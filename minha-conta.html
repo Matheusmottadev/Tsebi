@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Minha conta | Tsebi Brasil</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600&family=Montserrat:wght@300;400;500;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/style.css" />
+  <link rel="stylesheet" href="css/account-auth.css" />
+</head>
+<body class="account-auth-page">
+  <header class="cart-simple-header">
+    <a class="cart-simple-logo" href="index.html">TSEBI</a>
+    <nav class="cart-simple-actions">
+      <a href="index.html">Voltar Ã  loja</a>
+      <a href="cart.html">Carrinho</a>
+    </nav>
+  </header>
+
+  <main class="account-main-page">
+    <section class="account-dashboard-card">
+      <div class="account-dashboard-head">
+        <div>
+          <p class="account-auth-kicker">Minha conta</p>
+          <h1 id="myAccountTitle">OlÃ¡</h1>
+          <p id="myAccountEmail"></p>
+        </div>
+        <button type="button" class="account-auth-submit account-logout-btn" id="logoutBtn">Sair</button>
+      </div>
+
+      <section class="account-shell" aria-label="Menu e conteÃºdo da conta">
+        <aside class="account-sidebar">
+          <button type="button" class="account-nav-btn is-active" data-panel="track">Acompanhar pedido</button>
+          <button type="button" class="account-nav-btn" data-panel="history">HistÃ³rico de pedidos</button>
+          <button type="button" class="account-nav-btn" data-panel="profile">Meus dados</button>
+          <button type="button" class="account-nav-btn" data-panel="addresses">EndereÃ§os</button>
+          <button type="button" class="account-nav-btn" data-panel="favorites">Favoritos</button>
+        </aside>
+
+        <div class="account-content">
+          <section class="account-panel is-active" id="panel-track" data-panel="track">
+            <h2>Acompanhar pedido</h2>
+            <p class="account-panel-note">Digite o nÃºmero do pedido para consultar o status em tempo real.</p>
+            <form id="trackOrderForm" class="account-auth-form account-track-form" novalidate>
+              <label>
+                <span>NÃºmero do pedido</span>
+                <input type="text" id="trackOrderId" placeholder="Ex.: ord_123" required />
+              </label>
+              <button type="submit" class="account-auth-submit">Buscar pedido</button>
+            </form>
+            <div id="trackOrderResult" class="account-order-single" hidden></div>
+          </section>
+
+          <section class="account-panel" id="panel-history" data-panel="history" hidden>
+            <h2>HistÃ³rico de pedidos</h2>
+            <div id="ordersList" class="account-orders-list"></div>
+            <p id="ordersEmpty" hidden>VocÃª ainda nÃ£o possui pedidos em sua conta.</p>
+          </section>
+
+          <section class="account-panel" id="panel-profile" data-panel="profile" hidden>
+            <h2>Meus dados</h2>
+            <form id="profileForm" class="account-auth-form account-inline-form" novalidate>
+              <label>
+                <span>Nome</span>
+                <input type="text" id="profileName" minlength="2" required />
+              </label>
+              <label>
+                <span>Data de nascimento</span>
+                <input type="date" id="profileBirthDate" required />
+              </label>
+              <label>
+                <span>CPF</span>
+                <input type="text" id="profileCpf" maxlength="14" inputmode="numeric" required />
+              </label>
+              <label>
+                <span>CEP</span>
+                <input type="text" id="profileCep" maxlength="9" inputmode="numeric" required />
+              </label>
+              <button type="submit" class="account-auth-submit">Salvar</button>
+            </form>
+          </section>
+
+          <section class="account-panel" id="panel-addresses" data-panel="addresses" hidden>
+            <h2>EndereÃ§os</h2>
+            <p class="account-panel-note">Cadastre mais de um endereÃ§o e defina qual serÃ¡ o padrÃ£o para checkout.</p>
+            <form id="addressForm" class="account-auth-form account-address-form" novalidate>
+              <input type="hidden" id="addressId" />
+              <label>
+                <span>Apelido do endereÃ§o</span>
+                <input type="text" id="addressLabel" placeholder="Ex.: Casa, Trabalho" required />
+              </label>
+              <label>
+                <span>Nome de recebimento</span>
+                <input type="text" id="addressFullName" required />
+              </label>
+              <label>
+                <span>CEP</span>
+                <input type="text" id="addressCep" maxlength="9" inputmode="numeric" required />
+              </label>
+              <label>
+                <span>Rua</span>
+                <input type="text" id="addressStreet" required />
+              </label>
+              <label>
+                <span>NÃºmero</span>
+                <input type="text" id="addressNumber" required />
+              </label>
+              <label>
+                <span>Complemento</span>
+                <input type="text" id="addressComplement" />
+              </label>
+              <label>
+                <span>Bairro</span>
+                <input type="text" id="addressDistrict" required />
+              </label>
+              <label>
+                <span>Cidade</span>
+                <input type="text" id="addressCity" required />
+              </label>
+              <label>
+                <span>Estado</span>
+                <input type="text" id="addressState" maxlength="2" required />
+              </label>
+              <div class="account-address-actions">
+                <button type="submit" class="account-auth-submit" id="saveAddressBtn">Salvar endereÃ§o</button>
+                <button type="button" class="account-auth-link" id="cancelAddressEditBtn" hidden>Cancelar ediÃ§Ã£o</button>
+              </div>
+            </form>
+            <div id="addressesList" class="account-address-list"></div>
+            <p id="addressesEmpty" class="account-panel-note" hidden>Nenhum endereÃ§o cadastrado.</p>
+          </section>
+
+          <section class="account-panel" id="panel-favorites" data-panel="favorites" hidden>
+            <h2>Favoritos</h2>
+            <p class="account-panel-note">Em breve vocÃª poderÃ¡ gerenciar seus favoritos nesta tela.</p>
+            <a class="account-inline-link" href="index.html">Voltar para a loja</a>
+          </section>
+        </div>
+      </section>
+
+      <p class="account-auth-feedback" id="accountFeedback" aria-live="polite"></p>
+    </section>
+  </main>
+
+  <script src="JS/user-utils.js?v=20260215q"></script>
+  <script src="JS/minha-conta.js?v=20260215q"></script>
+</body>
+</html>
+

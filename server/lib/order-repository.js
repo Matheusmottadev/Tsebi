@@ -1,65 +1,269 @@
-const path = require("node:path");
-const crypto = require("node:crypto");
-const { readJson, writeJson } = require("./json-store");
+const { query } = require("./db");
 
-const ordersPath = path.resolve(__dirname, "..", "..", "data", "orders.json");
-
-async function readOrders() {
-  const orders = await readJson(ordersPath, []);
-  return Array.isArray(orders) ? orders : [];
+function mapOrderRow(row, items = []) {
+  if (!row) return null;
+  return {
+    id: row.id,
+    status: row.status,
+    stockCommitted: Boolean(row.stock_committed),
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+    paymentMethod: row.payment_method,
+    installments: Number(row.installments || 1),
+    currency: row.currency,
+    amount: Number(row.total_cents || 0),
+    itemsAmount: Number(row.items_cents || 0),
+    shippingAmount: Number(row.shipping_cents || 0),
+    items,
+    shipping: row.shipping_json || null,
+    userId: row.user_id,
+    userEmail: row.user_email,
+    userName: row.user_name,
+    stripePaymentIntentId: row.stripe_payment_intent_id,
+    stripeRefundId: row.stripe_refund_id,
+    paidAt: row.paid_at,
+    canceledAt: row.canceled_at,
+    refundedAt: row.refunded_at,
+    failureReason: row.failure_reason,
+    cancellationReason: row.cancellation_reason,
+    stockIssues: row.stock_issues || null
+  };
 }
 
-async function writeOrders(orders) {
-  await writeJson(ordersPath, orders);
+function mapOrderItemRow(row) {
+  return {
+    id: row.product_sku || row.product_id,
+    name: row.name,
+    qty: Number(row.qty || 0),
+    unitAmount: Number(row.price_cents || 0),
+    currency: row.currency
+  };
 }
 
-function nowIso() {
-  return new Date().toISOString();
+async function listItemsByOrderIds(orderIds) {
+  if (!Array.isArray(orderIds) || orderIds.length === 0) return new Map();
+
+  const result = await query(
+    `
+    SELECT order_id, product_sku, product_id, name, qty, price_cents, currency
+    FROM order_items
+    WHERE order_id = ANY($1::uuid[])
+    ORDER BY id ASC
+    `,
+    [orderIds]
+  );
+
+  const byOrderId = new Map();
+  result.rows.forEach((row) => {
+    const list = byOrderId.get(row.order_id) || [];
+    list.push(mapOrderItemRow(row));
+    byOrderId.set(row.order_id, list);
+  });
+  return byOrderId;
+}
+
+async function insertOrderItems(client, orderId, items) {
+  for (const item of items) {
+    const sku = String(item?.id || "").trim();
+    if (!sku) continue;
+
+    const productResult = await client.query(
+      `SELECT id FROM products WHERE sku = $1 LIMIT 1`,
+      [sku]
+    );
+
+    const productId = productResult.rows[0]?.id || null;
+
+    await client.query(
+      `
+      INSERT INTO order_items (
+        order_id, product_id, product_sku, name, qty, price_cents, currency
+      ) VALUES (
+        $1, $2::uuid, $3, $4, $5, $6, $7
+      )
+      `,
+      [
+        orderId,
+        productId,
+        sku,
+        String(item.name || sku),
+        Math.max(1, Number(item.qty || 1)),
+        Math.max(0, Number(item.unitAmount || 0)),
+        String(item.currency || "brl").toLowerCase()
+      ]
+    );
+  }
 }
 
 async function createOrder(payload) {
-  const orders = await readOrders();
-  const order = {
-    id: crypto.randomUUID(),
-    status: "pending_payment",
-    stockCommitted: false,
-    createdAt: nowIso(),
-    updatedAt: nowIso(),
-    ...payload
-  };
-  orders.push(order);
-  await writeOrders(orders);
-  return order;
+  const { withTransaction } = require("./db");
+  return withTransaction(async (client) => {
+    const sql = `
+      INSERT INTO orders (
+        status, payment_method, installments, currency,
+        total_cents, items_cents, shipping_cents,
+        shipping_json, user_id, user_email, user_name,
+        stock_committed
+      ) VALUES (
+        $1, $2, $3, $4,
+        $5, $6, $7,
+        $8::jsonb, $9::uuid, $10, $11,
+        $12
+      )
+      RETURNING *
+    `;
+
+    const result = await client.query(sql, [
+      String(payload.status || "pending_payment"),
+      String(payload.paymentMethod || "automatic"),
+      Math.max(1, Number(payload.installments || 1)),
+      String(payload.currency || "brl").toLowerCase(),
+      Math.max(0, Number(payload.amount || 0)),
+      Math.max(0, Number(payload.itemsAmount || 0)),
+      Math.max(0, Number(payload.shippingAmount || 0)),
+      JSON.stringify(payload.shipping || null),
+      payload.userId || null,
+      payload.userEmail || null,
+      payload.userName || null,
+      Boolean(payload.stockCommitted)
+    ]);
+
+    const orderRow = result.rows[0];
+
+    if (Array.isArray(payload.items) && payload.items.length > 0) {
+      await insertOrderItems(client, orderRow.id, payload.items);
+    }
+
+    const itemResult = await client.query(
+      `SELECT order_id, product_sku, product_id, name, qty, price_cents, currency FROM order_items WHERE order_id = $1`,
+      [orderRow.id]
+    );
+
+    return mapOrderRow(orderRow, itemResult.rows.map(mapOrderItemRow));
+  });
 }
 
+const PATCH_TO_COLUMN = {
+  status: "status",
+  stockCommitted: "stock_committed",
+  stripePaymentIntentId: "stripe_payment_intent_id",
+  stripeRefundId: "stripe_refund_id",
+  failureReason: "failure_reason",
+  cancellationReason: "cancellation_reason",
+  stockIssues: "stock_issues",
+  paidAt: "paid_at",
+  canceledAt: "canceled_at",
+  refundedAt: "refunded_at",
+  paymentMethod: "payment_method",
+  installments: "installments",
+  userEmail: "user_email",
+  userName: "user_name",
+  amount: "total_cents",
+  itemsAmount: "items_cents",
+  shippingAmount: "shipping_cents",
+  shipping: "shipping_json"
+};
+
 async function updateOrder(orderId, patch) {
-  const orders = await readOrders();
-  const index = orders.findIndex((order) => order.id === orderId);
-  if (index < 0) return null;
-  const next = {
-    ...orders[index],
-    ...patch,
-    updatedAt: nowIso()
-  };
-  orders[index] = next;
-  await writeOrders(orders);
-  return next;
+  const keys = Object.keys(patch || {}).filter((key) => Object.prototype.hasOwnProperty.call(PATCH_TO_COLUMN, key));
+
+  if (keys.length === 0) {
+    return findOrderById(orderId);
+  }
+
+  const values = [];
+  const assignments = [];
+
+  keys.forEach((key, index) => {
+    const column = PATCH_TO_COLUMN[key];
+    let value = patch[key];
+
+    if (key === "shipping" || key === "stockIssues") {
+      value = value == null ? null : JSON.stringify(value);
+      assignments.push(`${column} = $${index + 2}::jsonb`);
+    } else {
+      assignments.push(`${column} = $${index + 2}`);
+    }
+
+    values.push(value);
+  });
+
+  const result = await query(
+    `
+    UPDATE orders
+    SET ${assignments.join(", ")}, updated_at = NOW()
+    WHERE id = $1
+    RETURNING *
+    `,
+    [orderId, ...values]
+  );
+
+  const row = result.rows[0];
+  if (!row) return null;
+
+  const itemResult = await query(
+    `SELECT order_id, product_sku, product_id, name, qty, price_cents, currency FROM order_items WHERE order_id = $1`,
+    [row.id]
+  );
+
+  return mapOrderRow(row, itemResult.rows.map(mapOrderItemRow));
 }
 
 async function findOrderById(orderId) {
-  const orders = await readOrders();
-  return orders.find((order) => order.id === orderId) || null;
+  const result = await query(`SELECT * FROM orders WHERE id = $1 LIMIT 1`, [orderId]);
+  if (result.rowCount === 0) return null;
+
+  const row = result.rows[0];
+  const itemResult = await query(
+    `SELECT order_id, product_sku, product_id, name, qty, price_cents, currency FROM order_items WHERE order_id = $1`,
+    [row.id]
+  );
+
+  return mapOrderRow(row, itemResult.rows.map(mapOrderItemRow));
 }
 
 async function findOrderByPaymentIntentId(paymentIntentId) {
   if (!paymentIntentId) return null;
-  const orders = await readOrders();
-  return orders.find((order) => order.stripePaymentIntentId === paymentIntentId) || null;
+
+  const result = await query(
+    `SELECT * FROM orders WHERE stripe_payment_intent_id = $1 LIMIT 1`,
+    [paymentIntentId]
+  );
+  if (result.rowCount === 0) return null;
+
+  const row = result.rows[0];
+  const itemResult = await query(
+    `SELECT order_id, product_sku, product_id, name, qty, price_cents, currency FROM order_items WHERE order_id = $1`,
+    [row.id]
+  );
+
+  return mapOrderRow(row, itemResult.rows.map(mapOrderItemRow));
+}
+
+async function listOrders() {
+  const result = await query(`SELECT * FROM orders ORDER BY created_at DESC`);
+  const rows = result.rows;
+  const byOrder = await listItemsByOrderIds(rows.map((row) => row.id));
+  return rows.map((row) => mapOrderRow(row, byOrder.get(row.id) || []));
+}
+
+async function listOrdersByUserId(userId) {
+  if (!userId) return [];
+  const result = await query(
+    `SELECT * FROM orders WHERE user_id = $1 ORDER BY created_at DESC`,
+    [userId]
+  );
+
+  const rows = result.rows;
+  const byOrder = await listItemsByOrderIds(rows.map((row) => row.id));
+  return rows.map((row) => mapOrderRow(row, byOrder.get(row.id) || []));
 }
 
 module.exports = {
   createOrder,
   updateOrder,
   findOrderById,
-  findOrderByPaymentIntentId
+  findOrderByPaymentIntentId,
+  listOrders,
+  listOrdersByUserId
 };

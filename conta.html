@@ -1,227 +1,85 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Conta | Tsebi Brasil</title>
-  <script async src="https://www.googletagmanager.com/gtag/js?id=G-4GHX4VL6DZ"></script>
-  <script>
-    window.dataLayer = window.dataLayer || [];
-    function gtag(){dataLayer.push(arguments);}
-    gtag('js', new Date());
-    gtag('consent', 'default', {
-      analytics_storage: 'denied',
-      ad_storage: 'denied',
-      ad_user_data: 'denied',
-      ad_personalization: 'denied',
-      functionality_storage: 'denied',
-      security_storage: 'granted'
-    });
-    gtag('config', 'G-4GHX4VL6DZ', {
-      anonymize_ip: true
-    });
-  </script>  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <title>Entrar | Tsebi Brasil</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600&family=Montserrat:wght@300;400;500;600&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="css/style.css" />
+  <link rel="stylesheet" href="css/account-auth.css" />
 </head>
-<body>
-  <header class="account-min-header">
-    <span class="account-min-spacer" aria-hidden="true"></span>
-    <a class="account-min-logo" href="index.html">TSEBI</a>
-    <a class="account-min-cart" href="cart.html" aria-label="Carrinho">Carrinho</a>
+<body class="account-auth-page">
+  <header class="cart-simple-header">
+    <a class="cart-simple-logo" href="index.html">TSEBI</a>
+    <nav class="cart-simple-actions">
+      <a href="index.html">Voltar a loja</a>
+      <a href="cart.html">Carrinho</a>
+    </nav>
   </header>
 
-  <main class="account-page">
-    <button class="account-page-back" id="accountPageBack" type="button">← Voltar</button>
+  <main class="account-auth-main">
+    <section class="account-auth-card">
+      <p class="account-auth-kicker">Conta Tsebi</p>
+      <h1>Acesse sua conta</h1>
 
-    <section class="account-flow">
-      <section class="account-main">
-        <section class="account-step is-active" id="accountStepEmail">
-          <h1>Insira seu e-mail</h1>
-          <form class="account-form" id="accountEmailForm">
-            <input id="accountEmailInput" name="email" type="email" placeholder="Digite seu e-mail" required />
-            <button type="submit">Próximo</button>
-          </form>
-        </section>
-
-        <section class="account-step" id="accountStepLogin" hidden>
-          <button class="account-back" id="accountBackToEmailFromLogin" type="button">← Voltar</button>
-          <h1>Digite sua senha</h1>
-          <p class="account-step-email" id="accountLoginEmailText"></p>
-          <form class="account-form" id="accountLoginForm">
-            <input id="accountLoginPassword" name="password" type="password" minlength="6" placeholder="Senha" required />
-            <button type="submit">Entrar</button>
-          </form>
-        </section>
-
-        <section class="account-step" id="accountStepRegister" hidden>
-          <button class="account-back" id="accountBackToEmailFromRegister" type="button">← Voltar</button>
-          <h1>Criar conta</h1>
-          <p class="account-step-email" id="accountRegisterEmailText"></p>
-          <form class="account-form" id="accountRegisterForm">
-            <input id="accountRegisterFirstName" name="firstName" type="text" minlength="2" placeholder="Nome" required />
-            <input id="accountRegisterLastName" name="lastName" type="text" minlength="2" placeholder="Sobrenome" required />
-            <input id="accountRegisterCpf" name="cpf" type="text" inputmode="numeric" placeholder="CPF" required />
-            <input id="accountRegisterBirthDate" name="birthDate" type="text" inputmode="numeric" placeholder="Data de nascimento (DD/MM/AAAA)" required />
-            <input id="accountRegisterPhone" name="phone" type="tel" placeholder="Telefone (opcional)" />
-            <input id="accountRegisterPassword" name="password" type="password" minlength="6" placeholder="Senha" required />
-            <button type="submit">Criar conta</button>
-          </form>
-        </section>
-
-        <section class="account-step" id="accountStepLogged" hidden>
-          <h1 id="accountLoggedTitle">Minha conta</h1>
-          <p class="account-step-email" id="accountLoggedEmail"></p>
-          <div class="account-dashboard-layout">
-            <aside class="account-dashboard-sidebar">
-              <nav class="account-dashboard-nav" aria-label="Navegação da conta">
-                <button type="button" class="account-dashboard-link is-active" data-account-tab="dados">Meus dados</button>
-                <button type="button" class="account-dashboard-link" data-account-tab="pedidos">Acompanhe seu pedido</button>
-                <button type="button" class="account-dashboard-link" data-account-tab="favoritos">Favoritos</button>
-                <button type="button" class="account-dashboard-link" data-account-tab="historico">Histórico de compras</button>
-              </nav>
-              <button class="account-logout" id="accountLogoutBtn" type="button">Sair</button>
-            </aside>
-
-            <div class="account-dashboard-content">
-              <section class="account-dashboard-panel is-active" id="accountPanelDados">
-                <div class="account-panel-head">
-                  <h3>Meus dados</h3>
-                  <button class="account-edit-btn" id="accountEditDataBtn" type="button">Editar dados</button>
-                </div>
-                <div class="account-data-grid" id="accountDataView">
-                  <p><strong>Nome:</strong> <span id="accountDataName">-</span></p>
-                  <p><strong>Sobrenome:</strong> <span id="accountDataLastName">-</span></p>
-                  <p><strong>E-mail:</strong> <span id="accountDataEmail">-</span></p>
-                  <p><strong>CPF:</strong> <span id="accountDataCpf">-</span></p>
-                  <p><strong>Data de nascimento:</strong> <span id="accountDataBirthDate">-</span></p>
-                </div>
-                <form class="account-form account-edit-form" id="accountDataEditForm" hidden>
-                  <input id="accountEditFirstName" name="firstName" type="text" minlength="2" placeholder="Nome" required />
-                  <input id="accountEditLastName" name="lastName" type="text" minlength="2" placeholder="Sobrenome" required />
-                  <input id="accountEditCpf" name="cpf" type="text" inputmode="numeric" placeholder="CPF" required />
-                  <input id="accountEditBirthDate" name="birthDate" type="text" inputmode="numeric" placeholder="Data de nascimento (DD/MM/AAAA)" required />
-                  <div class="account-edit-actions">
-                    <button type="button" class="account-edit-cancel" id="accountEditCancelBtn">Cancelar</button>
-                    <button type="submit">Salvar alterações</button>
-                  </div>
-                </form>
-              </section>
-
-              <section class="account-dashboard-panel" id="accountPanelPedidos" hidden>
-                <h3>Acompanhe seu pedido</h3>
-                <div class="account-list">
-                  <button type="button" class="account-list-item account-list-item-clickable">
-                    <p class="account-list-title">Pedido #TSE-10458</p>
-                    <p>Status: Em separação</p>
-                    <p>Última atualização: Hoje, 14:22</p>
-                    <div class="account-list-detail">
-                      <p>Transportadora: Tsebi Express</p>
-                      <p>Código de rastreio: TXB10458BR</p>
-                      <div class="account-order-products">
-                        <article class="account-order-product">
-                          <img src="images/produtos/sug3.jpeg" alt="Camisa em algodão croata de trama nobre" loading="lazy" decoding="async" />
-                          <div>
-                            <p class="account-order-product-name">Camisa em algodão croata de trama nobre</p>
-                            <p>Cor: Azul | Tamanho: P</p>
-                            <p>Qtd: 1 | R$ 1.600</p>
-                          </div>
-                        </article>
-                      </div>
-                    </div>
-                  </button>
-                  <button type="button" class="account-list-item account-list-item-clickable">
-                    <p class="account-list-title">Pedido #TSE-10391</p>
-                    <p>Status: Em trânsito</p>
-                    <p>Previsão de entrega: 2 dias úteis</p>
-                    <div class="account-list-detail">
-                      <p>Centro logístico: São Paulo</p>
-                      <p>Rota final iniciada.</p>
-                      <div class="account-order-products">
-                        <article class="account-order-product">
-                          <img src="images/produtos/sug4.jpeg" alt="Calça de alfaiataria em sarja premium estruturada" loading="lazy" decoding="async" />
-                          <div>
-                            <p class="account-order-product-name">Calça de alfaiataria em sarja premium estruturada</p>
-                            <p>Cor: Grafite | Tamanho: 40</p>
-                            <p>Qtd: 1 | R$ 2.200</p>
-                          </div>
-                        </article>
-                      </div>
-                    </div>
-                  </button>
-                </div>
-              </section>
-
-              <section class="account-dashboard-panel" id="accountPanelFavoritos" hidden>
-                <h3>Favoritos</h3>
-                <div class="account-favorites-grid" id="accountFavoritesGrid"></div>
-                <p id="accountFavoritesEmpty" hidden>Você ainda não favoritou nenhum produto.</p>
-              </section>
-
-              <section class="account-dashboard-panel" id="accountPanelHistorico" hidden>
-                <h3>Histórico de compras</h3>
-                <div class="account-list">
-                  <button type="button" class="account-list-item account-list-item-clickable">
-                    <p class="account-list-title">Pedido #TSE-10312</p>
-                    <p>Camisa em algodão croata de trama nobre</p>
-                    <p>Total: R$ 1.600</p>
-                    <div class="account-list-detail">
-                      <p>Data da compra: 18/01/2026</p>
-                      <p>Pagamento aprovado.</p>
-                      <div class="account-order-products">
-                        <article class="account-order-product">
-                          <img src="images/produtos/sug3.jpeg" alt="Camisa em algodão croata de trama nobre" loading="lazy" decoding="async" />
-                          <div>
-                            <p class="account-order-product-name">Camisa em algodão croata de trama nobre</p>
-                            <p>Cor: Azul | Tamanho: P</p>
-                            <p>Qtd: 1 | R$ 1.600</p>
-                          </div>
-                        </article>
-                      </div>
-                    </div>
-                  </button>
-                  <button type="button" class="account-list-item account-list-item-clickable">
-                    <p class="account-list-title">Pedido #TSE-10177</p>
-                    <p>Calça de alfaiataria em sarja premium estruturada</p>
-                    <p>Total: R$ 2.200</p>
-                    <div class="account-list-detail">
-                      <p>Data da compra: 03/12/2025</p>
-                      <p>Pedido entregue.</p>
-                      <div class="account-order-products">
-                        <article class="account-order-product">
-                          <img src="images/produtos/sug4.jpeg" alt="Calça de alfaiataria em sarja premium estruturada" loading="lazy" decoding="async" />
-                          <div>
-                            <p class="account-order-product-name">Calça de alfaiataria em sarja premium estruturada</p>
-                            <p>Cor: Grafite | Tamanho: 40</p>
-                            <p>Qtd: 1 | R$ 2.200</p>
-                          </div>
-                        </article>
-                      </div>
-                    </div>
-                  </button>
-                </div>
-              </section>
-            </div>
-          </div>
-        </section>
-
-        <p class="account-feedback" id="accountFeedback" role="status" aria-live="polite"></p>
+      <section class="account-auth-panel is-active" id="authPanelEmail">
+        <form id="emailCheckForm" class="account-auth-form" novalidate>
+          <label>
+            <span>E-mail</span>
+            <input type="email" id="emailCheckInput" required autocomplete="email" />
+          </label>
+          <button type="submit" class="account-auth-submit">Continuar</button>
+        </form>
       </section>
+
+      <section class="account-auth-panel" id="authPanelLogin" hidden>
+        <p class="account-auth-flow-note">Conta encontrada para <strong id="detectedEmailLogin"></strong></p>
+        <form id="loginForm" class="account-auth-form" novalidate>
+          <label>
+            <span>Senha</span>
+            <input type="password" id="loginPassword" required minlength="8" autocomplete="current-password" />
+          </label>
+          <button type="submit" class="account-auth-submit">Entrar</button>
+        </form>
+        <button type="button" id="changeEmailFromLogin" class="account-auth-link">Usar outro e-mail</button>
+      </section>
+
+      <section class="account-auth-panel" id="authPanelRegister" hidden>
+        <p class="account-auth-flow-note">Criar nova conta para <strong id="detectedEmailRegister"></strong></p>
+        <form id="registerForm" class="account-auth-form" novalidate>
+          <label>
+            <span>Nome completo</span>
+            <input type="text" id="registerName" required minlength="2" autocomplete="name" />
+          </label>
+          <label>
+            <span>Data de nascimento</span>
+            <input type="date" id="registerBirthDate" required autocomplete="bday" />
+          </label>
+          <label>
+            <span>CPF</span>
+            <input type="text" id="registerCpf" required inputmode="numeric" maxlength="14" autocomplete="off" />
+          </label>
+          <label>
+            <span>CEP</span>
+            <input type="text" id="registerCep" required inputmode="numeric" maxlength="9" autocomplete="postal-code" />
+          </label>
+          <label>
+            <span>Senha</span>
+            <input type="password" id="registerPassword" required minlength="8" autocomplete="new-password" />
+          </label>
+          <button type="submit" class="account-auth-submit">Criar conta</button>
+        </form>
+        <button type="button" id="changeEmailFromRegister" class="account-auth-link">Usar outro e-mail</button>
+      </section>
+
+      <p class="account-auth-feedback" id="authFeedback" aria-live="polite"></p>
     </section>
   </main>
 
-  <script src="JS/user-utils.js"></script>
-  <script src="JS/account.js"></script>
-  <script src="JS/cookies.js"></script>
-  <script src="JS/language-switcher.js"></script>
+  <script src="JS/user-utils.js?v=20260215q"></script>
+  <script src="JS/conta.js?v=20260215j"></script>
 </body>
 </html>
-
-
-
-
-
-
-
 

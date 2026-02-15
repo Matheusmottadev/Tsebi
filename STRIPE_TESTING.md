@@ -1,127 +1,97 @@
-# Stripe Checkout Testing (3 Steps)
+# Stripe Testing - TSEBI
 
-## 1. Setup
-
-1. Install dependencies:
+## 1) Setup rapido
 
 ```bash
 npm install
-```
-
-2. Create `.env` from `.env.example`:
-
-```env
-PORT=4242
-STRIPE_SECRET_KEY=sk_test_xxx
-STRIPE_PUBLISHABLE_KEY=pk_test_xxx
-STRIPE_WEBHOOK_SECRET=whsec_xxx
-```
-
-3. Start server:
-
-```bash
+docker compose up -d
+npm run migrate
+npm run migrate:json
 npm run dev
 ```
 
-4. Open checkout:
+Acesse: `http://localhost:4242/cart.html`
 
-`http://localhost:4242/cart.html`
+## 2) Variaveis obrigatorias
 
-## 2. Webhook (required)
+No `.env`:
 
-Run in another terminal:
+```env
+DATABASE_URL=postgresql://postgres:postgres@localhost:5432/tsebi
+STRIPE_SECRET_KEY=sk_test_xxx
+STRIPE_PUBLISHABLE_KEY=pk_test_xxx
+STRIPE_WEBHOOK_SECRET=whsec_xxx
+SESSION_SECRET=change-this-secret
+```
+
+## 3) Listener de webhook
 
 ```bash
 stripe listen --forward-to localhost:4242/api/stripe/webhook
 ```
 
-Copy the generated `whsec_...` into `STRIPE_WEBHOOK_SECRET`.
+Copie o `whsec_...` para `STRIPE_WEBHOOK_SECRET`.
 
-## 3. New checkout flow (Cart > Shipping > Payment)
+## 4) Metodos no Dashboard
 
-### Step 1: Cart
-- Adjust quantity (`+` / `-`) or remove items.
-- "Continuar para entrega" is disabled when cart is empty.
-- Summary updates in real time.
+Habilite em modo teste:
 
-### Step 2: Shipping
-- Required fields:
-  - full name
-  - email
-  - CEP
-  - street
-  - number
-  - district
-  - city
-  - state
-- CEP attempts auto-fill via ViaCEP on blur.
-- Shipping method:
-  - `Padrao (3-7 dias)`
-  - `Expressa (1-3 dias)`
-- Shipping cost and estimated delivery update summary.
+- Card
+- Pix
+- Boleto
+- Apple Pay
+- Google Pay
 
-### Step 3: Payment
-- Methods:
-  - card (Stripe Elements)
-  - Pix (Stripe)
-- Installments (1x to 6x) are shown only for card.
-- Final action redirects to:
-  - `payment-result.html?orderId=...`
+## 5) Login obrigatorio no checkout
 
-## 4. Test scenarios
+1. Abra `cart.html` deslogado.
+2. Tente avancar para Entrega/Pagamento.
+3. Deve redirecionar para `conta.html?returnUrl=...`.
+4. Apos login/cadastro, deve voltar ao checkout no step certo.
 
-### Card success
-1. Complete all 3 steps.
-2. Use test card `4242 4242 4242 4242`.
-3. Submit payment.
+## 6) Fluxos de pagamento
 
-Expected:
-- Order created as `pending_payment`.
-- Webhook updates to `paid`.
-- Result page shows `Pagamento confirmado`.
+### Cartao aprovado
 
-### Pix / async
-1. Complete shipping.
-2. Select `Pix`.
-3. Submit payment and follow Stripe flow.
+- Use `4242 4242 4242 4242`.
+- Resultado esperado:
+  - Stripe confirma pagamento.
+  - Webhook marca pedido como `paid`.
+  - Estoque baixa uma unica vez.
 
-Expected:
-- Result page opens in `Pagamento em processamento`.
-- Polling every 3s (up to 2 minutes).
-- Once webhook marks `paid`, UI changes to confirmed.
+### Pix/Boleto (assincronos)
 
-### Card failure
-1. Use a failing Stripe test card.
-2. Submit payment.
+- Selecione no Payment Element.
+- Resultado esperado:
+  - Pagina de resultado pode mostrar `processing`.
+  - Quando webhook confirmar, muda para `paid`.
 
-Expected:
-- Result page eventually shows `Pagamento nao aprovado`.
-- Actions shown: `Tentar novamente` and `Falar no WhatsApp`.
+### Falha
 
-## 5. Backend payload compatibility
+- Use cartao de falha do Stripe.
+- Resultado esperado: pedido `failed`.
 
-`POST /api/orders/payment-intent` still accepts:
-- `items`
-- `paymentMethod`
-- `installments`
+## 7) Reembolso/cancelamento
 
-Now it also accepts optional:
-- `shipping` object
+- Em `order.html`, pedido `paid` permite reembolso dentro da janela configurada.
+- Pedido em `pending_payment/processing` permite cancelamento (se Stripe aceitar).
 
-Backend remains source of truth for:
-- price
-- stock
-- shipping amount (same mock rule set used by checkout)
+## 8) Apple Pay / Google Pay
 
-## 6. Useful endpoints
+As wallets aparecem somente quando:
 
-- `GET /api/config`
-- `POST /api/orders/payment-intent`
-- `GET /api/orders/:orderId`
-- `POST /api/stripe/webhook`
+- HTTPS
+- Metodo habilitado no Dashboard
+- Navegador/dispositivo compativeis
+- Apple Pay com domain verification
 
-## 7. Storage
+Teste local com HTTPS:
 
-- Orders: `data/orders.json`
-- Inventory: `data/inventory.json`
-- Client shipping draft: localStorage key `tsebi-checkout-shipping-v1`
+```bash
+ngrok http 4242
+```
+
+## 9) Idempotencia do webhook
+
+A tabela `webhook_events` evita processamento duplicado pelo `stripe_event_id`.
+Reenvio do mesmo evento nao deve gerar nova baixa de estoque.

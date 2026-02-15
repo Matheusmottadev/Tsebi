@@ -90,10 +90,32 @@ function variantKey(color, size) {
 }
 
 function readCart() {
+  function normalizeCartItems(items) {
+    if (!Array.isArray(items)) return [];
+    return items
+      .map((item) => {
+        if (!item || typeof item !== "object") return null;
+        const rawKey = String(item.key || "").trim();
+        const idFromKey = rawKey.includes("::") ? rawKey.split("::")[0] : rawKey;
+        const id = String(item.id || item.productId || idFromKey || "").trim();
+        if (!id) return null;
+        return {
+          ...item,
+          id,
+          qty: Math.max(1, Number(item.qty || item.quantity || 1))
+        };
+      })
+      .filter(Boolean);
+  }
+
   try {
     const raw = localStorage.getItem(cartKey);
     const parsed = raw ? JSON.parse(raw) : [];
-    return Array.isArray(parsed) ? parsed : [];
+    const normalized = normalizeCartItems(parsed);
+    if (Array.isArray(parsed) && normalized.length !== parsed.length) {
+      saveCart(normalized);
+    }
+    return normalized;
   } catch {
     return [];
   }

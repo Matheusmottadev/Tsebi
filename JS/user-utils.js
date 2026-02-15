@@ -1,7 +1,17 @@
 ﻿(function initTsebiUserStore() {
-  const USERS_KEY = "tsebi-users-v1";
-  const SESSION_KEY = "tsebi-session-v1";
-  const FAVORITES_KEY = "tsebi-favorites-v1";
+  const AUTH_CACHE_KEY = "tsebi-auth-user-cache-v1";
+  const FAVORITES_KEY = "tsebi-favorites-v2";
+
+  let currentUser = null;
+  let authReady = false;
+
+  function emitAuthChange() {
+    window.dispatchEvent(
+      new CustomEvent("tsebi:auth-changed", {
+        detail: { user: currentUser, ready: authReady }
+      })
+    );
+  }
 
   function readJson(key, fallback) {
     try {
@@ -17,158 +27,77 @@
   function writeJson(key, value) {
     try {
       localStorage.setItem(key, JSON.stringify(value));
-      return true;
-    } catch {
-      return false;
+    } catch {}
+  }
+
+  function snapshotUser(user) {
+    return JSON.stringify({
+      id: user?.id || "",
+      email: normalizeEmail(user?.email || ""),
+      name: String(user?.name || ""),
+      birthDate: String(user?.birthDate || ""),
+      cpf: String(user?.cpf || ""),
+      cep: String(user?.cep || ""),
+      defaultAddressId: String(user?.defaultAddressId || ""),
+      addresses: Array.isArray(user?.addresses)
+        ? user.addresses.map((address) => ({
+            id: String(address?.id || ""),
+            cep: String(address?.cep || ""),
+            state: String(address?.state || "")
+          }))
+        : []
+    });
+  }
+
+  function setCachedUser(user) {
+    const prevSnapshot = snapshotUser(currentUser);
+    currentUser = user || null;
+    const nextSnapshot = snapshotUser(currentUser);
+    const hasChanged = prevSnapshot !== nextSnapshot;
+
+    if (currentUser) writeJson(AUTH_CACHE_KEY, currentUser);
+    else localStorage.removeItem(AUTH_CACHE_KEY);
+    if (hasChanged) {
+      emitAuthChange();
     }
+  }
+
+  function getCachedUser() {
+    return readJson(AUTH_CACHE_KEY, null);
+  }
+
+  async function apiRequest(url, options) {
+    const response = await fetch(url, {
+      credentials: "same-origin",
+      ...options
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      const message = data && data.error ? data.error : "REQUEST_FAILED";
+      throw new Error(message);
+    }
+    return data;
   }
 
   function normalizeEmail(email) {
     return String(email || "").trim().toLowerCase();
   }
 
-  function normalizeCpf(value) {
-    return String(value || "").replace(/\D/g, "");
-  }
-
-  function isValidBirthDate(value) {
-    const raw = String(value || "").trim();
-    let day = 0;
-    let month = 0;
-    let year = 0;
-
-    if (/^\d{2}\/\d{2}\/\d{4}$/.test(raw)) {
-      const parts = raw.split("/");
-      day = Number(parts[0]);
-      month = Number(parts[1]);
-      year = Number(parts[2]);
-    } else if (/^\d{4}-\d{2}-\d{2}$/.test(raw)) {
-      const parts = raw.split("-");
-      year = Number(parts[0]);
-      month = Number(parts[1]);
-      day = Number(parts[2]);
-    } else {
-      return false;
-    }
-
-    if (!Number.isInteger(day) || !Number.isInteger(month) || !Number.isInteger(year)) return false;
-    if (year < 1900 || year > new Date().getFullYear()) return false;
-    if (month < 1 || month > 12) return false;
-    if (day < 1 || day > 31) return false;
-
-    const dt = new Date(year, month - 1, day);
-    return dt.getFullYear() === year && dt.getMonth() === month - 1 && dt.getDate() === day;
-  }
-
-  function createId() {
-    return `usr-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-  }
-
-  function getUsers() {
-    const users = readJson(USERS_KEY, []);
-    return Array.isArray(users) ? users : [];
-  }
-
-  function saveUsers(users) {
-    return writeJson(USERS_KEY, Array.isArray(users) ? users : []);
-  }
-
-  function getSession() {
-    const session = readJson(SESSION_KEY, null);
-    if (!session || typeof session !== "object") return null;
-    if (!session.userId) return null;
-    return session;
-  }
-
-  function setSession(userId) {
-    return writeJson(SESSION_KEY, {
-      userId,
-      loggedAt: new Date().toISOString()
-    });
-  }
-
-  function clearSession() {
-    try {
-      localStorage.removeItem(SESSION_KEY);
-    } catch {}
-  }
-
-  function getCurrentUser() {
-    const session = getSession();
-    if (!session) return null;
-    const users = getUsers();
-    return users.find((user) => user.id === session.userId) || null;
-  }
-
-  function updateCurrentUser(patch) {
-    const session = getSession();
-    if (!session) return { ok: false, error: "Sessão não encontrada." };
-
-    const users = getUsers();
-    const index = users.findIndex((user) => user.id === session.userId);
-    if (index < 0) return { ok: false, error: "Usuário não encontrado." };
-
-    const current = users[index];
-    const next = { ...current, ...(patch || {}) };
-    if (next.firstName || next.lastName) {
-      next.name = `${String(next.firstName || "").trim()} ${String(next.lastName || "").trim()}`.trim();
-    }
-    users[index] = next;
-
-    if (!saveUsers(users)) return { ok: false, error: "Não foi possível salvar alterações." };
-    return { ok: true, user: next };
-  }
-
-  function createUser(payload) {
-    const firstName = String(payload?.firstName || "").trim();
-    const lastName = String(payload?.lastName || "").trim();
-    const cpf = normalizeCpf(payload?.cpf);
-    const birthDate = String(payload?.birthDate || "").trim();
-    const name = `${firstName} ${lastName}`.trim();
-    const email = normalizeEmail(payload?.email);
-    const password = String(payload?.password || "");
-
-    if (firstName.length < 2) return { ok: false, error: "Nome inválido." };
-    if (lastName.length < 2) return { ok: false, error: "Sobrenome inválido." };
-    if (cpf.length !== 11) return { ok: false, error: "CPF inválido." };
-    if (!isValidBirthDate(birthDate)) return { ok: false, error: "Data de nascimento inválida. Use DD/MM/AAAA." };
-    if (!email.includes("@")) return { ok: false, error: "E-mail inválido." };
-    if (password.length < 6) return { ok: false, error: "A senha deve ter ao menos 6 caracteres." };
-
-    const users = getUsers();
-    const alreadyExists = users.some((user) => normalizeEmail(user.email) === email);
-    if (alreadyExists) return { ok: false, error: "Esse e-mail já possui cadastro." };
-
-    const user = {
-      id: createId(),
-      firstName,
-      lastName,
-      name,
-      cpf,
-      birthDate,
-      email,
-      password,
-      createdAt: new Date().toISOString()
-    };
-
-    users.push(user);
-    if (!saveUsers(users)) return { ok: false, error: "Não foi possível salvar seu cadastro." };
-    return { ok: true, user };
-  }
-
-  function login(payload) {
-    const email = normalizeEmail(payload?.email);
-    const password = String(payload?.password || "");
-    const users = getUsers();
-    const user = users.find((entry) => normalizeEmail(entry.email) === email && entry.password === password);
-    if (!user) return { ok: false, error: "E-mail ou senha inválidos." };
-    setSession(user.id);
-    return { ok: true, user };
-  }
-
-  function logout() {
-    clearSession();
-    return { ok: true };
+  function mapAuthError(errorMessage) {
+    const code = String(errorMessage || "");
+    if (code === "INVALID_INPUT") return "Dados inválidos.";
+    if (code === "INVALID_CREDENTIALS") return "E-mail ou senha inválidos.";
+    if (code === "EMAIL_ALREADY_EXISTS") return "Este e-mail já está cadastrado.";
+    if (code === "TOO_MANY_ATTEMPTS") return "Muitas tentativas. Tente novamente em alguns minutos.";
+    if (code === "UNAUTHORIZED") return "Sessão expirada. Faça login novamente.";
+    if (code === "ORDER_NOT_FOUND") return "Pedido não encontrado.";
+    if (code === "ORDER_NOT_CANCELABLE") return "Este pedido não pode ser cancelado.";
+    if (code === "ORDER_ALREADY_PAID_USE_REFUND") return "Pedido pago. Use reembolso.";
+    if (code === "ORDER_NOT_REFUNDABLE") return "Este pedido não pode ser reembolsado.";
+    if (code === "REFUND_WINDOW_EXPIRED") return "Prazo de reembolso expirado (10 minutos após a compra).";
+    if (code === "CANCEL_FAILED") return "Não foi possível cancelar o pedido.";
+    if (code === "REFUND_FAILED") return "Não foi possível solicitar o reembolso.";
+    return "Não foi possível concluir a operação.";
   }
 
   function readFavoritesRoot() {
@@ -181,7 +110,6 @@
   }
 
   function getFavoriteIds() {
-    const currentUser = getCurrentUser();
     const root = readFavoritesRoot();
     if (!currentUser) return Array.from(new Set(root.guest.map(String)));
     const userFavs = root.users[currentUser.id];
@@ -190,7 +118,6 @@
   }
 
   function saveFavoriteIds(nextIds) {
-    const currentUser = getCurrentUser();
     const root = readFavoritesRoot();
     const safeIds = Array.from(new Set((Array.isArray(nextIds) ? nextIds : []).map(String)));
     if (!currentUser) {
@@ -217,23 +144,296 @@
     return !has;
   }
 
+  async function register({ name, email, password, birthDate, cpf, cep }) {
+    try {
+      const data = await apiRequest("/api/auth/register", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: String(name || "").trim(),
+          email: normalizeEmail(email),
+          password: String(password || ""),
+          birthDate: String(birthDate || "").trim(),
+          cpf: String(cpf || "").replace(/\D/g, "").slice(0, 11),
+          cep: String(cep || "").replace(/\D/g, "").slice(0, 8)
+        })
+      });
+      setCachedUser(data.user || null);
+      return { ok: true, user: data.user || null };
+    } catch (error) {
+      return { ok: false, error: mapAuthError(error.message), code: String(error.message || "") };
+    }
+  }
+
+  async function checkEmail(email) {
+    try {
+      const data = await apiRequest("/api/auth/check-email", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: normalizeEmail(email)
+        })
+      });
+      return { ok: true, exists: Boolean(data.exists) };
+    } catch (error) {
+      return { ok: false, error: mapAuthError(error.message), code: String(error.message || ""), exists: false };
+    }
+  }
+
+  async function login({ email, password }) {
+    try {
+      const data = await apiRequest("/api/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: normalizeEmail(email),
+          password: String(password || "")
+        })
+      });
+      setCachedUser(data.user || null);
+      return { ok: true, user: data.user || null };
+    } catch (error) {
+      return { ok: false, error: mapAuthError(error.message), code: String(error.message || "") };
+    }
+  }
+
+  async function logout() {
+    try {
+      await apiRequest("/api/auth/logout", { method: "POST" });
+    } catch {}
+    setCachedUser(null);
+    return { ok: true };
+  }
+
+  async function fetchMe() {
+    try {
+      const data = await apiRequest("/api/auth/me", { method: "GET" });
+      setCachedUser(data.user || null);
+      return { ok: true, user: data.user || null };
+    } catch (error) {
+      if (String(error.message || "") === "UNAUTHORIZED") {
+        setCachedUser(null);
+      }
+      return { ok: false, error: mapAuthError(error.message) };
+    }
+  }
+
+  async function fetchMyOrders() {
+    try {
+      const data = await apiRequest("/api/my/orders", { method: "GET" });
+      return { ok: true, orders: Array.isArray(data.orders) ? data.orders : [] };
+    } catch (error) {
+      return { ok: false, error: mapAuthError(error.message), orders: [] };
+    }
+  }
+
+  async function fetchMyOrder(orderId) {
+    try {
+      const id = encodeURIComponent(String(orderId || "").trim());
+      const data = await apiRequest(`/api/my/orders/${id}`, { method: "GET" });
+      return { ok: true, order: data.order || null };
+    } catch (error) {
+      return { ok: false, error: mapAuthError(error.message), order: null };
+    }
+  }
+
+  async function cancelMyOrder(orderId) {
+    try {
+      const id = encodeURIComponent(String(orderId || "").trim());
+      const data = await apiRequest(`/api/my/orders/${id}/cancel`, { method: "POST" });
+      return { ok: true, order: data.order || null };
+    } catch (error) {
+      return { ok: false, error: mapAuthError(error.message), code: String(error.message || ""), order: null };
+    }
+  }
+
+  async function refundMyOrder(orderId) {
+    try {
+      const id = encodeURIComponent(String(orderId || "").trim());
+      const data = await apiRequest(`/api/my/orders/${id}/refund`, { method: "POST" });
+      return { ok: true, order: data.order || null, refundId: data.refundId || null };
+    } catch (error) {
+      return {
+        ok: false,
+        error: mapAuthError(error.message),
+        code: String(error.message || ""),
+        order: null,
+        refundId: null
+      };
+    }
+  }
+
+  async function updateMyProfile({ name, birthDate, cpf, cep }) {
+    try {
+      const data = await apiRequest("/api/my/profile", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: String(name || "").trim(),
+          birthDate: String(birthDate || "").trim(),
+          cpf: String(cpf || "").replace(/\D/g, "").slice(0, 11),
+          cep: String(cep || "").replace(/\D/g, "").slice(0, 8)
+        })
+      });
+      setCachedUser(data.user || null);
+      return { ok: true, user: data.user || null };
+    } catch (error) {
+      return { ok: false, error: mapAuthError(error.message), code: String(error.message || "") };
+    }
+  }
+
+  async function fetchMyAddresses() {
+    try {
+      const data = await apiRequest("/api/my/addresses", { method: "GET" });
+      return {
+        ok: true,
+        defaultAddressId: String(data.defaultAddressId || ""),
+        addresses: Array.isArray(data.addresses) ? data.addresses : []
+      };
+    } catch (error) {
+      return {
+        ok: false,
+        error: mapAuthError(error.message),
+        code: String(error.message || ""),
+        defaultAddressId: "",
+        addresses: []
+      };
+    }
+  }
+
+  async function createMyAddress(payload) {
+    try {
+      const data = await apiRequest("/api/my/addresses", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload || {})
+      });
+      return {
+        ok: true,
+        defaultAddressId: String(data.defaultAddressId || ""),
+        addresses: Array.isArray(data.addresses) ? data.addresses : []
+      };
+    } catch (error) {
+      return {
+        ok: false,
+        error: mapAuthError(error.message),
+        code: String(error.message || ""),
+        defaultAddressId: "",
+        addresses: []
+      };
+    }
+  }
+
+  async function updateMyAddress(addressId, payload) {
+    try {
+      const id = encodeURIComponent(String(addressId || "").trim());
+      const data = await apiRequest(`/api/my/addresses/${id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload || {})
+      });
+      return {
+        ok: true,
+        defaultAddressId: String(data.defaultAddressId || ""),
+        addresses: Array.isArray(data.addresses) ? data.addresses : []
+      };
+    } catch (error) {
+      return {
+        ok: false,
+        error: mapAuthError(error.message),
+        code: String(error.message || ""),
+        defaultAddressId: "",
+        addresses: []
+      };
+    }
+  }
+
+  async function setMyAddressDefault(addressId) {
+    try {
+      const id = encodeURIComponent(String(addressId || "").trim());
+      const data = await apiRequest(`/api/my/addresses/${id}/default`, {
+        method: "POST"
+      });
+      return {
+        ok: true,
+        defaultAddressId: String(data.defaultAddressId || ""),
+        addresses: Array.isArray(data.addresses) ? data.addresses : []
+      };
+    } catch (error) {
+      return {
+        ok: false,
+        error: mapAuthError(error.message),
+        code: String(error.message || ""),
+        defaultAddressId: "",
+        addresses: []
+      };
+    }
+  }
+
+  async function deleteMyAddress(addressId) {
+    try {
+      const id = encodeURIComponent(String(addressId || "").trim());
+      const data = await apiRequest(`/api/my/addresses/${id}`, {
+        method: "DELETE"
+      });
+      return {
+        ok: true,
+        defaultAddressId: String(data.defaultAddressId || ""),
+        addresses: Array.isArray(data.addresses) ? data.addresses : []
+      };
+    } catch (error) {
+      return {
+        ok: false,
+        error: mapAuthError(error.message),
+        code: String(error.message || ""),
+        defaultAddressId: "",
+        addresses: []
+      };
+    }
+  }
+
+  function getCurrentUser() {
+    return currentUser;
+  }
+
   function getDisplayName() {
-    const currentUser = getCurrentUser();
-    if (!currentUser) return "Conta";
-    const firstName = String(currentUser.firstName || currentUser.name || "").trim().split(/\s+/)[0] || "Conta";
+    if (!currentUser) return "Entrar / Criar conta";
+    const firstName = String(currentUser.name || "").trim().split(/\s+/)[0] || "Cliente";
     return `Olá, ${firstName}`;
   }
 
+  function ensureAuthBoot() {
+    if (authReady) return;
+    const cached = getCachedUser();
+    if (cached) currentUser = cached;
+    authReady = true;
+    emitAuthChange();
+    fetchMe();
+  }
+
   window.TsebiUserStore = {
-    getUsers,
-    createUser,
+    ensureAuthBoot,
+    checkEmail,
+    register,
     login,
     logout,
+    fetchMe,
+    fetchMyOrders,
+    fetchMyOrder,
+    cancelMyOrder,
+    refundMyOrder,
+    updateMyProfile,
+    fetchMyAddresses,
+    createMyAddress,
+    updateMyAddress,
+    setMyAddressDefault,
+    deleteMyAddress,
     getCurrentUser,
-    updateCurrentUser,
     getDisplayName,
     getFavoriteIds,
     isFavorite,
     toggleFavorite
   };
+
+  ensureAuthBoot();
 })();

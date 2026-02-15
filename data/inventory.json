@@ -1,14 +1,86 @@
 [
-  { "id": "genesis-bomber", "name": "Jaqueta bomber em couro italiano com forro em seda", "unitAmount": 590000, "currency": "brl", "stock": 8 },
-  { "id": "genesis-tailored", "name": "Calça de alfaiataria em sarja premium estruturada", "unitAmount": 220000, "currency": "brl", "stock": 14 },
-  { "id": "origem-shirt", "name": "Camisa em algodão croata de trama nobre", "unitAmount": 160000, "currency": "brl", "stock": 10 },
-  { "id": "origem-skirt", "name": "Saia estruturada em lã fria de acabamento impecável", "unitAmount": 245000, "currency": "brl", "stock": 9 },
-  { "id": "atelier-bag", "name": "Bolsa em couro natural com ferragens banhadas", "unitAmount": 480000, "currency": "brl", "stock": 6 },
-  { "id": "atelier-heels", "name": "Scarpin em couro envernizado de salto esculpido", "unitAmount": 320000, "currency": "brl", "stock": 11 },
-  { "id": "flux-trench", "name": "Trench coat em gabardine com corte arquitetônico", "unitAmount": 395000, "currency": "brl", "stock": 7 },
-  { "id": "flux-knit", "name": "Malha em lã merino de toque ultrafino", "unitAmount": 198000, "currency": "brl", "stock": 12 },
-  { "id": "noir-dress", "name": "Vestido coluna em crepe de seda com caimento couture", "unitAmount": 420000, "currency": "brl", "stock": 5 },
-  { "id": "noir-sneaker", "name": "Tênis em nylon técnico e couro de acabamento premium", "unitAmount": 270000, "currency": "brl", "stock": 13 },
-  { "id": "essence-blazer", "name": "Blazer em linho premium com alfaiataria de precisão", "unitAmount": 335000, "currency": "brl", "stock": 8 },
-  { "id": "essence-trousers", "name": "Calça wide leg em linho premium com prega profunda", "unitAmount": 225000, "currency": "brl", "stock": 10 }
+  {
+    "id": "genesis-bomber",
+    "name": "Jaqueta bomber em couro italiano com forro em seda",
+    "unitAmount": 590000,
+    "currency": "brl",
+    "stock": 8
+  },
+  {
+    "id": "genesis-tailored",
+    "name": "Calça de alfaiataria em sarja premium estruturada",
+    "unitAmount": 220000,
+    "currency": "brl",
+    "stock": 14
+  },
+  {
+    "id": "origem-shirt",
+    "name": "Camisa em algodão croata de trama nobre",
+    "unitAmount": 160000,
+    "currency": "brl",
+    "stock": 9
+  },
+  {
+    "id": "origem-skirt",
+    "name": "Saia estruturada em lã fria de acabamento impecável",
+    "unitAmount": 245000,
+    "currency": "brl",
+    "stock": 9
+  },
+  {
+    "id": "atelier-bag",
+    "name": "Bolsa em couro natural com ferragens banhadas",
+    "unitAmount": 480000,
+    "currency": "brl",
+    "stock": 6
+  },
+  {
+    "id": "atelier-heels",
+    "name": "Scarpin em couro envernizado de salto esculpido",
+    "unitAmount": 320000,
+    "currency": "brl",
+    "stock": 11
+  },
+  {
+    "id": "flux-trench",
+    "name": "Trench coat em gabardine com corte arquitetônico",
+    "unitAmount": 395000,
+    "currency": "brl",
+    "stock": 7
+  },
+  {
+    "id": "flux-knit",
+    "name": "Malha em lã merino de toque ultrafino",
+    "unitAmount": 198000,
+    "currency": "brl",
+    "stock": 11
+  },
+  {
+    "id": "noir-dress",
+    "name": "Vestido coluna em crepe de seda com caimento couture",
+    "unitAmount": 420000,
+    "currency": "brl",
+    "stock": 5
+  },
+  {
+    "id": "noir-sneaker",
+    "name": "Tênis em nylon técnico e couro de acabamento premium",
+    "unitAmount": 270000,
+    "currency": "brl",
+    "stock": 13
+  },
+  {
+    "id": "essence-blazer",
+    "name": "Blazer em linho premium com alfaiataria de precisão",
+    "unitAmount": 335000,
+    "currency": "brl",
+    "stock": 8
+  },
+  {
+    "id": "essence-trousers",
+    "name": "Calça wide leg em linho premium com prega profunda",
+    "unitAmount": 225000,
+    "currency": "brl",
+    "stock": 10
+  }
 ]

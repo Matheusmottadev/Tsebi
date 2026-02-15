@@ -130,6 +130,17 @@
   font-size: 13px;
 }
 
+.checkout-auth-cta{
+  margin-top: 10px;
+  font-size: 12px !important;
+  color: #3b3a37 !important;
+}
+
+.checkout-auth-cta a{
+  color: #111;
+  text-decoration: underline;
+}
+
 .cart-items-v2{
   margin-top: 22px;
   border-top: 1px solid #efede7;
@@ -330,6 +341,17 @@
   padding: 0 10px;
   font-family: "Montserrat", sans-serif;
   font-size: 13px;
+}
+
+.checkout-field input.is-locked{
+  background: #f4f1ea;
+  color: #4f4b45;
+  cursor: not-allowed;
+}
+
+#payment-element{
+  padding: 10px;
+  min-height: 188px;
 }
 
 .field-error{

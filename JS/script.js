@@ -872,6 +872,7 @@ function initHeroVideoLoop() {
 
 function initCartEntryPoints() {
   const cartKey = "tsebi-cart-v1";
+  const legacyCartKeys = ["tsebi-cart", "cart"];
   const returnKey = "tsebi-last-shopping-url";
   const currentPath = window.location.pathname.toLowerCase();
   const isCartPage = currentPath.endsWith("/cart.html") || currentPath.endsWith("cart.html");
@@ -881,10 +882,44 @@ function initCartEntryPoints() {
   }
 
   function readCart() {
+    function normalize(items) {
+      if (!Array.isArray(items)) return [];
+      return items
+        .map((item) => {
+          if (!item || typeof item !== "object") return null;
+          const rawKey = String(item.key || "").trim();
+          const idFromKey = rawKey.includes("::") ? rawKey.split("::")[0] : rawKey;
+          const id = String(item.id || item.productId || idFromKey || "").trim();
+          if (!id) return null;
+          return {
+            id,
+            qty: Math.max(1, Number(item.qty || item.quantity || 1))
+          };
+        })
+        .filter(Boolean);
+    }
+
+    function parse(raw) {
+      if (!raw) return [];
+      try {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed)) return normalize(parsed);
+        if (parsed && Array.isArray(parsed.items)) return normalize(parsed.items);
+      } catch {}
+      return [];
+    }
+
     try {
-      const raw = localStorage.getItem(cartKey);
-      const parsed = raw ? JSON.parse(raw) : [];
-      return Array.isArray(parsed) ? parsed : [];
+      const current = parse(localStorage.getItem(cartKey));
+      if (current.length > 0) return current;
+      for (const key of legacyCartKeys) {
+        const legacy = parse(localStorage.getItem(key));
+        if (legacy.length > 0) {
+          localStorage.setItem(cartKey, JSON.stringify(legacy));
+          return legacy;
+        }
+      }
+      return [];
     } catch {
       return [];
     }
@@ -917,12 +952,21 @@ function initCartEntryPoints() {
 function initAccountEntryPoints() {
   const accountLinks = Array.from(document.querySelectorAll('a[aria-label="Conta"]'));
   if (!accountLinks.length) return;
-  const label = userStore?.getDisplayName?.() || "Conta";
-  accountLinks.forEach((link) => {
-    link.href = "conta.html";
-    if (link.classList.contains("quick-action")) return;
-    link.textContent = label;
-  });
+  const currentRelativeUrl = `${window.location.pathname}${window.location.search}${window.location.hash}`;
+  const loginUrl = `conta.html?returnUrl=${encodeURIComponent(currentRelativeUrl)}`;
+
+  function render() {
+    const user = userStore?.getCurrentUser?.() || null;
+    const label = userStore?.getDisplayName?.() || "Entrar / Criar conta";
+    accountLinks.forEach((link) => {
+      link.href = user ? "minha-conta.html" : loginUrl;
+      if (link.classList.contains("quick-action")) return;
+      link.textContent = label;
+    });
+  }
+
+  render();
+  window.addEventListener("tsebi:auth-changed", render);
 }
 
 function initNewsletterPopup() {

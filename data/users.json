@@ -1,0 +1,36 @@
+[
+  {
+    "id": "e6eed119-4d80-4903-bd55-6fb7b0c1186e",
+    "name": "Matheus Mota Xavier",
+    "email": "oimatheus64@gmail.com",
+    "passwordHash": "$2b$12$RAmnuokTeedFW53OdWQVA.UexyDIlv0TuHt2eLkB7k.aHzUbFXREa",
+    "createdAt": "2026-02-15T14:28:16.818Z",
+    "updatedAt": "2026-02-15T14:28:26.895Z"
+  },
+  {
+    "id": "485253d0-f18e-4dbd-8908-b0afbebcd5a2",
+    "name": "Matheus Mota Xavier",
+    "email": "needxx677@gmail.com",
+    "birthDate": "2004-05-10",
+    "cpf": "12345678990",
+    "cep": "05162100",
+    "addresses": [],
+    "defaultAddressId": "",
+    "passwordHash": "$2b$12$ssvpp9tu0UL8DmlYbhrAge3RJ/6Q29qVlYXFs/.UFx.yIiiuz9zBG",
+    "createdAt": "2026-02-15T15:29:27.027Z",
+    "updatedAt": "2026-02-15T15:32:37.018Z"
+  },
+  {
+    "id": "eb47e750-3d7c-4430-9ce1-cdd6d8c3c9b0",
+    "name": "Sabrina Erika Duarte",
+    "email": "binaeduarte10@gmail.com",
+    "birthDate": "2004-11-10",
+    "cpf": "50781660840",
+    "cep": "05162100",
+    "addresses": [],
+    "defaultAddressId": "",
+    "passwordHash": "$2b$12$LY8hJVWU7a9X8UQMi7Kkf.d0jaOn6b93MuW5bvSZCakFhjzEl7A3y",
+    "createdAt": "2026-02-15T16:25:46.947Z",
+    "updatedAt": "2026-02-15T16:25:46.947Z"
+  }
+]

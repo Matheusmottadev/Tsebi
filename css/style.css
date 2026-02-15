@@ -20,6 +20,10 @@ body {
   overflow-x: hidden;
 }
 
+[hidden] {
+  display: none !important;
+}
+
 /* ===== TOP BAR ===== */
 
 .top-bar {

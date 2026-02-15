@@ -1,4 +1,4 @@
-const POLL_INTERVAL_MS = 3000;
+﻿const POLL_INTERVAL_MS = 3000;
 const MAX_POLL_DURATION_MS = 2 * 60 * 1000;
 const cartKey = "tsebi-cart-v1";
 
@@ -94,7 +94,9 @@ function clearCart() {
 function normalizeStatus(status) {
   const value = String(status || "").toLowerCase();
   if (value === "paid") return "paid";
-  if (value === "failed" || value === "canceled") return "failed";
+  if (value === "canceled") return "canceled";
+  if (value === "refunded") return "refunded";
+  if (value === "failed") return "failed";
   return "processing";
 }
 
@@ -104,8 +106,7 @@ function renderPaid(order) {
   if (kickerEl) kickerEl.textContent = "Pedido confirmado";
   if (titleEl) titleEl.textContent = "Pagamento confirmado";
   if (messageEl) {
-    messageEl.textContent =
-      "Recebemos seu pagamento com sucesso. Seu pedido já está em preparação.";
+    messageEl.textContent = "Recebemos seu pagamento com sucesso. Seu pedido já está em preparação.";
   }
   renderSummary(order);
   setActionsVisibility({
@@ -122,8 +123,9 @@ function renderProcessing(order, didTimeout) {
   if (kickerEl) kickerEl.textContent = "Pedido em análise";
   if (titleEl) titleEl.textContent = "Pagamento em processamento";
   if (messageEl) {
-    messageEl.textContent =
-      "Seu pagamento foi iniciado e pode levar alguns minutos para confirmação automática.";
+    messageEl.textContent = didTimeout
+      ? "Ainda não recebemos a confirmação final. Você pode atualizar o status ou falar com o suporte."
+      : "Seu pagamento foi iniciado e pode levar alguns minutos para confirmação automática.";
   }
   renderSummary(order);
   setActionsVisibility({
@@ -155,6 +157,42 @@ function renderFailed(order) {
   });
 }
 
+function renderCanceled(order) {
+  clearPolling();
+  if (kickerEl) kickerEl.textContent = "Pedido cancelado";
+  if (titleEl) titleEl.textContent = "Compra cancelada";
+  if (messageEl) {
+    messageEl.textContent = "Seu pagamento foi cancelado. Se quiser, voce pode reiniciar a compra.";
+  }
+  renderSummary(order);
+  setActionsVisibility({
+    showRefresh: false,
+    showOrders: false,
+    showStore: true,
+    showRetry: true,
+    showWhatsapp: false,
+    showSupportHint: false
+  });
+}
+
+function renderRefunded(order) {
+  clearPolling();
+  if (kickerEl) kickerEl.textContent = "Pedido reembolsado";
+  if (titleEl) titleEl.textContent = "Pagamento reembolsado";
+  if (messageEl) {
+    messageEl.textContent = "Este pedido foi reembolsado. O estorno segue o prazo do emissor.";
+  }
+  renderSummary(order);
+  setActionsVisibility({
+    showRefresh: false,
+    showOrders: true,
+    showStore: true,
+    showRetry: false,
+    showWhatsapp: false,
+    showSupportHint: false
+  });
+}
+
 function renderFatal(message) {
   clearPolling();
   if (kickerEl) kickerEl.textContent = "Pedido";
@@ -180,7 +218,9 @@ async function fetchOrder(orderId) {
   });
   const data = await response.json().catch(() => ({}));
   if (!response.ok) {
-    throw new Error(data.error || "Falha ao buscar pedido.");
+    const error = new Error(data.error || "Falha ao buscar pedido.");
+    error.status = response.status;
+    throw error;
   }
   return data;
 }
@@ -204,6 +244,16 @@ async function refreshOrderStatus({ keepLoader = false } = {}) {
       return;
     }
 
+    if (normalizedStatus === "canceled") {
+      renderCanceled(order);
+      return;
+    }
+
+    if (normalizedStatus === "refunded") {
+      renderRefunded(order);
+      return;
+    }
+
     const elapsed = Date.now() - pollStartedAt;
     const timedOut = elapsed >= MAX_POLL_DURATION_MS;
     renderProcessing(order, timedOut);
@@ -216,6 +266,11 @@ async function refreshOrderStatus({ keepLoader = false } = {}) {
       }, POLL_INTERVAL_MS);
     }
   } catch (error) {
+    if (error.status === 401) {
+      const returnUrl = `${window.location.pathname}${window.location.search}${window.location.hash}`;
+      window.location.href = `conta.html?returnUrl=${encodeURIComponent(returnUrl)}`;
+      return;
+    }
     showContent();
     renderFatal(error.message);
   }
