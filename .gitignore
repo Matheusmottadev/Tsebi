@@ -1,0 +1,12 @@
+# Dependências
+node_modules/
+
+# Variáveis de ambiente (Stripe)
+.env
+
+# Dados locais
+orders.json
+inventory.json
+
+# Logs
+*.log
