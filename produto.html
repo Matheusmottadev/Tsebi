@@ -1,0 +1,205 @@
+﻿<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Produto | Tsebi Brasil</title>
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-4GHX4VL6DZ"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    gtag('consent', 'default', {
+      analytics_storage: 'denied',
+      ad_storage: 'denied',
+      ad_user_data: 'denied',
+      ad_personalization: 'denied',
+      functionality_storage: 'denied',
+      security_storage: 'granted'
+    });
+    gtag('config', 'G-4GHX4VL6DZ', {
+      anonymize_ip: true
+    });
+  </script>  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600&family=Montserrat:wght@300;400;500;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+  <header class="cart-simple-header">
+    <a class="cart-simple-logo" href="index.html">TSEBI</a>
+    <div class="cart-simple-actions">
+      <a href="conta.html" aria-label="Conta">Conta</a>
+      <a href="cart.html" aria-label="Carrinho">Carrinho</a>
+    </div>
+  </header>
+
+  <main class="product-page" id="productPage">
+    <a class="product-back" href="index.html">&larr; Voltar para a loja</a>
+
+    <section class="product-view" id="productView" hidden>
+      <div class="product-media">
+        <div class="product-media-track-wrap">
+          <div class="product-media-track" id="productMediaTrack"></div>
+          <div class="product-media-dots" id="productMediaDots" aria-label="Navegação de fotos"></div>
+        </div>
+      </div>
+
+      <div class="product-info">
+        <p class="product-collection" id="productCollection"></p>
+        <h1 class="product-name" id="productName"></h1>
+        <p class="product-price" id="productPrice"></p>
+        <p class="product-desc" id="productDescription"></p>
+
+        <div class="product-variant-block">
+          <p class="product-variant-label">Cor <span id="productSelectedColorText"></span></p>
+          <div class="product-variant-options" id="productColorOptions"></div>
+        </div>
+
+        <div class="product-variant-block">
+          <p class="product-variant-label">Tamanho</p>
+          <div class="product-size-row">
+            <select id="productSizeSelect" class="product-size-select" aria-label="Selecionar tamanho"></select>
+            <button type="button" class="product-size-guide">Tabela de tamanhos</button>
+          </div>
+        </div>
+
+        <a class="product-fit-link" href="#">Encontre o seu tamanho</a>
+
+        <p class="product-stock-note" id="productStockNote"></p>
+
+        <button class="product-cta" type="button">Adicionar ao carrinho</button>
+
+        <div class="product-info-links">
+          <a href="#" id="openProductDetailsPopup">Detalhes do produto</a>
+          <a href="#">Frete e devolução grátis</a>
+        </div>
+      </div>
+    </section>
+
+    <section class="product-similar" id="productSimilar" hidden>
+      <div class="product-similar-head">
+        <h2>Você vai gostar também!</h2>
+      </div>
+      <div class="product-similar-grid" id="productSimilarGrid"></div>
+    </section>
+
+    <section class="product-not-found" id="productNotFound" hidden>
+      <h1>Produto não encontrado</h1>
+      <p>Esse item pode não estar mais disponível no catálogo atual.</p>
+      <a href="index.html">Voltar para a página inicial</a>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="footer-grid">
+      <section class="footer-newsletter">
+        <h3>ASSINE NOSSA NEWSLETTER</h3>
+        <form class="newsletter-form" action="#" method="post">
+          <label for="newsletterEmailProduto">Insira seu e-mail *</label>
+          <div class="newsletter-input-row">
+            <input id="newsletterEmailProduto" name="email" type="email" required />
+            <button type="submit" aria-label="Assinar newsletter">&rarr;</button>
+          </div>
+        </form>
+        <p class="newsletter-legal">
+          Ao clicar em "Assinar", você confirma que leu e entendeu nossa
+          <a href="politica-privacidade.html">Política de Privacidade</a> e que deseja receber a newsletter e outras
+          comunicações de marketing, conforme nela estabelecido.
+        </p>
+      </section>
+
+      <section class="footer-column">
+        <h3>PRECISA DE AJUDA?</h3>
+        <a href="#">Fale conosco pelo telefone (11) 93461-8004</a>
+        <a href="#">Fale conosco pelo WhatsApp</a>
+        <a href="#">Contatos</a>
+        <a href="#">FAQ</a>
+      </section>
+
+      <section class="footer-column">
+        <h3>SERVIÇOS EXCLUSIVOS</h3>
+        <a href="#">Serviços Tsebi</a>
+        <a href="#">Acompanhe seu pedido</a>
+        <a href="#">Devoluções</a>
+      </section>
+
+      <section class="footer-column">
+        <h3>EMPRESA</h3>
+        <a href="nossa-historia.html">A Tsebi</a>
+        <a href="processos.html">Processos</a>
+        <a href="#">Sustentabilidade</a>
+      </section>
+
+      <section class="footer-column">
+        <h3>TERMOS E CONDIÇÕES LEGAIS</h3>
+        <a href="aviso-legal.html">Aviso legal</a>
+        <a href="politica-privacidade.html">Política de Privacidade</a>
+        <a href="cookie-policy.html">Política de cookies</a>
+        <a href="#">Configurações de cookies</a>
+      </section>
+    </div>
+  </footer>
+
+  <div class="cart-popup" id="cartPopup" aria-hidden="true">
+    <div class="cart-popup-backdrop" id="cartPopupBackdrop"></div>
+    <aside class="cart-popup-panel" role="dialog" aria-modal="true" aria-labelledby="cartPopupTitle">
+      <div class="cart-popup-head">
+        <h2 id="cartPopupTitle">Sua seleção (<span id="cartPopupCount">0</span>)</h2>
+        <button class="cart-popup-close" id="closeCartPopup" type="button" aria-label="Fechar">&times;</button>
+      </div>
+
+      <div class="cart-popup-body" id="cartPopupItems"></div>
+
+      <div class="cart-popup-footer">
+        <div class="cart-popup-subtotal">
+          <span>Subtotal</span>
+          <strong id="cartPopupSubtotal">R$ 0,00</strong>
+        </div>
+        <a class="cart-popup-btn cart-popup-btn-light" href="cart.html">Ir para o carrinho</a>
+        <a class="cart-popup-btn cart-popup-btn-dark" href="cart.html">Prosseguir para o pagamento</a>
+      </div>
+    </aside>
+  </div>
+
+  <div class="product-details-popup" id="productDetailsPopup" aria-hidden="true">
+    <div class="product-details-popup-backdrop" id="productDetailsPopupBackdrop"></div>
+    <aside class="product-details-popup-panel" role="dialog" aria-modal="true" aria-labelledby="productDetailsTitle">
+      <button class="product-details-popup-close" id="closeProductDetailsPopup" type="button" aria-label="Fechar">&times;</button>
+      <p class="product-details-popup-kicker">Detalhes do produto</p>
+      <h2 class="product-details-popup-title" id="productDetailsTitle"></h2>
+      <div class="product-details-popup-content">
+        <section>
+          <h3>Origem</h3>
+          <p id="productDetailsOrigin"></p>
+        </section>
+        <section>
+          <h3>Composição</h3>
+          <p id="productDetailsComposition"></p>
+        </section>
+        <section>
+          <h3>Acabamento e construção</h3>
+          <p id="productDetailsConstruction"></p>
+        </section>
+        <section>
+          <h3>Cuidados</h3>
+          <p id="productDetailsCare"></p>
+        </section>
+      </div>
+    </aside>
+  </div>
+
+  <script src="JS/user-utils.js"></script>
+  <script src="JS/produto.js"></script>
+  <script src="JS/cookies.js"></script>
+  <script src="JS/language-switcher.js"></script>
+</body>
+</html>
+
+
+
+
+
+
+
+

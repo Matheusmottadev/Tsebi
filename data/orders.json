@@ -1,0 +1,44 @@
+[
+  {
+    "id": "5c53a0d4-123b-436c-bc1e-5d02dd3adee1",
+    "status": "pending_payment",
+    "stockCommitted": false,
+    "createdAt": "2026-02-15T02:39:12.723Z",
+    "updatedAt": "2026-02-15T02:39:14.548Z",
+    "paymentMethod": "card",
+    "installments": 1,
+    "currency": "brl",
+    "amount": 1180000,
+    "items": [
+      {
+        "id": "genesis-bomber",
+        "name": "Jaqueta bomber em couro italiano com forro em seda",
+        "qty": 2,
+        "unitAmount": 590000,
+        "currency": "brl"
+      }
+    ],
+    "stripePaymentIntentId": "pi_3T0vEpAWghZnoVUr1IQQPWEr"
+  },
+  {
+    "id": "cf235343-5542-454b-abe1-f5668623560a",
+    "status": "pending_payment",
+    "stockCommitted": false,
+    "createdAt": "2026-02-15T02:39:52.050Z",
+    "updatedAt": "2026-02-15T02:39:52.406Z",
+    "paymentMethod": "card",
+    "installments": 1,
+    "currency": "brl",
+    "amount": 590000,
+    "items": [
+      {
+        "id": "genesis-bomber",
+        "name": "Jaqueta bomber em couro italiano com forro em seda",
+        "qty": 1,
+        "unitAmount": 590000,
+        "currency": "brl"
+      }
+    ],
+    "stripePaymentIntentId": "pi_3T0vFRAWghZnoVUr2GhkjN5S"
+  }
+]
