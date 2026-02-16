@@ -139,7 +139,7 @@
       width: 100vw;
       margin-left: calc(50% - 50vw);
       margin-right: calc(50% - 50vw);
-      background: #0d0d0d;
+      background: transparent;
     }
 
     .launch-video {
@@ -154,6 +154,14 @@
     .launch-video-block.is-full-bleed .launch-video {
       object-fit: cover;
       background: transparent;
+    }
+
+    @media (max-width: 980px) {
+      .launch-video {
+        height: min(74vh, 560px);
+        object-fit: cover;
+        background: transparent;
+      }
     }
 
     .reveal {
@@ -853,11 +861,22 @@
       const launchVideos = Array.from(document.querySelectorAll(".launch-video"));
 
       function setupLaunchVideos() {
+        const safePlayAll = () => {
+          launchVideos.forEach((video) => {
+            const promise = video.play();
+            if (promise && typeof promise.catch === "function") {
+              promise.catch(() => {});
+            }
+          });
+        };
+
         launchVideos.forEach((video) => {
           if (!video) return;
           video.muted = true;
+          video.defaultMuted = true;
           video.autoplay = true;
           video.loop = true;
+          video.playsInline = true;
           video.setAttribute("muted", "");
           video.setAttribute("playsinline", "");
           video.setAttribute("webkit-playsinline", "");
@@ -900,6 +919,7 @@
           }
 
           video.addEventListener("loadedmetadata", safePlay, { once: true });
+          video.addEventListener("loadeddata", safePlay, { once: true });
           video.addEventListener("canplay", safePlay, { once: true });
           video.addEventListener("ended", () => {
             video.currentTime = 0;
@@ -922,14 +942,27 @@
           safePlay();
         });
 
+        // iOS browsers may require a user gesture before autoplay starts reliably.
+        const primeOnGesture = () => {
+          safePlayAll();
+          window.removeEventListener("touchstart", primeOnGesture, true);
+          window.removeEventListener("click", primeOnGesture, true);
+          window.removeEventListener("scroll", primeOnGesture, true);
+        };
+        window.addEventListener("touchstart", primeOnGesture, { capture: true, passive: true });
+        window.addEventListener("click", primeOnGesture, { capture: true, passive: true });
+        window.addEventListener("scroll", primeOnGesture, { capture: true, passive: true });
+
+        // Retry autoplay for a short window while the page initializes on mobile.
+        const retryTimer = window.setInterval(() => {
+          if (document.hidden) return;
+          safePlayAll();
+        }, 1500);
+        window.setTimeout(() => window.clearInterval(retryTimer), 12000);
+
         document.addEventListener("visibilitychange", () => {
           if (document.hidden) return;
-          launchVideos.forEach((video) => {
-            const promise = video.play();
-            if (promise && typeof promise.catch === "function") {
-              promise.catch(() => {});
-            }
-          });
+          safePlayAll();
         });
       }
 
