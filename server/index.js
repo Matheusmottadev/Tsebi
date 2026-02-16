@@ -16,6 +16,7 @@ const {
   updateOrder,
   findOrderById
 } = require("./lib/order-repository");
+const { listProducts, getProductByIdentifier } = require("./lib/product-repository");
 const { checkAvailability, commitStock } = require("./lib/inventory-repository");
 const { withTransaction } = require("./lib/db");
 
@@ -444,6 +445,27 @@ app.use(
 );
 app.use("/api/auth", authRouter);
 app.use("/api/my", myRouter);
+
+app.get("/api/products", async (req, res) => {
+  try {
+    const products = await listProducts();
+    return res.json(products);
+  } catch {
+    return res.status(500).json({ error: "Failed to load products." });
+  }
+});
+
+app.get("/api/products/:id", async (req, res) => {
+  try {
+    const product = await getProductByIdentifier(req.params.id);
+    if (!product || product.active === false) {
+      return res.status(404).json({ error: "PRODUCT_NOT_FOUND" });
+    }
+    return res.json(product);
+  } catch {
+    return res.status(500).json({ error: "Failed to load product." });
+  }
+});
 
 app.get("/api/config", (req, res) => {
   res.json({

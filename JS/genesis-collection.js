@@ -3,7 +3,7 @@
   // 1) Adicione/remova itens no array `genesisItems`.
   // 2) Para nova categoria, basta usar uma nova `categoryKey`.
   // 3) Mantenha `href` apontando para produto.html?id=...
-  const genesisItems = [
+  const fallbackGenesisItems = [
     {
       id: "genesis-bomber",
       categoryKey: "jackets",
@@ -78,6 +78,49 @@
     }
   ];
 
+  function normalizeText(value) {
+    return String(value || "")
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .toLowerCase()
+      .trim();
+  }
+
+  async function loadProducts() {
+    try {
+      const response = await fetch("/api/products");
+      if (!response.ok) return [];
+      const parsed = await response.json();
+      if (Array.isArray(parsed)) return parsed;
+      if (parsed && Array.isArray(parsed.products)) return parsed.products;
+    } catch {}
+
+    return [];
+  }
+
+  function toCategoryKey(category) {
+    const normalized = normalizeText(category);
+    if (normalized.includes("jaquet")) return "jackets";
+    if (normalized.includes("calc") || normalized.includes("trouser")) return "trousers";
+    if (normalized.includes("calcad") || normalized.includes("footwear")) return "footwear";
+    if (normalized.includes("malha") || normalized.includes("knit")) return "knitwear";
+    if (normalized.includes("vestid") || normalized.includes("dress")) return "dresses";
+    return "collection";
+  }
+
+  function toCategoryLabel(category, key) {
+    const normalized = normalizeText(category);
+    if (key === "jackets") return { pt: "Jaquetas", en: "Jackets" };
+    if (key === "trousers") return { pt: "Calças", en: "Trousers" };
+    if (key === "footwear") return { pt: "Calçados", en: "Footwear" };
+    if (key === "knitwear") return { pt: "Malhas", en: "Knitwear" };
+    if (key === "dresses") return { pt: "Vestidos", en: "Dresses" };
+    if (normalized) return { pt: category, en: category };
+    return { pt: "Coleção", en: "Collection" };
+  }
+
+  let genesisItems = [...fallbackGenesisItems];
+
   const grid = document.getElementById("genesisGrid");
   const filters = document.getElementById("genesisCategoryFilters");
   if (!grid || !filters) return;
@@ -86,15 +129,19 @@
   const allLabel = lang === "en" ? "All categories" : "Todas as categorias";
   const emptyLabel = lang === "en" ? "No items found in this category." : "Nenhuma peça encontrada nessa categoria.";
 
-  const categories = [];
-  genesisItems.forEach((item) => {
-    if (!categories.some((category) => category.key === item.categoryKey)) {
-      categories.push({
-        key: item.categoryKey,
-        label: item.categoryLabel[lang] || item.categoryLabel.pt
-      });
-    }
-  });
+  let categories = [];
+
+  function refreshCategories() {
+    categories = [];
+    genesisItems.forEach((item) => {
+      if (!categories.some((category) => category.key === item.categoryKey)) {
+        categories.push({
+          key: item.categoryKey,
+          label: item.categoryLabel[lang] || item.categoryLabel.pt
+        });
+      }
+    });
+  }
 
   let activeCategory = "all";
 
@@ -194,6 +241,41 @@
     render();
   });
 
-  renderFilters();
-  render();
+  async function initialize() {
+    const apiProducts = await loadProducts();
+    if (apiProducts.length > 0) {
+      const mapped = apiProducts
+        .filter((item) => normalizeText(item?.collection).includes("genesis"))
+        .map((item) => {
+          const categoryKey = toCategoryKey(item.category);
+          return {
+            id: String(item.id || item.sku || "").trim(),
+            categoryKey,
+            categoryLabel: toCategoryLabel(item.category, categoryKey),
+            name: {
+              pt: String(item.name || ""),
+              en: String(item.nameEn || item.name || "")
+            },
+            priceLabel: String(item.priceLabel || ""),
+            image: String(item.image || "images/produtos/sug1.jpeg"),
+            href: String(item.href || `produto.html?id=${encodeURIComponent(String(item.id || "").trim())}`)
+          };
+        })
+        .filter((item) => item.id);
+
+      if (mapped.length > 0) {
+        genesisItems = mapped;
+      }
+    }
+
+    refreshCategories();
+    renderFilters();
+    render();
+  }
+
+  initialize().catch(() => {
+    refreshCategories();
+    renderFilters();
+    render();
+  });
 })();

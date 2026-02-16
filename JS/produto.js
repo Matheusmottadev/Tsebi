@@ -1,17 +1,31 @@
-﻿const productsCatalog = [
-  { id: "genesis-bomber", name: "Jaqueta bomber em couro italiano com forro em seda", collection: "Gênesis", material: "Couro e lã", sizes: ["P", "M", "G"], colors: ["Vermelho", "Areia"], priceLabel: "R$ 5.900", image: "images/produtos/sug1.jpeg" },
-  { id: "genesis-tailored", name: "Calça de alfaiataria em sarja premium estruturada", collection: "Gênesis", material: "Sarja premium", sizes: ["36", "38", "40", "42"], colors: ["Grafite", "Preto"], priceLabel: "R$ 2.200", image: "images/produtos/sug4.jpeg" },
-  { id: "origem-shirt", name: "Camisa em algodão croata de trama nobre", collection: "Alicerce", material: "Algodão egípcio", sizes: ["P", "M", "G", "GG"], colors: ["Branco", "Azul"], priceLabel: "R$ 1.600", image: "images/produtos/sug3.jpeg" },
-  { id: "origem-skirt", name: "Saia estruturada em lã fria de acabamento impecável", collection: "Alicerce", material: "Lã fria", sizes: ["36", "38", "40"], colors: ["Preto", "Marfim"], priceLabel: "R$ 2.450", image: "images/produtos/sug2.jpeg" },
-  { id: "atelier-bag", name: "Bolsa em couro natural com ferragens banhadas", collection: "Alicerce", material: "Couro natural", sizes: ["Único"], colors: ["Caramelo", "Preto"], priceLabel: "R$ 4.800", image: "images/produtos/sug1.jpeg" },
-  { id: "atelier-heels", name: "Scarpin em couro envernizado de salto esculpido", collection: "Gênesis", material: "Couro envernizado", sizes: ["35", "36", "37", "38", "39"], colors: ["Preto", "Vinho"], priceLabel: "R$ 3.200", image: "images/produtos/sug2.jpeg" },
-  { id: "flux-trench", name: "Trench coat em gabardine com corte arquitetônico", collection: "Alicerce", material: "Gabardine", sizes: ["P", "M", "G"], colors: ["Areia", "Oliva"], priceLabel: "R$ 3.950", image: "images/produtos/sug3.jpeg" },
-  { id: "flux-knit", name: "Malha em lã merino de toque ultrafino", collection: "Gênesis", material: "Lã merino", sizes: ["P", "M", "G", "GG"], colors: ["Off white", "Cinza"], priceLabel: "R$ 1.980", image: "images/produtos/sug4.jpeg" },
-  { id: "noir-dress", name: "Vestido coluna em crepe de seda com caimento couture", collection: "Gênesis", material: "Crepe de seda", sizes: ["36", "38", "40", "42"], colors: ["Preto"], priceLabel: "R$ 4.200", image: "images/produtos/sug2.jpeg" },
-  { id: "noir-sneaker", name: "Tênis em nylon técnico e couro de acabamento premium", collection: "Alicerce", material: "Nylon técnico", sizes: ["37", "38", "39", "40", "41", "42"], colors: ["Preto", "Branco"], priceLabel: "R$ 2.700", image: "images/produtos/sug1.jpeg" },
-  { id: "essence-blazer", name: "Blazer em linho premium com alfaiataria de precisão", collection: "Alicerce", material: "Linho premium", sizes: ["P", "M", "G"], colors: ["Marfim", "Bege"], priceLabel: "R$ 3.350", image: "images/produtos/sug4.jpeg" },
-  { id: "essence-trousers", name: "Calça wide leg em linho premium com prega profunda", collection: "Gênesis", material: "Linho premium", sizes: ["36", "38", "40", "42", "44"], colors: ["Marfim", "Areia"], priceLabel: "R$ 2.250", image: "images/produtos/sug3.jpeg" }
-];
+let productsCatalog = [];
+
+async function loadProductsCatalog() {
+  try {
+    const response = await fetch("/api/products");
+    if (!response.ok) return [];
+    const parsed = await response.json();
+    if (Array.isArray(parsed)) return parsed;
+    if (parsed && Array.isArray(parsed.products)) return parsed.products;
+  } catch {}
+
+  return [];
+}
+
+async function loadProductById(id) {
+  const normalizedId = String(id || "").trim();
+  if (!normalizedId) return null;
+
+  try {
+    const response = await fetch(`/api/products/${encodeURIComponent(normalizedId)}`);
+    if (response.status === 404) return null;
+    if (!response.ok) return null;
+    const parsed = await response.json();
+    if (parsed && typeof parsed === "object") return parsed;
+  } catch {}
+
+  return null;
+}
 
 const galleryPool = [
   "images/produtos/sug1.jpeg",
@@ -284,10 +298,17 @@ if (productBack) {
   });
 }
 
-const product = productsCatalog.find((item) => item.id === productId);
 syncProductHeaderCartLink();
 initProductCartLinksReturnTo();
 initProductAccountEntry();
+
+initProductPage();
+
+async function initProductPage() {
+  productsCatalog = await loadProductsCatalog();
+  if (!Array.isArray(productsCatalog)) productsCatalog = [];
+
+  const product = (await loadProductById(productId)) || productsCatalog.find((item) => item.id === productId);
 
 if (!product) {
   if (productNotFound) productNotFound.hidden = false;
@@ -732,4 +753,5 @@ if (!product) {
   });
 
   if (productView) productView.hidden = false;
+}
 }

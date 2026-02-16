@@ -230,22 +230,19 @@ function formatCurrency(value) {
 }
 
 function sanitizeDisplayText(value) {
-  const text = String(value || "");
-  const map = {
-    "Ã§": "ç",
-    "Ã£": "ã",
-    "Ã¡": "á",
-    "Ã©": "é",
-    "Ãª": "ê",
-    "Ã­": "í",
-    "Ã³": "ó",
-    "Ã´": "ô",
-    "Ãº": "ú",
-    "Ã‰": "É",
-    "Ã‡": "Ç",
-    "Ã ": "à"
-  };
-  return Object.entries(map).reduce((acc, [from, to]) => acc.split(from).join(to), text);
+  let text = String(value || "");
+  const mojibakePattern = /\u00C3[\u0080-\u00BF]|\u00C2[\u0080-\u00BF]/u;
+  for (let i = 0; i < 2; i += 1) {
+    if (!mojibakePattern.test(text)) break;
+    try {
+      const decoded = decodeURIComponent(escape(text));
+      if (decoded === text) break;
+      text = decoded;
+    } catch {
+      break;
+    }
+  }
+  return text;
 }
 
 function setButtonDisabled(button, disabled) {

@@ -179,20 +179,36 @@ function ensureSearchTopPieces(searchOverlay) {
 
   attachFavoriteHandlers(grid);
 }
-const productsCatalog = [
-  { id: "genesis-bomber", name: "Jaqueta bomber em couro italiano com forro em seda", collection: "Gênesis", category: "Jaquetas", material: "Couro e lã", sizes: ["P", "M", "G"], colors: ["Vermelho", "Areia"], gender: "Unissex", priceLabel: "R$ 5.900", priceValue: 5900, image: "images/produtos/sug1.jpeg", href: "produto.html?id=genesis-bomber" },
-  { id: "genesis-tailored", name: "Calça de alfaiataria em sarja premium estruturada", collection: "Gênesis", category: "Calças", material: "Sarja premium", sizes: ["36", "38", "40", "42"], colors: ["Grafite", "Preto"], gender: "Feminino", priceLabel: "R$ 2.200", priceValue: 2200, image: "images/produtos/sug4.jpeg", href: "produto.html?id=genesis-tailored" },
-  { id: "origem-shirt", name: "Camisa em algodão croata de trama nobre", collection: "Alicerce", category: "Camisas", material: "Algodão egípcio", sizes: ["P", "M", "G", "GG"], colors: ["Branco", "Azul"], gender: "Masculino", priceLabel: "R$ 1.600", priceValue: 1600, image: "images/produtos/sug3.jpeg", href: "produto.html?id=origem-shirt" },
-  { id: "origem-skirt", name: "Saia estruturada em lã fria de acabamento impecável", collection: "Alicerce", category: "Saias", material: "Lã fria", sizes: ["36", "38", "40"], colors: ["Preto", "Marfim"], gender: "Feminino", priceLabel: "R$ 2.450", priceValue: 2450, image: "images/produtos/sug2.jpeg", href: "produto.html?id=origem-skirt" },
-  { id: "atelier-bag", name: "Bolsa em couro natural com ferragens banhadas", collection: "Alicerce", category: "Bolsas", material: "Couro natural", sizes: ["Único"], colors: ["Caramelo", "Preto"], gender: "Unissex", priceLabel: "R$ 4.800", priceValue: 4800, image: "images/produtos/sug1.jpeg", href: "produto.html?id=atelier-bag" },
-  { id: "atelier-heels", name: "Scarpin em couro envernizado de salto esculpido", collection: "Gênesis", category: "Calçados", material: "Couro envernizado", sizes: ["35", "36", "37", "38", "39"], colors: ["Preto", "Vinho"], gender: "Feminino", priceLabel: "R$ 3.200", priceValue: 3200, image: "images/produtos/sug2.jpeg", href: "produto.html?id=atelier-heels" },
-  { id: "flux-trench", name: "Trench coat em gabardine com corte arquitetônico", collection: "Alicerce", category: "Casacos", material: "Gabardine", sizes: ["P", "M", "G"], colors: ["Areia", "Oliva"], gender: "Unissex", priceLabel: "R$ 3.950", priceValue: 3950, image: "images/produtos/sug3.jpeg", href: "produto.html?id=flux-trench" },
-  { id: "flux-knit", name: "Malha em lã merino de toque ultrafino", collection: "Gênesis", category: "Malhas", material: "Lã merino", sizes: ["P", "M", "G", "GG"], colors: ["Off white", "Cinza"], gender: "Masculino", priceLabel: "R$ 1.980", priceValue: 1980, image: "images/produtos/sug4.jpeg", href: "produto.html?id=flux-knit" },
-  { id: "noir-dress", name: "Vestido coluna em crepe de seda com caimento couture", collection: "Gênesis", category: "Vestidos", material: "Crepe de seda", sizes: ["36", "38", "40", "42"], colors: ["Preto"], gender: "Feminino", priceLabel: "R$ 4.200", priceValue: 4200, image: "images/produtos/sug2.jpeg", href: "produto.html?id=noir-dress" },
-  { id: "noir-sneaker", name: "Tênis em nylon técnico e couro de acabamento premium", collection: "Alicerce", category: "Calçados", material: "Nylon técnico", sizes: ["37", "38", "39", "40", "41", "42"], colors: ["Preto", "Branco"], gender: "Unissex", priceLabel: "R$ 2.700", priceValue: 2700, image: "images/produtos/sug1.jpeg", href: "produto.html?id=noir-sneaker" },
-  { id: "essence-blazer", name: "Blazer em linho premium com alfaiataria de precisão", collection: "Alicerce", category: "Blazers", material: "Linho premium", sizes: ["P", "M", "G"], colors: ["Marfim", "Bege"], gender: "Feminino", priceLabel: "R$ 3.350", priceValue: 3350, image: "images/produtos/sug4.jpeg", href: "produto.html?id=essence-blazer" },
-  { id: "essence-trousers", name: "Calça wide leg em linho premium com prega profunda", collection: "Gênesis", category: "Calças", material: "Linho premium", sizes: ["36", "38", "40", "42", "44"], colors: ["Marfim", "Areia"], gender: "Feminino", priceLabel: "R$ 2.250", priceValue: 2250, image: "images/produtos/sug3.jpeg", href: "produto.html?id=essence-trousers" }
-];
+let productsCatalog = [];
+
+async function loadProductsCatalog() {
+  try {
+    const response = await fetch("/api/products");
+    if (!response.ok) return [];
+    const parsed = await response.json();
+    if (Array.isArray(parsed)) return parsed;
+    if (parsed && Array.isArray(parsed.products)) return parsed.products;
+  } catch {}
+
+  return [];
+}
+
+async function bootstrap() {
+  productsCatalog = await loadProductsCatalog();
+  if (!Array.isArray(productsCatalog)) productsCatalog = [];
+
+  initTopBar();
+  initSearchOverlay();
+  initCategorySwitch();
+  initHomeHeaderScrollState();
+  initHeaderMenu();
+  initHeroVideoLoop();
+  initCartEntryPoints();
+  initAccountEntryPoints();
+  initNewsletterPopup();
+}
+
+bootstrap();
 
 function normalizeSearchText(value) {
   return String(value || "")
@@ -1033,12 +1049,3 @@ function initNewsletterPopup() {
   });
 }
 
-initTopBar();
-initSearchOverlay();
-initCategorySwitch();
-initHomeHeaderScrollState();
-initHeaderMenu();
-initHeroVideoLoop();
-initCartEntryPoints();
-initAccountEntryPoints();
-initNewsletterPopup();
