@@ -1187,6 +1187,82 @@ html.no-scroll{
   }
 }
 
+@media (max-width: 760px){
+  .home-header{
+    padding: 10px 12px;
+  }
+
+  .header-row{
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    gap: 8px;
+  }
+
+  /* On touch devices there is no hover; keep header controls available */
+  .header-left,
+  .header-right{
+    opacity: 1;
+    transform: translateY(0);
+    pointer-events: auto;
+  }
+
+  .header-left{
+    gap: 8px;
+    min-width: 0;
+  }
+
+  .search-box-trigger{
+    min-width: 0;
+    width: min(44vw, 190px);
+    height: 38px;
+    padding: 0 8px;
+    gap: 8px;
+  }
+
+  .search-box-label{
+    font-size: 11px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: block;
+    max-width: 100%;
+  }
+
+  .search-box-icon{
+    font-size: 16px;
+    flex: 0 0 auto;
+  }
+
+  .logo-center-link{
+    min-height: 36px;
+  }
+
+  .logo-center-text{
+    font-size: 20px;
+    letter-spacing: 3px;
+    white-space: nowrap;
+  }
+
+  .logo-center-image{
+    width: 30px;
+    height: 30px;
+  }
+
+  .header-right{
+    gap: 6px;
+  }
+
+  .header-right .quick-action{
+    width: 26px;
+    height: 26px;
+    display: inline-flex;
+  }
+
+  .header-right .quick-action svg{
+    width: 18px;
+    height: 18px;
+  }
+}
+
 @media (max-width: 520px){
   :root { --header-height: 64px; }
   .top-grid{ grid-template-columns: 1fr; }
@@ -1197,16 +1273,24 @@ html.no-scroll{
   .header-left { gap: 10px; }
   .search-box-trigger {
     min-width: 0;
-    width: 100%;
-    height: 42px;
-    padding: 0 10px;
+    width: min(46vw, 176px);
+    height: 36px;
+    padding: 0 8px;
   }
-  .search-box-label { font-size: 12px; }
-  .search-box-icon { font-size: 18px; }
-  .logo-center-image { width: 34px; height: 34px; }
-  .header-right { gap: 8px; }
-  .quick-action { width: 28px; height: 28px; }
-  .quick-action svg { width: 20px; height: 20px; }
+  .search-box-label { font-size: 10px; }
+  .search-box-icon { font-size: 15px; }
+  .logo-center-text { font-size: 18px; letter-spacing: 2.2px; }
+  .logo-center-image { width: 28px; height: 28px; }
+  .header-right { gap: 4px; }
+  .quick-action { width: 24px; height: 24px; }
+  .quick-action svg { width: 17px; height: 17px; }
+  .quick-action.cart-link[data-cart-count]::after{
+    top: -4px;
+    right: -6px;
+    min-width: 16px;
+    height: 16px;
+    font-size: 9px;
+  }
   .menu-flyout {
     position: static;
     width: 100%;
