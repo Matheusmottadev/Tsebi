@@ -1352,6 +1352,26 @@ html.no-scroll{
     display: none;
   }
 
+  .category-grid{
+    display: flex;
+    gap: 12px;
+    overflow-x: auto;
+    overflow-y: hidden;
+    -webkit-overflow-scrolling: touch;
+    scroll-snap-type: x mandatory;
+    padding: 0 12px 8px;
+  }
+
+  .category-grid::-webkit-scrollbar{
+    display: none;
+  }
+
+  .category-card{
+    flex: 0 0 min(72vw, 260px);
+    border-right: none;
+    scroll-snap-align: start;
+  }
+
   .top-img,
   .category-media img,
   .new-drop-media img{

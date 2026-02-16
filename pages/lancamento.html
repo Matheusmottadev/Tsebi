@@ -512,7 +512,7 @@
 
         <section class="launch-video-block reveal" aria-label="Vídeo da coleção Alicerce">
           <video class="launch-video" autoplay muted loop playsinline preload="auto">
-            <source src="images/trigoverde.mp4" type="video/mp4" />
+            <source src="https://media.tsebi.com.br/alicerce-hero.mp4" type="video/mp4" />
           </video>
         </section>
 
@@ -572,7 +572,7 @@
 
         <section class="launch-video-block reveal" aria-label="Vídeo da coleção Genesis">
           <video class="launch-video" autoplay muted loop playsinline preload="auto">
-            <source src="images/genesis.mp4" type="video/mp4" />
+            <source src="https://media.tsebi.com.br/flor-lancamento.mp4" type="video/mp4" />
           </video>
         </section>
 
@@ -828,7 +828,7 @@
         switchButtons.forEach((button) => {
           const isActive = button.dataset.collectionTarget === collectionKey;
           button.classList.toggle("is-active", isActive);
-          button.setAttribute("aria-pressed", isActive  "true" : "false");
+          button.setAttribute("aria-pressed", isActive ? "true" : "false");
         });
 
         panels.forEach((panel) => {
@@ -881,7 +881,7 @@
 
       function setLoading(isLoading) {
         submitBtn.disabled = Boolean(isLoading);
-        submitBtn.textContent = isLoading  "Enviando..." : "Entrar na lista VIP";
+        submitBtn.textContent = isLoading ? "Enviando..." : "Entrar na lista VIP";
       }
 
       talkBtn?.addEventListener("click", function () {
