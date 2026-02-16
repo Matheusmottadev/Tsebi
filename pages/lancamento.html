@@ -9,51 +9,6 @@
   <link rel="stylesheet" href="css/style.css" />
   <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600&family=Montserrat:wght@300;400;500;600&display=swap" rel="stylesheet" />
   <style>
-    .launch-header {
-      position: sticky;
-      top: 0;
-      z-index: 30;
-      background: rgba(247, 246, 242, 0.96);
-      backdrop-filter: blur(8px);
-      border-bottom: 1px solid #e2dfd7;
-    }
-
-    .launch-header-inner {
-      max-width: 1180px;
-      margin: 0 auto;
-      padding: 14px 24px;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 16px;
-    }
-
-    .launch-brand {
-      color: #111;
-      text-decoration: none;
-      font-family: "Playfair Display", serif;
-      font-size: 40px;
-      letter-spacing: 0.5px;
-      line-height: 1;
-    }
-
-    .launch-nav {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 14px;
-      align-items: center;
-      justify-content: flex-end;
-    }
-
-    .launch-nav a {
-      color: #111;
-      text-decoration: none;
-      font-family: "Montserrat", sans-serif;
-      font-size: 11px;
-      letter-spacing: 1.1px;
-      text-transform: uppercase;
-    }
-
     .launch-main {
       background: #f7f6f2;
       color: #111;
@@ -352,15 +307,10 @@
         grid-template-columns: 1fr;
       }
 
-      .launch-header-inner,
       .launch-main,
       .launch-mini-footer {
         padding-left: 16px;
         padding-right: 16px;
-      }
-
-      .launch-brand {
-        font-size: 32px;
       }
 
       .launch-hero {
@@ -369,18 +319,129 @@
     }
   </style>
 </head>
-<body>
-  <header class="launch-header">
-    <div class="launch-header-inner">
-      <a class="launch-brand" href="index.html" aria-label="Tsebi">TSEBI</a>
-      <nav class="launch-nav" aria-label="Navegação principal">
-        <a href="index.html">Home</a>
-        <a href="#colecoes">Coleções</a>
-        <a href="#vip">Lista VIP</a>
-        <a href="genesis.html">Editorial</a>
-      </nav>
+<body class="legal-header-image-default">
+  <div class="top-bar">
+    <div class="top-wrapper">
+      <button class="arrow left" type="button">&#10094;</button>
+      <div class="top-message" id="topMessage">Frete Grátis!</div>
+      <button class="arrow right" type="button">&#10095;</button>
+    </div>
+  </div>
+
+  <header class="home-header">
+    <div class="header-row">
+      <div class="header-left">
+        <button class="menu-toggle" id="openHeaderMenu" type="button" aria-label="Abrir menu">
+          <span></span><span></span><span></span>
+        </button>
+
+        <button class="search-box-trigger" id="openSearch" type="button" aria-label="Abrir busca">
+          <span class="search-box-label">O que você está buscando?</span>
+          <span class="search-box-icon">&#8985;</span>
+        </button>
+      </div>
+
+      <h1 class="logo">
+        <a class="logo-center-link" href="index.html">
+          <span class="logo-center-text">TSEBI</span>
+          <img class="logo-center-image" src="images/logo-tsebi.png" alt="Logo TSEBI" />
+        </a>
+      </h1>
+
+      <div class="header-right">
+        <a class="quick-action" href="#" aria-label="Conta">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M20 21a8 8 0 0 0-16 0"></path>
+            <circle cx="12" cy="8" r="4"></circle>
+          </svg>
+        </a>
+        <a class="quick-action" href="#" aria-label="Carrinho">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M7 7h10l1 12H6L7 7z"></path>
+            <path d="M9 7V6a3 3 0 1 1 6 0v1"></path>
+          </svg>
+        </a>
+      </div>
     </div>
   </header>
+
+  <aside class="header-menu" id="headerMenu" aria-hidden="true">
+    <button class="header-menu-close" id="closeHeaderMenu" type="button" aria-label="Fechar menu">&times;</button>
+    <nav class="header-menu-nav" aria-label="Categorias">
+      <div class="menu-group">
+        <a class="menu-group-title" href="genesis.html">Coleção Gênesis</a>
+      </div>
+
+      <div class="menu-group">
+        <a class="menu-group-title" href="#">Presentes</a>
+        <a href="#">Presente para ele</a>
+        <a href="#">Presentes para ela</a>
+        <a href="#">Fragrâncias para ele</a>
+        <a href="#">Fragrâncias para ela</a>
+      </div>
+
+      <div class="menu-group menu-group-flyout">
+        <a class="menu-group-title" href="#">Masculino</a>
+        <div class="menu-flyout">
+          <div class="flyout-col">
+            <p class="flyout-title">Novidades</p>
+            <a href="#">Lançamentos</a>
+            <a href="#">Destaques da semana</a>
+            <a href="#">Editorial masculino</a>
+          </div>
+          <div class="flyout-col">
+            <p class="flyout-title">Roupas</p>
+            <a href="#">Camisetas</a>
+            <a href="#">Camisas</a>
+            <a href="#">Calças</a>
+            <a href="#">Jaquetas</a>
+            <a href="#">Blazers</a>
+          </div>
+          <div class="flyout-col">
+            <p class="flyout-title">Acessórios</p>
+            <a href="#">Calçados</a>
+            <a href="#">Tênis</a>
+            <a href="#">Bolsas</a>
+            <a href="#">Cintos</a>
+            <a href="#">Óculos</a>
+          </div>
+        </div>
+      </div>
+
+      <div class="menu-group menu-group-flyout">
+        <a class="menu-group-title" href="#">Feminino</a>
+        <div class="menu-flyout">
+          <div class="flyout-col">
+            <p class="flyout-title">Novidades</p>
+            <a href="#">Lançamentos</a>
+            <a href="genesis.html">Coleção Gênesis</a>
+            <a href="#">Escolhas da curadoria</a>
+          </div>
+          <div class="flyout-col">
+            <p class="flyout-title">Roupas</p>
+            <a href="#">Vestidos</a>
+            <a href="#">Saias</a>
+            <a href="#">Calças</a>
+            <a href="#">Camisetas</a>
+            <a href="#">Jeans</a>
+          </div>
+          <div class="flyout-col">
+            <p class="flyout-title">Acessórios</p>
+            <a href="#">Bolsas</a>
+            <a href="#">Sapatos</a>
+            <a href="#">Bijuterias</a>
+            <a href="#">Óculos</a>
+            <a href="#">Lenços</a>
+          </div>
+        </div>
+      </div>
+
+      <div class="menu-group">
+        <a class="menu-group-title" href="processos.html">Processos</a>
+        <a class="menu-group-title" href="nossa-historia.html">Origem</a>
+      </div>
+    </nav>
+  </aside>
 
   <main class="launch-main">
     <section class="launch-shell">
@@ -415,7 +476,7 @@
 
       <section class="launch-video-block" aria-label="Vídeo da coleção">
         <video class="launch-video" autoplay muted loop playsinline preload="auto">
-          <source src="images/trigo.mp4" type="video/mp4" />
+          <source src="images/flor-lancamento.mp4" type="video/mp4" />
         </video>
       </section>
 
@@ -516,6 +577,37 @@
     </div>
   </footer>
 
+  <div class="search-overlay" id="searchOverlay" aria-hidden="true">
+    <button class="search-close" id="closeSearch" type="button" aria-label="Fechar">&times;</button>
+
+    <div class="search-panel">
+      <div class="search-field">
+        <span class="search-field-icon">&#8985;</span>
+        <input
+          id="searchInput"
+          class="search-input"
+          type="text"
+          placeholder="Pesquisar (vestido azul, etc)"
+          autocomplete="off"
+        />
+      </div>
+
+      <section class="search-section">
+        <h3>SUGESTÕES</h3>
+        <div class="chips">
+          <button class="chip" type="button">NOVIDADE PARA HOMENS</button>
+          <button class="chip" type="button">NOVIDADE PARA MULHERES</button>
+          <button class="chip" type="button">BOLSAS FEMININAS</button>
+          <button class="chip" type="button">VESTIDOS</button>
+          <button class="chip" type="button">JAQUETAS</button>
+          <button class="chip" type="button">TÊNIS</button>
+          <button class="chip" type="button">ACESSÓRIOS</button>
+        </div>
+      </section>
+    </div>
+  </div>
+
+  <script src="JS/script.js?v=20260215i"></script>
   <script>
     (function () {
       const EMAIL = "contato@tsebi.com.br";
