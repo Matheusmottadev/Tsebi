@@ -23,6 +23,51 @@
       gap: 28px;
     }
 
+    .collection-switcher {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .collection-switch-btn {
+      border: 1px solid #111;
+      background: #fff;
+      color: #111;
+      text-transform: uppercase;
+      letter-spacing: 0.9px;
+      font-family: "Montserrat", sans-serif;
+      font-size: 12px;
+      padding: 12px 18px;
+      cursor: pointer;
+      transition: background 0.28s ease, color 0.28s ease, transform 0.28s ease;
+    }
+
+    .collection-switch-btn:hover {
+      transform: translateY(-1px);
+    }
+
+    .collection-switch-btn.is-active {
+      background: #111;
+      color: #fff;
+    }
+
+    .collection-content {
+      display: grid;
+      gap: 28px;
+      opacity: 0;
+      transform: translateY(16px);
+      animation: collectionEnter 0.5s ease forwards;
+    }
+
+    @keyframes collectionEnter {
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
     .launch-hero {
       border: 1px solid #e2dfd7;
       background: #fff;
@@ -102,6 +147,17 @@
       object-fit: cover;
       display: block;
       opacity: 0.94;
+    }
+
+    .reveal {
+      opacity: 0;
+      transform: translateY(22px);
+      transition: opacity 0.55s ease, transform 0.55s ease;
+    }
+
+    .reveal.is-visible {
+      opacity: 1;
+      transform: translateY(0);
     }
 
     .launch-story-grid {
@@ -445,72 +501,132 @@
 
   <main class="launch-main">
     <section class="launch-shell">
-      <article class="launch-hero" id="alicerce">
-        <p class="launch-kicker">Pré-lançamento Tsebi</p>
-        <h1 class="launch-title">Coleção Gênesis e Coleção Alicerce</h1>
-        <p class="launch-lead">
-          A Tsebi inicia sua história em dois movimentos complementares: Gênesis, nossa linguagem inaugural de identidade,
-          e Alicerce, a coleção que estabelece a base de modelagem, materiais e acabamento para as próximas temporadas.
-          Estamos preparando o lançamento com edição controlada e atenção total ao caimento de cada peça.
-        </p>
-      </article>
-
-      <section class="collections-grid" id="colecoes">
-        <article class="collection-card" id="genesis">
-          <p class="collection-tag">Coleção 01</p>
-          <h3>Gênesis</h3>
-          <p>
-            A coleção Gênesis define o vocabulário visual da marca: silhuetas precisas, contraste entre estrutura e fluidez
-            e um guarda-roupa pensado para permanência. É o ponto de partida da assinatura Tsebi.
-          </p>
-        </article>
-        <article class="collection-card" id="origem">
-          <p class="collection-tag">Coleção 02</p>
-          <h3>Alicerce</h3>
-          <p>
-            Alicerce aprofunda essa direção com foco em matéria-prima, construção e uso real. Cada item é desenvolvido
-            para manter presença estética e desempenho no dia a dia, com acabamento de padrão elevado.
-          </p>
-        </article>
+      <section class="collection-switcher" aria-label="Alternar coleção">
+        <button class="collection-switch-btn is-active" type="button" data-collection-target="alicerce">Coleção Alicerce</button>
+        <button class="collection-switch-btn" type="button" data-collection-target="genesis">Coleção Genesis</button>
       </section>
 
-      <section class="launch-video-block" aria-label="Vídeo da coleção">
-        <video class="launch-video" autoplay muted loop playsinline preload="auto">
-          <source src="images/flor-lancamento.mp4" type="video/mp4" />
-        </video>
-      </section>
-
-      <section class="launch-story-grid">
-        <article class="launch-story-card" id="qualidade">
-          <h4>Qualidade</h4>
-          <p>
-            Modelagem técnica, seleção cuidadosa de tecidos e revisão em múltiplas etapas. O objetivo é entregar peças
-            que sustentem imagem e conforto com consistência.
+      <section class="collection-content" data-collection-panel="alicerce">
+        <article class="launch-hero reveal">
+          <p class="launch-kicker">Pré-lançamento Tsebi</p>
+          <h1 class="launch-title">Coleção Alicerce</h1>
+          <p class="launch-lead">
+            Alicerce marca o ponto de partida da nossa construção criativa. A proposta une sofisticação e estrutura,
+            com desenho de peças para uso real, acabamento refinado e leitura contemporânea de alfaiataria.
           </p>
         </article>
-        <article class="launch-story-card" id="acabamento">
-          <h4>Acabamento</h4>
-          <p>
-            Costura limpa, proporções equilibradas e conferência final manual. Cada detalhe foi pensado para gerar uma
-            experiência de uso refinada do primeiro ao último elemento da peça.
-          </p>
-        </article>
-        <article class="launch-story-card">
-          <h4>Origem</h4>
-          <p>
-            Produção em escala controlada no Brasil, com direção criativa autoral e visão de longo prazo. A marca nasce
-            para construir legado e não apenas coleções sazonais.
-          </p>
-        </article>
+
+        <section class="collections-grid" id="colecoes">
+          <article class="collection-card reveal">
+            <p class="collection-tag">Direção</p>
+            <h3>Base da marca</h3>
+            <p>
+              Alicerce define os fundamentos de modelagem e proporção que serão repetidos nas próximas temporadas.
+              É uma coleção feita para durar e consolidar assinatura.
+            </p>
+          </article>
+          <article class="collection-card reveal">
+            <p class="collection-tag">Matéria-prima</p>
+            <h3>Textura e caimento</h3>
+            <p>
+              Trabalhamos com seleção técnica de tecidos para entregar presença, conforto e estabilidade visual no uso
+              diário, mantendo elegância mesmo em peças essenciais.
+            </p>
+          </article>
+        </section>
+
+        <section class="launch-video-block reveal" aria-label="Vídeo da coleção Alicerce">
+          <video class="launch-video" autoplay muted loop playsinline preload="auto">
+            <source src="images/trigoverde.mp4" type="video/mp4" />
+          </video>
+        </section>
+
+        <section class="launch-story-grid">
+          <article class="launch-story-card reveal">
+            <h4>Qualidade</h4>
+            <p>
+              Revisão técnica contínua, controle de caimento e acabamento final rigoroso para garantir consistência em
+              toda peça apresentada no lançamento.
+            </p>
+          </article>
+          <article class="launch-story-card reveal">
+            <h4>Acabamento</h4>
+            <p>
+              Costuras limpas, estrutura precisa e atenção a detalhes internos e externos para manter o padrão estético
+              e funcional da coleção.
+            </p>
+          </article>
+          <article class="launch-story-card reveal">
+            <h4>Origem</h4>
+            <p>
+              Produção em escala controlada no Brasil, com direção autoral e construção de longo prazo para a evolução
+              da identidade Tsebi.
+            </p>
+          </article>
+        </section>
       </section>
 
-      <section class="launch-video-block" aria-label="Vídeo editorial do lançamento">
-        <video class="launch-video" autoplay muted loop playsinline preload="auto">
-          <source src="images/trigoverde.mp4" type="video/mp4" />
-        </video>
+      <section class="collection-content" data-collection-panel="genesis" hidden>
+        <article class="launch-hero reveal">
+          <p class="launch-kicker">Editorial de estreia</p>
+          <h1 class="launch-title">Coleção Genesis</h1>
+          <p class="launch-lead">
+            Genesis apresenta a linguagem inicial da Tsebi. Silhuetas de presença forte, contraste entre precisão e
+            fluidez e uma leitura de luxo essencial pensada para construir memorabilidade desde a primeira coleção.
+          </p>
+        </article>
+
+        <section class="collections-grid">
+          <article class="collection-card reveal">
+            <p class="collection-tag">Conceito</p>
+            <h3>Primeiro manifesto</h3>
+            <p>
+              Genesis estabelece o tom visual da marca e traduz nossa visão de moda com identidade, intencionalidade e
+              permanência além da lógica sazonal.
+            </p>
+          </article>
+          <article class="collection-card reveal">
+            <p class="collection-tag">Direção estética</p>
+            <h3>Contraste refinado</h3>
+            <p>
+              A coleção combina estrutura com movimento para criar peças de presença elegante e narrativa contemporânea,
+              conectando imagem e funcionalidade.
+            </p>
+          </article>
+        </section>
+
+        <section class="launch-video-block reveal" aria-label="Vídeo da coleção Genesis">
+          <video class="launch-video" autoplay muted loop playsinline preload="auto">
+            <source src="images/genesis.mp4" type="video/mp4" />
+          </video>
+        </section>
+
+        <section class="launch-story-grid">
+          <article class="launch-story-card reveal">
+            <h4>Design</h4>
+            <p>
+              O desenho parte de linhas limpas e proporções seguras para construir uma estética marcante com leitura
+              internacional e assinatura local.
+            </p>
+          </article>
+          <article class="launch-story-card reveal">
+            <h4>Execução</h4>
+            <p>
+              Da modelagem ao acabamento, cada etapa preserva coerência técnica para manter resultado premium e
+              repetibilidade de qualidade.
+            </p>
+          </article>
+          <article class="launch-story-card reveal">
+            <h4>Legado</h4>
+            <p>
+              Genesis é o primeiro capítulo da marca e abre caminho para desdobramentos da Alicerce, consolidando um
+              sistema de coleção com continuidade.
+            </p>
+          </article>
+        </section>
       </section>
 
-      <section class="launch-panel" id="vip">
+      <section class="launch-panel reveal" id="vip">
         <h2>Entrar na Lista VIP</h2>
         <p>
           Ao entrar na lista VIP, você recebe prioridade no lançamento e cria sua conta Tsebi automaticamente.
@@ -610,6 +726,8 @@
   <script src="JS/script.js?v=20260215i"></script>
   <script>
     (function () {
+      const switchButtons = Array.from(document.querySelectorAll("[data-collection-target]"));
+      const panels = Array.from(document.querySelectorAll("[data-collection-panel]"));
       const EMAIL = "contato@tsebi.com.br";
       const form = document.getElementById("vipRegisterForm");
       const submitBtn = document.getElementById("vipSubmitBtn");
@@ -617,6 +735,54 @@
       const talkBtn = document.getElementById("talkToTeamBtn");
       const emailBox = document.getElementById("teamEmailBox");
       const copyBtn = document.getElementById("copyEmailBtn");
+      const revealElements = Array.from(document.querySelectorAll(".reveal"));
+
+      const observer = new IntersectionObserver((entries) => {
+        entries.forEach((entry) => {
+          if (!entry.isIntersecting) return;
+          entry.target.classList.add("is-visible");
+          observer.unobserve(entry.target);
+        });
+      }, { threshold: 0.16, rootMargin: "0px 0px -8% 0px" });
+
+      function armRevealAnimations(scope) {
+        const nodes = Array.from(scope.querySelectorAll(".reveal"));
+        nodes.forEach((node) => {
+          node.classList.remove("is-visible");
+          observer.observe(node);
+        });
+      }
+
+      function setActiveCollection(collectionKey) {
+        switchButtons.forEach((button) => {
+          const isActive = button.dataset.collectionTarget === collectionKey;
+          button.classList.toggle("is-active", isActive);
+          button.setAttribute("aria-pressed", isActive ? "true" : "false");
+        });
+
+        panels.forEach((panel) => {
+          const isTarget = panel.dataset.collectionPanel === collectionKey;
+          panel.hidden = !isTarget;
+          if (isTarget) {
+            panel.classList.remove("is-active");
+            requestAnimationFrame(() => panel.classList.add("is-active"));
+            armRevealAnimations(panel);
+          } else {
+            panel.classList.remove("is-active");
+          }
+        });
+      }
+
+      switchButtons.forEach((button) => {
+        button.addEventListener("click", () => {
+          const key = String(button.dataset.collectionTarget || "").trim();
+          if (!key) return;
+          setActiveCollection(key);
+        });
+      });
+
+      revealElements.forEach((node) => observer.observe(node));
+      setActiveCollection("alicerce");
 
       function digitsOnly(value, maxLen) {
         return String(value || "").replace(/\D/g, "").slice(0, maxLen);
