@@ -8,7 +8,9 @@
     "start": "node server/index.js",
     "dev": "node --watch server/index.js",
     "migrate": "node scripts/run-migrations.js",
-    "migrate:json": "node scripts/migrate-json-to-db.js"
+    "migrate:json": "node scripts/migrate-json-to-db.js",
+    "launch:prelaunch": "node scripts/set-launch-mode.js prelaunch",
+    "launch:live": "node scripts/set-launch-mode.js launch"
   },
   "dependencies": {
     "bcrypt": "^5.1.1",
