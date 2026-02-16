@@ -16,6 +16,7 @@ const searchTopPieces = [
 const userStore = window.TsebiUserStore;
 const currentLang = localStorage.getItem("tsebi-site-language") || "pt";
 const isEnglish = currentLang === "en";
+const isPrelaunchMode = window.TSEBI_PRELAUNCH_MODE === true;
 
 function tSearchLabel(text) {
   if (!isEnglish) return text;
@@ -72,7 +73,15 @@ function tSearchLabel(text) {
     "Oliva": "Olive",
     "Cinza": "Gray",
     "Off white": "Off-white",
-    "Gênesis": "Genesis"
+    "Gênesis": "Genesis",
+    "PRÉ-LANÇAMENTO": "PRE-LAUNCH",
+    "EDITORIAL": "EDITORIAL",
+    "Estamos em pré-lançamento. Cadastre-se para acesso antecipado.": "We are in pre-launch. Join for early access.",
+    "Ainda sem peças disponíveis para compra. Lançamento em breve.": "No pieces available for purchase yet. Launching soon.",
+    "Entrar na lista VIP": "Join VIP list",
+    "Conhecer a marca": "Discover the brand",
+    "Coleção Alicerce em breve": "Alicerce collection soon",
+    "Novidades por e-mail": "Email updates"
   };
   return map[text] || text;
 }
@@ -178,6 +187,38 @@ function ensureSearchTopPieces(searchOverlay) {
   });
 
   attachFavoriteHandlers(grid);
+}
+
+function applyPrelaunchSearchMode(searchOverlay, searchInput) {
+  if (!isPrelaunchMode || !searchOverlay) return;
+
+  if (searchInput) {
+    searchInput.placeholder = tSearchLabel("Estamos em pré-lançamento. Cadastre-se para acesso antecipado.");
+  }
+
+  const suggestionTitle = searchOverlay.querySelector(".search-section h3");
+  if (suggestionTitle) suggestionTitle.textContent = tSearchLabel("PRÉ-LANÇAMENTO");
+
+  const chipLabels = [
+    "Entrar na lista VIP",
+    "Conhecer a marca",
+    "Coleção Alicerce em breve",
+    "Novidades por e-mail"
+  ];
+  const chipsWrap = searchOverlay.querySelector(".chips");
+  if (chipsWrap) {
+    chipsWrap.innerHTML = "";
+    chipLabels.forEach((label) => {
+      const chip = document.createElement("button");
+      chip.type = "button";
+      chip.className = "chip";
+      chip.textContent = tSearchLabel(label);
+      chipsWrap.appendChild(chip);
+    });
+  }
+
+  const topPiecesTitle = searchOverlay.querySelector(".search-top-pieces h3");
+  if (topPiecesTitle) topPiecesTitle.textContent = tSearchLabel("EDITORIAL");
 }
 let productsCatalog = [];
 
@@ -459,6 +500,16 @@ function ensureSearchExperience(searchOverlay, searchInput) {
   }
 
   function renderResults() {
+    if (isPrelaunchMode) {
+      shell.classList.add("is-active");
+      resultsGrid.innerHTML = "";
+      countEl.textContent = isEnglish ? "Launch soon" : "Lançamento em breve";
+      emptyEl.hidden = false;
+      emptyEl.textContent = tSearchLabel("Ainda sem peças disponíveis para compra. Lançamento em breve.");
+      if (topPiecesSection) topPiecesSection.hidden = false;
+      return;
+    }
+
     const query = mapSearchQueryToCatalogTerms(searchInput?.value || "");
     const filters = getSelectedFilters();
     const hasQuery = query.length > 0;
@@ -655,6 +706,7 @@ function initSearchOverlay() {
   const searchInput = document.getElementById("searchInput");
 
   if (!searchOverlay) return;
+  applyPrelaunchSearchMode(searchOverlay, searchInput);
   ensureSearchTopPieces(searchOverlay);
   const searchExperience = ensureSearchExperience(searchOverlay, searchInput);
 
