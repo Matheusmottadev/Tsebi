@@ -561,6 +561,12 @@
     const existing = document.querySelector(".site-language-switcher");
     if (existing) return;
 
+    const isMobile = window.matchMedia("(max-width: 760px)").matches;
+    const footer =
+      document.querySelector(".site-footer .footer-grid") ||
+      document.querySelector(".site-footer") ||
+      document.querySelector("footer");
+
     const header =
       document.querySelector(".home-header .header-right") ||
       document.querySelector(".careers-header") ||
@@ -568,7 +574,8 @@
       document.querySelector(".account-min-header") ||
       document.querySelector("body > header");
 
-    if (!header) return;
+    const host = isMobile && footer ? footer : header;
+    if (!host) return;
 
     const wrapper = document.createElement("div");
     wrapper.className = "site-language-switcher";
@@ -605,7 +612,7 @@
     wrapper.appendChild(ptBtn);
     wrapper.appendChild(divider);
     wrapper.appendChild(enBtn);
-    header.appendChild(wrapper);
+    host.appendChild(wrapper);
   }
 
   function startObserverIfNeeded() {

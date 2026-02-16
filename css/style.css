@@ -44,6 +44,7 @@ body {
   display: inline-flex;
   align-items: center;
   gap: 14px;
+  max-width: 100%;
 }
 
 /* Setas (sem hover / sem animation no CSS — o JS anima) */
@@ -59,6 +60,7 @@ body {
 
   transform: translateX(0);
   will-change: transform;
+  flex: 0 0 auto;
 }
 
 /* remove “pulo” por foco/click */
@@ -71,6 +73,9 @@ body {
   font-size: 13px;
   letter-spacing: 1px;
   position: relative;
+  max-width: calc(100vw - 130px);
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 /* Animações do texto (mantém do jeito que você já usa) */
@@ -455,6 +460,7 @@ body.legal-header-image-default .home-header:not(.is-scrolled):not(:hover):not(:
   line-height: 1;
   cursor: pointer;
   margin-bottom: 14px;
+  color: #111;
 }
 
 .header-menu-nav {
@@ -1028,6 +1034,14 @@ html.no-scroll{
   font-size: 28px;
   cursor: pointer;
   line-height: 1;
+  color: #111;
+}
+
+.newsletter-popup-close,
+.cart-popup-close,
+.product-details-popup-close,
+.cookie-settings-close{
+  color: #111;
 }
 
 /* painel central com rolagem */
@@ -1188,6 +1202,28 @@ html.no-scroll{
 }
 
 @media (max-width: 760px){
+  .top-wrapper{
+    width: 100%;
+    justify-content: center;
+    gap: 6px;
+    padding: 0 8px;
+  }
+
+  .arrow{
+    width: 20px;
+    padding: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .top-message{
+    max-width: calc(100vw - 72px);
+    font-size: 12px;
+    letter-spacing: .5px;
+    text-overflow: ellipsis;
+  }
+
   .home-header{
     padding: 10px 12px;
   }
@@ -1267,7 +1303,7 @@ html.no-scroll{
     position: relative;
   }
 
-  .home-header:not(.is-scrolled) .logo{
+  .home-header .logo{
     position: absolute;
     left: 50%;
     top: 50%;
@@ -1276,17 +1312,35 @@ html.no-scroll{
     z-index: 2;
   }
 
-  /* Restore normal flow when user scrolls and header becomes solid */
-  .home-header.is-scrolled .logo{
-    position: static;
-    left: auto;
-    top: auto;
-    transform: none;
-  }
-
   /* Avoid floating cart count badge over transparent hero header */
   .home-header:not(.is-scrolled) .quick-action.cart-link[data-cart-count]::after{
     display: none;
+  }
+
+  .top-img,
+  .category-media img,
+  .new-drop-media img{
+    object-fit: contain;
+    background: #f6f6f6;
+  }
+
+  .site-footer .site-language-switcher{
+    margin: 10px 0 0;
+    padding-top: 10px;
+    border-top: 1px solid rgba(255, 255, 255, .18);
+    gap: 8px;
+  }
+
+  .site-footer .site-language-switcher .lang-btn{
+    color: rgba(255, 255, 255, .7);
+  }
+
+  .site-footer .site-language-switcher .lang-btn.is-active{
+    color: #fff;
+  }
+
+  .site-footer .site-language-switcher .lang-divider{
+    color: rgba(255, 255, 255, .45);
   }
 }
 
@@ -3990,6 +4044,10 @@ body.newsletter-popup-open{
   color: #8a8a8a;
   font-size: 11px;
   line-height: 1;
+}
+
+.site-language-switcher button{
+  -webkit-tap-highlight-color: transparent;
 }
 
 .home-header .site-language-switcher .lang-btn,

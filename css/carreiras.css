@@ -285,17 +285,33 @@
 
 
 @media (max-width: 1024px){
+  .careers-header{
+    min-height: auto;
+    padding: 10px 14px 12px;
+    align-items: flex-start;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+
   .careers-nav{
-    display: none;
+    display: flex;
+    width: 100%;
+    margin-left: 0;
+    gap: 12px;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    padding-bottom: 2px;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .careers-nav a{
+    white-space: nowrap;
+    font-size: 12px;
+    letter-spacing: .8px;
   }
 }
 
 @media (max-width: 720px){
-  .careers-header{
-    min-height: 72px;
-    padding: 0 14px;
-  }
-
   .careers-logo{
     font-size: 28px;
   }
