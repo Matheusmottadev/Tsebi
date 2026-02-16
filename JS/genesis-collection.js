@@ -250,6 +250,7 @@
           const categoryKey = toCategoryKey(item.category);
           return {
             id: String(item.id || item.sku || "").trim(),
+            sku: String(item.sku || item.id || "").trim(),
             categoryKey,
             categoryLabel: toCategoryLabel(item.category, categoryKey),
             name: {
@@ -257,6 +258,7 @@
               en: String(item.nameEn || item.name || "")
             },
             priceLabel: String(item.priceLabel || ""),
+            stock: Number(item.stock ?? item.stock_qty ?? 0),
             image: String(item.image || "images/produtos/sug1.jpeg"),
             href: String(item.href || `produto.html?id=${encodeURIComponent(String(item.id || "").trim())}`)
           };

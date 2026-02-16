@@ -700,6 +700,7 @@ body.menu-open {
 
 .category-media{
   display: block;
+  position: relative;
   background: #fff;
   text-decoration: none;
   overflow: hidden;
@@ -2180,6 +2181,18 @@ body.newsletter-popup-open{
 .product-cta:disabled{
   background: #b7b7b7;
   border-color: #b7b7b7;
+  cursor: not-allowed;
+}
+
+.product-cta.is-disabled{
+  background: #b7b7b7;
+  border-color: #b7b7b7;
+  color: #fff;
+  cursor: not-allowed;
+}
+
+.is-disabled{
+  opacity: 0.5;
   cursor: not-allowed;
 }
 

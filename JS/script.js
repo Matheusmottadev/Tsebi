@@ -186,8 +186,12 @@ async function loadProductsCatalog() {
     const response = await fetch("/api/products");
     if (!response.ok) return [];
     const parsed = await response.json();
-    if (Array.isArray(parsed)) return parsed;
-    if (parsed && Array.isArray(parsed.products)) return parsed.products;
+    const list = Array.isArray(parsed) ? parsed : (parsed && Array.isArray(parsed.products) ? parsed.products : []);
+    return list.map((product) => ({
+      ...product,
+      sku: String(product?.sku || product?.id || ""),
+      stock: Number(product?.stock ?? product?.stock_qty ?? 0)
+    }));
   } catch {}
 
   return [];
