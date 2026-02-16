@@ -13,7 +13,7 @@
       background: #f7f6f2;
       color: #111;
       min-height: 100vh;
-      padding: 118px 24px 70px;
+      padding: 156px 24px 70px;
     }
 
     .launch-shell {
@@ -29,7 +29,7 @@
       align-items: center;
       gap: 10px;
       flex-wrap: wrap;
-      margin-top: 6px;
+      margin-top: 18px;
     }
 
     .collection-switch-btn {
@@ -859,6 +859,20 @@
         return String(value || "").replace(/\D/g, "").slice(0, maxLen);
       }
 
+      function formatCpf(value) {
+        const digits = digitsOnly(value, 11);
+        if (digits.length <= 3) return digits;
+        if (digits.length <= 6) return `${digits.slice(0, 3)}.${digits.slice(3)}`;
+        if (digits.length <= 9) return `${digits.slice(0, 3)}.${digits.slice(3, 6)}.${digits.slice(6)}`;
+        return `${digits.slice(0, 3)}.${digits.slice(3, 6)}.${digits.slice(6, 9)}-${digits.slice(9)}`;
+      }
+
+      function formatCep(value) {
+        const digits = digitsOnly(value, 8);
+        if (digits.length <= 5) return digits;
+        return `${digits.slice(0, 5)}-${digits.slice(5)}`;
+      }
+
       function setStatus(message, type) {
         statusEl.textContent = message || "";
         statusEl.classList.remove("error", "success");
@@ -889,11 +903,11 @@
       });
 
       document.getElementById("vipCpf")?.addEventListener("input", function (event) {
-        event.target.value = digitsOnly(event.target.value, 11);
+        event.target.value = formatCpf(event.target.value);
       });
 
       document.getElementById("vipCep")?.addEventListener("input", function (event) {
-        event.target.value = digitsOnly(event.target.value, 8);
+        event.target.value = formatCep(event.target.value);
       });
 
       form?.addEventListener("submit", async function (event) {
