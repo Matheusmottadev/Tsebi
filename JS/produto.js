@@ -350,7 +350,7 @@ if (!product) {
 
   const colorGalleries = buildProductGalleryByColor(product);
   const stockMap = buildVariantStock(product);
-  const totalProductStock = Math.max(0, Number(product?.stock ?? product?.stock_qty ?? 0));
+  let totalProductStock = Math.max(0, Number(product?.stock ?? product?.stock_qty ?? 0));
 
   let selectedColor = product.colors[0] || "";
   let selectedSize = product.sizes[0] || "";
@@ -519,14 +519,19 @@ if (!product) {
     };
   }
 
+  function setSoldOutState() {
+    if (!productCta) return;
+    if (productStockNote) productStockNote.textContent = isEnglish ? "Sold out." : "Esgotado.";
+    productCta.disabled = true;
+    productCta.classList.add("is-disabled");
+    productCta.textContent = isEnglish ? "Sold out" : "ESGOTADO";
+  }
+
   function syncStockState() {
     if (!productStockNote || !productCta) return;
 
     if (totalProductStock <= 0) {
-      productStockNote.textContent = isEnglish ? "Sold out." : "Esgotado.";
-      productCta.disabled = true;
-      productCta.classList.add("is-disabled");
-      productCta.textContent = isEnglish ? "Sold out" : "ESGOTADO";
+      setSoldOutState();
       return;
     }
 
@@ -541,10 +546,7 @@ if (!product) {
     }
 
     if (stock <= 0) {
-      productStockNote.textContent = isEnglish ? "Sold out." : "Esgotado.";
-      productCta.disabled = true;
-      productCta.classList.add("is-disabled");
-      productCta.textContent = isEnglish ? "Sold out" : "ESGOTADO";
+      setSoldOutState();
       return;
     }
 
@@ -603,9 +605,15 @@ if (!product) {
     productSimilar.hidden = similar.length === 0;
   }
 
-  function addSelectedVariantToCart() {
+  async function addSelectedVariantToCart() {
+    const latestProduct = await loadProductById(product.id);
+    const latestStock = Math.max(0, Number(latestProduct?.stock ?? latestProduct?.stock_qty ?? totalProductStock));
+    if (Number.isFinite(latestStock)) {
+      totalProductStock = latestStock;
+    }
+
     if (totalProductStock <= 0) {
-      syncStockState();
+      setSoldOutState();
       return;
     }
 
@@ -734,7 +742,11 @@ if (!product) {
   syncProductState();
   renderSimilarProducts();
 
-  productCta?.addEventListener("click", addSelectedVariantToCart);
+  productCta?.addEventListener("click", () => {
+    addSelectedVariantToCart().catch(() => {
+      setSoldOutState();
+    });
+  });
   closeCartPopup?.addEventListener("click", closePopup);
   cartPopupBackdrop?.addEventListener("click", closePopup);
   productSimilarGrid?.addEventListener("click", (event) => {
