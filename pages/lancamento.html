@@ -151,6 +151,11 @@
       opacity: 0.94;
     }
 
+    .launch-video-block.is-full-bleed .launch-video {
+      object-fit: cover;
+      background: transparent;
+    }
+
     .reveal {
       opacity: 0;
       transform: translateY(22px);
@@ -546,7 +551,7 @@
           </article>
         </section>
 
-        <section class="launch-video-block reveal" aria-label="Vídeo da coleção Alicerce">
+        <section class="launch-video-block reveal is-full-bleed" aria-label="Vídeo da coleção Alicerce">
           <video class="launch-video" autoplay muted loop playsinline preload="auto">
             <source src="https://media.tsebi.com.br/alicerce-hero.mp4" type="video/mp4" />
             <source src="images/alicerce-hero.mp4" type="video/mp4" />
