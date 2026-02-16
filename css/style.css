@@ -1261,6 +1261,28 @@ html.no-scroll{
     width: 18px;
     height: 18px;
   }
+
+  /* Keep logo perfectly centered while header is transparent on mobile */
+  .home-header:not(.is-scrolled) .header-row{
+    position: relative;
+  }
+
+  .home-header:not(.is-scrolled) .logo{
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    margin: 0;
+    z-index: 2;
+  }
+
+  /* Restore normal flow when user scrolls and header becomes solid */
+  .home-header.is-scrolled .logo{
+    position: static;
+    left: auto;
+    top: auto;
+    transform: none;
+  }
 }
 
 @media (max-width: 520px){
