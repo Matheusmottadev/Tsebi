@@ -1135,6 +1135,40 @@ html.no-scroll{
   letter-spacing: .5px;
 }
 
+.prelaunch-action-card{
+  border: 1px solid #d8d8d8;
+  border-radius: 10px;
+  background: #fff;
+  padding: 18px 16px;
+  min-height: 150px;
+  display: block;
+}
+
+.prelaunch-action-content{
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.prelaunch-action-content .tag{
+  font-size: 11px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  opacity: .7;
+}
+
+.prelaunch-action-content .name{
+  font-size: 18px;
+  line-height: 1.25;
+  font-family: 'Playfair Display', serif;
+}
+
+.prelaunch-action-desc{
+  font-size: 13px;
+  line-height: 1.45;
+  color: #3c3c3c;
+}
+
 /* Responsivo */
 @media (max-width: 980px){
   :root { --header-height: 72px; }

@@ -12,6 +12,32 @@ const searchTopPieces = [
   { id: "genesis-tailored", href: "produto.html?id=genesis-tailored", src: "images/produtos/sug4.jpeg", alt: "Sabrina maravilhosa", tag: "NOVO", name: "Sabrina maravilhosa" },
   { id: "genesis-bomber", href: "produto.html?id=genesis-bomber", src: "images/produtos/sug1.jpeg", alt: "Sabrina incrível", tag: "NOVO", name: "Sabrina incrível" }
 ];
+const prelaunchActionCards = [
+  {
+    tag: "VIP",
+    name: "Entrar na lista VIP",
+    description: "Receba acesso antecipado ao lançamento da Tsebi.",
+    href: "lancamento.html#vip"
+  },
+  {
+    tag: "EMAIL",
+    name: "Novidades por e-mail",
+    description: "Seja avisado(a) quando as primeiras peças estiverem disponíveis.",
+    href: "lancamento.html#newsletter"
+  },
+  {
+    tag: "ORIGEM",
+    name: "Conhecer a marca",
+    description: "Descubra nossa origem, materiais e processo de qualidade.",
+    href: "lancamento.html#origem"
+  },
+  {
+    tag: "ALICERCE",
+    name: "Coleção Alicerce em breve",
+    description: "Conheça a proposta da primeira coleção da Tsebi.",
+    href: "lancamento.html#alicerce"
+  }
+];
 
 const userStore = window.TsebiUserStore;
 const currentLang = localStorage.getItem("tsebi-site-language") || "pt";
@@ -147,6 +173,23 @@ function ensureSearchTopPieces(searchOverlay) {
 
   grid.innerHTML = "";
 
+  if (isPrelaunchMode) {
+    prelaunchActionCards.forEach((item) => {
+      const card = document.createElement("a");
+      card.className = "top-card prelaunch-action-card";
+      card.href = item.href;
+      card.innerHTML = `
+        <div class="top-media prelaunch-action-content">
+          <span class="tag">${item.tag}</span>
+          <span class="name">${item.name}</span>
+          <p class="prelaunch-action-desc">${item.description}</p>
+        </div>
+      `;
+      grid.appendChild(card);
+    });
+    return;
+  }
+
   searchTopPieces.forEach((item) => {
     const card = document.createElement("a");
     card.className = "top-card";
@@ -200,25 +243,32 @@ function applyPrelaunchSearchMode(searchOverlay, searchInput) {
   if (suggestionTitle) suggestionTitle.textContent = tSearchLabel("PRÉ-LANÇAMENTO");
 
   const chipLabels = [
-    "Entrar na lista VIP",
-    "Conhecer a marca",
-    "Coleção Alicerce em breve",
-    "Novidades por e-mail"
+    { label: "Entrar na lista VIP", href: "lancamento.html#vip" },
+    { label: "Conhecer a marca", href: "lancamento.html#origem" },
+    { label: "Coleção Alicerce em breve", href: "lancamento.html#alicerce" },
+    { label: "Novidades por e-mail", href: "lancamento.html#newsletter" }
   ];
   const chipsWrap = searchOverlay.querySelector(".chips");
   if (chipsWrap) {
     chipsWrap.innerHTML = "";
-    chipLabels.forEach((label) => {
+    chipLabels.forEach((item) => {
       const chip = document.createElement("button");
       chip.type = "button";
       chip.className = "chip";
-      chip.textContent = tSearchLabel(label);
+      chip.dataset.href = item.href;
+      chip.textContent = tSearchLabel(item.label);
       chipsWrap.appendChild(chip);
     });
   }
 
   const topPiecesTitle = searchOverlay.querySelector(".search-top-pieces h3");
   if (topPiecesTitle) topPiecesTitle.textContent = tSearchLabel("EDITORIAL");
+}
+
+function initLaunchCtaRouting() {
+  const heroCta = document.querySelector(".hero-cta-btn");
+  if (!heroCta) return;
+  heroCta.href = isPrelaunchMode ? "lancamento.html" : "genesis.html";
 }
 let productsCatalog = [];
 
@@ -242,6 +292,7 @@ async function bootstrap() {
   productsCatalog = await loadProductsCatalog();
   if (!Array.isArray(productsCatalog)) productsCatalog = [];
 
+  initLaunchCtaRouting();
   initTopBar();
   initSearchOverlay();
   initCategorySwitch();
@@ -583,6 +634,11 @@ function ensureSearchExperience(searchOverlay, searchInput) {
   const chips = Array.from(searchOverlay.querySelectorAll(".chip"));
   chips.forEach((chip) => {
     chip.addEventListener("click", () => {
+      if (isPrelaunchMode) {
+        const href = chip.dataset.href;
+        if (href) window.location.href = href;
+        return;
+      }
       if (!searchInput) return;
       const preset = getSearchPresetFromLabel(chip.textContent || "");
       resetFilters(true);
