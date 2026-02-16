@@ -313,6 +313,11 @@ nav a:hover { opacity: 0.6; }
   line-height: 1;
 }
 
+.search-box-icon{
+  position: relative;
+  display: inline-block;
+}
+
 .home-header .logo {
   margin: 0;
 }
@@ -1247,25 +1252,55 @@ html.no-scroll{
   }
 
   .search-box-trigger{
-    min-width: 0;
-    width: min(44vw, 190px);
-    height: 38px;
-    padding: 0 8px;
-    gap: 8px;
+    min-width: 34px;
+    width: 34px;
+    height: 34px;
+    padding: 0;
+    gap: 0;
+    border: none;
+    background: transparent;
+    justify-content: center;
   }
 
   .search-box-label{
-    font-size: 11px;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    display: block;
-    max-width: 100%;
+    display: none;
   }
 
   .search-box-icon{
-    font-size: 16px;
-    flex: 0 0 auto;
+    width: 15px;
+    height: 15px;
+    font-size: 0;
+    line-height: 0;
+    color: currentColor;
+  }
+
+  .search-box-icon::before{
+    content: "";
+    position: absolute;
+    inset: 0;
+    border: 1.7px solid currentColor;
+    border-radius: 50%;
+  }
+
+  .search-box-icon::after{
+    content: "";
+    position: absolute;
+    width: 7px;
+    height: 1.7px;
+    background: currentColor;
+    right: -4px;
+    bottom: 0;
+    transform: rotate(45deg);
+    transform-origin: right center;
+    border-radius: 2px;
+  }
+
+  .home-header:not(.is-scrolled) .search-box-trigger{
+    color: #fff;
+  }
+
+  .home-header.is-scrolled .search-box-trigger{
+    color: #111;
   }
 
   .logo-center-link{
@@ -1353,13 +1388,10 @@ html.no-scroll{
   }
   .header-left { gap: 10px; }
   .search-box-trigger {
-    min-width: 0;
-    width: min(46vw, 176px);
-    height: 36px;
-    padding: 0 8px;
+    min-width: 32px;
+    width: 32px;
+    height: 32px;
   }
-  .search-box-label { font-size: 10px; }
-  .search-box-icon { font-size: 15px; }
   .logo-center-text { font-size: 18px; letter-spacing: 2.2px; }
   .logo-center-image { width: 28px; height: 28px; }
   .header-right { gap: 4px; }
