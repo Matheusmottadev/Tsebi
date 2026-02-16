@@ -828,7 +828,7 @@
         switchButtons.forEach((button) => {
           const isActive = button.dataset.collectionTarget === collectionKey;
           button.classList.toggle("is-active", isActive);
-          button.setAttribute("aria-pressed", isActive ? "true" : "false");
+          button.setAttribute("aria-pressed", isActive  "true" : "false");
         });
 
         panels.forEach((panel) => {
@@ -881,7 +881,7 @@
 
       function setLoading(isLoading) {
         submitBtn.disabled = Boolean(isLoading);
-        submitBtn.textContent = isLoading ? "Enviando..." : "Entrar na lista VIP";
+        submitBtn.textContent = isLoading  "Enviando..." : "Entrar na lista VIP";
       }
 
       talkBtn?.addEventListener("click", function () {
