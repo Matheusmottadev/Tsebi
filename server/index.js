@@ -1,4 +1,5 @@
 const path = require("node:path");
+const fs = require("node:fs");
 const express = require("express");
 const cors = require("cors");
 const helmet = require("helmet");
@@ -429,6 +430,21 @@ app.use(express.json());
 
 app.get("/favicon.ico", (req, res) => {
   res.status(204).end();
+});
+
+const pagesDir = path.resolve(__dirname, "..", "pages");
+
+app.get("/", (req, res) => {
+  res.setHeader("Cache-Control", "no-cache");
+  res.sendFile(path.join(pagesDir, "index.html"));
+});
+
+app.get("/:page.html", (req, res, next) => {
+  const pageName = `${req.params.page}.html`;
+  const filePath = path.join(pagesDir, pageName);
+  if (!fs.existsSync(filePath)) return next();
+  res.setHeader("Cache-Control", "no-cache");
+  return res.sendFile(filePath);
 });
 
 app.use(

@@ -1,0 +1,621 @@
+﻿<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Lançamento | Tsebi Brasil</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="stylesheet" href="css/style.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600&family=Montserrat:wght@300;400;500;600&display=swap" rel="stylesheet" />
+  <style>
+    .launch-header {
+      position: sticky;
+      top: 0;
+      z-index: 30;
+      background: rgba(247, 246, 242, 0.96);
+      backdrop-filter: blur(8px);
+      border-bottom: 1px solid #e2dfd7;
+    }
+
+    .launch-header-inner {
+      max-width: 1180px;
+      margin: 0 auto;
+      padding: 14px 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+    }
+
+    .launch-brand {
+      color: #111;
+      text-decoration: none;
+      font-family: "Playfair Display", serif;
+      font-size: 40px;
+      letter-spacing: 0.5px;
+      line-height: 1;
+    }
+
+    .launch-nav {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 14px;
+      align-items: center;
+      justify-content: flex-end;
+    }
+
+    .launch-nav a {
+      color: #111;
+      text-decoration: none;
+      font-family: "Montserrat", sans-serif;
+      font-size: 11px;
+      letter-spacing: 1.1px;
+      text-transform: uppercase;
+    }
+
+    .launch-main {
+      background: #f7f6f2;
+      color: #111;
+      min-height: 100vh;
+      padding: 38px 24px 70px;
+    }
+
+    .launch-shell {
+      max-width: 1180px;
+      margin: 0 auto;
+      display: grid;
+      gap: 28px;
+    }
+
+    .launch-hero {
+      border: 1px solid #e2dfd7;
+      background: #fff;
+      padding: 42px 36px;
+    }
+
+    .launch-kicker {
+      font-family: "Montserrat", sans-serif;
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 1.3px;
+      opacity: 0.72;
+    }
+
+    .launch-title {
+      margin-top: 10px;
+      font-family: "Playfair Display", serif;
+      font-size: clamp(34px, 5.2vw, 68px);
+      line-height: 1.02;
+      max-width: 860px;
+    }
+
+    .launch-lead {
+      margin-top: 16px;
+      max-width: 780px;
+      font-family: "Montserrat", sans-serif;
+      font-size: 15px;
+      line-height: 1.65;
+      color: #2a2a2a;
+    }
+
+    .collections-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 16px;
+    }
+
+    .collection-card {
+      border: 1px solid #e2dfd7;
+      background: #fff;
+      padding: 24px;
+      display: grid;
+      gap: 10px;
+    }
+
+    .collection-card h3 {
+      font-family: "Playfair Display", serif;
+      font-size: clamp(28px, 3vw, 38px);
+      line-height: 1.08;
+    }
+
+    .collection-card p {
+      font-family: "Montserrat", sans-serif;
+      font-size: 14px;
+      line-height: 1.6;
+      color: #2f2f2f;
+    }
+
+    .collection-tag {
+      font-family: "Montserrat", sans-serif;
+      font-size: 11px;
+      letter-spacing: 1.2px;
+      text-transform: uppercase;
+      opacity: 0.66;
+    }
+
+    .launch-video-block {
+      width: 100vw;
+      margin-left: calc(50% - 50vw);
+      margin-right: calc(50% - 50vw);
+      background: #0d0d0d;
+    }
+
+    .launch-video {
+      width: 100%;
+      height: clamp(320px, 64vh, 760px);
+      object-fit: cover;
+      display: block;
+      opacity: 0.94;
+    }
+
+    .launch-story-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 16px;
+    }
+
+    .launch-story-card {
+      border: 1px solid #e2dfd7;
+      background: #fff;
+      padding: 20px;
+    }
+
+    .launch-story-card h4 {
+      font-family: "Playfair Display", serif;
+      font-size: 24px;
+      line-height: 1.15;
+    }
+
+    .launch-story-card p {
+      margin-top: 10px;
+      font-family: "Montserrat", sans-serif;
+      font-size: 13px;
+      line-height: 1.6;
+      color: #333;
+    }
+
+    .launch-panel {
+      border: 1px solid #e2dfd7;
+      background: #fff;
+      padding: 26px;
+      display: grid;
+      gap: 16px;
+    }
+
+    .launch-panel h2 {
+      font-family: "Playfair Display", serif;
+      font-size: clamp(30px, 3vw, 40px);
+      line-height: 1.08;
+    }
+
+    .launch-panel p {
+      font-family: "Montserrat", sans-serif;
+      font-size: 14px;
+      line-height: 1.65;
+      color: #2f2f2f;
+    }
+
+    .launch-btn-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+
+    .launch-btn {
+      border: 1px solid #111;
+      background: #111;
+      color: #fff;
+      text-decoration: none;
+      font-family: "Montserrat", sans-serif;
+      text-transform: uppercase;
+      letter-spacing: 0.9px;
+      font-size: 12px;
+      padding: 12px 16px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+    }
+
+    .launch-btn.secondary {
+      background: #fff;
+      color: #111;
+    }
+
+    .team-email-box {
+      border: 1px solid #d9d4c8;
+      background: #faf8f2;
+      padding: 14px;
+      display: none;
+      gap: 10px;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+    }
+
+    .team-email-box.is-visible {
+      display: flex;
+    }
+
+    .team-email-address {
+      font-family: "Montserrat", sans-serif;
+      font-size: 14px;
+      font-weight: 600;
+      color: #111;
+      text-decoration: none;
+    }
+
+    .team-email-copy {
+      border: 1px solid #111;
+      background: transparent;
+      color: #111;
+      font-family: "Montserrat", sans-serif;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      font-size: 11px;
+      padding: 8px 12px;
+      cursor: pointer;
+    }
+
+    .vip-form {
+      display: grid;
+      gap: 12px;
+      margin-top: 6px;
+    }
+
+    .vip-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    .vip-field {
+      display: grid;
+      gap: 6px;
+    }
+
+    .vip-field label {
+      font-family: "Montserrat", sans-serif;
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.9px;
+      color: #333;
+    }
+
+    .vip-field input {
+      width: 100%;
+      height: 46px;
+      border: 1px solid #d2d2d2;
+      background: #fff;
+      padding: 10px 12px;
+      font-family: "Montserrat", sans-serif;
+      font-size: 14px;
+      color: #111;
+    }
+
+    .vip-legal {
+      font-family: "Montserrat", sans-serif;
+      font-size: 12px;
+      line-height: 1.5;
+      color: #444;
+    }
+
+    .vip-status {
+      min-height: 22px;
+      font-family: "Montserrat", sans-serif;
+      font-size: 13px;
+      color: #111;
+    }
+
+    .vip-status.error {
+      color: #a12828;
+    }
+
+    .vip-status.success {
+      color: #1b6c34;
+    }
+
+    .launch-mini-footer {
+      border-top: 1px solid #e2dfd7;
+      background: #f7f6f2;
+      padding: 28px 24px;
+      margin-top: 40px;
+    }
+
+    .launch-mini-footer-inner {
+      max-width: 1180px;
+      margin: 0 auto;
+      display: flex;
+      justify-content: space-between;
+      gap: 16px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+
+    .launch-mini-footer p,
+    .launch-mini-footer a {
+      font-family: "Montserrat", sans-serif;
+      font-size: 12px;
+      letter-spacing: 0.6px;
+      color: #111;
+      text-decoration: none;
+    }
+
+    @media (max-width: 980px) {
+      .collections-grid,
+      .vip-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .launch-story-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .launch-header-inner,
+      .launch-main,
+      .launch-mini-footer {
+        padding-left: 16px;
+        padding-right: 16px;
+      }
+
+      .launch-brand {
+        font-size: 32px;
+      }
+
+      .launch-hero {
+        padding: 28px 22px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header class="launch-header">
+    <div class="launch-header-inner">
+      <a class="launch-brand" href="index.html" aria-label="Tsebi">TSEBI</a>
+      <nav class="launch-nav" aria-label="Navegação principal">
+        <a href="index.html">Home</a>
+        <a href="#colecoes">Coleções</a>
+        <a href="#vip">Lista VIP</a>
+        <a href="genesis.html">Editorial</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="launch-main">
+    <section class="launch-shell">
+      <article class="launch-hero" id="alicerce">
+        <p class="launch-kicker">Pré-lançamento Tsebi</p>
+        <h1 class="launch-title">Coleção Gênesis e Coleção Alicerce</h1>
+        <p class="launch-lead">
+          A Tsebi inicia sua história em dois movimentos complementares: Gênesis, nossa linguagem inaugural de identidade,
+          e Alicerce, a coleção que estabelece a base de modelagem, materiais e acabamento para as próximas temporadas.
+          Estamos preparando o lançamento com edição controlada e atenção total ao caimento de cada peça.
+        </p>
+      </article>
+
+      <section class="collections-grid" id="colecoes">
+        <article class="collection-card" id="genesis">
+          <p class="collection-tag">Coleção 01</p>
+          <h3>Gênesis</h3>
+          <p>
+            A coleção Gênesis define o vocabulário visual da marca: silhuetas precisas, contraste entre estrutura e fluidez
+            e um guarda-roupa pensado para permanência. É o ponto de partida da assinatura Tsebi.
+          </p>
+        </article>
+        <article class="collection-card" id="origem">
+          <p class="collection-tag">Coleção 02</p>
+          <h3>Alicerce</h3>
+          <p>
+            Alicerce aprofunda essa direção com foco em matéria-prima, construção e uso real. Cada item é desenvolvido
+            para manter presença estética e desempenho no dia a dia, com acabamento de padrão elevado.
+          </p>
+        </article>
+      </section>
+
+      <section class="launch-video-block" aria-label="Vídeo da coleção">
+        <video class="launch-video" autoplay muted loop playsinline preload="auto">
+          <source src="images/trigo.mp4" type="video/mp4" />
+        </video>
+      </section>
+
+      <section class="launch-story-grid">
+        <article class="launch-story-card" id="qualidade">
+          <h4>Qualidade</h4>
+          <p>
+            Modelagem técnica, seleção cuidadosa de tecidos e revisão em múltiplas etapas. O objetivo é entregar peças
+            que sustentem imagem e conforto com consistência.
+          </p>
+        </article>
+        <article class="launch-story-card" id="acabamento">
+          <h4>Acabamento</h4>
+          <p>
+            Costura limpa, proporções equilibradas e conferência final manual. Cada detalhe foi pensado para gerar uma
+            experiência de uso refinada do primeiro ao último elemento da peça.
+          </p>
+        </article>
+        <article class="launch-story-card">
+          <h4>Origem</h4>
+          <p>
+            Produção em escala controlada no Brasil, com direção criativa autoral e visão de longo prazo. A marca nasce
+            para construir legado e não apenas coleções sazonais.
+          </p>
+        </article>
+      </section>
+
+      <section class="launch-video-block" aria-label="Vídeo editorial do lançamento">
+        <video class="launch-video" autoplay muted loop playsinline preload="auto">
+          <source src="images/trigoverde.mp4" type="video/mp4" />
+        </video>
+      </section>
+
+      <section class="launch-panel" id="vip">
+        <h2>Entrar na Lista VIP</h2>
+        <p>
+          Ao entrar na lista VIP, você recebe prioridade no lançamento e cria sua conta Tsebi automaticamente.
+          O cadastro é salvo na mesma base da plataforma (Railway/Postgres), pronto para o lançamento oficial.
+        </p>
+
+        <form id="vipRegisterForm" class="vip-form" novalidate>
+          <div class="vip-grid">
+            <div class="vip-field">
+              <label for="vipName">Nome completo</label>
+              <input id="vipName" name="name" type="text" minlength="2" maxlength="120" required />
+            </div>
+            <div class="vip-field">
+              <label for="vipEmail">E-mail</label>
+              <input id="vipEmail" name="email" type="email" required />
+            </div>
+            <div class="vip-field">
+              <label for="vipBirthDate">Data de nascimento</label>
+              <input id="vipBirthDate" name="birthDate" type="date" required />
+            </div>
+            <div class="vip-field">
+              <label for="vipCpf">CPF (somente números)</label>
+              <input id="vipCpf" name="cpf" type="text" inputmode="numeric" maxlength="14" required />
+            </div>
+            <div class="vip-field">
+              <label for="vipCep">CEP (somente números)</label>
+              <input id="vipCep" name="cep" type="text" inputmode="numeric" maxlength="9" required />
+            </div>
+            <div class="vip-field">
+              <label for="vipPassword">Senha (mín. 8 caracteres, letras e números)</label>
+              <input id="vipPassword" name="password" type="password" minlength="8" maxlength="128" required />
+            </div>
+          </div>
+
+          <p class="vip-legal">
+            Ao enviar, você concorda com nossa <a href="politica-privacidade.html">Política de Privacidade</a> e autoriza
+            o recebimento de novidades sobre Gênesis e Alicerce.
+          </p>
+
+          <div class="launch-btn-row">
+            <button class="launch-btn" type="submit" id="vipSubmitBtn">Entrar na lista VIP</button>
+            <button class="launch-btn secondary" type="button" id="talkToTeamBtn">Falar com a equipe</button>
+          </div>
+
+          <div class="team-email-box" id="teamEmailBox" aria-live="polite">
+            <a class="team-email-address" href="mailto:contato@tsebi.com.br">contato@tsebi.com.br</a>
+            <button class="team-email-copy" type="button" id="copyEmailBtn">Copiar e-mail</button>
+          </div>
+
+          <p class="vip-status" id="vipStatus" aria-live="polite"></p>
+        </form>
+      </section>
+    </section>
+  </main>
+
+  <footer class="launch-mini-footer">
+    <div class="launch-mini-footer-inner">
+      <p>© 2026 Tsebi Brasil. Todos os direitos reservados.</p>
+      <div class="launch-btn-row">
+        <a href="nossa-historia.html">Origem</a>
+        <a href="processos.html">Processos</a>
+        <a href="politica-privacidade.html">Privacidade</a>
+      </div>
+    </div>
+  </footer>
+
+  <script>
+    (function () {
+      const EMAIL = "contato@tsebi.com.br";
+      const form = document.getElementById("vipRegisterForm");
+      const submitBtn = document.getElementById("vipSubmitBtn");
+      const statusEl = document.getElementById("vipStatus");
+      const talkBtn = document.getElementById("talkToTeamBtn");
+      const emailBox = document.getElementById("teamEmailBox");
+      const copyBtn = document.getElementById("copyEmailBtn");
+
+      function digitsOnly(value, maxLen) {
+        return String(value || "").replace(/\D/g, "").slice(0, maxLen);
+      }
+
+      function setStatus(message, type) {
+        statusEl.textContent = message || "";
+        statusEl.classList.remove("error", "success");
+        if (type) statusEl.classList.add(type);
+      }
+
+      function setLoading(isLoading) {
+        submitBtn.disabled = Boolean(isLoading);
+        submitBtn.textContent = isLoading ? "Enviando..." : "Entrar na lista VIP";
+      }
+
+      talkBtn?.addEventListener("click", function () {
+        emailBox.classList.toggle("is-visible");
+        if (emailBox.classList.contains("is-visible")) {
+          setStatus("Equipe disponível em contato@tsebi.com.br", "success");
+        }
+      });
+
+      copyBtn?.addEventListener("click", async function () {
+        try {
+          if (navigator.clipboard && navigator.clipboard.writeText) {
+            await navigator.clipboard.writeText(EMAIL);
+            setStatus("E-mail copiado para a área de transferência.", "success");
+            return;
+          }
+        } catch (_) {}
+        setStatus("Copie manualmente: contato@tsebi.com.br", "success");
+      });
+
+      document.getElementById("vipCpf")?.addEventListener("input", function (event) {
+        event.target.value = digitsOnly(event.target.value, 11);
+      });
+
+      document.getElementById("vipCep")?.addEventListener("input", function (event) {
+        event.target.value = digitsOnly(event.target.value, 8);
+      });
+
+      form?.addEventListener("submit", async function (event) {
+        event.preventDefault();
+        setStatus("");
+
+        const payload = {
+          name: String(document.getElementById("vipName")?.value || "").trim(),
+          email: String(document.getElementById("vipEmail")?.value || "").trim(),
+          birthDate: String(document.getElementById("vipBirthDate")?.value || "").trim(),
+          cpf: digitsOnly(document.getElementById("vipCpf")?.value || "", 11),
+          cep: digitsOnly(document.getElementById("vipCep")?.value || "", 8),
+          password: String(document.getElementById("vipPassword")?.value || "")
+        };
+
+        if (!payload.name || !payload.email || !payload.birthDate || payload.cpf.length !== 11 || payload.cep.length !== 8 || payload.password.length < 8) {
+          setStatus("Confira os dados do cadastro VIP antes de enviar.", "error");
+          return;
+        }
+
+        setLoading(true);
+
+        try {
+          const response = await fetch("/api/auth/register", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            credentials: "include",
+            body: JSON.stringify(payload)
+          });
+
+          const data = await response.json().catch(function () { return {}; });
+
+          if (response.ok) {
+            form.reset();
+            setStatus("Cadastro concluído. Você entrou na lista VIP e sua conta Tsebi foi criada.", "success");
+            return;
+          }
+
+          if (response.status === 409 || data.error === "EMAIL_ALREADY_EXISTS") {
+            setStatus("Este e-mail já está cadastrado. Faça login para continuar.", "error");
+            return;
+          }
+
+          setStatus("Não foi possível concluir agora. Tente novamente em instantes.", "error");
+        } catch (_) {
+          setStatus("Falha de conexão. Verifique sua internet e tente novamente.", "error");
+        } finally {
+          setLoading(false);
+        }
+      });
+    })();
+  </script>
+</body>
+</html>
