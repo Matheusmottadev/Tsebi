@@ -6,7 +6,7 @@
   <title>Lançamento | Tsebi Brasil</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link rel="stylesheet" href="css/style.css" />
+  <link rel="stylesheet" href="css/style.css?v=20260216c" />
   <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600&family=Montserrat:wght@300;400;500;600&display=swap" rel="stylesheet" />
   <style>
     .launch-main {
@@ -145,7 +145,8 @@
     .launch-video {
       width: 100%;
       height: clamp(320px, 64vh, 760px);
-      object-fit: cover;
+      object-fit: contain;
+      background: #000;
       display: block;
       opacity: 0.94;
     }
@@ -831,7 +832,7 @@
     </div>
   </div>
 
-  <script src="JS/script.js?v=20260215i"></script>
+  <script src="JS/script.js?v=20260216c"></script>
   <script>
     (function () {
       const switchButtons = Array.from(document.querySelectorAll("[data-collection-target]"));
@@ -854,6 +855,13 @@
           video.loop = true;
           video.setAttribute("muted", "");
           video.setAttribute("playsinline", "");
+          video.setAttribute("webkit-playsinline", "");
+
+          const sourceUrls = Array.from(video.querySelectorAll("source"))
+            .map((source) => source.src)
+            .filter(Boolean);
+          let sourceIndex = 0;
+          let switchedToFallback = false;
 
           const safePlay = () => {
             const promise = video.play();
@@ -862,8 +870,50 @@
             }
           };
 
+          const applySource = (index) => {
+            const nextUrl = sourceUrls[index];
+            if (!nextUrl) return false;
+            sourceIndex = index;
+            if (video.src !== nextUrl) {
+              video.src = nextUrl;
+            }
+            video.load();
+            return true;
+          };
+
+          const moveToFallback = () => {
+            if (switchedToFallback) return;
+            if (sourceIndex + 1 >= sourceUrls.length) return;
+            switchedToFallback = true;
+            if (applySource(sourceIndex + 1)) {
+              safePlay();
+            }
+          };
+
+          if (sourceUrls.length > 0) {
+            applySource(0);
+          }
+
           video.addEventListener("loadedmetadata", safePlay, { once: true });
           video.addEventListener("canplay", safePlay, { once: true });
+          video.addEventListener("ended", () => {
+            video.currentTime = 0;
+            safePlay();
+          });
+          video.addEventListener("error", moveToFallback);
+          video.addEventListener("stalled", () => {
+            if (video.currentTime < 0.1) moveToFallback();
+          });
+          video.querySelectorAll("source").forEach((source) => {
+            source.addEventListener("error", moveToFallback);
+          });
+
+          setTimeout(() => {
+            if (video.currentTime < 0.1 && video.readyState < 2) {
+              moveToFallback();
+            }
+          }, 3500);
+
           safePlay();
         });
 
