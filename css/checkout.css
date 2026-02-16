@@ -396,17 +396,32 @@
 }
 
 .checkout-status{
-  min-height: 18px;
+  min-height: 40px;
   font-family: "Montserrat", sans-serif;
   font-size: 12px;
+  line-height: 1.45;
+  padding: 10px 12px;
+  border: 1px solid transparent;
+  background: transparent;
+  transition: all .2s ease;
 }
 
 .checkout-status.is-error{
-  color: #9d1f1f;
+  color: #8b1c1c;
+  border-color: #e8c9c9;
+  background: #fff4f4;
 }
 
 .checkout-status.is-success{
   color: #1d6a2d;
+  border-color: #cfe6d5;
+  background: #f4fbf6;
+}
+
+.checkout-status.is-warning{
+  color: #7a5a14;
+  border-color: #e8dab5;
+  background: #fff9ec;
 }
 
 .checkout-summary{

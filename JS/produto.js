@@ -5,8 +5,11 @@ async function loadProductsCatalog() {
     const response = await fetch("/api/products");
     if (!response.ok) return [];
     const parsed = await response.json();
-    if (Array.isArray(parsed)) return parsed;
-    if (parsed && Array.isArray(parsed.products)) return parsed.products;
+    const list = Array.isArray(parsed) ? parsed : (parsed && Array.isArray(parsed.products) ? parsed.products : []);
+    return list.map((product) => ({
+      ...product,
+      stock: Number(product?.stock ?? product?.stock_qty ?? 0)
+    }));
   } catch {}
 
   return [];
@@ -21,7 +24,12 @@ async function loadProductById(id) {
     if (response.status === 404) return null;
     if (!response.ok) return null;
     const parsed = await response.json();
-    if (parsed && typeof parsed === "object") return parsed;
+    if (parsed && typeof parsed === "object") {
+      return {
+        ...parsed,
+        stock: Number(parsed?.stock ?? parsed?.stock_qty ?? 0)
+      };
+    }
   } catch {}
 
   return null;
@@ -231,31 +239,29 @@ function buildProductGalleryByColor(product) {
 
 function buildVariantStock(product) {
   const stockMap = {};
+  const totalStock = Math.max(0, Number(product?.stock ?? product?.stock_qty ?? 0));
+  const combinations = [];
 
-  product.colors.forEach((color, colorIndex) => {
-    product.sizes.forEach((size, sizeIndex) => {
-      const seed = product.id.length + colorIndex * 3 + sizeIndex * 5;
-      const base = seed % 7;
-      const qty = base === 0 ? 0 : (base % 4) + 1;
-      stockMap[variantKey(color, size)] = qty;
+  product.colors.forEach((color) => {
+    product.sizes.forEach((size) => {
+      const key = variantKey(color, size);
+      stockMap[key] = 0;
+      combinations.push(key);
     });
   });
 
-  // Garante que cada cor tenha ao menos 1 tamanho disponível.
-  product.colors.forEach((color) => {
-    const available = product.sizes.some((size) => stockMap[variantKey(color, size)] > 0);
-    if (!available && product.sizes.length > 0) {
-      stockMap[variantKey(color, product.sizes[0])] = 1;
-    }
-  });
+  if (combinations.length === 0 || totalStock <= 0) {
+    return stockMap;
+  }
 
-  // Garante que cada tamanho tenha ao menos 1 cor disponível.
-  product.sizes.forEach((size) => {
-    const available = product.colors.some((color) => stockMap[variantKey(color, size)] > 0);
-    if (!available && product.colors.length > 0) {
-      stockMap[variantKey(product.colors[0], size)] = 1;
-    }
-  });
+  let remaining = totalStock;
+  let index = 0;
+  while (remaining > 0) {
+    const key = combinations[index % combinations.length];
+    stockMap[key] += 1;
+    remaining -= 1;
+    index += 1;
+  }
 
   return stockMap;
 }
@@ -282,7 +288,7 @@ const returnTo = params.get("returnTo");
 const productView = document.getElementById("productView");
 const productNotFound = document.getElementById("productNotFound");
 const productBack = document.querySelector(".product-back");
-const productCta = document.querySelector(".product-cta");
+let productCta = null;
 
 if (productBack) {
   const referrerUrl = document.referrer ? new URL(document.referrer, window.location.href) : null;
@@ -313,6 +319,7 @@ async function initProductPage() {
 if (!product) {
   if (productNotFound) productNotFound.hidden = false;
 } else {
+  productCta = document.querySelector(".product-cta");
   const productMediaTrack = document.getElementById("productMediaTrack");
   const productMediaDots = document.getElementById("productMediaDots");
   const productCollection = document.getElementById("productCollection");
@@ -343,6 +350,7 @@ if (!product) {
 
   const colorGalleries = buildProductGalleryByColor(product);
   const stockMap = buildVariantStock(product);
+  const totalProductStock = Math.max(0, Number(product?.stock ?? product?.stock_qty ?? 0));
 
   let selectedColor = product.colors[0] || "";
   let selectedSize = product.sizes[0] || "";
@@ -514,24 +522,35 @@ if (!product) {
   function syncStockState() {
     if (!productStockNote || !productCta) return;
 
+    if (totalProductStock <= 0) {
+      productStockNote.textContent = isEnglish ? "Sold out." : "Esgotado.";
+      productCta.disabled = true;
+      productCta.classList.add("is-disabled");
+      productCta.textContent = isEnglish ? "Sold out" : "ESGOTADO";
+      return;
+    }
+
     const stock = getStock(selectedColor, selectedSize);
 
     if (!selectedColor || !selectedSize) {
       productStockNote.textContent = "";
       productCta.disabled = true;
+      productCta.classList.add("is-disabled");
       productCta.textContent = isEnglish ? "Select variant" : "Selecionar variação";
       return;
     }
 
     if (stock <= 0) {
-      productStockNote.textContent = isEnglish ? "Unavailable for this color and size combination." : "Indisponível para essa combinação de cor e tamanho.";
+      productStockNote.textContent = isEnglish ? "Sold out." : "Esgotado.";
       productCta.disabled = true;
-      productCta.textContent = isEnglish ? "Unavailable" : "Indisponível";
+      productCta.classList.add("is-disabled");
+      productCta.textContent = isEnglish ? "Sold out" : "ESGOTADO";
       return;
     }
 
     productStockNote.textContent = "";
     productCta.disabled = false;
+    productCta.classList.remove("is-disabled");
     productCta.textContent = isEnglish ? "Add to cart" : "Adicionar ao carrinho";
   }
 
@@ -585,6 +604,11 @@ if (!product) {
   }
 
   function addSelectedVariantToCart() {
+    if (totalProductStock <= 0) {
+      syncStockState();
+      return;
+    }
+
     if (!selectedColor || !selectedSize) return;
 
     const stock = getStock(selectedColor, selectedSize);
@@ -755,3 +779,4 @@ if (!product) {
   if (productView) productView.hidden = false;
 }
 }
+

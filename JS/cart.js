@@ -254,9 +254,10 @@ function setButtonDisabled(button, disabled) {
 function setCheckoutStatus(message, type = "") {
   if (!dom.checkoutStatus) return;
   dom.checkoutStatus.textContent = message || "";
-  dom.checkoutStatus.classList.remove("is-error", "is-success");
+  dom.checkoutStatus.classList.remove("is-error", "is-success", "is-warning");
   if (type === "error") dom.checkoutStatus.classList.add("is-error");
   if (type === "success") dom.checkoutStatus.classList.add("is-success");
+  if (type === "warning") dom.checkoutStatus.classList.add("is-warning");
 }
 
 function setProcessingState(processing) {
@@ -269,12 +270,90 @@ async function apiRequest(url, options) {
   const response = await fetch(url, options);
   const data = await response.json().catch(() => ({}));
   if (!response.ok) {
-    const error = new Error(data.error || "Falha na comunicação com o servidor.");
+    const serverMessage =
+      (data && (data.error || data.message || data.detail)) ||
+      "Falha na comunicacao com o servidor.";
+    const error = new Error(serverMessage);
     error.status = response.status;
-    error.code = data.error || "";
+    error.code = data.error || data.code || "";
     throw error;
   }
   return data;
+}
+
+function isInvalidCartError(error) {
+  const status = Number(error?.status || 0);
+  const raw = String(error?.message || error?.code || "").toLowerCase();
+  if (raw.includes("invalid cart")) return true;
+  if (status === 409 || status === 422) return true;
+  return false;
+}
+
+function getProductStock(product) {
+  const stock = Number(product?.stock ?? product?.stock_qty ?? 0);
+  return Number.isFinite(stock) ? stock : 0;
+}
+
+function getProductPriceLabel(product) {
+  if (product && typeof product.priceLabel === "string" && product.priceLabel.trim()) {
+    return product.priceLabel;
+  }
+  const numeric = Number(product?.priceValue ?? product?.price ?? 0);
+  return formatCurrency(Number.isFinite(numeric) ? numeric : 0);
+}
+
+async function fetchProductsCatalog() {
+  try {
+    const response = await fetch("/api/products", { method: "GET" });
+    if (!response.ok) return [];
+    const parsed = await response.json();
+    if (Array.isArray(parsed)) return parsed;
+    if (parsed && Array.isArray(parsed.products)) return parsed.products;
+  } catch {}
+  return [];
+}
+
+async function refreshCartFromLatestProducts() {
+  const products = await fetchProductsCatalog();
+  if (!Array.isArray(products) || products.length === 0) return { ok: false, removedOutOfStock: false };
+
+  const byId = new Map();
+  products.forEach((product) => {
+    const id = String(product?.id || "").trim();
+    const sku = String(product?.sku || "").trim();
+    if (id) byId.set(id, product);
+    if (sku) byId.set(sku, product);
+  });
+
+  let removedOutOfStock = false;
+  const nextItems = [];
+
+  checkoutState.cart.items.filter((item) => item && item.id).forEach((item) => {
+    const product = byId.get(String(item.id || "").trim());
+    if (!product) {
+      nextItems.push(item);
+      return;
+    }
+
+    const stock = getProductStock(product);
+    if (stock <= 0) {
+      removedOutOfStock = true;
+      return;
+    }
+
+    nextItems.push({
+      ...item,
+      priceLabel: getProductPriceLabel(product),
+      maxStock: stock,
+      qty: Math.min(Math.max(1, Number(item.qty) || 1), stock)
+    });
+  });
+
+  checkoutState.cart.items = nextItems;
+  saveCart(nextItems);
+  invalidatePaymentSession();
+  renderCartItems();
+  return { ok: true, removedOutOfStock };
 }
 
 function getShippingOptionsFromCep(cepDigits) {
@@ -863,6 +942,20 @@ async function ensurePaymentElementReady() {
       redirectToLogin(3);
       return;
     }
+    if (isInvalidCartError(error)) {
+      const refreshed = await refreshCartFromLatestProducts();
+      if (refreshed.ok) {
+        const messages = ["Atualizamos seu carrinho porque o estoque ou o preco de um item mudou."];
+        if (refreshed.removedOutOfStock) {
+          messages.push("Alguns itens foram removidos por falta de estoque.");
+        }
+        messages.push("Confira o resumo e tente finalizar novamente.");
+        setCheckoutStatus(messages.join(" "), "warning");
+      } else {
+        setCheckoutStatus("Nao foi possivel atualizar seu carrinho agora. Tente novamente em instantes.", "error");
+      }
+      return;
+    }
     setCheckoutStatus(error.message || "Falha ao preparar o pagamento.", "error");
   } finally {
     checkoutState.payment.preparing = false;
@@ -1185,5 +1278,3 @@ async function init() {
 
 init();
 })();
-
-
