@@ -348,9 +348,44 @@
         padding: 28px 22px;
       }
     }
+
+    /* Header estático na página de lançamento (sem dependência de hover) */
+    body.launch-header-static .home-header {
+      background: #fff;
+      border-bottom-color: #d9d9d9;
+    }
+
+    body.launch-header-static .header-left,
+    body.launch-header-static .header-right {
+      opacity: 1;
+      transform: translateY(0);
+      pointer-events: auto;
+    }
+
+    body.launch-header-static .home-header:not(.is-scrolled) .logo-center-text {
+      color: #000;
+      display: inline-block !important;
+      opacity: 1;
+    }
+
+    body.launch-header-static .home-header:not(.is-scrolled) .logo-center-image {
+      display: none !important;
+      opacity: 0;
+    }
+
+    /* Sem efeito de hover no topo: mantém texto fixo antes do scroll */
+    body.launch-header-static .home-header:not(.is-scrolled):hover .logo-center-text,
+    body.launch-header-static .home-header:not(.is-scrolled):focus-within .logo-center-text {
+      display: inline-block !important;
+    }
+
+    body.launch-header-static .home-header:not(.is-scrolled):hover .logo-center-image,
+    body.launch-header-static .home-header:not(.is-scrolled):focus-within .logo-center-image {
+      display: none !important;
+    }
   </style>
 </head>
-<body class="legal-header-image-default">
+<body class="legal-header-image-default launch-header-static">
   <div class="top-bar">
     <div class="top-wrapper">
       <button class="arrow left" type="button">&#10094;</button>
@@ -513,6 +548,7 @@
         <section class="launch-video-block reveal" aria-label="Vídeo da coleção Alicerce">
           <video class="launch-video" autoplay muted loop playsinline preload="auto">
             <source src="https://media.tsebi.com.br/alicerce-hero.mp4" type="video/mp4" />
+            <source src="images/alicerce-hero.mp4" type="video/mp4" />
           </video>
         </section>
 
@@ -573,6 +609,7 @@
         <section class="launch-video-block reveal" aria-label="Vídeo da coleção Genesis">
           <video class="launch-video" autoplay muted loop playsinline preload="auto">
             <source src="https://media.tsebi.com.br/flor-lancamento.mp4" type="video/mp4" />
+            <source src="images/genesis.mp4" type="video/mp4" />
           </video>
         </section>
 
@@ -807,6 +844,39 @@
       const emailBox = document.getElementById("teamEmailBox");
       const copyBtn = document.getElementById("copyEmailBtn");
       const revealElements = Array.from(document.querySelectorAll(".reveal"));
+      const launchVideos = Array.from(document.querySelectorAll(".launch-video"));
+
+      function setupLaunchVideos() {
+        launchVideos.forEach((video) => {
+          if (!video) return;
+          video.muted = true;
+          video.autoplay = true;
+          video.loop = true;
+          video.setAttribute("muted", "");
+          video.setAttribute("playsinline", "");
+
+          const safePlay = () => {
+            const promise = video.play();
+            if (promise && typeof promise.catch === "function") {
+              promise.catch(() => {});
+            }
+          };
+
+          video.addEventListener("loadedmetadata", safePlay, { once: true });
+          video.addEventListener("canplay", safePlay, { once: true });
+          safePlay();
+        });
+
+        document.addEventListener("visibilitychange", () => {
+          if (document.hidden) return;
+          launchVideos.forEach((video) => {
+            const promise = video.play();
+            if (promise && typeof promise.catch === "function") {
+              promise.catch(() => {});
+            }
+          });
+        });
+      }
 
       const observer = new IntersectionObserver((entries) => {
         entries.forEach((entry) => {
@@ -838,8 +908,15 @@
             panel.classList.remove("is-active");
             requestAnimationFrame(() => panel.classList.add("is-active"));
             armRevealAnimations(panel);
+            panel.querySelectorAll("video").forEach((video) => {
+              const promise = video.play();
+              if (promise && typeof promise.catch === "function") {
+                promise.catch(() => {});
+              }
+            });
           } else {
             panel.classList.remove("is-active");
+            panel.querySelectorAll("video").forEach((video) => video.pause());
           }
         });
       }
@@ -854,6 +931,7 @@
 
       revealElements.forEach((node) => observer.observe(node));
       setActiveCollection("alicerce");
+      setupLaunchVideos();
 
       function digitsOnly(value, maxLen) {
         return String(value || "").replace(/\D/g, "").slice(0, maxLen);
