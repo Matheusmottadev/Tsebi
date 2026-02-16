@@ -1283,6 +1283,11 @@ html.no-scroll{
     top: auto;
     transform: none;
   }
+
+  /* Avoid floating cart count badge over transparent hero header */
+  .home-header:not(.is-scrolled) .quick-action.cart-link[data-cart-count]::after{
+    display: none;
+  }
 }
 
 @media (max-width: 520px){
