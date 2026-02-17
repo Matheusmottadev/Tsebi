@@ -3,7 +3,12 @@ const bcrypt = require("bcrypt");
 const rateLimit = require("express-rate-limit");
 const { z } = require("zod");
 const { normalizeEmail, findUserByEmail, createUser } = require("./user-repository");
-const { upsertVipSubscriber, listVipSubscribers, setVipAccountCreated } = require("./lib/vip-repository");
+const {
+  upsertVipSubscriber,
+  listVipSubscribers,
+  setVipAccountCreated,
+  deleteVipSubscriberById
+} = require("./lib/vip-repository");
 const { getVipDatabaseUrl } = require("./lib/vip-db");
 
 const vipRouter = express.Router();
@@ -46,6 +51,24 @@ const vipRegisterSchema = z.object({
     .string()
     .transform((value) => String(value || "").replace(/\D/g, ""))
     .refine((value) => /^\d{8}$/.test(value))
+});
+
+const optionalDigits = (length) =>
+  z
+    .union([z.string(), z.null(), z.undefined()])
+    .transform((value) => String(value || "").replace(/\D/g, ""))
+    .refine((value) => value.length === 0 || value.length === length);
+
+const vipAdminUpsertSchema = z.object({
+  name: z.string().trim().min(2).max(120),
+  email: emailSchema,
+  birthDate: z
+    .union([z.string(), z.null(), z.undefined()])
+    .transform((value) => String(value || "").trim())
+    .refine((value) => value.length === 0 || /^\d{4}-\d{2}-\d{2}$/.test(value)),
+  cpf: optionalDigits(11),
+  cep: optionalDigits(8),
+  accountCreated: z.boolean().optional().default(false)
 });
 
 function parseBirthDate(value) {
@@ -173,6 +196,65 @@ vipRouter.get("/subscribers", vipListRateLimit, requireVipAdmin, async (req, res
     return res.json({ subscribers, count: subscribers.length, limit, offset });
   } catch {
     return res.status(500).json({ error: "VIP_LIST_FAILED" });
+  }
+});
+
+vipRouter.post("/subscribers", vipListRateLimit, requireVipAdmin, async (req, res) => {
+  try {
+    assertVipDbConfigured();
+  } catch {
+    return res.status(500).json({ error: "VIP_DATABASE_NOT_CONFIGURED" });
+  }
+
+  const parsed = vipAdminUpsertSchema.safeParse(req.body || {});
+  if (!parsed.success) {
+    return res.status(400).json({ error: "INVALID_INPUT" });
+  }
+
+  const payload = parsed.data;
+  if (payload.birthDate && !parseBirthDate(payload.birthDate)) {
+    return res.status(400).json({ error: "INVALID_INPUT" });
+  }
+
+  try {
+    const subscriber = await upsertVipSubscriber({
+      name: payload.name,
+      email: normalizeEmail(payload.email),
+      birthDate: payload.birthDate || "",
+      cpf: payload.cpf || "",
+      cep: payload.cep || "",
+      source: "admin_panel",
+      accountCreated: Boolean(payload.accountCreated),
+      ipAddress: req.ip,
+      userAgent: req.headers["user-agent"]
+    });
+
+    return res.status(201).json({ ok: true, subscriber });
+  } catch {
+    return res.status(500).json({ error: "VIP_SAVE_FAILED" });
+  }
+});
+
+vipRouter.delete("/subscribers/:id", vipListRateLimit, requireVipAdmin, async (req, res) => {
+  try {
+    assertVipDbConfigured();
+  } catch {
+    return res.status(500).json({ error: "VIP_DATABASE_NOT_CONFIGURED" });
+  }
+
+  const id = Number(req.params.id);
+  if (!Number.isInteger(id) || id <= 0) {
+    return res.status(400).json({ error: "INVALID_ID" });
+  }
+
+  try {
+    const removed = await deleteVipSubscriberById(id);
+    if (!removed) {
+      return res.status(404).json({ error: "NOT_FOUND" });
+    }
+    return res.json({ ok: true, removed });
+  } catch {
+    return res.status(500).json({ error: "VIP_DELETE_FAILED" });
   }
 });
 

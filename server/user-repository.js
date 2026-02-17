@@ -84,6 +84,32 @@ async function findUserById(id) {
   return fromRow(result.rows[0] || null);
 }
 
+async function listUsers({ limit = 100, offset = 0, search = "" } = {}) {
+  const safeLimit = Math.max(1, Math.min(500, Number(limit) || 100));
+  const safeOffset = Math.max(0, Number(offset) || 0);
+  const normalizedSearch = String(search || "").trim().toLowerCase();
+
+  const values = [safeLimit, safeOffset];
+  let whereSql = "";
+  if (normalizedSearch) {
+    values.push(`%${normalizedSearch}%`);
+    whereSql = `WHERE lower(name) LIKE $3 OR lower(email) LIKE $3`;
+  }
+
+  const result = await query(
+    `
+    SELECT *
+    FROM users
+    ${whereSql}
+    ORDER BY created_at DESC
+    LIMIT $1 OFFSET $2
+    `,
+    values
+  );
+
+  return result.rows.map(fromRow).filter(Boolean);
+}
+
 async function createUser({ name, email, passwordHash, birthDate, cpf, cep }) {
   const normalizedEmail = normalizeEmail(email);
   try {
@@ -157,6 +183,77 @@ async function updateUser(id, patch) {
   );
 
   return fromRow(result.rows[0] || null);
+}
+
+async function adminUpdateUser(id, patch = {}) {
+  const current = await findUserById(id);
+  if (!current) return null;
+
+  const next = {
+    name: patch.name ?? current.name,
+    email: patch.email ?? current.email,
+    birthDate: patch.birthDate ?? current.birthDate,
+    cpf: patch.cpf ?? current.cpf,
+    cep: patch.cep ?? current.cep
+  };
+
+  try {
+    const result = await query(
+      `
+      UPDATE users
+      SET
+        name = $2,
+        email = $3,
+        birth_date = NULLIF($4, '')::date,
+        cpf = $5,
+        cep = $6,
+        updated_at = NOW()
+      WHERE id = $1
+      RETURNING *
+      `,
+      [
+        id,
+        String(next.name || "").trim(),
+        normalizeEmail(next.email),
+        String(next.birthDate || ""),
+        String(next.cpf || "").replace(/\D/g, "").slice(0, 11) || null,
+        String(next.cep || "").replace(/\D/g, "").slice(0, 8) || null
+      ]
+    );
+
+    return fromRow(result.rows[0] || null);
+  } catch (error) {
+    if (String(error.code || "") === "23505") {
+      return { error: "EMAIL_ALREADY_EXISTS" };
+    }
+    throw error;
+  }
+}
+
+async function deleteUserById(id) {
+  if (!id) return null;
+  return withTransaction(async (client) => {
+    await client.query(
+      `
+      UPDATE orders
+      SET user_id = NULL,
+          updated_at = NOW()
+      WHERE user_id = $1
+      `,
+      [id]
+    );
+
+    const result = await client.query(
+      `
+      DELETE FROM users
+      WHERE id = $1
+      RETURNING *
+      `,
+      [id]
+    );
+
+    return fromRow(result.rows[0] || null);
+  });
 }
 
 function hashToken(token) {
@@ -236,8 +333,11 @@ module.exports = {
   publicUser,
   findUserByEmail,
   findUserById,
+  listUsers,
   createUser,
   updateUser,
+  adminUpdateUser,
+  deleteUserById,
   createPasswordResetToken,
   consumePasswordResetToken
 };

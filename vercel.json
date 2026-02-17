@@ -9,6 +9,10 @@
       "destination": "/pages/index.html"
     },
     {
+      "source": "/studio-portal",
+      "destination": "/pages/studio-portal.html"
+    },
+    {
       "source": "/:page.html",
       "destination": "/pages/:page.html"
     }

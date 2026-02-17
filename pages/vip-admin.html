@@ -16,9 +16,11 @@
       --muted: #6a665f;
       --line: #ddd6c9;
       --danger: #9d1f1f;
+      --ok: #1d5e2b;
     }
 
     * { box-sizing: border-box; }
+
     body {
       margin: 0;
       background: var(--bg);
@@ -59,8 +61,29 @@
       align-items: center;
     }
 
+    .form-grid {
+      display: grid;
+      grid-template-columns: repeat(5, minmax(130px, 1fr));
+      gap: 10px;
+      align-items: end;
+    }
+
+    .field {
+      display: grid;
+      gap: 6px;
+    }
+
+    .field label {
+      font-size: 11px;
+      letter-spacing: 0.7px;
+      text-transform: uppercase;
+      color: #5e5a53;
+    }
+
     input[type="password"],
-    input[type="number"] {
+    input[type="text"],
+    input[type="email"],
+    input[type="date"] {
       width: 100%;
       min-height: 42px;
       border: 1px solid #cfc8bc;
@@ -69,6 +92,17 @@
       color: var(--text);
       font-family: "Montserrat", sans-serif;
       font-size: 14px;
+    }
+
+    .checkbox-field {
+      min-height: 42px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      border: 1px solid #cfc8bc;
+      padding: 0 10px;
+      background: #fff;
+      font-size: 13px;
     }
 
     button {
@@ -89,6 +123,16 @@
       color: #151515;
     }
 
+    button.danger {
+      border-color: #7c2f2f;
+      background: #7c2f2f;
+    }
+
+    button:disabled {
+      opacity: 0.55;
+      cursor: not-allowed;
+    }
+
     .status {
       margin-top: 10px;
       min-height: 20px;
@@ -100,37 +144,62 @@
       color: var(--danger);
     }
 
-    .actions {
-      margin-top: 14px;
+    .status.ok {
+      color: var(--ok);
+    }
+
+    .list-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+      margin-bottom: 10px;
+    }
+
+    .count {
+      border: 1px solid #cfc8bc;
+      padding: 6px 10px;
+      font-size: 12px;
+      letter-spacing: 0.7px;
+      text-transform: uppercase;
+      background: #fbf8f2;
+    }
+
+    .vip-list {
+      list-style: none;
+      margin: 0;
+      padding: 0;
       display: grid;
-      grid-template-columns: 150px 140px 120px;
+      gap: 10px;
+    }
+
+    .vip-item {
+      border: 1px solid #e8e2d8;
+      background: #fff;
+    }
+
+    .vip-item-head {
+      display: grid;
+      grid-template-columns: 1fr auto auto;
       gap: 10px;
       align-items: center;
+      padding: 10px;
+      border-bottom: 1px solid #f1ece4;
     }
 
-    table {
-      margin-top: 14px;
-      width: 100%;
-      border-collapse: collapse;
-      background: #fff;
-      border: 1px solid var(--line);
-      font-size: 13px;
+    .vip-main {
+      display: grid;
+      gap: 3px;
     }
 
-    th,
-    td {
-      border-bottom: 1px solid #ece7de;
-      text-align: left;
-      padding: 10px 8px;
-      vertical-align: top;
+    .vip-main strong {
+      font-size: 14px;
     }
 
-    th {
-      font-size: 11px;
-      letter-spacing: 0.9px;
-      text-transform: uppercase;
-      color: #5e5a53;
-      background: #f6f2eb;
+    .vip-main span {
+      font-size: 12px;
+      color: var(--muted);
     }
 
     .pill {
@@ -140,6 +209,7 @@
       padding: 2px 7px;
       font-size: 11px;
       border-radius: 12px;
+      white-space: nowrap;
     }
 
     .pill.no {
@@ -147,16 +217,50 @@
       color: #7c2f2f;
     }
 
-    @media (max-width: 920px) {
+    .vip-details {
+      display: none;
+      padding: 10px;
+      background: #fcfaf6;
+    }
+
+    .vip-item.open .vip-details {
+      display: block;
+    }
+
+    .vip-details-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(180px, 1fr));
+      gap: 8px 14px;
+      font-size: 13px;
+    }
+
+    .empty {
+      border: 1px dashed #d8d1c4;
+      padding: 12px;
+      color: var(--muted);
+      font-size: 13px;
+      background: #fcfaf7;
+    }
+
+    [hidden] {
+      display: none !important;
+    }
+
+    @media (max-width: 980px) {
       .row {
         grid-template-columns: 1fr;
       }
-      .actions {
+
+      .form-grid {
         grid-template-columns: 1fr;
       }
-      table {
-        display: block;
-        overflow-x: auto;
+
+      .vip-item-head {
+        grid-template-columns: 1fr;
+      }
+
+      .vip-details-grid {
+        grid-template-columns: 1fr;
       }
     }
   </style>
@@ -164,44 +268,63 @@
 <body>
   <main class="wrap">
     <h1>VIP Admin</h1>
-    <p class="muted">Acesso por token para visualizar inscritos da lista VIP.</p>
+    <p class="muted">Acesso por token para gerenciar inscritos da lista VIP.</p>
 
     <section class="card">
       <div class="row">
         <input id="vipToken" type="password" placeholder="VIP_ADMIN_TOKEN" autocomplete="off" />
-        <button id="saveTokenBtn" type="button">Salvar token</button>
+        <button id="saveTokenBtn" type="button">Acessar</button>
         <button id="clearTokenBtn" type="button" class="secondary">Sair</button>
       </div>
       <p class="status" id="authStatus"></p>
     </section>
 
-    <section class="card">
-      <div class="actions">
-        <input id="limitInput" type="number" min="1" max="500" value="100" />
-        <input id="offsetInput" type="number" min="0" value="0" />
-        <button id="loadBtn" type="button">Carregar</button>
+    <section class="card" id="addCard" hidden>
+      <div class="form-grid">
+        <div class="field">
+          <label for="newVipName">Nome</label>
+          <input id="newVipName" type="text" maxlength="120" placeholder="Nome completo" />
+        </div>
+        <div class="field">
+          <label for="newVipEmail">Email</label>
+          <input id="newVipEmail" type="email" maxlength="160" placeholder="email@dominio.com" />
+        </div>
+        <div class="field">
+          <label for="newVipBirthDate">Nascimento</label>
+          <input id="newVipBirthDate" type="date" />
+        </div>
+        <div class="field">
+          <label for="newVipCpf">CPF</label>
+          <input id="newVipCpf" type="text" inputmode="numeric" maxlength="14" placeholder="Somente numeros" />
+        </div>
+        <div class="field">
+          <label for="newVipCep">CEP</label>
+          <input id="newVipCep" type="text" inputmode="numeric" maxlength="9" placeholder="Somente numeros" />
+        </div>
       </div>
-      <p class="status" id="loadStatus"></p>
+
+      <div style="margin-top:10px; display:grid; grid-template-columns: 1fr auto; gap:10px; align-items:center;">
+        <label class="checkbox-field">
+          <input id="newVipAccountCreated" type="checkbox" />
+          Marcar conta criada
+        </label>
+        <button id="addVipBtn" type="button">Adicionar inscrito</button>
+      </div>
+
+      <p class="status" id="formStatus"></p>
     </section>
 
-    <table id="vipTable" hidden>
-      <thead>
-        <tr>
-          <th>ID</th>
-          <th>Nome</th>
-          <th>Email</th>
-          <th>Nascimento</th>
-          <th>CPF</th>
-          <th>CEP</th>
-          <th>Conta</th>
-          <th>Data inscricao</th>
-        </tr>
-      </thead>
-      <tbody id="vipTableBody"></tbody>
-    </table>
+    <section class="card" id="listCard" hidden>
+      <div class="list-head">
+        <strong>Inscritos VIP</strong>
+        <span class="count" id="vipCount">0 inscritos</span>
+      </div>
+      <p class="status" id="loadStatus"></p>
+      <div id="emptyState" class="empty" hidden>Nenhum inscrito encontrado.</div>
+      <ul class="vip-list" id="vipList"></ul>
+    </section>
   </main>
 
-  <script src="JS/vip-admin.js?v=20260217a"></script>
+  <script src="JS/vip-admin.js?v=20260217b"></script>
 </body>
 </html>
-

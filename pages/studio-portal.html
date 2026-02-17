@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="robots" content="noindex,nofollow" />
+  <title>Studio Portal | Tsebi</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;600&family=Montserrat:wght@400;500;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/studio-portal.css?v=20260217b" />
+</head>
+<body>
+  <main class="admin-wrap">
+    <header class="admin-head">
+      <div>
+        <p class="admin-kicker">Painel interno</p>
+        <h1>Studio Portal</h1>
+        <p class="admin-sub" id="adminIdentity">Validando acesso...</p>
+      </div>
+      <div class="admin-head-actions">
+        <button id="refreshAllBtn" type="button" class="btn">Atualizar tudo</button>
+        <button id="logoutBtn" type="button" class="btn btn-ghost">Sair</button>
+      </div>
+    </header>
+
+    <p id="adminStatus" class="status"></p>
+
+    <section id="adminLocked" class="panel" hidden>
+      <h2>Acesso restrito</h2>
+      <p>Entre com um usuário administrador para acessar o painel.</p>
+      <a class="btn" href="conta.html">Ir para login</a>
+    </section>
+
+    <section id="adminApp" hidden>
+      <nav class="tabs" aria-label="Abas do painel">
+        <button type="button" class="tab is-active" data-tab="users">Usuários</button>
+        <button type="button" class="tab" data-tab="orders">Pedidos</button>
+        <button type="button" class="tab" data-tab="products">Produtos</button>
+        <button type="button" class="tab" data-tab="vip">Lista VIP</button>
+      </nav>
+
+      <section class="panel tab-panel is-active" data-panel="users">
+        <div class="panel-head">
+          <h2>Usuários</h2>
+          <div class="inline-actions">
+            <input id="usersSearch" type="search" placeholder="Buscar por nome/email" />
+            <button id="usersRefreshBtn" type="button" class="btn btn-ghost">Atualizar</button>
+          </div>
+        </div>
+
+        <form id="createUserForm" class="form-grid">
+          <input id="newUserName" type="text" placeholder="Nome" required />
+          <input id="newUserEmail" type="email" placeholder="Email" required />
+          <input id="newUserPassword" type="text" placeholder="Senha temporária" required />
+          <input id="newUserBirthDate" type="date" />
+          <input id="newUserCpf" type="text" placeholder="CPF" />
+          <input id="newUserCep" type="text" placeholder="CEP" />
+          <button type="submit" class="btn">Adicionar usuário</button>
+        </form>
+
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Nome</th>
+                <th>Email</th>
+                <th>CPF</th>
+                <th>CEP</th>
+                <th>Criado</th>
+                <th>Ações</th>
+              </tr>
+            </thead>
+            <tbody id="usersBody"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="panel tab-panel" data-panel="orders" hidden>
+        <div class="panel-head">
+          <h2>Pedidos</h2>
+          <div class="inline-actions">
+            <input id="ordersSearch" type="search" placeholder="Buscar por ID/email" />
+            <select id="ordersStatusFilter">
+              <option value="">Todos status</option>
+              <option value="pending_payment">Pendente</option>
+              <option value="processing">Processando</option>
+              <option value="paid">Pago</option>
+              <option value="failed">Falhou</option>
+              <option value="canceled">Cancelado</option>
+              <option value="refunded">Reembolsado</option>
+            </select>
+            <button id="ordersRefreshBtn" type="button" class="btn btn-ghost">Atualizar</button>
+          </div>
+        </div>
+
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Pedido</th>
+                <th>Cliente</th>
+                <th>Total</th>
+                <th>Status</th>
+                <th>Data</th>
+                <th>Ações</th>
+              </tr>
+            </thead>
+            <tbody id="ordersBody"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="panel tab-panel" data-panel="products" hidden>
+        <div class="panel-head">
+          <h2>Produtos</h2>
+          <div class="inline-actions">
+            <input id="productsSearch" type="search" placeholder="Buscar por SKU/nome" />
+            <label class="toggle-inline"><input id="productsIncludeInactive" type="checkbox" checked /> Inativos</label>
+            <button id="productsRefreshBtn" type="button" class="btn btn-ghost">Atualizar</button>
+          </div>
+        </div>
+
+        <form id="createProductForm" class="form-grid">
+          <input id="newProductSku" type="text" placeholder="SKU (ex: vestido-longo)" required />
+          <input id="newProductName" type="text" placeholder="Nome" required />
+          <input id="newProductPrice" type="number" min="0" step="1" placeholder="Preço em centavos" required />
+          <input id="newProductStock" type="number" min="0" step="1" placeholder="Estoque" required />
+          <button type="submit" class="btn">Adicionar produto</button>
+        </form>
+
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>SKU</th>
+                <th>Nome</th>
+                <th>Preço (centavos)</th>
+                <th>Estoque</th>
+                <th>Ativo</th>
+                <th>Ações</th>
+              </tr>
+            </thead>
+            <tbody id="productsBody"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="panel tab-panel" data-panel="vip" hidden>
+        <div class="panel-head">
+          <h2>Lista VIP</h2>
+          <div class="inline-actions">
+            <button id="vipRefreshBtn" type="button" class="btn btn-ghost">Atualizar</button>
+          </div>
+        </div>
+
+        <form id="createVipForm" class="form-grid">
+          <input id="newVipName" type="text" placeholder="Nome" required />
+          <input id="newVipEmail" type="email" placeholder="Email" required />
+          <input id="newVipBirthDate" type="date" />
+          <input id="newVipCpf" type="text" placeholder="CPF" />
+          <input id="newVipCep" type="text" placeholder="CEP" />
+          <label class="toggle-inline"><input id="newVipAccountCreated" type="checkbox" /> Conta criada</label>
+          <button type="submit" class="btn">Adicionar VIP</button>
+        </form>
+
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Nome</th>
+                <th>Email</th>
+                <th>CPF</th>
+                <th>CEP</th>
+                <th>Conta</th>
+                <th>Inscrição</th>
+                <th>Ações</th>
+              </tr>
+            </thead>
+            <tbody id="vipBody"></tbody>
+          </table>
+        </div>
+      </section>
+    </section>
+  </main>
+
+  <script src="JS/studio-portal.js?v=20260217b"></script>
+</body>
+</html>

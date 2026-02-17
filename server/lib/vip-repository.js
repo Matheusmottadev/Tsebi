@@ -110,9 +110,66 @@ async function listVipSubscribers({ limit = 100, offset = 0 } = {}) {
   return result.rows.map(mapVipRow).filter(Boolean);
 }
 
+async function deleteVipSubscriberById(id) {
+  const normalizedId = Number(id);
+  if (!Number.isInteger(normalizedId) || normalizedId <= 0) return null;
+
+  const result = await queryVip(
+    `
+    DELETE FROM vip_subscribers
+    WHERE id = $1
+    RETURNING *
+    `,
+    [normalizedId]
+  );
+
+  return mapVipRow(result.rows[0] || null);
+}
+
+async function updateVipSubscriberById(id, patch = {}) {
+  const normalizedId = Number(id);
+  if (!Number.isInteger(normalizedId) || normalizedId <= 0) return null;
+
+  const result = await queryVip(
+    `
+    UPDATE vip_subscribers
+    SET
+      name = COALESCE(NULLIF($2, ''), name),
+      email = COALESCE(NULLIF($3, ''), email),
+      birth_date = CASE
+        WHEN $4 = '__KEEP__' THEN birth_date
+        WHEN $4 = '' THEN NULL
+        ELSE NULLIF($4, '')::date
+      END,
+      cpf = COALESCE(NULLIF($5, ''), cpf),
+      cep = COALESCE(NULLIF($6, ''), cep),
+      account_created = COALESCE($7, account_created),
+      account_created_at = CASE
+        WHEN COALESCE($7, account_created) THEN COALESCE(account_created_at, NOW())
+        ELSE NULL
+      END,
+      updated_at = NOW()
+    WHERE id = $1
+    RETURNING *
+    `,
+    [
+      normalizedId,
+      String(patch.name ?? "").trim(),
+      normalizeEmail(patch.email ?? ""),
+      patch.birthDate == null ? "__KEEP__" : String(patch.birthDate || "").trim(),
+      normalizeCpf(patch.cpf ?? ""),
+      normalizeCep(patch.cep ?? ""),
+      typeof patch.accountCreated === "boolean" ? patch.accountCreated : null
+    ]
+  );
+
+  return mapVipRow(result.rows[0] || null);
+}
+
 module.exports = {
   upsertVipSubscriber,
   setVipAccountCreated,
-  listVipSubscribers
+  listVipSubscribers,
+  deleteVipSubscriberById,
+  updateVipSubscriberById
 };
-

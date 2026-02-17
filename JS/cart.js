@@ -1349,10 +1349,14 @@ function onShippingMethodChange(event) {
 
 function bindEvents() {
   dom.cartItems?.addEventListener("click", (event) => {
-    const target = event.target;
-    if (!(target instanceof HTMLElement)) return;
-    const action = target.getAttribute("data-action");
-    const key = target.getAttribute("data-key");
+    const targetNode = event.target;
+    if (!(targetNode instanceof Node)) return;
+    const targetElement = targetNode instanceof Element ? targetNode : targetNode.parentElement;
+    if (!(targetElement instanceof Element)) return;
+    const actionButton = targetElement.closest("[data-action][data-key]");
+    if (!(actionButton instanceof HTMLElement)) return;
+    const action = actionButton.getAttribute("data-action");
+    const key = actionButton.getAttribute("data-key");
     if (!action || !key) return;
 
     if (action === "increase") updateItemQuantity(key, 1);

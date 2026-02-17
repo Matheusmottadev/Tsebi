@@ -33,6 +33,7 @@ STRIPE_WEBHOOK_SECRET=whsec_xxx
 SESSION_SECRET=change-this-secret
 SESSION_COOKIE_NAME=tsebi.sid
 CORS_ORIGIN=http://localhost:4242
+ADMIN_EMAILS=admin@seudominio.com.br
 ```
 
 ## Rodando local com PostgreSQL
@@ -119,6 +120,16 @@ Observacoes:
 - Validacao de payload com `zod`
 - Senha com hash `bcrypt`
 - Cookies de sessao: `httpOnly`, `sameSite=lax`, `secure` somente em producao
+
+## Admin panel
+
+- URL: `/studio-portal` (ou `/studio-portal.html`)
+- Requer usuario logado cujo email esteja em `ADMIN_EMAILS` (separado por virgula)
+- Modulos iniciais:
+  - Usuarios (listar, criar, editar, excluir)
+  - Pedidos (listar, alterar status)
+  - Produtos (listar, criar, editar, arquivar)
+  - Lista VIP (listar, criar, editar, excluir)
 
 ## Deploy basico
 

@@ -1,0 +1,269 @@
+:root {
+  --bg: #f7f4ef;
+  --card: #ffffff;
+  --text: #151515;
+  --muted: #6a665f;
+  --line: #ddd6c9;
+  --danger: #8f2020;
+  --ok: #1d5e2b;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: radial-gradient(circle at top right, #f2eee5 0%, #f7f4ef 58%);
+  color: var(--text);
+  font-family: "Montserrat", sans-serif;
+}
+
+.admin-wrap {
+  max-width: 1260px;
+  margin: 0 auto;
+  padding: 28px 20px 42px;
+}
+
+.admin-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+
+.admin-kicker {
+  margin: 0;
+  text-transform: uppercase;
+  letter-spacing: 1.1px;
+  font-size: 11px;
+  color: var(--muted);
+}
+
+h1 {
+  margin: 8px 0 0;
+  font-size: clamp(32px, 5vw, 44px);
+  font-family: "Playfair Display", serif;
+  font-weight: 600;
+}
+
+.admin-sub {
+  margin: 8px 0 0;
+  color: var(--muted);
+  font-size: 14px;
+}
+
+.admin-head-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.tabs {
+  margin-top: 18px;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.tab {
+  min-height: 44px;
+  border: 1px solid #c9c2b6;
+  background: #fff;
+  color: #1a1a1a;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  cursor: pointer;
+}
+
+.tab.is-active {
+  background: #151515;
+  color: #fff;
+  border-color: #151515;
+}
+
+.panel {
+  margin-top: 14px;
+  border: 1px solid var(--line);
+  background: var(--card);
+  padding: 14px;
+}
+
+.panel-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.panel-head h2 {
+  margin: 0;
+  font-family: "Playfair Display", serif;
+  font-size: 28px;
+  font-weight: 600;
+}
+
+.inline-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+input,
+select,
+button {
+  font-family: "Montserrat", sans-serif;
+}
+
+input,
+select {
+  min-height: 38px;
+  border: 1px solid #cfc8bc;
+  background: #fff;
+  color: #1b1b1b;
+  padding: 0 10px;
+  min-width: 150px;
+}
+
+.form-grid {
+  margin-top: 12px;
+  display: grid;
+  grid-template-columns: repeat(7, minmax(120px, 1fr));
+  gap: 8px;
+  align-items: center;
+}
+
+.btn {
+  min-height: 38px;
+  border: 1px solid #151515;
+  background: #151515;
+  color: #fff;
+  padding: 0 12px;
+  cursor: pointer;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.9px;
+}
+
+.btn-ghost {
+  background: #fff;
+  color: #151515;
+}
+
+.btn-danger {
+  background: #8f2020;
+  border-color: #8f2020;
+}
+
+.status {
+  margin-top: 10px;
+  min-height: 20px;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.status.error {
+  color: var(--danger);
+}
+
+.status.ok {
+  color: var(--ok);
+}
+
+.table-wrap {
+  margin-top: 12px;
+  overflow-x: auto;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 960px;
+}
+
+th,
+td {
+  text-align: left;
+  border-bottom: 1px solid #ece7de;
+  padding: 8px 6px;
+  font-size: 12px;
+  vertical-align: top;
+}
+
+th {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: #5f5a50;
+}
+
+td small {
+  color: #6f695e;
+}
+
+.row-actions {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.row-actions .btn {
+  min-height: 30px;
+  font-size: 10px;
+  padding: 0 8px;
+}
+
+.toggle-inline {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid #cfc8bc;
+  min-height: 38px;
+  padding: 0 10px;
+  background: #fff;
+  font-size: 12px;
+}
+
+.toggle-inline input {
+  min-width: 0;
+  min-height: 0;
+}
+
+.pill {
+  display: inline-block;
+  border: 1px solid #1d5e2b;
+  color: #1d5e2b;
+  border-radius: 999px;
+  padding: 2px 8px;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.7px;
+}
+
+.pill.no {
+  border-color: #8f2020;
+  color: #8f2020;
+}
+
+[hidden] {
+  display: none !important;
+}
+
+@media (max-width: 980px) {
+  .tabs {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .form-grid {
+    grid-template-columns: 1fr;
+  }
+
+  input,
+  select {
+    min-width: 0;
+    width: 100%;
+  }
+}

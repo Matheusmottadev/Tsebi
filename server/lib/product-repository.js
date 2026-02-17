@@ -175,6 +175,37 @@ async function listProducts() {
   return result.rows.map(mapProduct);
 }
 
+async function listAdminProducts({ limit = 200, offset = 0, search = "", includeInactive = true } = {}) {
+  const safeLimit = Math.max(1, Math.min(500, Number(limit) || 200));
+  const safeOffset = Math.max(0, Number(offset) || 0);
+  const normalizedSearch = String(search || "").trim().toLowerCase();
+  const values = [safeLimit, safeOffset];
+  const conditions = [];
+
+  if (!includeInactive) {
+    conditions.push("active = true");
+  }
+
+  if (normalizedSearch) {
+    values.push(`%${normalizedSearch}%`);
+    conditions.push("(lower(name) LIKE $" + values.length + " OR lower(sku) LIKE $" + values.length + ")");
+  }
+
+  const whereSql = conditions.length ? `WHERE ${conditions.join(" AND ")}` : "";
+  const result = await query(
+    `
+    SELECT id, sku, name, price_cents, stock_qty, currency, active
+    FROM products
+    ${whereSql}
+    ORDER BY created_at DESC
+    LIMIT $1 OFFSET $2
+    `,
+    values
+  );
+
+  return result.rows.map(mapProduct);
+}
+
 async function getProductByIdentifier(identifier) {
   const normalized = String(identifier || "").trim();
   if (!normalized) return null;
@@ -194,7 +225,103 @@ async function getProductByIdentifier(identifier) {
   return mapProduct(result.rows[0]);
 }
 
+function normalizeSku(value) {
+  return String(value || "")
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, "-")
+    .replace(/[^a-z0-9-_]/g, "");
+}
+
+async function createProduct(payload = {}) {
+  const sku = normalizeSku(payload.sku);
+  if (!sku) return { error: "INVALID_SKU" };
+
+  try {
+    const result = await query(
+      `
+      INSERT INTO products (
+        sku, name, price_cents, stock_qty, currency, active
+      ) VALUES (
+        $1, $2, $3, $4, $5, $6
+      )
+      RETURNING id, sku, name, price_cents, stock_qty, currency, active
+      `,
+      [
+        sku,
+        String(payload.name || sku).trim(),
+        Math.max(0, Math.round(Number(payload.priceCents || 0))),
+        Math.max(0, Math.floor(Number(payload.stockQty || 0))),
+        String(payload.currency || "brl").trim().toLowerCase() || "brl",
+        Boolean(payload.active !== false)
+      ]
+    );
+
+    return mapProduct(result.rows[0] || null);
+  } catch (error) {
+    if (String(error.code || "") === "23505") {
+      return { error: "SKU_ALREADY_EXISTS" };
+    }
+    throw error;
+  }
+}
+
+async function updateProductByIdentifier(identifier, patch = {}) {
+  const normalized = String(identifier || "").trim();
+  if (!normalized) return null;
+
+  const current = await getProductByIdentifier(normalized);
+  if (!current) return null;
+
+  const result = await query(
+    `
+    UPDATE products
+    SET
+      name = $2,
+      price_cents = $3,
+      stock_qty = $4,
+      currency = $5,
+      active = $6,
+      updated_at = NOW()
+    WHERE id::text = $1
+       OR lower(sku) = lower($1)
+    RETURNING id, sku, name, price_cents, stock_qty, currency, active
+    `,
+    [
+      normalized,
+      String(patch.name ?? current.name ?? current.sku).trim(),
+      Math.max(0, Math.round(Number(patch.priceCents ?? current.unitAmount ?? 0))),
+      Math.max(0, Math.floor(Number(patch.stockQty ?? current.stock ?? 0))),
+      String(patch.currency ?? current.currency ?? "brl").trim().toLowerCase() || "brl",
+      Boolean(patch.active ?? current.active)
+    ]
+  );
+
+  return mapProduct(result.rows[0] || null);
+}
+
+async function archiveProductByIdentifier(identifier) {
+  const normalized = String(identifier || "").trim();
+  if (!normalized) return null;
+  const result = await query(
+    `
+    UPDATE products
+    SET active = false,
+        updated_at = NOW()
+    WHERE id::text = $1
+       OR lower(sku) = lower($1)
+    RETURNING id, sku, name, price_cents, stock_qty, currency, active
+    `,
+    [normalized]
+  );
+  return mapProduct(result.rows[0] || null);
+}
+
 module.exports = {
   listProducts,
-  getProductByIdentifier
+  listAdminProducts,
+  getProductByIdentifier,
+  createProduct,
+  updateProductByIdentifier,
+  archiveProductByIdentifier
 };

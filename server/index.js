@@ -11,6 +11,7 @@ const { z } = require("zod");
 const { createSessionMiddleware } = require("./session");
 const { authRouter, myRouter } = require("./auth");
 const { vipRouter } = require("./vip");
+const { adminRouter } = require("./admin");
 const { findUserById } = require("./user-repository");
 const { requireAuth } = require("./middlewares/requireAuth");
 const {
@@ -444,6 +445,11 @@ if (!isVercelRuntime) {
     res.sendFile(path.join(pagesDir, "index.html"));
   });
 
+  app.get("/studio-portal", (req, res) => {
+    res.setHeader("Cache-Control", "no-cache");
+    res.sendFile(path.join(pagesDir, "studio-portal.html"));
+  });
+
   app.get("/:page.html", (req, res, next) => {
     const pageName = `${req.params.page}.html`;
     const filePath = path.join(pagesDir, pageName);
@@ -468,6 +474,7 @@ if (!isVercelRuntime) {
 app.use("/api/auth", authRouter);
 app.use("/api/my", myRouter);
 app.use("/api/vip", vipRouter);
+app.use("/api/admin", adminRouter);
 
 app.get("/api/products", async (req, res) => {
   try {
