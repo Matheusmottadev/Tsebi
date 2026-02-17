@@ -337,6 +337,26 @@ function buildVolumes() {
   ];
 }
 
+function uniqueServiceCandidates(primaryServiceCode, quoteList = []) {
+  const seen = new Set();
+  const candidates = [];
+
+  const pushCandidate = (value) => {
+    const normalized = String(value || "").trim();
+    if (!/^\d+$/.test(normalized)) return;
+    if (seen.has(normalized)) return;
+    seen.add(normalized);
+    candidates.push(normalized);
+  };
+
+  pushCandidate(primaryServiceCode);
+  (Array.isArray(quoteList) ? quoteList : []).forEach((quoteEntry) => {
+    pushCandidate(quoteEntry?.serviceCode);
+  });
+
+  return candidates;
+}
+
 async function buyLabel({ order }) {
   const fromZip = normalizeZip(process.env.SHIP_FROM_ZIP || "");
   const toZip = normalizeZip(order?.shippingDestinationZip || order?.shipping?.cep || "");
@@ -346,25 +366,23 @@ async function buyLabel({ order }) {
     throw error;
   }
 
-  let serviceCode = String(order?.shippingSelectedServiceCode || "").trim();
-  if (!/^\d+$/.test(serviceCode)) {
-    const recalculated = await quote({
-      fromZip,
-      toZip,
-      packages: [
-        {
-          quantity: 1,
-          weightKg: Math.max(0.1, toNumber(process.env.DEFAULT_PACKAGE_WEIGHT_KG || 0.3, 0.3)),
-          lengthCm: Math.max(1, Math.round(toNumber(process.env.DEFAULT_PACKAGE_LENGTH_CM || 20, 20))),
-          widthCm: Math.max(1, Math.round(toNumber(process.env.DEFAULT_PACKAGE_WIDTH_CM || 15, 15))),
-          heightCm: Math.max(1, Math.round(toNumber(process.env.DEFAULT_PACKAGE_HEIGHT_CM || 5, 5)))
-        }
-      ]
-    });
-    serviceCode = String(recalculated?.[0]?.serviceCode || "").trim();
-  }
+  const recalculated = await quote({
+    fromZip,
+    toZip,
+    packages: [
+      {
+        quantity: 1,
+        weightKg: Math.max(0.1, toNumber(process.env.DEFAULT_PACKAGE_WEIGHT_KG || 0.3, 0.3)),
+        lengthCm: Math.max(1, Math.round(toNumber(process.env.DEFAULT_PACKAGE_LENGTH_CM || 20, 20))),
+        widthCm: Math.max(1, Math.round(toNumber(process.env.DEFAULT_PACKAGE_WIDTH_CM || 15, 15))),
+        heightCm: Math.max(1, Math.round(toNumber(process.env.DEFAULT_PACKAGE_HEIGHT_CM || 5, 5)))
+      }
+    ]
+  });
+  const preferredServiceCode = String(order?.shippingSelectedServiceCode || "").trim();
+  const candidateServiceCodes = uniqueServiceCandidates(preferredServiceCode, recalculated);
 
-  if (!serviceCode) {
+  if (!candidateServiceCodes.length) {
     const error = new Error("ORDER_MISSING_SHIPPING_SERVICE_CODE");
     error.code = "ORDER_MISSING_SHIPPING_SERVICE_CODE";
     throw error;
@@ -388,8 +406,7 @@ async function buyLabel({ order }) {
     ? rebalanceProductsInsurance(capProductsUnitaryValue(rawProducts, insuranceValue), insuranceValue)
     : rawProducts;
 
-  const cartPayload = {
-    service: Number(serviceCode),
+  const baseCartPayload = {
     from: sender,
     to: recipient,
     products,
@@ -405,18 +422,32 @@ async function buyLabel({ order }) {
   };
 
   let cartResponse = null;
-  try {
-    cartResponse = await melhorEnvioRequest("/me/cart", {
-      method: "POST",
-      body: cartPayload
-    });
-  } catch (error) {
-    error.details = {
-      stage: "cart_create",
-      request: cartPayload,
-      response: error?.payload || null
+  let lastError = null;
+  for (const serviceCode of candidateServiceCodes) {
+    const cartPayload = {
+      ...baseCartPayload,
+      service: Number(serviceCode)
     };
-    throw error;
+    try {
+      cartResponse = await melhorEnvioRequest("/me/cart", {
+        method: "POST",
+        body: cartPayload
+      });
+      break;
+    } catch (error) {
+      lastError = error;
+      lastError.details = {
+        stage: "cart_create",
+        serviceTried: serviceCode,
+        serviceCandidates: candidateServiceCodes,
+        request: cartPayload,
+        response: error?.payload || null
+      };
+    }
+  }
+
+  if (!cartResponse) {
+    throw lastError || new Error("MELHOR_ENVIO_REQUEST_FAILED");
   }
 
   const orderFromCart = Array.isArray(cartResponse)
