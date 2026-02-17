@@ -302,10 +302,20 @@ async function buyLabel({ order }) {
     }
   };
 
-  const cartResponse = await melhorEnvioRequest("/me/cart", {
-    method: "POST",
-    body: cartPayload
-  });
+  let cartResponse = null;
+  try {
+    cartResponse = await melhorEnvioRequest("/me/cart", {
+      method: "POST",
+      body: cartPayload
+    });
+  } catch (error) {
+    error.details = {
+      stage: "cart_create",
+      request: cartPayload,
+      response: error?.payload || null
+    };
+    throw error;
+  }
 
   const orderFromCart = Array.isArray(cartResponse)
     ? cartResponse[0]
