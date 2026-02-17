@@ -466,6 +466,129 @@ function ensureSearchExperience(searchOverlay, searchInput) {
   if (!filtersContainer || !resultsGrid || !countEl || !clearBtn || !emptyEl) return;
   attachFavoriteHandlers(resultsGrid);
 
+  const SEARCH_CART_KEY = "tsebi-cart-v1";
+  const SEARCH_CART_LEGACY_KEYS = ["tsebi-cart", "cart"];
+
+  function normalizeSearchCartItems(items) {
+    if (!Array.isArray(items)) return [];
+    return items
+      .map((item) => {
+        if (!item || typeof item !== "object") return null;
+        const rawKey = String(item.key || "").trim();
+        const idFromKey = rawKey.includes("::") ? rawKey.split("::")[0] : rawKey;
+        const id = String(item.id || item.productId || idFromKey || "").trim();
+        if (!id) return null;
+        return {
+          ...item,
+          key: String(item.key || id),
+          id,
+          qty: Math.max(1, Number(item.qty || item.quantity || 1))
+        };
+      })
+      .filter(Boolean);
+  }
+
+  function parseSearchCart(rawValue) {
+    if (!rawValue) return [];
+    try {
+      const parsed = JSON.parse(rawValue);
+      if (Array.isArray(parsed)) return normalizeSearchCartItems(parsed);
+      if (parsed && Array.isArray(parsed.items)) return normalizeSearchCartItems(parsed.items);
+    } catch {}
+    return [];
+  }
+
+  function readSearchCart() {
+    const current = parseSearchCart(localStorage.getItem(SEARCH_CART_KEY));
+    if (current.length > 0) return current;
+
+    for (const legacyKey of SEARCH_CART_LEGACY_KEYS) {
+      const legacy = parseSearchCart(localStorage.getItem(legacyKey));
+      if (legacy.length > 0) {
+        localStorage.setItem(SEARCH_CART_KEY, JSON.stringify(legacy));
+        return legacy;
+      }
+    }
+
+    return [];
+  }
+
+  function saveSearchCart(items) {
+    try {
+      localStorage.setItem(SEARCH_CART_KEY, JSON.stringify(items));
+    } catch {}
+  }
+
+  function getProductStock(product) {
+    return Math.max(0, Number(product?.stock ?? product?.stock_qty ?? 0));
+  }
+
+  function syncSearchHeaderCartBadge(cartItems) {
+    const links = Array.from(document.querySelectorAll('a[aria-label="Carrinho"]'));
+    if (!links.length) return;
+    const totalItems = (Array.isArray(cartItems) ? cartItems : [])
+      .filter((item) => item && item.id)
+      .reduce((sum, item) => sum + Math.max(1, Number(item.qty) || 1), 0);
+
+    links.forEach((link) => {
+      link.classList.add("cart-link");
+      if (totalItems > 0) {
+        link.setAttribute("data-cart-count", String(totalItems));
+      } else {
+        link.removeAttribute("data-cart-count");
+      }
+    });
+  }
+
+  function getCartQtyByProductId(cartItems, productId) {
+    const safeId = String(productId || "").trim();
+    if (!safeId) return 0;
+    return (Array.isArray(cartItems) ? cartItems : [])
+      .filter((item) => String(item?.id || "").trim() === safeId)
+      .reduce((sum, item) => sum + Math.max(1, Number(item?.qty) || 1), 0);
+  }
+
+  function addProductFromSearchToCart(product) {
+    const safeProduct = product && typeof product === "object" ? product : null;
+    const productId = String(safeProduct?.id || "").trim();
+    if (!productId) return false;
+
+    const cartItems = readSearchCart();
+    const stock = getProductStock(safeProduct);
+    const currentQty = getCartQtyByProductId(cartItems, productId);
+    if (stock <= 0 || currentQty >= stock) return false;
+
+    const plainEntry = cartItems.find((item) => {
+      if (String(item?.id || "").trim() !== productId) return false;
+      const key = String(item?.key || "").trim();
+      return !key || key === productId;
+    });
+
+    if (plainEntry) {
+      plainEntry.qty = Math.min(stock, Math.max(1, Number(plainEntry.qty) || 1) + 1);
+      plainEntry.maxStock = stock;
+      plainEntry.priceLabel = safeProduct.priceLabel || plainEntry.priceLabel || "R$ 0,00";
+      plainEntry.name = safeProduct.name || plainEntry.name || productId;
+      plainEntry.image = safeProduct.image || plainEntry.image || "images/produtos/sug1.jpeg";
+    } else {
+      cartItems.push({
+        key: productId,
+        id: productId,
+        name: safeProduct.name || productId,
+        priceLabel: safeProduct.priceLabel || "R$ 0,00",
+        image: safeProduct.image || "images/produtos/sug1.jpeg",
+        color: "-",
+        size: "-",
+        maxStock: stock,
+        qty: 1
+      });
+    }
+
+    saveSearchCart(cartItems);
+    syncSearchHeaderCartBadge(cartItems);
+    return true;
+  }
+
   const collectionOptions = uniqueSorted(productsCatalog.map((item) => item.collection));
   const sizeOptions = uniqueSorted(productsCatalog.flatMap((item) => item.sizes));
   const colorOptions = uniqueSorted(productsCatalog.flatMap((item) => item.colors));
@@ -599,9 +722,13 @@ function ensureSearchExperience(searchOverlay, searchInput) {
     const sortedResults = sortResults(filtered, filters.sort);
     shell.classList.add("is-active");
     resultsGrid.innerHTML = "";
+    const cartItems = readSearchCart();
 
     sortedResults.forEach((product, index) => {
       const fallbackSecondary = sortedResults[(index + 1) % sortedResults.length]?.image || product.image;
+      const stock = getProductStock(product);
+      const qtyInCart = getCartQtyByProductId(cartItems, product.id);
+      const soldOut = stock <= 0 || qtyInCart >= stock;
       const card = document.createElement("a");
       card.className = "search-result-card";
       card.href = product.href;
@@ -614,6 +741,12 @@ function ensureSearchExperience(searchOverlay, searchInput) {
         <div class="search-result-meta">
           <h4 class="search-result-name">${product.name}</h4>
           <p class="search-result-price">${product.priceLabel}</p>
+          <button
+            class="search-result-cart-btn ${soldOut ? "is-disabled" : ""}"
+            type="button"
+            data-product-id="${product.id}"
+            ${soldOut ? 'disabled aria-disabled="true"' : ""}
+          >${soldOut ? (isEnglish ? "Sold out" : "Esgotado") : (isEnglish ? "Add to cart" : "Adicionar ao carrinho")}</button>
         </div>
       `;
       bindProductPreview(card);
@@ -631,6 +764,31 @@ function ensureSearchExperience(searchOverlay, searchInput) {
   });
 
   searchInput?.addEventListener("input", renderResults);
+  resultsGrid.addEventListener("click", (event) => {
+    const target = event.target instanceof Element ? event.target : null;
+    if (!target) return;
+    const addButton = target.closest(".search-result-cart-btn");
+    if (!addButton) return;
+
+    event.preventDefault();
+    event.stopPropagation();
+
+    const productId = String(addButton.getAttribute("data-product-id") || "").trim();
+    if (!productId) return;
+
+    const product = productsCatalog.find((entry) => String(entry?.id || "").trim() === productId);
+    if (!product) return;
+
+    const added = addProductFromSearchToCart(product);
+    if (!added) {
+      addButton.disabled = true;
+      addButton.classList.add("is-disabled");
+      addButton.textContent = isEnglish ? "Sold out" : "Esgotado";
+      return;
+    }
+
+    renderResults();
+  });
 
   const chips = Array.from(searchOverlay.querySelectorAll(".chip"));
   chips.forEach((chip) => {
