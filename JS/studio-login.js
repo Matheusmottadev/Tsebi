@@ -69,11 +69,22 @@
         ...(options.headers || {})
       }
     });
-    const data = await response.json().catch(() => ({}));
+    const rawBody = await response.text().catch(() => "");
+    const data = (() => {
+      if (!rawBody) return {};
+      try {
+        return JSON.parse(rawBody);
+      } catch {
+        return {};
+      }
+    })();
     if (!response.ok) {
-      const error = new Error(String(data?.error || "REQUEST_FAILED"));
-      error.code = String(data?.error || "REQUEST_FAILED");
+      const errorCode = String(data?.error || `HTTP_${response.status}` || "REQUEST_FAILED");
+      const error = new Error(errorCode);
+      error.code = errorCode;
       error.status = response.status;
+      error.stage = String(data?.stage || "").trim();
+      error.detail = String(data?.message || data?.detail || "").trim();
       throw error;
     }
     return data;
@@ -120,10 +131,23 @@
 
   async function handleLogin(event) {
     event.preventDefault();
+    const email = String(dom.email?.value || "").trim();
+    const password = String(dom.password?.value || "");
+    if (!email || !password) {
+      setStatus("Preencha e-mail e senha para continuar.", "error");
+      return;
+    }
+
     const payload = {
-      email: String(dom.email?.value || "").trim(),
-      password: String(dom.password?.value || "")
+      email,
+      password
     };
+
+    const submitButton = dom.loginForm?.querySelector('button[type="submit"]');
+    if (submitButton instanceof HTMLButtonElement) {
+      submitButton.disabled = true;
+      submitButton.textContent = "Entrando...";
+    }
 
     try {
       const data = await api("/api/studio-auth/login", {
@@ -140,9 +164,20 @@
         dom.verifyToken?.focus();
         return;
       }
+      if (data.stage === "authenticated") {
+        redirectToStudio();
+        return;
+      }
       setStatus("Fluxo de login invalido.", "error");
     } catch (error) {
-      setStatus(`Falha no login: ${error.code || error.message}`, "error");
+      const details = [String(error.code || error.message || "REQUEST_FAILED")];
+      if (error.stage) details.push(`etapa: ${error.stage}`);
+      setStatus(`Falha no login: ${details.join(" | ")}`, "error");
+    } finally {
+      if (submitButton instanceof HTMLButtonElement) {
+        submitButton.disabled = false;
+        submitButton.textContent = "Continuar";
+      }
     }
   }
 

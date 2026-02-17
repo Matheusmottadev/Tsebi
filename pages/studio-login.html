@@ -26,10 +26,10 @@
 
     <section id="stepLogin" class="studio-card">
       <h2>1. Credenciais</h2>
-      <form id="studioLoginForm" class="studio-form">
+      <form id="studioLoginForm" class="studio-form" novalidate>
         <label>
           <span>Email admin</span>
-          <input id="studioEmail" type="email" autocomplete="username" required />
+          <input id="studioEmail" type="text" inputmode="email" autocomplete="username" required />
         </label>
         <label>
           <span>Senha</span>
@@ -49,7 +49,7 @@
           <code id="setupSecret">-</code>
         </div>
       </div>
-      <form id="studioSetupVerifyForm" class="studio-form">
+      <form id="studioSetupVerifyForm" class="studio-form" novalidate>
         <label>
           <span>Codigo MFA</span>
           <input id="setupToken" type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="6" required />
@@ -60,7 +60,7 @@
 
     <section id="stepVerify" class="studio-card" hidden>
       <h2>2. Verificar MFA</h2>
-      <form id="studioVerifyForm" class="studio-form">
+      <form id="studioVerifyForm" class="studio-form" novalidate>
         <label>
           <span>Codigo MFA (6 digitos)</span>
           <input id="verifyToken" type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="6" />
@@ -85,6 +85,6 @@
     </footer>
   </main>
 
-  <script src="JS/studio-login.js?v=20260217b"></script>
+  <script src="JS/studio-login.js?v=20260217c"></script>
 </body>
 </html>
