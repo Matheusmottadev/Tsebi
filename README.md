@@ -38,6 +38,7 @@ ADMIN_MFA_ENCRYPTION_KEY=defina-uma-chave-forte-unica-aqui
 ADMIN_IDLE_TIMEOUT_MINUTES=20
 ADMIN_MFA_ISSUER=Tsebi Studio
 ADMIN_CSRF_COOKIE_NAME=tsebi.admin.csrf
+ADMIN_AUDIT_RETENTION_DAYS=30
 ```
 
 ## Rodando local com PostgreSQL
@@ -106,6 +107,11 @@ Observacoes:
 - `POST /api/studio-auth/mfa/disable`
 - `POST /api/studio-auth/logout`
 
+### Endpoints Admin Audit (Studio)
+
+- `GET /api/admin/audit-logs`
+- `POST /api/admin/audit-logs/:id/reverse`
+
 ### Recuperacao de senha
 
 - `forgot-password` gera token com expiracao e salva no DB.
@@ -146,6 +152,7 @@ Observacoes:
 - Codigos de recuperacao de MFA armazenados em hash e consumidos 1x.
 - Timeout de inatividade admin controlado por `ADMIN_IDLE_TIMEOUT_MINUTES`.
 - CSRF em rotas mutaveis admin (`POST/PATCH/DELETE`) com validacao de cookie + header `x-csrf-token`.
+- Auditoria de mudancas do Studio com ator, resumo, horario e reversao ate 30 dias.
 - Logout do cliente e logout do Studio sao separados para evitar mistura de fluxo.
 
 ## Admin panel
@@ -157,6 +164,7 @@ Observacoes:
   - Pedidos (listar, alterar status)
   - Produtos (listar, criar, editar, arquivar)
   - Lista VIP (listar, criar, editar, excluir)
+  - Auditoria (timeline de mudancas + botao de reversao)
 
 ## Deploy basico
 
@@ -176,6 +184,7 @@ Pode ser usado em Render/Railway/Fly:
 - `ADMIN_IDLE_TIMEOUT_MINUTES` (ex.: `20`)
 - `ADMIN_MFA_ISSUER` (nome exibido no app autenticador, ex.: `Tsebi Studio`)
 - `ADMIN_CSRF_COOKIE_NAME` (opcional; padrao `tsebi.admin.csrf`)
+- `ADMIN_AUDIT_RETENTION_DAYS` (opcional; padrao `30`)
 
 ## Compatibilidade
 

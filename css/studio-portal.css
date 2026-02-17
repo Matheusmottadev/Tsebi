@@ -102,7 +102,7 @@ h1 {
 .tabs {
   margin-top: 18px;
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: 8px;
 }
 
@@ -287,6 +287,31 @@ td small {
 .pill.no {
   border-color: var(--danger);
   color: var(--danger);
+}
+
+.audit-status {
+  display: inline-block;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 2px 8px;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.7px;
+}
+
+.audit-status.ok {
+  border-color: var(--ok);
+  color: var(--ok);
+}
+
+.audit-status.warn {
+  border-color: #c18a15;
+  color: #c18a15;
+}
+
+.audit-status.muted {
+  border-color: var(--line);
+  color: var(--muted);
 }
 
 .action-modal {

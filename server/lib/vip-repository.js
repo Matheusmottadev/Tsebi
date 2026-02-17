@@ -110,6 +110,40 @@ async function listVipSubscribers({ limit = 100, offset = 0 } = {}) {
   return result.rows.map(mapVipRow).filter(Boolean);
 }
 
+async function findVipSubscriberById(id) {
+  const normalizedId = Number(id);
+  if (!Number.isInteger(normalizedId) || normalizedId <= 0) return null;
+
+  const result = await queryVip(
+    `
+    SELECT *
+    FROM vip_subscribers
+    WHERE id = $1
+    LIMIT 1
+    `,
+    [normalizedId]
+  );
+
+  return mapVipRow(result.rows[0] || null);
+}
+
+async function findVipSubscriberByEmail(email) {
+  const normalized = normalizeEmail(email);
+  if (!normalized) return null;
+
+  const result = await queryVip(
+    `
+    SELECT *
+    FROM vip_subscribers
+    WHERE lower(email) = lower($1)
+    LIMIT 1
+    `,
+    [normalized]
+  );
+
+  return mapVipRow(result.rows[0] || null);
+}
+
 async function deleteVipSubscriberById(id) {
   const normalizedId = Number(id);
   if (!Number.isInteger(normalizedId) || normalizedId <= 0) return null;
@@ -166,10 +200,82 @@ async function updateVipSubscriberById(id, patch = {}) {
   return mapVipRow(result.rows[0] || null);
 }
 
+async function restoreVipSubscriberFromSnapshot(snapshot = {}) {
+  const email = normalizeEmail(snapshot.email);
+  const name = String(snapshot.name || "").trim();
+  if (!email || !name) return { error: "INVALID_SNAPSHOT" };
+
+  const result = await queryVip(
+    `
+    INSERT INTO vip_subscribers (
+      name,
+      email,
+      birth_date,
+      cpf,
+      cep,
+      source,
+      account_created,
+      account_created_at,
+      ip_address,
+      user_agent,
+      subscribed_at,
+      updated_at
+    )
+    VALUES (
+      $1,
+      $2,
+      NULLIF($3, '')::date,
+      $4,
+      $5,
+      $6,
+      $7,
+      $8::timestamptz,
+      $9,
+      $10,
+      COALESCE($11::timestamptz, NOW()),
+      COALESCE($12::timestamptz, NOW())
+    )
+    ON CONFLICT (email) DO UPDATE
+    SET
+      name = EXCLUDED.name,
+      birth_date = EXCLUDED.birth_date,
+      cpf = EXCLUDED.cpf,
+      cep = EXCLUDED.cep,
+      source = EXCLUDED.source,
+      account_created = EXCLUDED.account_created,
+      account_created_at = EXCLUDED.account_created_at,
+      ip_address = EXCLUDED.ip_address,
+      user_agent = EXCLUDED.user_agent,
+      subscribed_at = EXCLUDED.subscribed_at,
+      updated_at = COALESCE(EXCLUDED.updated_at, NOW())
+    RETURNING *
+    `,
+    [
+      name,
+      email,
+      String(snapshot.birthDate || "").trim(),
+      normalizeCpf(snapshot.cpf),
+      normalizeCep(snapshot.cep),
+      String(snapshot.source || "admin_panel").trim() || "admin_panel",
+      Boolean(snapshot.accountCreated),
+      snapshot.accountCreated ? snapshot.accountCreatedAt || snapshot.updatedAt || null : null,
+      String(snapshot.ipAddress || "").trim() || null,
+      String(snapshot.userAgent || "").trim() || null,
+      snapshot.subscribedAt || null,
+      snapshot.updatedAt || null
+    ]
+  );
+
+  return { ok: true, subscriber: mapVipRow(result.rows[0] || null) };
+}
+
 module.exports = {
   upsertVipSubscriber,
   setVipAccountCreated,
   listVipSubscribers,
+  findVipSubscriberById,
+  findVipSubscriberByEmail,
   deleteVipSubscriberById,
-  updateVipSubscriberById
+  updateVipSubscriberById,
+  restoreVipSubscriberFromSnapshot
 };

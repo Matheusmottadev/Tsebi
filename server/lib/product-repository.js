@@ -317,11 +317,78 @@ async function archiveProductByIdentifier(identifier) {
   return mapProduct(result.rows[0] || null);
 }
 
+async function deleteProductByIdentifier(identifier) {
+  const normalized = String(identifier || "").trim();
+  if (!normalized) return null;
+
+  try {
+    const result = await query(
+      `
+      DELETE FROM products
+      WHERE id::text = $1
+         OR lower(sku) = lower($1)
+      RETURNING id, sku, name, price_cents, stock_qty, currency, active
+      `,
+      [normalized]
+    );
+    return mapProduct(result.rows[0] || null);
+  } catch (error) {
+    if (String(error.code || "") === "23503") {
+      return { error: "PRODUCT_IN_USE" };
+    }
+    throw error;
+  }
+}
+
+async function restoreProductFromSnapshot(snapshot = {}) {
+  const sku = normalizeSku(snapshot.sku || snapshot.id || "");
+  if (!sku) return { error: "INVALID_SNAPSHOT" };
+
+  try {
+    const result = await query(
+      `
+      INSERT INTO products (
+        sku, name, price_cents, stock_qty, currency, active, created_at, updated_at
+      ) VALUES (
+        $1, $2, $3, $4, $5, $6, COALESCE($7::timestamptz, NOW()), COALESCE($8::timestamptz, NOW())
+      )
+      ON CONFLICT (sku) DO UPDATE
+      SET
+        name = EXCLUDED.name,
+        price_cents = EXCLUDED.price_cents,
+        stock_qty = EXCLUDED.stock_qty,
+        currency = EXCLUDED.currency,
+        active = EXCLUDED.active,
+        updated_at = COALESCE(EXCLUDED.updated_at, NOW())
+      RETURNING id, sku, name, price_cents, stock_qty, currency, active
+      `,
+      [
+        sku,
+        String(snapshot.name || sku).trim(),
+        Math.max(0, Math.round(Number(snapshot.unitAmount || snapshot.priceCents || 0))),
+        Math.max(0, Math.floor(Number(snapshot.stock || snapshot.stockQty || 0))),
+        String(snapshot.currency || "brl").trim().toLowerCase() || "brl",
+        Boolean(snapshot.active !== false),
+        snapshot.createdAt || null,
+        snapshot.updatedAt || null
+      ]
+    );
+    return { ok: true, product: mapProduct(result.rows[0] || null) };
+  } catch (error) {
+    if (String(error.code || "") === "23505") {
+      return { error: "SKU_ALREADY_EXISTS" };
+    }
+    throw error;
+  }
+}
+
 module.exports = {
   listProducts,
   listAdminProducts,
   getProductByIdentifier,
   createProduct,
   updateProductByIdentifier,
-  archiveProductByIdentifier
+  archiveProductByIdentifier,
+  deleteProductByIdentifier,
+  restoreProductFromSnapshot
 };

@@ -426,6 +426,105 @@ async function disableAdminMfa(userId) {
   return fromRow(result.rows[0] || null);
 }
 
+async function restoreUserFromSnapshot(snapshot = {}) {
+  const id = String(snapshot.id || "").trim();
+  const email = normalizeEmail(snapshot.email);
+  const passwordHash = String(snapshot.passwordHash || "").trim();
+  if (!id || !email || !passwordHash) {
+    return { error: "INVALID_SNAPSHOT" };
+  }
+
+  try {
+    const result = await query(
+      `
+      INSERT INTO users (
+        id,
+        name,
+        email,
+        password_hash,
+        birth_date,
+        cpf,
+        cep,
+        addresses,
+        default_address_id,
+        admin_mfa_enabled,
+        admin_mfa_secret_enc,
+        admin_mfa_recovery_codes,
+        admin_mfa_enabled_at,
+        admin_mfa_disabled_at,
+        created_at,
+        updated_at
+      )
+      VALUES (
+        $1,
+        $2,
+        $3,
+        $4,
+        NULLIF($5, '')::date,
+        $6,
+        $7,
+        $8::jsonb,
+        $9,
+        $10,
+        $11,
+        $12::jsonb,
+        $13::timestamptz,
+        $14::timestamptz,
+        COALESCE($15::timestamptz, NOW()),
+        COALESCE($16::timestamptz, NOW())
+      )
+      ON CONFLICT (id) DO UPDATE
+      SET
+        name = EXCLUDED.name,
+        email = EXCLUDED.email,
+        password_hash = EXCLUDED.password_hash,
+        birth_date = EXCLUDED.birth_date,
+        cpf = EXCLUDED.cpf,
+        cep = EXCLUDED.cep,
+        addresses = EXCLUDED.addresses,
+        default_address_id = EXCLUDED.default_address_id,
+        admin_mfa_enabled = EXCLUDED.admin_mfa_enabled,
+        admin_mfa_secret_enc = EXCLUDED.admin_mfa_secret_enc,
+        admin_mfa_recovery_codes = EXCLUDED.admin_mfa_recovery_codes,
+        admin_mfa_enabled_at = EXCLUDED.admin_mfa_enabled_at,
+        admin_mfa_disabled_at = EXCLUDED.admin_mfa_disabled_at,
+        created_at = EXCLUDED.created_at,
+        updated_at = COALESCE(EXCLUDED.updated_at, NOW())
+      RETURNING *
+      `,
+      [
+        id,
+        String(snapshot.name || "").trim(),
+        email,
+        passwordHash,
+        String(snapshot.birthDate || "").trim(),
+        String(snapshot.cpf || "").replace(/\D/g, "").slice(0, 11) || null,
+        String(snapshot.cep || "").replace(/\D/g, "").slice(0, 8) || null,
+        JSON.stringify(toDbAddresses(snapshot.addresses)),
+        String(snapshot.defaultAddressId || "").trim(),
+        Boolean(snapshot.adminMfaEnabled),
+        String(snapshot.adminMfaSecretEnc || "").trim() || null,
+        JSON.stringify(
+          Array.isArray(snapshot.adminMfaRecoveryCodes)
+            ? snapshot.adminMfaRecoveryCodes.map((item) => String(item || "").trim()).filter(Boolean)
+            : []
+        ),
+        snapshot.adminMfaEnabledAt || null,
+        snapshot.adminMfaDisabledAt || null,
+        snapshot.createdAt || null,
+        snapshot.updatedAt || null
+      ]
+    );
+
+    return { ok: true, user: fromRow(result.rows[0] || null) };
+  } catch (error) {
+    if (String(error.code || "") === "23505") {
+      return { error: "EMAIL_ALREADY_EXISTS" };
+    }
+    throw error;
+  }
+}
+
 module.exports = {
   normalizeEmail,
   publicUser,
@@ -441,5 +540,6 @@ module.exports = {
   setAdminMfaCredentials,
   replaceAdminRecoveryCodes,
   consumeAdminRecoveryCode,
-  disableAdminMfa
+  disableAdminMfa,
+  restoreUserFromSnapshot
 };

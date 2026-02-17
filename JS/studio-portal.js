@@ -54,7 +54,10 @@
     newVipBirthDate: document.getElementById("newVipBirthDate"),
     newVipCpf: document.getElementById("newVipCpf"),
     newVipCep: document.getElementById("newVipCep"),
-    newVipAccountCreated: document.getElementById("newVipAccountCreated")
+    newVipAccountCreated: document.getElementById("newVipAccountCreated"),
+
+    auditRefreshBtn: document.getElementById("auditRefreshBtn"),
+    auditBody: document.getElementById("auditBody")
   };
 
   const state = {
@@ -64,7 +67,8 @@
     users: [],
     orders: [],
     products: [],
-    vip: []
+    vip: [],
+    auditLogs: []
   };
 
   const orderStatuses = ["pending_payment", "processing", "paid", "failed", "canceled", "refunded"];
@@ -455,6 +459,50 @@
     });
   }
 
+  function getAuditStatus(entry) {
+    if (entry?.reversedAt) {
+      return { label: "Revertido", tone: "muted" };
+    }
+    if (entry?.reversible) {
+      return { label: "Reversivel", tone: "ok" };
+    }
+    return { label: "Expirado", tone: "warn" };
+  }
+
+  function renderAuditLogs() {
+    if (!dom.auditBody) return;
+    dom.auditBody.innerHTML = "";
+    state.auditLogs.forEach((entry) => {
+      const row = document.createElement("tr");
+      row.setAttribute("data-id", String(entry.id || ""));
+      const status = getAuditStatus(entry);
+      row.innerHTML = `
+        <td><small>${escapeHtml(formatDate(entry.createdAt))}</small></td>
+        <td>${escapeHtml(entry.actorEmail || "-")}</td>
+        <td>${escapeHtml(entry.action || "-")}</td>
+        <td>
+          <div>${escapeHtml(entry.entityType || "-")}</div>
+          <small>${escapeHtml(entry.entityId || "-")}</small>
+        </td>
+        <td>${escapeHtml(entry.summary || "-")}</td>
+        <td><span class="audit-status ${status.tone}">${escapeHtml(status.label)}</span></td>
+        <td>
+          <div class="row-actions">
+            <button
+              type="button"
+              class="btn btn-ghost"
+              data-action="audit-reverse"
+              ${entry.reversible ? "" : "disabled"}
+            >
+              Reverter
+            </button>
+          </div>
+        </td>
+      `;
+      dom.auditBody.appendChild(row);
+    });
+  }
+
   async function loadUsers() {
     const search = encodeURIComponent(String(dom.usersSearch?.value || "").trim());
     const data = await api(`/api/admin/users?limit=200&offset=0&search=${search}`);
@@ -484,10 +532,16 @@
     renderVip();
   }
 
+  async function loadAuditLogs() {
+    const data = await api(`/api/admin/audit-logs?limit=200&offset=0`);
+    state.auditLogs = Array.isArray(data.logs) ? data.logs : [];
+    renderAuditLogs();
+  }
+
   async function loadAll() {
     setStatus("Atualizando dados...", "");
     try {
-      await Promise.all([loadUsers(), loadOrders(), loadProducts(), loadVip()]);
+      await Promise.all([loadUsers(), loadOrders(), loadProducts(), loadVip(), loadAuditLogs()]);
       setStatus("Dados atualizados.", "ok");
     } catch (error) {
       setStatus(`Falha ao atualizar painel: ${error.code || error.message}`, "error");
@@ -813,6 +867,37 @@
     }
   }
 
+  async function handleAuditAction(event) {
+    const target = event.target instanceof Element ? event.target.closest("button[data-action]") : null;
+    if (!(target instanceof HTMLButtonElement)) return;
+    if (target.getAttribute("data-action") !== "audit-reverse") return;
+
+    const row = target.closest("tr[data-id]");
+    if (!row) return;
+    const id = String(row.getAttribute("data-id") || "");
+    const current = state.auditLogs.find((entry) => String(entry.id) === id);
+    if (!current || !current.reversible) return;
+
+    const confirmed = await confirmAction({
+      title: "Reverter alteracao",
+      message: `${current.summary || "Deseja reverter esta alteracao?"}\n\nEsta acao vai restaurar o estado salvo no log.`,
+      confirmLabel: "Reverter agora",
+      tone: "danger"
+    });
+    if (!confirmed) return;
+
+    try {
+      await api(`/api/admin/audit-logs/${encodeURIComponent(id)}/reverse`, {
+        method: "POST",
+        body: JSON.stringify({})
+      });
+      await loadAll();
+      setStatus("Reversao aplicada com sucesso.", "ok");
+    } catch (error) {
+      setStatus(`Falha ao reverter alteracao: ${error.code || error.message}`, "error");
+    }
+  }
+
   async function handleLogout() {
     try {
       await fetch("/api/studio-auth/logout", { method: "POST", credentials: "include" });
@@ -987,6 +1072,9 @@
     dom.vipRefreshBtn?.addEventListener("click", loadVip);
     dom.createVipForm?.addEventListener("submit", handleVipCreate);
     dom.vipBody?.addEventListener("click", handleVipAction);
+
+    dom.auditRefreshBtn?.addEventListener("click", loadAuditLogs);
+    dom.auditBody?.addEventListener("click", handleAuditAction);
   }
 
   async function init() {

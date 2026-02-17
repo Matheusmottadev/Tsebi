@@ -13,7 +13,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;600&family=Montserrat:wght@400;500;600&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="css/studio-portal.css?v=20260217f" />
+  <link rel="stylesheet" href="css/studio-portal.css?v=20260217g" />
 </head>
 <body>
   <main class="admin-wrap">
@@ -45,6 +45,7 @@
         <button type="button" class="tab" data-tab="orders">Pedidos</button>
         <button type="button" class="tab" data-tab="products">Produtos</button>
         <button type="button" class="tab" data-tab="vip">Lista VIP</button>
+        <button type="button" class="tab" data-tab="audit">Auditoria</button>
       </nav>
 
       <section class="panel tab-panel is-active" data-panel="users">
@@ -188,6 +189,32 @@
           </table>
         </div>
       </section>
+
+      <section class="panel tab-panel" data-panel="audit" hidden>
+        <div class="panel-head">
+          <h2>Auditoria</h2>
+          <div class="inline-actions">
+            <button id="auditRefreshBtn" type="button" class="btn btn-ghost">Atualizar</button>
+          </div>
+        </div>
+
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Quando</th>
+                <th>Admin</th>
+                <th>Acao</th>
+                <th>Entidade</th>
+                <th>Resumo</th>
+                <th>Status</th>
+                <th>Acoes</th>
+              </tr>
+            </thead>
+            <tbody id="auditBody"></tbody>
+          </table>
+        </div>
+      </section>
     </section>
   </main>
 
@@ -206,6 +233,7 @@
     </div>
   </div>
 
-  <script src="JS/studio-portal.js?v=20260217f"></script>
+  <script src="JS/studio-portal.js?v=20260217g"></script>
 </body>
 </html>
+
