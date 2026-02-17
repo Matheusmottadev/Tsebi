@@ -1,4 +1,6 @@
 const session = require("express-session");
+const pgSessionFactory = require("connect-pg-simple");
+const { getPool } = require("./lib/db");
 
 const isProduction = process.env.NODE_ENV === "production";
 const sessionName = process.env.SESSION_COOKIE_NAME || "tsebi.sid";
@@ -14,11 +16,21 @@ function getSessionMaxAgeMs() {
   return days * 24 * 60 * 60 * 1000;
 }
 
+function createSessionStore() {
+  const PgSession = pgSessionFactory(session);
+  return new PgSession({
+    pool: getPool(),
+    tableName: "user_sessions",
+    createTableIfMissing: true,
+    pruneSessionInterval: 15 * 60
+  });
+}
+
 function createSessionMiddleware() {
-  // Default MemoryStore is acceptable for local dev only; swap to Redis in production.
   return session({
     name: sessionName,
     secret: sessionSecret,
+    store: createSessionStore(),
     resave: false,
     saveUninitialized: false,
     rolling: true,
