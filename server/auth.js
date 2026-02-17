@@ -11,12 +11,17 @@ const {
   findUserById,
   createUser,
   updateUser,
-  createPasswordResetToken,
-  consumePasswordResetToken
+  markUserEmailVerified
 } = require("./user-repository");
 const { listOrdersByUserId, updateOrder } = require("./lib/order-repository");
 const { commitStock } = require("./lib/inventory-repository");
 const { requireAuth } = require("./middlewares/requireAuth");
+const { issueAuthEmailCode, consumeAuthEmailCode } = require("./lib/auth-email-code-repository");
+const {
+  sendAccountVerificationEmail,
+  sendLoginVerificationEmail,
+  sendPasswordResetEmail
+} = require("./lib/email-service");
 
 const authRouter = express.Router();
 const myRouter = express.Router();
@@ -77,6 +82,20 @@ const checkEmailSchema = z.object({
 
 const forgotPasswordSchema = z.object({
   email: emailSchema
+});
+
+const verifyCodeSchema = z.object({
+  email: emailSchema,
+  code: z.string().trim().regex(/^\d{6}$/)
+});
+
+const loginVerifySchema = verifyCodeSchema;
+const accountVerifySchema = verifyCodeSchema;
+
+const resetPasswordCodeSchema = z.object({
+  email: emailSchema,
+  code: z.string().trim().regex(/^\d{6}$/),
+  password: passwordSchema
 });
 
 const resetPasswordSchema = z.object({
@@ -228,6 +247,72 @@ function isRefundWindowOpen(order) {
   return Date.now() - paidDate.getTime() <= REFUND_WINDOW_MS;
 }
 
+function buildEmailCodeResponseBase(email, stage, issued) {
+  const response = {
+    ok: true,
+    email: normalizeEmail(email),
+    stage,
+    expiresAt: issued?.expiresAt || null
+  };
+
+  if (process.env.NODE_ENV !== "production") {
+    response.devCode = issued?.code || null;
+  }
+
+  return response;
+}
+
+async function issueAndSendAccountVerifyCode(user) {
+  const issued = await issueAuthEmailCode({
+    userId: user.id,
+    email: user.email,
+    purpose: "account_verify"
+  });
+  if (!issued.ok) return issued;
+
+  await sendAccountVerificationEmail({
+    to: user.email,
+    code: issued.code,
+    minutes: 20
+  });
+
+  return { ok: true, issued };
+}
+
+async function issueAndSendLoginVerifyCode(user) {
+  const issued = await issueAuthEmailCode({
+    userId: user.id,
+    email: user.email,
+    purpose: "login_verify"
+  });
+  if (!issued.ok) return issued;
+
+  await sendLoginVerificationEmail({
+    to: user.email,
+    code: issued.code,
+    minutes: 10
+  });
+
+  return { ok: true, issued };
+}
+
+async function issueAndSendPasswordResetCode(user) {
+  const issued = await issueAuthEmailCode({
+    userId: user.id,
+    email: user.email,
+    purpose: "password_reset"
+  });
+  if (!issued.ok) return issued;
+
+  await sendPasswordResetEmail({
+    to: user.email,
+    code: issued.code,
+    minutes: 15
+  });
+
+  return { ok: true, issued };
+}
+
 authRouter.post("/register", authRateLimit, async (req, res) => {
   const parsed = registerSchema.safeParse(req.body || {});
   if (!parsed.success) {
@@ -239,21 +324,43 @@ authRouter.post("/register", authRateLimit, async (req, res) => {
     return res.status(400).json({ error: "INVALID_INPUT" });
   }
 
+  const normalizedEmail = normalizeEmail(payload.email);
+  const existing = await findUserByEmail(normalizedEmail);
+  if (existing) {
+    if (existing.emailVerified) {
+      return res.status(409).json({ error: "EMAIL_ALREADY_EXISTS" });
+    }
+
+    try {
+      const resend = await issueAndSendAccountVerifyCode(existing);
+      if (!resend.ok) return res.status(500).json({ error: "AUTH_CODE_ISSUE_FAILED" });
+      return res.json(buildEmailCodeResponseBase(existing.email, "account_verification_required", resend.issued));
+    } catch {
+      return res.status(500).json({ error: "EMAIL_DELIVERY_FAILED" });
+    }
+  }
+
   const created = await createUser({
     name: payload.name,
-    email: normalizeEmail(payload.email),
+    email: normalizedEmail,
     passwordHash: await bcrypt.hash(payload.password, 12),
     birthDate: payload.birthDate,
     cpf: payload.cpf,
-    cep: payload.cep
+    cep: payload.cep,
+    emailVerified: false
   });
 
   if (!created.ok) {
     return res.status(409).json({ error: "EMAIL_ALREADY_EXISTS" });
   }
 
-  req.session.userId = created.user.id;
-  return res.status(201).json({ user: publicUser(created.user) });
+  try {
+    const sent = await issueAndSendAccountVerifyCode(created.user);
+    if (!sent.ok) return res.status(500).json({ error: "AUTH_CODE_ISSUE_FAILED" });
+    return res.status(201).json(buildEmailCodeResponseBase(created.user.email, "account_verification_required", sent.issued));
+  } catch {
+    return res.status(500).json({ error: "EMAIL_DELIVERY_FAILED" });
+  }
 });
 
 authRouter.post("/check-email", async (req, res) => {
@@ -263,7 +370,49 @@ authRouter.post("/check-email", async (req, res) => {
   }
 
   const user = await findUserByEmail(parsed.data.email);
-  return res.json({ exists: Boolean(user) });
+  return res.json({ exists: Boolean(user), emailVerified: Boolean(user?.emailVerified) });
+});
+
+authRouter.post("/email/verify-account", authRateLimit, async (req, res) => {
+  const parsed = accountVerifySchema.safeParse(req.body || {});
+  if (!parsed.success) {
+    return res.status(400).json({ error: "INVALID_INPUT" });
+  }
+
+  const email = normalizeEmail(parsed.data.email);
+  const user = await findUserByEmail(email);
+  if (!user) return res.status(400).json({ error: "INVALID_OR_EXPIRED_CODE" });
+
+  const consumed = await consumeAuthEmailCode({
+    email,
+    purpose: "account_verify",
+    code: parsed.data.code
+  });
+  if (!consumed.ok || consumed.userId !== user.id) {
+    return res.status(400).json({ error: "INVALID_OR_EXPIRED_CODE" });
+  }
+
+  const verified = await markUserEmailVerified(user.id);
+  if (!verified) return res.status(404).json({ error: "USER_NOT_FOUND" });
+  req.session.userId = verified.id;
+  return res.json({ ok: true, user: publicUser(verified) });
+});
+
+authRouter.post("/email/resend-account-code", resetRateLimit, async (req, res) => {
+  const parsed = forgotPasswordSchema.safeParse(req.body || {});
+  if (!parsed.success) return res.status(400).json({ error: "INVALID_INPUT" });
+
+  const email = normalizeEmail(parsed.data.email);
+  const user = await findUserByEmail(email);
+  if (!user || user.emailVerified) return res.json({ ok: true });
+
+  try {
+    const sent = await issueAndSendAccountVerifyCode(user);
+    if (!sent.ok) return res.status(500).json({ error: "AUTH_CODE_ISSUE_FAILED" });
+    return res.json(buildEmailCodeResponseBase(user.email, "account_verification_required", sent.issued));
+  } catch {
+    return res.status(500).json({ error: "EMAIL_DELIVERY_FAILED" });
+  }
 });
 
 authRouter.post("/login", authRateLimit, async (req, res) => {
@@ -296,8 +445,43 @@ authRouter.post("/login", authRateLimit, async (req, res) => {
     return res.status(401).json({ error: "INVALID_CREDENTIALS" });
   }
 
+  try {
+    if (!user.emailVerified) {
+      const accountCode = await issueAndSendAccountVerifyCode(user);
+      if (!accountCode.ok) return res.status(500).json({ error: "AUTH_CODE_ISSUE_FAILED" });
+      return res.status(200).json(
+        buildEmailCodeResponseBase(user.email, "account_verification_required", accountCode.issued)
+      );
+    }
+
+    const loginCode = await issueAndSendLoginVerifyCode(user);
+    if (!loginCode.ok) return res.status(500).json({ error: "AUTH_CODE_ISSUE_FAILED" });
+    return res.json(buildEmailCodeResponseBase(user.email, "login_code_required", loginCode.issued));
+  } catch {
+    return res.status(500).json({ error: "EMAIL_DELIVERY_FAILED" });
+  }
+});
+
+authRouter.post("/login/verify-code", authRateLimit, async (req, res) => {
+  const parsed = loginVerifySchema.safeParse(req.body || {});
+  if (!parsed.success) return res.status(400).json({ error: "INVALID_INPUT" });
+
+  const email = normalizeEmail(parsed.data.email);
+  const user = await findUserByEmail(email);
+  if (!user) return res.status(401).json({ error: "INVALID_CREDENTIALS" });
+  if (!user.emailVerified) return res.status(403).json({ error: "EMAIL_NOT_VERIFIED" });
+
+  const consumed = await consumeAuthEmailCode({
+    email,
+    purpose: "login_verify",
+    code: parsed.data.code
+  });
+  if (!consumed.ok || consumed.userId !== user.id) {
+    return res.status(400).json({ error: "INVALID_OR_EXPIRED_CODE" });
+  }
+
   req.session.userId = user.id;
-  return res.json({ user: publicUser(user) });
+  return res.json({ ok: true, user: publicUser(user) });
 });
 
 authRouter.post("/logout", (req, res) => {
@@ -331,29 +515,45 @@ authRouter.post("/forgot-password", resetRateLimit, async (req, res) => {
     return res.json({ ok: true });
   }
 
-  const reset = await createPasswordResetToken(user.id, 30);
-  const response = { ok: true };
-
-  if (process.env.NODE_ENV !== "production") {
-    response.resetToken = reset.token;
-    response.expiresAt = reset.expiresAt;
+  try {
+    const sent = await issueAndSendPasswordResetCode(user);
+    if (!sent.ok) return res.status(500).json({ error: "AUTH_CODE_ISSUE_FAILED" });
+    const response = { ok: true, expiresAt: sent.issued?.expiresAt || null };
+    if (process.env.NODE_ENV !== "production") {
+      response.devCode = sent.issued?.code || null;
+    }
+    return res.json(response);
+  } catch {
+    if (process.env.NODE_ENV === "production") {
+      // Em producao, evita vazar comportamento de email.
+      return res.json({ ok: true });
+    }
+    return res.status(500).json({ error: "EMAIL_DELIVERY_FAILED" });
   }
-
-  return res.json(response);
 });
 
-authRouter.post("/reset-password", resetRateLimit, async (req, res) => {
-  const parsed = resetPasswordSchema.safeParse(req.body || {});
+authRouter.post("/forgot-password/verify-code", resetRateLimit, async (req, res) => {
+  const parsed = resetPasswordCodeSchema.safeParse(req.body || {});
   if (!parsed.success) {
     return res.status(400).json({ error: "INVALID_INPUT" });
   }
 
-  const consumed = await consumePasswordResetToken(parsed.data.token);
-  if (!consumed?.userId) {
-    return res.status(400).json({ error: "INVALID_OR_EXPIRED_TOKEN" });
+  const email = normalizeEmail(parsed.data.email);
+  const user = await findUserByEmail(email);
+  if (!user) {
+    return res.status(400).json({ error: "INVALID_OR_EXPIRED_CODE" });
   }
 
-  const updated = await updateUser(consumed.userId, {
+  const consumed = await consumeAuthEmailCode({
+    email,
+    purpose: "password_reset",
+    code: parsed.data.code
+  });
+  if (!consumed.ok || consumed.userId !== user.id) {
+    return res.status(400).json({ error: "INVALID_OR_EXPIRED_CODE" });
+  }
+
+  const updated = await updateUser(user.id, {
     passwordHash: await bcrypt.hash(parsed.data.password, 12)
   });
 
@@ -362,6 +562,13 @@ authRouter.post("/reset-password", resetRateLimit, async (req, res) => {
   }
 
   return res.json({ ok: true });
+});
+
+// Compat legado (token antigo): mantido para nao quebrar clientes antigos.
+authRouter.post("/reset-password", resetRateLimit, async (req, res) => {
+  const parsed = resetPasswordSchema.safeParse(req.body || {});
+  if (!parsed.success) return res.status(400).json({ error: "INVALID_INPUT" });
+  return res.status(410).json({ error: "RESET_TOKEN_FLOW_DEPRECATED_USE_EMAIL_CODE" });
 });
 
 myRouter.get("/orders", requireAuth, async (req, res) => {

@@ -12,7 +12,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600&family=Montserrat:wght@300;400;500;600&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="css/style.css" />
+  <link rel="stylesheet" href="css/style.css?v=20260217f" />
   <link rel="stylesheet" href="css/account-auth.css" />
 </head>
 <body class="account-auth-page">
@@ -46,7 +46,25 @@
             <span>Senha</span>
             <input type="password" id="loginPassword" required minlength="8" autocomplete="current-password" />
           </label>
+          <label id="loginCodeField" hidden>
+            <span>Codigo do e-mail</span>
+            <input type="text" id="loginEmailCode" inputmode="numeric" maxlength="6" autocomplete="one-time-code" />
+          </label>
           <button type="submit" class="account-auth-submit">Entrar</button>
+        </form>
+        <button type="button" id="resendLoginCodeBtn" class="account-auth-link" hidden>Reenviar codigo</button>
+        <button type="button" id="forgotPasswordBtn" class="account-auth-link">Esqueci minha senha</button>
+
+        <form id="forgotPasswordForm" class="account-auth-form" hidden novalidate>
+          <label>
+            <span>Codigo de redefinicao</span>
+            <input type="text" id="forgotPasswordCode" inputmode="numeric" maxlength="6" autocomplete="one-time-code" />
+          </label>
+          <label>
+            <span>Nova senha</span>
+            <input type="password" id="forgotPasswordNewPassword" minlength="8" autocomplete="new-password" />
+          </label>
+          <button type="submit" class="account-auth-submit">Redefinir senha</button>
         </form>
         <button type="button" id="changeEmailFromLogin" class="account-auth-link">Usar outro e-mail</button>
       </section>
@@ -74,8 +92,17 @@
             <span>Senha</span>
             <input type="password" id="registerPassword" required minlength="8" autocomplete="new-password" />
           </label>
+          <label>
+            <span>Confirmar senha</span>
+            <input type="password" id="registerPasswordConfirm" required minlength="8" autocomplete="new-password" />
+          </label>
+          <label id="registerCodeField" hidden>
+            <span>Codigo do e-mail</span>
+            <input type="text" id="registerEmailCode" inputmode="numeric" maxlength="6" autocomplete="one-time-code" />
+          </label>
           <button type="submit" class="account-auth-submit">Criar conta</button>
         </form>
+        <button type="button" id="resendRegisterCodeBtn" class="account-auth-link" hidden>Reenviar codigo</button>
         <button type="button" id="changeEmailFromRegister" class="account-auth-link">Usar outro e-mail</button>
       </section>
 
@@ -83,8 +110,9 @@
     </section>
   </main>
 
-  <script src="JS/user-utils.js?v=20260217b"></script>
-  <script src="JS/conta.js?v=20260215j"></script>
+  <script src="JS/user-utils.js?v=20260217c"></script>
+  <script src="JS/conta.js?v=20260217m"></script>
 </body>
 </html>
+
 

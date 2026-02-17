@@ -33,6 +33,10 @@ STRIPE_WEBHOOK_SECRET=whsec_xxx
 SESSION_SECRET=change-this-secret
 SESSION_COOKIE_NAME=tsebi.sid
 CORS_ORIGIN=http://localhost:4242
+APP_NAME=Tsebi
+EMAIL_PROVIDER=console
+EMAIL_FROM=no-reply@tsebi.com.br
+RESEND_API_KEY=
 ADMIN_EMAILS=admin@seudominio.com.br
 ADMIN_MFA_ENCRYPTION_KEY=defina-uma-chave-forte-unica-aqui
 ADMIN_IDLE_TIMEOUT_MINUTES=20
@@ -91,11 +95,15 @@ Observacoes:
 
 - `POST /api/auth/check-email`
 - `POST /api/auth/register`
+- `POST /api/auth/email/verify-account`
+- `POST /api/auth/email/resend-account-code`
 - `POST /api/auth/login`
+- `POST /api/auth/login/verify-code`
 - `POST /api/auth/logout`
 - `GET /api/auth/me`
 - `POST /api/auth/forgot-password`
-- `POST /api/auth/reset-password`
+- `POST /api/auth/forgot-password/verify-code`
+- `POST /api/auth/reset-password` (legado, deprecated)
 
 ### Endpoints Studio Auth (admin)
 
@@ -114,9 +122,15 @@ Observacoes:
 
 ### Recuperacao de senha
 
-- `forgot-password` gera token com expiracao e salva no DB.
-- Em `NODE_ENV=development`, o token e retornado na resposta (mock para testes).
-- Em producao, conecte o envio por email usando esse token.
+- No fluxo atual, `forgot-password` envia codigo de 6 digitos por email.
+- `forgot-password/verify-code` valida o codigo e redefine a senha.
+- Em `NODE_ENV=development`, a API devolve `devCode` para facilitar testes locais.
+
+### Verificacao de email
+
+- Cadastro exige confirmacao de email por codigo de 6 digitos.
+- Login exige confirmacao por codigo de 6 digitos enviado por email.
+- Usuarios antigos sao marcados como verificados na migration `004_auth_email_security.sql`.
 
 ## Pedidos do usuario
 

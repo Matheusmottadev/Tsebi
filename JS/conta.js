@@ -10,14 +10,33 @@ const feedbackEl = document.getElementById("authFeedback");
 const emailCheckForm = document.getElementById("emailCheckForm");
 const loginForm = document.getElementById("loginForm");
 const registerForm = document.getElementById("registerForm");
+const forgotPasswordForm = document.getElementById("forgotPasswordForm");
+
 const emailCheckInput = document.getElementById("emailCheckInput");
 const detectedEmailLogin = document.getElementById("detectedEmailLogin");
 const detectedEmailRegister = document.getElementById("detectedEmailRegister");
+
+const loginPasswordInput = document.getElementById("loginPassword");
+const loginCodeField = document.getElementById("loginCodeField");
+const loginEmailCodeInput = document.getElementById("loginEmailCode");
+const resendLoginCodeBtn = document.getElementById("resendLoginCodeBtn");
+const forgotPasswordBtn = document.getElementById("forgotPasswordBtn");
+
+const forgotPasswordCodeInput = document.getElementById("forgotPasswordCode");
+const forgotPasswordNewPasswordInput = document.getElementById("forgotPasswordNewPassword");
+
+const registerCodeField = document.getElementById("registerCodeField");
+const registerEmailCodeInput = document.getElementById("registerEmailCode");
+const registerPasswordConfirmInput = document.getElementById("registerPasswordConfirm");
+const resendRegisterCodeBtn = document.getElementById("resendRegisterCodeBtn");
+
 const changeEmailFromLogin = document.getElementById("changeEmailFromLogin");
 const changeEmailFromRegister = document.getElementById("changeEmailFromRegister");
 
 let selectedEmail = "";
 let activeSessionEmail = "";
+let loginStage = "password"; // password | login_code | account_verify
+let registerStage = "form"; // form | account_verify
 
 function getSafeReturnUrl() {
   const params = new URLSearchParams(window.location.search);
@@ -51,20 +70,6 @@ function setFormLoading(form, loading) {
   submit.disabled = Boolean(loading);
 }
 
-function showPanel(panelName) {
-  Object.entries(panels).forEach(([name, panel]) => {
-    if (!panel) return;
-    const active = name === panelName;
-    panel.hidden = !active;
-    panel.classList.toggle("is-active", active);
-  });
-  setFeedback("");
-
-  if (panelName === "email") emailCheckInput?.focus();
-  if (panelName === "login") document.getElementById("loginPassword")?.focus();
-  if (panelName === "register") document.getElementById("registerName")?.focus();
-}
-
 function normalizeEmail(email) {
   return String(email || "").trim().toLowerCase();
 }
@@ -90,6 +95,125 @@ function formatCep(value) {
   return digits.replace(/^(\d{5})(\d)/, "$1-$2");
 }
 
+function codeHint(devCode) {
+  if (!devCode) return "";
+  return ` (dev: ${devCode})`;
+}
+
+function showPanel(panelName) {
+  Object.entries(panels).forEach(([name, panel]) => {
+    if (!panel) return;
+    const active = name === panelName;
+    panel.hidden = !active;
+    panel.classList.toggle("is-active", active);
+  });
+  setFeedback("");
+
+  if (panelName === "email") emailCheckInput?.focus();
+  if (panelName === "login") {
+    if (loginStage === "password") loginPasswordInput?.focus();
+    else loginEmailCodeInput?.focus();
+  }
+  if (panelName === "register") {
+    if (registerStage === "form") document.getElementById("registerName")?.focus();
+    else registerEmailCodeInput?.focus();
+  }
+}
+
+function setLoginStage(nextStage) {
+  loginStage = nextStage;
+
+  const submit = loginForm?.querySelector('button[type="submit"]');
+  const inCodeStage = nextStage === "login_code" || nextStage === "account_verify";
+  if (loginCodeField) loginCodeField.hidden = !inCodeStage;
+  if (resendLoginCodeBtn) resendLoginCodeBtn.hidden = !inCodeStage;
+  if (forgotPasswordBtn) forgotPasswordBtn.hidden = inCodeStage;
+  if (forgotPasswordForm) forgotPasswordForm.hidden = true;
+
+  if (loginPasswordInput) {
+    loginPasswordInput.disabled = inCodeStage;
+    loginPasswordInput.required = !inCodeStage;
+  }
+
+  if (loginEmailCodeInput) {
+    loginEmailCodeInput.disabled = !inCodeStage;
+    loginEmailCodeInput.required = inCodeStage;
+    if (!inCodeStage) loginEmailCodeInput.value = "";
+  }
+
+  if (submit) {
+    if (nextStage === "login_code") submit.textContent = "Verificar codigo e entrar";
+    else if (nextStage === "account_verify") submit.textContent = "Verificar e-mail e entrar";
+    else submit.textContent = "Entrar";
+  }
+}
+
+function setRegisterStage(nextStage) {
+  registerStage = nextStage;
+  const submit = registerForm?.querySelector('button[type="submit"]');
+  const inCodeStage = nextStage === "account_verify";
+
+  if (registerCodeField) registerCodeField.hidden = !inCodeStage;
+  if (resendRegisterCodeBtn) resendRegisterCodeBtn.hidden = !inCodeStage;
+
+  const inputs = Array.from(registerForm?.querySelectorAll("input") || []);
+  inputs.forEach((input) => {
+    const id = String(input.id || "");
+    if (id === "registerEmailCode") {
+      input.disabled = !inCodeStage;
+      input.required = inCodeStage;
+      if (!inCodeStage) input.value = "";
+      return;
+    }
+
+    input.disabled = inCodeStage;
+    if (inCodeStage) {
+      input.removeAttribute("required");
+    } else {
+      if (
+        ["registerName", "registerBirthDate", "registerCpf", "registerCep", "registerPassword", "registerPasswordConfirm"].includes(
+          id
+        )
+      ) {
+        input.setAttribute("required", "required");
+      }
+    }
+  });
+
+  if (submit) {
+    submit.textContent = inCodeStage ? "Verificar e-mail e entrar" : "Criar conta";
+  }
+}
+
+function resetToEmailStep() {
+  selectedEmail = "";
+  setLoginStage("password");
+  setRegisterStage("form");
+
+  if (emailCheckInput) emailCheckInput.value = "";
+  if (loginPasswordInput) loginPasswordInput.value = "";
+  if (loginEmailCodeInput) loginEmailCodeInput.value = "";
+  if (forgotPasswordCodeInput) forgotPasswordCodeInput.value = "";
+  if (forgotPasswordNewPasswordInput) forgotPasswordNewPasswordInput.value = "";
+  if (forgotPasswordForm) forgotPasswordForm.hidden = true;
+
+  const registerIds = [
+    "registerName",
+    "registerBirthDate",
+    "registerCpf",
+    "registerCep",
+    "registerPassword",
+    "registerPasswordConfirm",
+    "registerEmailCode"
+  ];
+  registerIds.forEach((id) => {
+    const input = document.getElementById(id);
+    if (input instanceof HTMLInputElement) input.value = "";
+  });
+
+  showPanel("email");
+}
+
 async function handleEmailCheck(event) {
   event.preventDefault();
   if (!store) return;
@@ -103,52 +227,86 @@ async function handleEmailCheck(event) {
   if (activeSessionEmail && email !== activeSessionEmail) {
     await store.logout();
     activeSessionEmail = "";
-    setFeedback("Sessão anterior encerrada. Continue com o novo e-mail.");
   }
 
   selectedEmail = email;
   setFormLoading(emailCheckForm, true);
-
   const result = await store.checkEmail(email);
   setFormLoading(emailCheckForm, false);
 
   if (!result.ok) {
     if (detectedEmailLogin) detectedEmailLogin.textContent = selectedEmail;
+    setLoginStage("password");
     showPanel("login");
-    setFeedback("Não foi possível validar automaticamente. Continue com sua senha.", false);
+    setFeedback("Nao foi possivel validar automaticamente. Continue com sua senha.", false);
     return;
   }
 
   if (result.exists) {
     if (detectedEmailLogin) detectedEmailLogin.textContent = selectedEmail;
+    setLoginStage("password");
     showPanel("login");
     return;
   }
 
   if (detectedEmailRegister) detectedEmailRegister.textContent = selectedEmail;
+  setRegisterStage("form");
   showPanel("register");
 }
 
 async function handleLogin(event) {
   event.preventDefault();
   if (!store) return;
+  if (!selectedEmail) return showPanel("email");
 
-  const password = String(document.getElementById("loginPassword")?.value || "");
-  if (!selectedEmail) {
-    showPanel("email");
+  if (loginStage === "password") {
+    setFormLoading(loginForm, true);
+    const result = await store.login({ email: selectedEmail, password: String(loginPasswordInput?.value || "") });
+    setFormLoading(loginForm, false);
+
+    if (!result.ok) {
+      setFeedback(result.error || "Nao foi possivel entrar.", true);
+      return;
+    }
+
+    if (result.user) {
+      setFeedback("Login realizado com sucesso.");
+      return redirectAfterAuth();
+    }
+
+    if (result.stage === "login_code_required") {
+      setLoginStage("login_code");
+      setFeedback(`Enviamos um codigo para ${selectedEmail}.${codeHint(result.devCode)}`);
+      loginEmailCodeInput?.focus();
+      return;
+    }
+
+    if (result.stage === "account_verification_required") {
+      setLoginStage("account_verify");
+      setFeedback(`Confirme seu e-mail para concluir o acesso.${codeHint(result.devCode)}`);
+      loginEmailCodeInput?.focus();
+      return;
+    }
+
+    setFeedback("Nao foi possivel iniciar o login.", true);
+    return;
+  }
+
+  const code = normalizeDigits(loginEmailCodeInput?.value || "", 6);
+  if (code.length !== 6) {
+    setFeedback("Informe o codigo de 6 digitos.", true);
     return;
   }
 
   setFormLoading(loginForm, true);
-  const result = await store.login({ email: selectedEmail, password });
+  const verifyResult =
+    loginStage === "account_verify"
+      ? await store.verifyAccountEmailCode({ email: selectedEmail, code })
+      : await store.verifyLoginEmailCode({ email: selectedEmail, code });
   setFormLoading(loginForm, false);
 
-  if (!result.ok) {
-    if (result.code === "INVALID_CREDENTIALS") {
-      setFeedback("Senha inválida. Se ainda não tiver conta, use outro e-mail para criar.", true);
-      return;
-    }
-    setFeedback(result.error || "Não foi possível entrar.", true);
+  if (!verifyResult.ok) {
+    setFeedback(verifyResult.error || "Codigo invalido.", true);
     return;
   }
 
@@ -159,93 +317,197 @@ async function handleLogin(event) {
 async function handleRegister(event) {
   event.preventDefault();
   if (!store) return;
+  if (!selectedEmail) return showPanel("email");
 
-  const name = String(document.getElementById("registerName")?.value || "").trim();
-  const birthDate = String(document.getElementById("registerBirthDate")?.value || "").trim();
-  const cpf = normalizeDigits(document.getElementById("registerCpf")?.value || "", 11);
-  const cep = normalizeDigits(document.getElementById("registerCep")?.value || "", 8);
-  const password = String(document.getElementById("registerPassword")?.value || "");
-  if (!selectedEmail) {
-    showPanel("email");
+  if (registerStage === "form") {
+    const name = String(document.getElementById("registerName")?.value || "").trim();
+    const birthDate = String(document.getElementById("registerBirthDate")?.value || "").trim();
+    const cpf = normalizeDigits(document.getElementById("registerCpf")?.value || "", 11);
+    const cep = normalizeDigits(document.getElementById("registerCep")?.value || "", 8);
+    const password = String(document.getElementById("registerPassword")?.value || "");
+    const passwordConfirm = String(registerPasswordConfirmInput?.value || "");
+
+    if (!birthDate || cpf.length !== 11 || cep.length !== 8) {
+      setFeedback("Preencha data de nascimento, CPF e CEP validos.", true);
+      return;
+    }
+
+    if (password !== passwordConfirm) {
+      setFeedback("As senhas nao coincidem.", true);
+      return;
+    }
+
+    setFormLoading(registerForm, true);
+    const result = await store.register({ name, email: selectedEmail, password, birthDate, cpf, cep });
+    setFormLoading(registerForm, false);
+
+    if (!result.ok) {
+      if (result.code === "EMAIL_ALREADY_EXISTS") {
+        if (detectedEmailLogin) detectedEmailLogin.textContent = selectedEmail;
+        setLoginStage("password");
+        showPanel("login");
+        setFeedback("Este e-mail ja possui conta. Entre com sua senha.", true);
+        return;
+      }
+      setFeedback(result.error || "Nao foi possivel criar conta.", true);
+      return;
+    }
+
+    if (result.user) {
+      setFeedback("Conta criada com sucesso.");
+      return redirectAfterAuth();
+    }
+
+    setRegisterStage("account_verify");
+    setFeedback(`Conta criada. Verifique o codigo enviado para ${selectedEmail}.${codeHint(result.devCode)}`);
+    registerEmailCodeInput?.focus();
     return;
   }
 
-  if (!birthDate || cpf.length !== 11 || cep.length !== 8) {
-    setFeedback("Preencha data de nascimento, CPF e CEP válidos.", true);
+  const code = normalizeDigits(registerEmailCodeInput?.value || "", 6);
+  if (code.length !== 6) {
+    setFeedback("Informe o codigo de 6 digitos.", true);
     return;
   }
 
   setFormLoading(registerForm, true);
-  const result = await store.register({
-    name,
-    email: selectedEmail,
-    password,
-    birthDate,
-    cpf,
-    cep
-  });
+  const verify = await store.verifyAccountEmailCode({ email: selectedEmail, code });
   setFormLoading(registerForm, false);
 
-  if (!result.ok) {
-    if (result.code === "EMAIL_ALREADY_EXISTS") {
-      if (detectedEmailLogin) detectedEmailLogin.textContent = selectedEmail;
-      showPanel("login");
-      setFeedback("Este e-mail já possui conta. Entre com sua senha.", true);
-      return;
-    }
-    setFeedback(result.error || "Não foi possível criar conta.", true);
+  if (!verify.ok) {
+    setFeedback(verify.error || "Codigo invalido.", true);
     return;
   }
 
-  setFeedback("Conta criada com sucesso.");
+  setFeedback("Conta verificada com sucesso.");
   redirectAfterAuth();
 }
 
-function resetToEmailStep() {
-  selectedEmail = "";
-  if (emailCheckInput) emailCheckInput.value = "";
-  const loginPassword = document.getElementById("loginPassword");
-  const registerName = document.getElementById("registerName");
-  const registerBirthDate = document.getElementById("registerBirthDate");
-  const registerCpf = document.getElementById("registerCpf");
-  const registerCep = document.getElementById("registerCep");
-  const registerPassword = document.getElementById("registerPassword");
-  if (loginPassword) loginPassword.value = "";
-  if (registerName) registerName.value = "";
-  if (registerBirthDate) registerBirthDate.value = "";
-  if (registerCpf) registerCpf.value = "";
-  if (registerCep) registerCep.value = "";
-  if (registerPassword) registerPassword.value = "";
-  showPanel("email");
+async function handleResendLoginCode() {
+  if (!store || !selectedEmail) return;
+
+  if (loginStage === "account_verify") {
+    const resent = await store.resendAccountEmailCode(selectedEmail);
+    if (!resent.ok) {
+      setFeedback(resent.error || "Nao foi possivel reenviar codigo.", true);
+      return;
+    }
+    setFeedback(`Codigo reenviado.${codeHint(resent.devCode)}`);
+    return;
+  }
+
+  if (loginStage === "login_code") {
+    const password = String(loginPasswordInput?.value || "");
+    if (!password) {
+      setFeedback("Digite sua senha novamente para reenviar o codigo.", true);
+      return;
+    }
+
+    const resent = await store.login({ email: selectedEmail, password });
+    if (!resent.ok) {
+      setFeedback(resent.error || "Nao foi possivel reenviar codigo.", true);
+      return;
+    }
+
+    setFeedback(`Codigo reenviado.${codeHint(resent.devCode)}`);
+  }
+}
+
+async function handleForgotPasswordRequest() {
+  if (!store || !selectedEmail) return;
+
+  const sent = await store.requestPasswordReset(selectedEmail);
+  if (!sent.ok) {
+    setFeedback(sent.error || "Nao foi possivel iniciar redefinicao.", true);
+    return;
+  }
+
+  if (forgotPasswordForm) forgotPasswordForm.hidden = false;
+  setFeedback(`Enviamos um codigo de redefinicao para ${selectedEmail}.${codeHint(sent.devCode)}`);
+  forgotPasswordCodeInput?.focus();
+}
+
+async function handleForgotPasswordSubmit(event) {
+  event.preventDefault();
+  if (!store || !selectedEmail) return;
+
+  const code = normalizeDigits(forgotPasswordCodeInput?.value || "", 6);
+  const password = String(forgotPasswordNewPasswordInput?.value || "");
+  if (code.length !== 6) {
+    setFeedback("Informe o codigo de 6 digitos.", true);
+    return;
+  }
+
+  setFormLoading(forgotPasswordForm, true);
+  const result = await store.verifyPasswordResetCode({
+    email: selectedEmail,
+    code,
+    password
+  });
+  setFormLoading(forgotPasswordForm, false);
+
+  if (!result.ok) {
+    setFeedback(result.error || "Nao foi possivel redefinir senha.", true);
+    return;
+  }
+
+  if (forgotPasswordForm) forgotPasswordForm.hidden = true;
+  if (forgotPasswordCodeInput) forgotPasswordCodeInput.value = "";
+  if (forgotPasswordNewPasswordInput) forgotPasswordNewPasswordInput.value = "";
+  if (loginPasswordInput) {
+    loginPasswordInput.value = password;
+    loginPasswordInput.disabled = false;
+  }
+  setLoginStage("password");
+  setFeedback("Senha redefinida. Agora faca login com a nova senha.");
 }
 
 async function boot() {
   if (!store) {
-    setFeedback("Serviço de conta indisponível.", true);
+    setFeedback("Servico de conta indisponivel.", true);
     return;
   }
 
   const me = await store.fetchMe();
   if (me.ok && me.user) {
     activeSessionEmail = normalizeEmail(me.user.email || "");
-    setFeedback(`Você está logado como ${me.user.email}. Para trocar de conta, informe outro e-mail.`);
+    setFeedback(`Voce esta logado como ${me.user.email}. Para trocar de conta, informe outro e-mail.`);
   }
 
   emailCheckForm?.addEventListener("submit", handleEmailCheck);
   loginForm?.addEventListener("submit", handleLogin);
   registerForm?.addEventListener("submit", handleRegister);
+  forgotPasswordForm?.addEventListener("submit", handleForgotPasswordSubmit);
+
   document.getElementById("registerCpf")?.addEventListener("input", (event) => {
     const input = event.target;
     if (!(input instanceof HTMLInputElement)) return;
     input.value = formatCpf(input.value);
   });
+
   document.getElementById("registerCep")?.addEventListener("input", (event) => {
     const input = event.target;
     if (!(input instanceof HTMLInputElement)) return;
     input.value = formatCep(input.value);
   });
+
+  resendLoginCodeBtn?.addEventListener("click", handleResendLoginCode);
+  resendRegisterCodeBtn?.addEventListener("click", async () => {
+    if (!store || !selectedEmail) return;
+    const resent = await store.resendAccountEmailCode(selectedEmail);
+    if (!resent.ok) {
+      setFeedback(resent.error || "Nao foi possivel reenviar codigo.", true);
+      return;
+    }
+    setFeedback(`Codigo reenviado.${codeHint(resent.devCode)}`);
+  });
+
+  forgotPasswordBtn?.addEventListener("click", handleForgotPasswordRequest);
   changeEmailFromLogin?.addEventListener("click", resetToEmailStep);
   changeEmailFromRegister?.addEventListener("click", resetToEmailStep);
+
+  setLoginStage("password");
+  setRegisterStage("form");
   showPanel("email");
 }
 

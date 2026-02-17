@@ -42,6 +42,8 @@
       id: user?.id || "",
       email: normalizeEmail(user?.email || ""),
       name: String(user?.name || ""),
+      emailVerified: Boolean(user?.emailVerified),
+      emailVerifiedAt: String(user?.emailVerifiedAt || ""),
       birthDate: String(user?.birthDate || ""),
       cpf: String(user?.cpf || ""),
       cep: String(user?.cep || ""),
@@ -89,6 +91,11 @@
     if (code === "INVALID_INPUT") return "Dados inválidos.";
     if (code === "INVALID_CREDENTIALS") return "E-mail ou senha inválidos.";
     if (code === "EMAIL_ALREADY_EXISTS") return "Este e-mail já está cadastrado.";
+    if (code === "EMAIL_NOT_VERIFIED") return "Seu e-mail ainda não foi verificado.";
+    if (code === "INVALID_OR_EXPIRED_CODE") return "Código inválido ou expirado.";
+    if (code === "EMAIL_DELIVERY_FAILED") return "Falha ao enviar e-mail. Tente novamente.";
+    if (code === "AUTH_CODE_ISSUE_FAILED") return "Não foi possível gerar código de verificação.";
+    if (code === "RESET_TOKEN_FLOW_DEPRECATED_USE_EMAIL_CODE") return "Este fluxo foi atualizado. Use código enviado por e-mail.";
     if (code === "TOO_MANY_ATTEMPTS") return "Muitas tentativas. Tente novamente em alguns minutos.";
     if (code === "UNAUTHORIZED") return "Sessão expirada. Faça login novamente.";
     if (code === "ORDER_NOT_FOUND") return "Pedido não encontrado.";
@@ -159,8 +166,17 @@
           cep: String(cep || "").replace(/\D/g, "").slice(0, 8)
         })
       });
-      setCachedUser(data.user || null);
-      return { ok: true, user: data.user || null };
+      if (data.user) {
+        setCachedUser(data.user || null);
+      }
+      return {
+        ok: true,
+        user: data.user || null,
+        stage: String(data.stage || ""),
+        email: String(data.email || normalizeEmail(email)),
+        expiresAt: data.expiresAt || null,
+        devCode: data.devCode || null
+      };
     } catch (error) {
       return { ok: false, error: mapAuthError(error.message), code: String(error.message || "") };
     }
@@ -175,9 +191,15 @@
           email: normalizeEmail(email)
         })
       });
-      return { ok: true, exists: Boolean(data.exists) };
+      return { ok: true, exists: Boolean(data.exists), emailVerified: Boolean(data.emailVerified) };
     } catch (error) {
-      return { ok: false, error: mapAuthError(error.message), code: String(error.message || ""), exists: false };
+      return {
+        ok: false,
+        error: mapAuthError(error.message),
+        code: String(error.message || ""),
+        exists: false,
+        emailVerified: false
+      };
     }
   }
 
@@ -191,8 +213,103 @@
           password: String(password || "")
         })
       });
+      if (data.user) {
+        setCachedUser(data.user || null);
+      }
+      return {
+        ok: true,
+        user: data.user || null,
+        stage: String(data.stage || ""),
+        email: String(data.email || normalizeEmail(email)),
+        expiresAt: data.expiresAt || null,
+        devCode: data.devCode || null
+      };
+    } catch (error) {
+      return { ok: false, error: mapAuthError(error.message), code: String(error.message || "") };
+    }
+  }
+
+  async function verifyAccountEmailCode({ email, code }) {
+    try {
+      const data = await apiRequest("/api/auth/email/verify-account", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: normalizeEmail(email),
+          code: String(code || "").replace(/\D/g, "").slice(0, 6)
+        })
+      });
       setCachedUser(data.user || null);
       return { ok: true, user: data.user || null };
+    } catch (error) {
+      return { ok: false, error: mapAuthError(error.message), code: String(error.message || "") };
+    }
+  }
+
+  async function resendAccountEmailCode(email) {
+    try {
+      const data = await apiRequest("/api/auth/email/resend-account-code", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: normalizeEmail(email) })
+      });
+      return {
+        ok: true,
+        stage: String(data.stage || ""),
+        expiresAt: data.expiresAt || null,
+        devCode: data.devCode || null
+      };
+    } catch (error) {
+      return { ok: false, error: mapAuthError(error.message), code: String(error.message || "") };
+    }
+  }
+
+  async function verifyLoginEmailCode({ email, code }) {
+    try {
+      const data = await apiRequest("/api/auth/login/verify-code", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: normalizeEmail(email),
+          code: String(code || "").replace(/\D/g, "").slice(0, 6)
+        })
+      });
+      setCachedUser(data.user || null);
+      return { ok: true, user: data.user || null };
+    } catch (error) {
+      return { ok: false, error: mapAuthError(error.message), code: String(error.message || "") };
+    }
+  }
+
+  async function requestPasswordReset(email) {
+    try {
+      const data = await apiRequest("/api/auth/forgot-password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: normalizeEmail(email) })
+      });
+      return {
+        ok: true,
+        expiresAt: data.expiresAt || null,
+        devCode: data.devCode || null
+      };
+    } catch (error) {
+      return { ok: false, error: mapAuthError(error.message), code: String(error.message || "") };
+    }
+  }
+
+  async function verifyPasswordResetCode({ email, code, password }) {
+    try {
+      const data = await apiRequest("/api/auth/forgot-password/verify-code", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: normalizeEmail(email),
+          code: String(code || "").replace(/\D/g, "").slice(0, 6),
+          password: String(password || "")
+        })
+      });
+      return { ok: true, data };
     } catch (error) {
       return { ok: false, error: mapAuthError(error.message), code: String(error.message || "") };
     }
@@ -430,6 +547,11 @@
     checkEmail,
     register,
     login,
+    verifyAccountEmailCode,
+    resendAccountEmailCode,
+    verifyLoginEmailCode,
+    requestPasswordReset,
+    verifyPasswordResetCode,
     logout,
     fetchMe,
     fetchMyOrders,

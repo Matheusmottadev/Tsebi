@@ -44,6 +44,8 @@ function fromRow(row) {
     id: row.id,
     name: row.name,
     email: normalizeEmail(row.email),
+    emailVerified: Boolean(row.email_verified),
+    emailVerifiedAt: row.email_verified_at || null,
     birthDate: formatBirthDate(row.birth_date),
     cpf: String(row.cpf || "").trim(),
     cep: String(row.cep || "").trim(),
@@ -65,6 +67,8 @@ function publicUser(user) {
     id: user.id,
     name: user.name,
     email: user.email,
+    emailVerified: Boolean(user.emailVerified),
+    emailVerifiedAt: user.emailVerifiedAt || null,
     birthDate: user.birthDate || "",
     cpf: user.cpf || "",
     cep: user.cep || "",
@@ -116,27 +120,28 @@ async function listUsers({ limit = 100, offset = 0, search = "" } = {}) {
   return result.rows.map(fromRow).filter(Boolean);
 }
 
-async function createUser({ name, email, passwordHash, birthDate, cpf, cep }) {
+async function createUser({ name, email, passwordHash, birthDate, cpf, cep, emailVerified = false }) {
   const normalizedEmail = normalizeEmail(email);
   try {
     const result = await query(
       `
-      INSERT INTO users (
-        name, email, password_hash, birth_date, cpf, cep, addresses, default_address_id
-      ) VALUES (
-        $1, $2, $3, NULLIF($4, '')::date, $5, $6, '[]'::jsonb, ''
-      )
-      RETURNING *
-      `,
-      [
-        String(name || "").trim(),
-        normalizedEmail,
-        passwordHash,
-        String(birthDate || ""),
-        String(cpf || "").replace(/\D/g, "").slice(0, 11) || null,
-        String(cep || "").replace(/\D/g, "").slice(0, 8) || null
-      ]
-    );
+        INSERT INTO users (
+          name, email, password_hash, birth_date, cpf, cep, addresses, default_address_id, email_verified, email_verified_at
+        ) VALUES (
+          $1, $2, $3, NULLIF($4, '')::date, $5, $6, '[]'::jsonb, '', $7, CASE WHEN $7 THEN NOW() ELSE NULL END
+        )
+        RETURNING *
+        `,
+        [
+          String(name || "").trim(),
+          normalizedEmail,
+          passwordHash,
+          String(birthDate || ""),
+          String(cpf || "").replace(/\D/g, "").slice(0, 11) || null,
+          String(cep || "").replace(/\D/g, "").slice(0, 8) || null,
+          Boolean(emailVerified)
+        ]
+      );
 
     return { ok: true, user: fromRow(result.rows[0]) };
   } catch (error) {
@@ -426,6 +431,22 @@ async function disableAdminMfa(userId) {
   return fromRow(result.rows[0] || null);
 }
 
+async function markUserEmailVerified(userId) {
+  const result = await query(
+    `
+    UPDATE users
+    SET
+      email_verified = TRUE,
+      email_verified_at = COALESCE(email_verified_at, NOW()),
+      updated_at = NOW()
+    WHERE id = $1
+    RETURNING *
+    `,
+    [userId]
+  );
+  return fromRow(result.rows[0] || null);
+}
+
 async function restoreUserFromSnapshot(snapshot = {}) {
   const id = String(snapshot.id || "").trim();
   const email = normalizeEmail(snapshot.email);
@@ -447,6 +468,8 @@ async function restoreUserFromSnapshot(snapshot = {}) {
         cep,
         addresses,
         default_address_id,
+        email_verified,
+        email_verified_at,
         admin_mfa_enabled,
         admin_mfa_secret_enc,
         admin_mfa_recovery_codes,
@@ -467,11 +490,13 @@ async function restoreUserFromSnapshot(snapshot = {}) {
         $9,
         $10,
         $11,
-        $12::jsonb,
-        $13::timestamptz,
-        $14::timestamptz,
-        COALESCE($15::timestamptz, NOW()),
-        COALESCE($16::timestamptz, NOW())
+        $12,
+        $13,
+        $14::jsonb,
+        $15::timestamptz,
+        $16::timestamptz,
+        COALESCE($17::timestamptz, NOW()),
+        COALESCE($18::timestamptz, NOW())
       )
       ON CONFLICT (id) DO UPDATE
       SET
@@ -483,6 +508,8 @@ async function restoreUserFromSnapshot(snapshot = {}) {
         cep = EXCLUDED.cep,
         addresses = EXCLUDED.addresses,
         default_address_id = EXCLUDED.default_address_id,
+        email_verified = EXCLUDED.email_verified,
+        email_verified_at = EXCLUDED.email_verified_at,
         admin_mfa_enabled = EXCLUDED.admin_mfa_enabled,
         admin_mfa_secret_enc = EXCLUDED.admin_mfa_secret_enc,
         admin_mfa_recovery_codes = EXCLUDED.admin_mfa_recovery_codes,
@@ -502,6 +529,8 @@ async function restoreUserFromSnapshot(snapshot = {}) {
         String(snapshot.cep || "").replace(/\D/g, "").slice(0, 8) || null,
         JSON.stringify(toDbAddresses(snapshot.addresses)),
         String(snapshot.defaultAddressId || "").trim(),
+        Boolean(snapshot.emailVerified),
+        snapshot.emailVerifiedAt || null,
         Boolean(snapshot.adminMfaEnabled),
         String(snapshot.adminMfaSecretEnc || "").trim() || null,
         JSON.stringify(
@@ -541,5 +570,6 @@ module.exports = {
   replaceAdminRecoveryCodes,
   consumeAdminRecoveryCode,
   disableAdminMfa,
+  markUserEmailVerified,
   restoreUserFromSnapshot
 };
