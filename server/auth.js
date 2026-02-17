@@ -29,6 +29,18 @@ const myRouter = express.Router();
 const REFUND_WINDOW_MS = 10 * 60 * 1000;
 let stripeClient = null;
 
+function parseBooleanEnv(value, fallback = false) {
+  const normalized = String(value || "").trim().toLowerCase();
+  if (!normalized) return fallback;
+  if (["1", "true", "yes", "on"].includes(normalized)) return true;
+  if (["0", "false", "no", "off"].includes(normalized)) return false;
+  return fallback;
+}
+
+function isLoginEmailVerificationRequired() {
+  return parseBooleanEnv(process.env.AUTH_LOGIN_EMAIL_CODE_REQUIRED, true);
+}
+
 function getStripeClient() {
   if (stripeClient) return stripeClient;
   const key = String(process.env.STRIPE_SECRET_KEY || "").trim();
@@ -462,6 +474,11 @@ authRouter.post("/login", authRateLimit, async (req, res) => {
       return res.status(200).json(
         buildEmailCodeResponseBase(user.email, "account_verification_required", accountCode.issued)
       );
+    }
+
+    if (!isLoginEmailVerificationRequired()) {
+      req.session.userId = user.id;
+      return res.json({ ok: true, user: publicUser(user), stage: "authenticated" });
     }
 
     const loginCode = await issueAndSendLoginVerifyCode(user);
