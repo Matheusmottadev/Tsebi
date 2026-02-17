@@ -296,6 +296,7 @@ async function bootstrap() {
   initTopBar();
   initSearchOverlay();
   initCategorySwitch();
+  initNewsCarousel();
   initHomeHeaderScrollState();
   initHeaderMenu();
   initHeroVideoLoop();
@@ -906,6 +907,61 @@ function initCategorySwitch() {
   });
 
   applyCategoryContent("feminino");
+}
+
+function initNewsCarousel() {
+  const newsGrid = document.getElementById("newsGrid");
+  if (!newsGrid) return;
+
+  const prevBtn = document.getElementById("newsPrevBtn");
+  const nextBtn = document.getElementById("newsNextBtn");
+  const cards = Array.from(newsGrid.querySelectorAll(".news-card"));
+
+  if (cards.length === 0) return;
+
+  function getGap() {
+    const styles = window.getComputedStyle(newsGrid);
+    const rawGap = styles.columnGap || styles.gap || "0";
+    const parsed = Number.parseFloat(rawGap);
+    return Number.isFinite(parsed) ? parsed : 0;
+  }
+
+  function getStepSize() {
+    const firstCard = cards[0];
+    const width = firstCard ? firstCard.getBoundingClientRect().width : 320;
+    return width + getGap();
+  }
+
+  function updateNavState() {
+    const maxScrollLeft = Math.max(0, newsGrid.scrollWidth - newsGrid.clientWidth - 1);
+    const current = newsGrid.scrollLeft;
+
+    if (prevBtn) {
+      const disabled = current <= 1;
+      prevBtn.disabled = disabled;
+      prevBtn.setAttribute("aria-disabled", disabled ? "true" : "false");
+    }
+
+    if (nextBtn) {
+      const disabled = current >= maxScrollLeft;
+      nextBtn.disabled = disabled;
+      nextBtn.setAttribute("aria-disabled", disabled ? "true" : "false");
+    }
+  }
+
+  function scrollByStep(direction) {
+    newsGrid.scrollBy({
+      left: getStepSize() * direction,
+      behavior: "smooth"
+    });
+  }
+
+  prevBtn?.addEventListener("click", () => scrollByStep(-1));
+  nextBtn?.addEventListener("click", () => scrollByStep(1));
+
+  newsGrid.addEventListener("scroll", updateNavState, { passive: true });
+  window.addEventListener("resize", updateNavState);
+  updateNavState();
 }
 
 function initHomeHeaderScrollState() {

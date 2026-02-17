@@ -30,6 +30,18 @@ function formatMoneyFromCents(value, currency = "brl") {
   });
 }
 
+function normalizeOrderIdentifier(value) {
+  return String(value || "").replace(/[^a-zA-Z0-9]/g, "").toUpperCase();
+}
+
+function formatOrderDisplayId(order) {
+  const rawId = String(order?.id || "").trim();
+  if (!rawId) return "-";
+  const compact = normalizeOrderIdentifier(rawId);
+  const shortCode = compact.slice(-8) || compact;
+  return `PED-${shortCode}`;
+}
+
 function showLoader() {
   if (loaderEl) loaderEl.hidden = false;
   if (contentEl) contentEl.hidden = true;
@@ -64,7 +76,7 @@ function setActionsVisibility({
 
 function renderSummary(order) {
   if (!summaryEl || !orderIdEl || !totalEl || !itemsEl) return;
-  orderIdEl.textContent = order.id || "-";
+  orderIdEl.textContent = formatOrderDisplayId(order);
   totalEl.textContent = formatMoneyFromCents(order.amount, order.currency);
   itemsEl.innerHTML = "";
 

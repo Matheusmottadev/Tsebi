@@ -10,6 +10,11 @@ const SHIPPING_KEY_BASE = "tsebi-checkout-shipping-v2";
 const SHIPPING_KEY_LEGACY = "tsebi-checkout-shipping-v1";
 const userStore = window.TsebiUserStore;
 const LOGIN_REQUIRED_MESSAGE = "Para finalizar sua compra, entre ou crie sua conta.";
+const CEP_LOOKUP_DEBOUNCE_MS = 450;
+const cepLookupCache = new Map();
+let cepLookupTimeoutId = 0;
+let cepLookupController = null;
+let cepLookupRequestSeq = 0;
 
 const checkoutState = {
   currentStep: 1,
@@ -40,6 +45,8 @@ const checkoutState = {
   payment: {
     methodPreference: "automatic",
     installments: 1,
+    billingName: "",
+    billingNameTouched: false,
     sessionSignature: "",
     orderId: "",
     clientSecret: "",
@@ -86,6 +93,10 @@ const dom = {
   checkoutStatus: document.getElementById("checkoutStatus"),
   installments: document.getElementById("installments"),
   installmentsField: document.getElementById("installmentsField"),
+  installmentsHint: document.getElementById("installmentsHint"),
+  installmentsPreview: document.getElementById("installmentsPreview"),
+  billingName: document.getElementById("billingName"),
+  billingNameError: document.getElementById("error-billingName"),
   paymentElementWrap: document.getElementById("paymentElementWrap"),
   paymentElement: document.getElementById("payment-element"),
   summarySubtotal: document.getElementById("summarySubtotal"),
@@ -115,6 +126,7 @@ const shippingFields = [
   "city",
   "state"
 ];
+const CEP_AUTOFILL_LOCKED_FIELDS = ["street", "district", "city", "state"];
 
 function readCart() {
   function normalizeCartItems(items) {
@@ -227,6 +239,54 @@ function parsePriceLabel(label) {
 
 function formatCurrency(value) {
   return Number(value || 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+}
+
+function getInstallmentsTotal() {
+  return Math.max(0, Number(getSummaryTotal() || 0));
+}
+
+function updateInstallmentsPreview(isCard) {
+  if (!dom.installmentsPreview) return;
+  if (!isCard) {
+    dom.installmentsPreview.textContent = "Parcelamento disponível apenas para pagamentos com cartão.";
+    return;
+  }
+
+  const installments = Math.max(1, Math.min(6, Number(dom.installments?.value || 1)));
+  const total = getInstallmentsTotal();
+  const installmentValue = total / installments;
+  dom.installmentsPreview.textContent = `${installments}x de ${formatCurrency(installmentValue)} sem juros (total ${formatCurrency(total)}).`;
+}
+
+function updateInstallmentsOptions() {
+  if (!dom.installments) return;
+  const total = getInstallmentsTotal();
+  const isCard = (checkoutState.payment.methodPreference || "automatic") === "card";
+  const maxInstallments = Math.max(1, Math.min(6, Number(checkoutState.config?.maxInstallments || 6)));
+
+  Array.from(dom.installments.options).forEach((option) => {
+    const count = Math.max(1, Number(option.value || 1));
+    option.hidden = count > maxInstallments;
+    option.disabled = count > maxInstallments;
+    const installmentValue = total / count;
+    option.textContent = `${count}x de ${formatCurrency(installmentValue)} sem juros`;
+  });
+
+  if (Number(dom.installments.value || 1) > maxInstallments) {
+    dom.installments.value = String(maxInstallments);
+    checkoutState.payment.installments = maxInstallments;
+  }
+
+  updateInstallmentsPreview(isCard);
+}
+
+function normalizeCepDigits(value) {
+  return String(value || "").replace(/\D/g, "").slice(0, 8);
+}
+
+function formatCepDisplay(value) {
+  const digits = normalizeCepDigits(value);
+  return digits.replace(/^(\d{5})(\d)/, "$1-$2");
 }
 
 function sanitizeDisplayText(value) {
@@ -387,8 +447,9 @@ function updateSummary() {
   if (dom.summaryEstimate) {
     dom.summaryEstimate.textContent = checkoutState.shipping.shippingEstimate
       ? `Entrega estimada: ${checkoutState.shipping.shippingEstimate}`
-      : "Selecione um método de entrega para ver o prazo estimado.";
+      : "Selecione um metodo de entrega para ver o prazo estimado.";
   }
+  updateInstallmentsOptions();
 }
 
 function recalcCartTotals() {
@@ -616,6 +677,7 @@ function prefillShippingFromUser() {
   if (!checkoutState.shipping.district) checkoutState.shipping.district = String(defaultAddress?.district || "").trim();
   if (!checkoutState.shipping.city) checkoutState.shipping.city = String(defaultAddress?.city || "").trim();
   if (!checkoutState.shipping.state) checkoutState.shipping.state = String(defaultAddress?.state || "").trim().toUpperCase().slice(0, 2);
+  syncBillingNameFromShipping();
 }
 
 function setFieldLocked(fieldId, locked) {
@@ -627,6 +689,8 @@ function setFieldLocked(fieldId, locked) {
 }
 
 function syncLockedPrefilledFields() {
+  CEP_AUTOFILL_LOCKED_FIELDS.forEach((fieldId) => setFieldLocked(fieldId, true));
+
   const user = userStore?.getCurrentUser?.() || null;
   if (!user) {
     setFieldLocked("fullName", false);
@@ -642,6 +706,12 @@ function syncLockedPrefilledFields() {
   setFieldLocked("cep", false);
 }
 
+function clearCepAutofilledAddressFields() {
+  CEP_AUTOFILL_LOCKED_FIELDS.forEach((fieldName) => {
+    checkoutState.shipping[fieldName] = "";
+  });
+}
+
 function getPaymentSessionSignature() {
   return JSON.stringify({
     items: getServerItemsPayload(),
@@ -654,12 +724,22 @@ function getPaymentSessionSignature() {
 function syncInstallmentsByPaymentMethod(methodType) {
   const isCard = methodType === "card";
   if (dom.installmentsField) {
-    dom.installmentsField.style.display = isCard ? "" : "none";
+    dom.installmentsField.classList.toggle("is-enabled", isCard);
+    dom.installmentsField.classList.toggle("is-disabled", !isCard);
+  }
+  if (dom.installmentsHint) {
+    dom.installmentsHint.textContent = isCard
+      ? "Escolha em quantas vezes deseja pagar. Todas as parcelas sem juros."
+      : "Selecione cartao na forma de pagamento para habilitar as parcelas.";
+  }
+  if (dom.installments) {
+    dom.installments.disabled = !isCard;
   }
   if (!isCard) {
     checkoutState.payment.installments = 1;
     if (dom.installments) dom.installments.value = "1";
   }
+  updateInstallmentsOptions();
 }
 
 function getLoginUrlForStep(step = 2) {
@@ -706,6 +786,31 @@ function invalidatePaymentSession() {
     elements: null,
     paymentElement: null
   };
+}
+
+function setBillingNameError(message) {
+  if (dom.billingNameError) dom.billingNameError.textContent = message || "";
+}
+
+function getBillingName() {
+  return String(checkoutState.payment.billingName || "").trim();
+}
+
+function syncBillingNameFromShipping() {
+  if (checkoutState.payment.billingNameTouched && getBillingName()) return;
+  checkoutState.payment.billingName = String(checkoutState.shipping.fullName || "").trim();
+  if (dom.billingName) dom.billingName.value = checkoutState.payment.billingName;
+  setBillingNameError("");
+}
+
+function validateBillingName() {
+  const billingName = getBillingName();
+  if (billingName.length < 3) {
+    setBillingNameError("Informe o nome do titular para pagar.");
+    return false;
+  }
+  setBillingNameError("");
+  return true;
 }
 
 function clearFieldError(fieldName) {
@@ -767,7 +872,12 @@ function refreshShippingProgressButton() {
 function fillShippingForm() {
   shippingFields.forEach((field) => {
     const input = document.getElementById(field);
-    if (input) input.value = checkoutState.shipping[field] || "";
+    if (!input) return;
+    if (field === "cep") {
+      input.value = formatCepDisplay(checkoutState.shipping[field] || "");
+      return;
+    }
+    input.value = checkoutState.shipping[field] || "";
   });
 
   const shippingMethod = checkoutState.shipping.shippingMethod;
@@ -775,6 +885,7 @@ function fillShippingForm() {
     const radio = dom.shippingForm?.querySelector(`input[name="shippingMethod"][value="${shippingMethod}"]`);
     if (radio) radio.checked = true;
   }
+  syncBillingNameFromShipping();
   syncLockedPrefilledFields();
 }
 
@@ -790,30 +901,114 @@ function updateShippingMethodPrices() {
   checkoutState.shipping.shippingEstimate = selected.estimate;
 }
 
-async function fillAddressFromCepIfPossible() {
-  const cep = String(checkoutState.shipping.cep || "").replace(/\D/g, "");
-  if (!/^\d{8}$/.test(cep)) return;
-  setFieldError("cep", "Buscando endereço...");
+function shouldAutofillAddressFromCep() {
+  return Boolean(
+    !String(checkoutState.shipping.street || "").trim() ||
+      !String(checkoutState.shipping.district || "").trim() ||
+      !String(checkoutState.shipping.city || "").trim() ||
+      !String(checkoutState.shipping.state || "").trim()
+  );
+}
+
+function applyAddressFromCepLookup(data) {
+  checkoutState.shipping.street = String(data?.logradouro || "").trim();
+  checkoutState.shipping.district = String(data?.bairro || "").trim();
+  checkoutState.shipping.city = String(data?.localidade || "").trim();
+  checkoutState.shipping.state = String(data?.uf || "")
+    .trim()
+    .toUpperCase()
+    .slice(0, 2);
+  if (!String(checkoutState.shipping.complement || "").trim()) {
+    checkoutState.shipping.complement = String(data?.complemento || "").trim();
+  }
+}
+
+async function lookupAddressByCep(cep, { force = false } = {}) {
+  if (!/^\d{8}$/.test(String(cep || ""))) return false;
+
+  if (!force && cepLookupCache.has(cep)) {
+    applyAddressFromCepLookup(cepLookupCache.get(cep));
+    fillShippingForm();
+    clearFieldError("cep");
+    saveShipping();
+    refreshShippingProgressButton();
+    return true;
+  }
+
+  const requestSeq = ++cepLookupRequestSeq;
+  if (cepLookupController) {
+    try {
+      cepLookupController.abort();
+    } catch {}
+  }
+
+  const controller = new AbortController();
+  cepLookupController = controller;
+  setFieldError("cep", "Buscando endereco...");
 
   try {
-    const response = await fetch(`https://viacep.com.br/ws/${cep}/json/`);
-    const data = await response.json();
-    if (!response.ok || data.erro) {
-      setFieldError("cep", "Não foi possível localizar este CEP.");
-      return;
+    const response = await fetch(`https://viacep.com.br/ws/${cep}/json/`, {
+      signal: controller.signal,
+      cache: "no-store"
+    });
+    const data = await response.json().catch(() => ({}));
+
+    if (requestSeq !== cepLookupRequestSeq || checkoutState.shipping.cep !== cep) {
+      return false;
     }
 
-    checkoutState.shipping.street = data.logradouro || checkoutState.shipping.street;
-    checkoutState.shipping.district = data.bairro || checkoutState.shipping.district;
-    checkoutState.shipping.city = data.localidade || checkoutState.shipping.city;
-    checkoutState.shipping.state = data.uf || checkoutState.shipping.state;
+    if (!response.ok || data.erro) {
+      clearCepAutofilledAddressFields();
+      fillShippingForm();
+      saveShipping();
+      refreshShippingProgressButton();
+      setFieldError("cep", "CEP nao encontrado.");
+      return false;
+    }
+
+    cepLookupCache.set(cep, data);
+    applyAddressFromCepLookup(data);
     fillShippingForm();
     clearFieldError("cep");
     saveShipping();
     invalidatePaymentSession();
-  } catch {
-    setFieldError("cep", "Falha ao consultar CEP. Preencha manualmente.");
+    refreshShippingProgressButton();
+
+    const numberInput = document.getElementById("number");
+    if (numberInput instanceof HTMLInputElement && !String(numberInput.value || "").trim()) {
+      numberInput.focus();
+    }
+    return true;
+  } catch (error) {
+    if (error && error.name === "AbortError") return false;
+    if (requestSeq === cepLookupRequestSeq) {
+      setFieldError("cep", "Falha ao consultar CEP. Tente novamente.");
+    }
+    return false;
+  } finally {
+    if (requestSeq === cepLookupRequestSeq) {
+      cepLookupController = null;
+    }
   }
+}
+
+function scheduleCepLookup() {
+  if (cepLookupTimeoutId) {
+    clearTimeout(cepLookupTimeoutId);
+  }
+
+  const cep = normalizeCepDigits(checkoutState.shipping.cep);
+  if (!/^\d{8}$/.test(cep)) return;
+
+  cepLookupTimeoutId = setTimeout(() => {
+    lookupAddressByCep(cep);
+  }, CEP_LOOKUP_DEBOUNCE_MS);
+}
+
+async function fillAddressFromCepIfPossible() {
+  const cep = normalizeCepDigits(checkoutState.shipping.cep);
+  if (!/^\d{8}$/.test(cep)) return;
+  await lookupAddressByCep(cep, { force: true });
 }
 
 function syncStepperUI() {
@@ -899,9 +1094,19 @@ async function ensurePaymentElementReady() {
       appearance
     });
 
+    const billingName = getBillingName() || String(checkoutState.shipping.fullName || "").trim();
     const paymentElement = elements.create("payment", {
       layout: "tabs",
-      business: { name: "TSEBI" }
+      wallets: {
+        applePay: "auto",
+        googlePay: "auto"
+      },
+      business: { name: "TSEBI" },
+      defaultValues: {
+        billingDetails: {
+          name: billingName
+        }
+      }
     });
 
     paymentElement.on("change", (event) => {
@@ -1013,6 +1218,11 @@ async function handleCheckoutSubmit() {
   }
 
   setCheckoutStatus("");
+  if (!validateBillingName()) {
+    setCheckoutStatus("Informe o nome do titular para continuar.", "error");
+    dom.billingName?.focus();
+    return;
+  }
   setProcessingState(true);
 
   try {
@@ -1020,10 +1230,16 @@ async function handleCheckoutSubmit() {
       checkoutState.payment.orderId
     )}`;
 
+    const billingName = getBillingName();
     const result = await checkoutState.stripe.instance.confirmPayment({
       elements: checkoutState.payment.elements,
       confirmParams: {
-        return_url: returnUrl
+        return_url: returnUrl,
+        payment_method_data: {
+          billing_details: {
+            name: billingName
+          }
+        }
       },
       redirect: "if_required"
     });
@@ -1073,12 +1289,13 @@ function onShippingFieldInput(event) {
   if (!(target instanceof HTMLInputElement)) return;
   const { id } = target;
   if (!shippingFields.includes(id)) return;
+  const previousCep = id === "cep" ? normalizeCepDigits(checkoutState.shipping.cep) : "";
 
   let value = target.value;
-  if (id === "cep") value = value.replace(/\D/g, "").slice(0, 8);
+  if (id === "cep") value = normalizeCepDigits(value);
   if (id === "state") value = value.replace(/[^A-Za-z]/g, "").slice(0, 2).toUpperCase();
 
-  target.value = value;
+  target.value = id === "cep" ? formatCepDisplay(value) : value;
   if (target.readOnly) return;
   checkoutState.shipping[id] = value;
   clearFieldError(id);
@@ -1086,6 +1303,11 @@ function onShippingFieldInput(event) {
   invalidatePaymentSession();
 
   if (id === "cep") {
+    if (value !== previousCep) {
+      clearCepAutofilledAddressFields();
+      fillShippingForm();
+      saveShipping();
+    }
     updateShippingMethodPrices();
     if (checkoutState.shipping.shippingMethod) {
       const options = getShippingOptionsFromCep(value);
@@ -1096,6 +1318,10 @@ function onShippingFieldInput(event) {
       }
     }
     updateSummary();
+    scheduleCepLookup();
+  }
+  if (id === "fullName") {
+    syncBillingNameFromShipping();
   }
   refreshShippingProgressButton();
 }
@@ -1178,14 +1404,24 @@ function bindEvents() {
     if ((checkoutState.payment.methodPreference || "automatic") !== "card") {
       checkoutState.payment.installments = 1;
       dom.installments.value = "1";
+      updateInstallmentsOptions();
       return;
     }
     checkoutState.payment.installments = Math.max(1, Math.min(6, Number(dom.installments.value || 1)));
+    updateInstallmentsOptions();
     invalidatePaymentSession();
     if (checkoutState.currentStep === 3) ensurePaymentElementReady();
   });
 
   dom.checkoutButton?.addEventListener("click", handleCheckoutSubmit);
+
+  dom.billingName?.addEventListener("input", (event) => {
+    const target = event.target;
+    if (!(target instanceof HTMLInputElement)) return;
+    checkoutState.payment.billingName = String(target.value || "").trimStart();
+    checkoutState.payment.billingNameTouched = true;
+    setBillingNameError("");
+  });
 
   const cepInput = document.getElementById("cep");
   cepInput?.addEventListener("blur", fillAddressFromCepIfPossible);
@@ -1213,6 +1449,8 @@ function bindEvents() {
         ...DEFAULT_SHIPPING_STATE,
         ...persistedShipping
       };
+      checkoutState.payment.billingName = "";
+      checkoutState.payment.billingNameTouched = false;
     }
 
     prefillShippingFromUser();
@@ -1248,6 +1486,8 @@ function hydrateState() {
     ...persistedShipping
   };
   prefillShippingFromUser();
+  checkoutState.payment.billingName = String(checkoutState.shipping.fullName || "").trim();
+  checkoutState.payment.billingNameTouched = false;
   saveShipping();
 }
 
@@ -1256,6 +1496,7 @@ async function init() {
   bindEvents();
   renderCartItems();
   fillShippingForm();
+  if (dom.billingName) dom.billingName.value = checkoutState.payment.billingName || "";
   renderCheckoutAuthCta();
   updateShippingMethodPrices();
   syncInstallmentsByPaymentMethod(checkoutState.payment.methodPreference);
@@ -1273,8 +1514,13 @@ async function init() {
     }
   }
 
+  if (/^\d{8}$/.test(checkoutState.shipping.cep) && shouldAutofillAddressFromCep()) {
+    fillAddressFromCepIfPossible();
+  }
+
   initStripe();
 }
 
 init();
 })();
+

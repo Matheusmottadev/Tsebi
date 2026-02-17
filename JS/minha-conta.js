@@ -61,6 +61,27 @@ function formatOrderDate(dateValue) {
   return date.toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo" });
 }
 
+function normalizeOrderIdentifier(value) {
+  return String(value || "").replace(/[^a-zA-Z0-9]/g, "").toUpperCase();
+}
+
+function formatOrderDisplayId(order) {
+  const rawId = String(order?.id || "").trim();
+  if (!rawId) return "-";
+  const compact = normalizeOrderIdentifier(rawId);
+  const shortCode = compact.slice(-8) || compact;
+  return `PED-${shortCode}`;
+}
+
+function orderMatchesIdentifier(order, input) {
+  const search = normalizeOrderIdentifier(input);
+  if (!search) return false;
+  const full = normalizeOrderIdentifier(order?.id);
+  if (!full) return false;
+  const shortCode = full.slice(-8);
+  return search === full || search === shortCode || search === `PED${shortCode}`;
+}
+
 function setFeedback(message, isError = false) {
   if (!feedbackEl) return;
   feedbackEl.textContent = message || "";
@@ -134,7 +155,7 @@ function renderOrderCard(order) {
   const article = document.createElement("article");
   article.className = "account-order-item";
   article.innerHTML = `
-    <p class="account-order-title">Pedido #${order.id}</p>
+    <p class="account-order-title">Pedido #${formatOrderDisplayId(order)}</p>
     <p>Status: ${formatOrderStatus(order.status)}</p>
     <p>Total: ${formatCurrencyFromCents(order.amount, order.currency)}</p>
     <p>Data: ${formatOrderDate(order.createdAt)}</p>
@@ -288,7 +309,7 @@ async function handleTrackOrder(event) {
     return;
   }
 
-  const fromList = myOrders.find((order) => String(order.id) === orderId);
+  const fromList = myOrders.find((order) => orderMatchesIdentifier(order, orderId));
   if (fromList) {
     renderTrackedOrder(fromList);
     setFeedback("Pedido encontrado.");

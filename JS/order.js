@@ -36,6 +36,18 @@ function formatStatus(status) {
   return status || "N/A";
 }
 
+function normalizeOrderIdentifier(value) {
+  return String(value || "").replace(/[^a-zA-Z0-9]/g, "").toUpperCase();
+}
+
+function formatOrderDisplayId(order) {
+  const rawId = String(order?.id || "").trim();
+  if (!rawId) return "-";
+  const compact = normalizeOrderIdentifier(rawId);
+  const shortCode = compact.slice(-8) || compact;
+  return `PED-${shortCode}`;
+}
+
 function canRefundByTime(order) {
   if (!order?.paidAt) return false;
   const paidAt = new Date(order.paidAt);
@@ -56,7 +68,7 @@ function renderActions(order) {
 function renderOrder(order) {
   if (!order) return;
   currentOrder = order;
-  if (subtitleEl) subtitleEl.textContent = `Pedido #${order.id}`;
+  if (subtitleEl) subtitleEl.textContent = `Pedido #${formatOrderDisplayId(order)}`;
 
   if (summaryEl) {
     summaryEl.innerHTML = `

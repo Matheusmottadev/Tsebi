@@ -26,7 +26,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600&family=Montserrat:wght@300;400;500;600&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="css/style.css" />
-  <link rel="stylesheet" href="css/checkout.css" />
+  <link rel="stylesheet" href="css/checkout.css?v=20260217c" />
 </head>
 <body class="checkout-v2">
   <header class="cart-simple-header">
@@ -129,7 +129,7 @@
 
               <label class="checkout-field">
                 <span>Rua *</span>
-                <input type="text" id="street" name="street" autocomplete="address-line1" />
+                <input type="text" id="street" name="street" autocomplete="address-line1" class="is-locked" readonly aria-readonly="true" />
                 <small class="field-error" id="error-street"></small>
               </label>
 
@@ -147,19 +147,19 @@
 
               <label class="checkout-field">
                 <span>Bairro *</span>
-                <input type="text" id="district" name="district" />
+                <input type="text" id="district" name="district" class="is-locked" readonly aria-readonly="true" />
                 <small class="field-error" id="error-district"></small>
               </label>
 
               <label class="checkout-field">
                 <span>Cidade *</span>
-                <input type="text" id="city" name="city" autocomplete="address-level2" />
+                <input type="text" id="city" name="city" autocomplete="address-level2" class="is-locked" readonly aria-readonly="true" />
                 <small class="field-error" id="error-city"></small>
               </label>
 
               <label class="checkout-field">
                 <span>Estado *</span>
-                <input type="text" id="state" name="state" maxlength="2" autocomplete="address-level1" />
+                <input type="text" id="state" name="state" maxlength="2" autocomplete="address-level1" class="is-locked" readonly aria-readonly="true" />
                 <small class="field-error" id="error-state"></small>
               </label>
             </div>
@@ -193,17 +193,34 @@
           </header>
 
           <div class="checkout-form">
-            <label class="checkout-field" id="installmentsField">
-              <span>Parcelamento (cart&atilde;o)</span>
-              <select id="installments">
-                <option value="1">1x sem juros</option>
-                <option value="2">2x</option>
-                <option value="3">3x</option>
-                <option value="4">4x</option>
-                <option value="5">5x</option>
-                <option value="6">6x</option>
-              </select>
+            <label class="checkout-field">
+              <span>Nome do titular *</span>
+              <input type="text" id="billingName" name="billingName" autocomplete="cc-name" required />
+              <small class="field-error" id="error-billingName"></small>
             </label>
+
+            <section class="checkout-installments-card is-disabled" id="installmentsField" aria-live="polite">
+              <div class="checkout-installments-head">
+                <span class="checkout-installments-title">Parcelamento no cartão</span>
+                <small class="checkout-installments-hint" id="installmentsHint">
+                  Selecione cartão na forma de pagamento para habilitar as parcelas.
+                </small>
+              </div>
+              <label class="checkout-field checkout-installments-select" for="installments">
+                <span>Número de parcelas</span>
+                <select id="installments" disabled>
+                  <option value="1">1x sem juros</option>
+                  <option value="2">2x</option>
+                  <option value="3">3x</option>
+                  <option value="4">4x</option>
+                  <option value="5">5x</option>
+                  <option value="6">6x</option>
+                </select>
+              </label>
+              <p class="checkout-installments-preview" id="installmentsPreview">
+                Parcelamento disponível apenas para pagamentos com cartão.
+              </p>
+            </section>
 
             <div class="checkout-field" id="paymentElementWrap">
               <span>Forma de pagamento</span>
@@ -279,9 +296,9 @@
   </div>
 
   <script src="https://js.stripe.com/v3/"></script>
-  <script src="JS/user-utils.js?v=20260215q"></script>
+  <script src="JS/user-utils.js?v=20260217a"></script>
   <script src="JS/script.js?v=20260215i"></script>
-  <script src="JS/cart.js?v=20260215p"></script>
+  <script src="JS/cart.js?v=20260217d"></script>
   <script src="JS/cookies.js"></script>
   <script src="JS/language-switcher.js"></script>
 </body>

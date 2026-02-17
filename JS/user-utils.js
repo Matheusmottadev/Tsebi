@@ -1,9 +1,10 @@
 ﻿(function initTsebiUserStore() {
-  const AUTH_CACHE_KEY = "tsebi-auth-user-cache-v1";
+  const LEGACY_AUTH_CACHE_KEY = "tsebi-auth-user-cache-v1";
   const FAVORITES_KEY = "tsebi-favorites-v2";
 
   let currentUser = null;
   let authReady = false;
+  let authBootPromise = null;
 
   function emitAuthChange() {
     window.dispatchEvent(
@@ -27,6 +28,12 @@
   function writeJson(key, value) {
     try {
       localStorage.setItem(key, JSON.stringify(value));
+    } catch {}
+  }
+
+  function clearLegacyAuthCache() {
+    try {
+      localStorage.removeItem(LEGACY_AUTH_CACHE_KEY);
     } catch {}
   }
 
@@ -55,15 +62,9 @@
     const nextSnapshot = snapshotUser(currentUser);
     const hasChanged = prevSnapshot !== nextSnapshot;
 
-    if (currentUser) writeJson(AUTH_CACHE_KEY, currentUser);
-    else localStorage.removeItem(AUTH_CACHE_KEY);
-    if (hasChanged) {
+    if (hasChanged && authReady) {
       emitAuthChange();
     }
-  }
-
-  function getCachedUser() {
-    return readJson(AUTH_CACHE_KEY, null);
   }
 
   async function apiRequest(url, options) {
@@ -403,12 +404,24 @@
   }
 
   function ensureAuthBoot() {
-    if (authReady) return;
-    const cached = getCachedUser();
-    if (cached) currentUser = cached;
-    authReady = true;
-    emitAuthChange();
-    fetchMe();
+    if (authReady) return Promise.resolve(currentUser);
+    if (authBootPromise) return authBootPromise;
+    clearLegacyAuthCache();
+
+    authBootPromise = (async () => {
+      try {
+        const data = await apiRequest("/api/auth/me", { method: "GET" });
+        setCachedUser(data.user || null);
+      } catch {
+        setCachedUser(null);
+      } finally {
+        authReady = true;
+        emitAuthChange();
+      }
+      return currentUser;
+    })();
+
+    return authBootPromise;
   }
 
   window.TsebiUserStore = {

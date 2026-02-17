@@ -9,3 +9,4 @@ data/*.local.json
 
 # Logs
 *.log
+.vercel

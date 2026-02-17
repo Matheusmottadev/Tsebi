@@ -3,6 +3,32 @@
   color: #141414;
 }
 
+.checkout-v2 .cart-simple-logo,
+.checkout-v2 .cart-simple-logo:visited,
+.checkout-v2 .cart-simple-actions a,
+.checkout-v2 .cart-simple-actions a:visited,
+.checkout-v2 .cart-empty-v2 a,
+.checkout-v2 .cart-empty-v2 a:visited,
+.checkout-v2 .checkout-auth-cta a,
+.checkout-v2 .checkout-auth-cta a:visited{
+  color: #141414;
+}
+
+.checkout-v2 input,
+.checkout-v2 select,
+.checkout-v2 textarea{
+  color: #141414;
+}
+
+.checkout-v2 input:-webkit-autofill,
+.checkout-v2 input:-webkit-autofill:hover,
+.checkout-v2 input:-webkit-autofill:focus,
+.checkout-v2 textarea:-webkit-autofill,
+.checkout-v2 select:-webkit-autofill{
+  -webkit-text-fill-color: #141414;
+  transition: background-color 9999s ease-in-out 0s;
+}
+
 .checkout-v2 .cart-simple-header{
   background: rgba(248, 247, 244, 0.95);
   backdrop-filter: blur(8px);
@@ -341,6 +367,61 @@
   padding: 0 10px;
   font-family: "Montserrat", sans-serif;
   font-size: 13px;
+}
+
+.checkout-installments-card{
+  border: 1px solid #d9d3c8;
+  background: #fbf8f2;
+  padding: 12px;
+  display: grid;
+  gap: 10px;
+  transition: border-color .2s ease, background .2s ease, box-shadow .2s ease;
+}
+
+.checkout-installments-card.is-enabled{
+  border-color: #121212;
+  background: #fff;
+  box-shadow: 0 0 0 2px rgba(18, 18, 18, 0.06);
+}
+
+.checkout-installments-head{
+  display: grid;
+  gap: 4px;
+}
+
+.checkout-installments-title{
+  font-family: "Montserrat", sans-serif;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 1.1px;
+}
+
+.checkout-installments-hint{
+  font-family: "Montserrat", sans-serif;
+  font-size: 11px;
+  color: #5f5c57;
+  line-height: 1.4;
+}
+
+.checkout-installments-select{
+  margin: 0;
+}
+
+.checkout-installments-preview{
+  margin: 0;
+  font-family: "Montserrat", sans-serif;
+  font-size: 12px;
+  color: #23211d;
+}
+
+.checkout-installments-card.is-disabled .checkout-installments-preview{
+  color: #646159;
+}
+
+.checkout-installments-card select:disabled{
+  background: #f3efe7;
+  color: #757066;
+  cursor: not-allowed;
 }
 
 .checkout-field input.is-locked{

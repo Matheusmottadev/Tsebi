@@ -22,8 +22,10 @@
     "express-session": "^1.18.1",
     "helmet": "^8.1.0",
     "pg": "^8.13.1",
-    "stripe": "^18.0.0"
-    ,
+    "stripe": "^18.0.0",
     "zod": "^3.24.1"
+  },
+  "devDependencies": {
+    "vercel": "^50.17.1"
   }
 }
