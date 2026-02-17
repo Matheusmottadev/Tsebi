@@ -768,6 +768,10 @@ async function ensureAuthenticatedOrRedirect(step = 2) {
 
   const me = await userStore.fetchMe();
   if (me.ok && me.user) return true;
+  if (String(me?.code || "") !== "UNAUTHORIZED") {
+    setCheckoutStatus("Nao foi possivel validar sua sessao agora. Tente novamente.", "warning");
+    return true;
+  }
 
   setCheckoutStatus(LOGIN_REQUIRED_MESSAGE, "error");
   redirectToLogin(step);

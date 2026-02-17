@@ -567,16 +567,11 @@ app.post("/api/orders/payment-intent", requireAuth, paymentIntentRateLimit, asyn
     }
   };
 
-  if (paymentMethod === "card" && installments > 1) {
+  if (paymentMethod === "card") {
     paymentIntentParams.payment_method_options = {
       card: {
         installments: {
-          enabled: true,
-          plan: {
-            type: "fixed_count",
-            interval: "month",
-            count: installments
-          }
+          enabled: true
         }
       }
     };

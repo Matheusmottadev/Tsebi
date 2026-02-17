@@ -212,10 +212,11 @@
       setCachedUser(data.user || null);
       return { ok: true, user: data.user || null };
     } catch (error) {
-      if (String(error.message || "") === "UNAUTHORIZED") {
+      const code = String(error.message || "");
+      if (code === "UNAUTHORIZED") {
         setCachedUser(null);
       }
-      return { ok: false, error: mapAuthError(error.message) };
+      return { ok: false, error: mapAuthError(code), code };
     }
   }
 
