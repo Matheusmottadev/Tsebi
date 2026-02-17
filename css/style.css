@@ -1267,8 +1267,10 @@ html.no-scroll{
   }
 
   .search-box-icon{
-    width: 15px;
-    height: 15px;
+    position: relative;
+    display: block;
+    width: 16px;
+    height: 16px;
     font-size: 0;
     line-height: 0;
     color: currentColor;
@@ -1277,19 +1279,20 @@ html.no-scroll{
   .search-box-icon::before{
     content: "";
     position: absolute;
-    inset: 0;
-    border: 1.7px solid currentColor;
+    inset: 1px;
+    border: 1.9px solid currentColor;
     border-radius: 50%;
+    box-sizing: border-box;
   }
 
   .search-box-icon::after{
     content: "";
     position: absolute;
     width: 7px;
-    height: 1.7px;
+    height: 2px;
     background: currentColor;
-    right: -4px;
-    bottom: 0;
+    right: -3px;
+    bottom: 1px;
     transform: rotate(45deg);
     transform-origin: right center;
     border-radius: 2px;
@@ -1297,6 +1300,8 @@ html.no-scroll{
 
   .home-header:not(.is-scrolled) .search-box-trigger{
     color: #fff;
+    opacity: 0;
+    pointer-events: none;
   }
 
   .home-header.is-scrolled .search-box-trigger{

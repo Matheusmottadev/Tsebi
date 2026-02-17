@@ -152,6 +152,8 @@ function sanitizeUser(user) {
     id: user.id,
     name: user.name,
     email: user.email,
+    emailVerified: Boolean(user.emailVerified),
+    emailVerifiedAt: user.emailVerifiedAt || null,
     birthDate: user.birthDate || "",
     cpf: user.cpf || "",
     cep: user.cep || "",
@@ -749,14 +751,18 @@ adminRouter.patch("/orders/:id", async (req, res) => {
     const before = await findOrderById(req.params.id);
     if (!before) return res.status(404).json({ error: "NOT_FOUND" });
     const updated = await updateOrder(req.params.id, parsed.data);
+    const afterState = updated || before;
+    const statusChanged = String(before.status || "") !== String(afterState.status || "");
 
     await recordAuditLog(req, {
-      action: "update",
+      action: statusChanged ? "status_change" : "save",
       entityType: "order",
       entityId: before.id,
-      summary: `Pedido atualizado: ${before.id}`,
+      summary: statusChanged
+        ? `Pedido ${before.id}: status ${before.status} -> ${afterState.status}`
+        : `Pedido salvo: ${before.id}`,
       before: sanitizeOrderForAudit(before),
-      after: sanitizeOrderForAudit(updated || before),
+      after: sanitizeOrderForAudit(afterState),
       reversePayload: {
         type: "order_update",
         payload: {
@@ -828,12 +834,16 @@ adminRouter.patch("/products/:id", async (req, res) => {
 
     const updated = await updateProductByIdentifier(req.params.id, parsed.data);
     if (!updated) return res.status(404).json({ error: "NOT_FOUND" });
+    const activeChanged = Boolean(before.active) !== Boolean(updated.active);
+    const becameActive = activeChanged && Boolean(updated.active);
 
     await recordAuditLog(req, {
-      action: "update",
+      action: activeChanged ? (becameActive ? "activate" : "deactivate") : "save",
       entityType: "product",
       entityId: updated.sku || updated.id,
-      summary: `Produto atualizado: ${updated.sku || updated.id}`,
+      summary: activeChanged
+        ? `Produto ${updated.sku || updated.id}: ${becameActive ? "ativado" : "desativado"}`
+        : `Produto salvo: ${updated.sku || updated.id}`,
       before: sanitizeProductForAudit(before),
       after: sanitizeProductForAudit(updated),
       reversePayload: {
@@ -860,10 +870,10 @@ adminRouter.delete("/products/:id", async (req, res) => {
     if (!archived) return res.status(404).json({ error: "NOT_FOUND" });
 
     await recordAuditLog(req, {
-      action: "delete",
+      action: "deactivate",
       entityType: "product",
       entityId: archived.sku || archived.id,
-      summary: `Produto arquivado: ${archived.sku || archived.id}`,
+      summary: `Produto desativado: ${archived.sku || archived.id}`,
       before: sanitizeProductForAudit(before),
       after: sanitizeProductForAudit(archived),
       reversePayload: {

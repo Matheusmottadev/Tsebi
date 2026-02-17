@@ -257,6 +257,16 @@ td small {
   padding: 0 8px;
 }
 
+tr.row-dirty td {
+  background: rgba(31, 139, 58, 0.14);
+}
+
+.section-save {
+  margin-top: 12px;
+  display: flex;
+  justify-content: flex-end;
+}
+
 .toggle-inline {
   display: inline-flex;
   align-items: center;

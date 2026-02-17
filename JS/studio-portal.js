@@ -35,11 +35,13 @@
     ordersStatusFilter: document.getElementById("ordersStatusFilter"),
     ordersRefreshBtn: document.getElementById("ordersRefreshBtn"),
     ordersBody: document.getElementById("ordersBody"),
+    ordersSaveSectionBtn: document.getElementById("ordersSaveSectionBtn"),
 
     productsSearch: document.getElementById("productsSearch"),
     productsIncludeInactive: document.getElementById("productsIncludeInactive"),
     productsRefreshBtn: document.getElementById("productsRefreshBtn"),
     productsBody: document.getElementById("productsBody"),
+    productsSaveSectionBtn: document.getElementById("productsSaveSectionBtn"),
     createProductForm: document.getElementById("createProductForm"),
     newProductSku: document.getElementById("newProductSku"),
     newProductName: document.getElementById("newProductName"),
@@ -68,7 +70,9 @@
     orders: [],
     products: [],
     vip: [],
-    auditLogs: []
+    auditLogs: [],
+    pendingOrderEdits: {},
+    pendingProductEdits: {}
   };
 
   const orderStatuses = ["pending_payment", "processing", "paid", "failed", "canceled", "refunded"];
@@ -133,6 +137,11 @@
 
   function escapeAttr(value) {
     return escapeHtml(value);
+  }
+
+  function setRowDirty(row, dirty) {
+    if (!(row instanceof HTMLTableRowElement)) return;
+    row.classList.toggle("row-dirty", Boolean(dirty));
   }
 
   function closeActionModal(result) {
@@ -388,8 +397,10 @@
     state.orders.forEach((order) => {
       const row = document.createElement("tr");
       row.setAttribute("data-id", String(order.id));
+      const pending = state.pendingOrderEdits[String(order.id)] || {};
+      const selectedStatus = String(pending.status || order.status || "");
       const selectOptions = orderStatuses
-        .map((status) => `<option value="${status}" ${order.status === status ? "selected" : ""}>${status}</option>`)
+        .map((status) => `<option value="${status}" ${selectedStatus === status ? "selected" : ""}>${status}</option>`)
         .join("");
       row.innerHTML = `
         <td><small>${escapeHtml(order.id)}</small></td>
@@ -402,12 +413,8 @@
           <select data-field="status">${selectOptions}</select>
         </td>
         <td><small>${escapeHtml(formatDate(order.createdAt))}</small></td>
-        <td>
-          <div class="row-actions">
-            <button type="button" class="btn btn-ghost" data-action="order-save">Salvar</button>
-          </div>
-        </td>
       `;
+      setRowDirty(row, Boolean(state.pendingOrderEdits[String(order.id)]));
       dom.ordersBody.appendChild(row);
     });
   }
@@ -418,19 +425,36 @@
     state.products.forEach((product) => {
       const row = document.createElement("tr");
       row.setAttribute("data-id", String(product.id));
+      const pending = state.pendingProductEdits[String(product.id)] || {};
+      const nameValue =
+        Object.prototype.hasOwnProperty.call(pending, "name")
+          ? String(pending.name || "")
+          : String(product.name || "");
+      const priceValue =
+        Object.prototype.hasOwnProperty.call(pending, "priceCents")
+          ? Number(pending.priceCents || 0)
+          : Number(product.unitAmount || 0);
+      const stockValue =
+        Object.prototype.hasOwnProperty.call(pending, "stockQty")
+          ? Number(pending.stockQty || 0)
+          : Number(product.stock || 0);
+      const activeValue =
+        Object.prototype.hasOwnProperty.call(pending, "active")
+          ? Boolean(pending.active)
+          : Boolean(product.active);
       row.innerHTML = `
         <td><small>${escapeHtml(product.sku || product.id)}</small></td>
-        <td><input data-field="name" value="${escapeHtml(product.name || "")}" /></td>
-        <td><input data-field="priceCents" type="number" min="0" step="1" value="${Number(product.unitAmount || 0)}" /></td>
-        <td><input data-field="stockQty" type="number" min="0" step="1" value="${Number(product.stock || 0)}" /></td>
-        <td><input data-field="active" type="checkbox" ${product.active ? "checked" : ""} /></td>
+        <td><input data-field="name" value="${escapeHtml(nameValue)}" /></td>
+        <td><input data-field="priceCents" type="number" min="0" step="1" value="${priceValue}" /></td>
+        <td><input data-field="stockQty" type="number" min="0" step="1" value="${stockValue}" /></td>
+        <td><input data-field="active" type="checkbox" ${activeValue ? "checked" : ""} /></td>
         <td>
           <div class="row-actions">
-            <button type="button" class="btn" data-action="product-save">Salvar</button>
             <button type="button" class="btn btn-danger" data-action="product-delete">Arquivar</button>
           </div>
         </td>
       `;
+      setRowDirty(row, Boolean(state.pendingProductEdits[String(product.id)]));
       dom.productsBody.appendChild(row);
     });
   }
@@ -469,6 +493,104 @@
     return { label: "Expirado", tone: "warn" };
   }
 
+  function getChangedFields(before, after, fieldMap = []) {
+    if (!before || !after) return [];
+    return fieldMap
+      .filter((item) => String(before[item.key] ?? "") !== String(after[item.key] ?? ""))
+      .map((item) => item.label);
+  }
+
+  function getAuditActionLabel(entry) {
+    const action = String(entry?.action || "").toLowerCase();
+    const entityType = String(entry?.entityType || "").toLowerCase();
+    const before = entry?.before || null;
+    const after = entry?.after || null;
+
+    if (action === "reverse") return "reverteu alteracao";
+    if (entityType === "product") {
+      if (before && after && Boolean(before.active) !== Boolean(after.active)) {
+        return Boolean(after.active) ? "ativou produto" : "desativou produto";
+      }
+      if (action === "delete" || action === "archive") return "apagou produto";
+      if (action === "create") return "criou produto";
+      return "salvou produto";
+    }
+
+    if (entityType === "order") {
+      if (before && after && String(before.status || "") !== String(after.status || "")) {
+        return "alterou status do pedido";
+      }
+      return "salvou pedido";
+    }
+
+    if (entityType === "user") {
+      if (action === "delete") return "apagou usuario";
+      if (action === "create") return "criou usuario";
+      return "salvou usuario";
+    }
+
+    if (entityType === "vip_subscriber") {
+      if (action === "delete") return "apagou VIP";
+      if (action === "create") return "criou VIP";
+      return "salvou VIP";
+    }
+
+    if (action === "delete") return "apagou";
+    if (action === "create") return "criou";
+    return "salvou";
+  }
+
+  function getAuditSummaryLabel(entry) {
+    const entityType = String(entry?.entityType || "").toLowerCase();
+    const before = entry?.before || null;
+    const after = entry?.after || null;
+    const target = String(entry?.entityId || "");
+
+    if (entityType === "product" && before && after && Boolean(before.active) !== Boolean(after.active)) {
+      return `Produto ${target}: ${Boolean(after.active) ? "ativado" : "desativado"}.`;
+    }
+
+    if (entityType === "order" && before && after && String(before.status || "") !== String(after.status || "")) {
+      return `Pedido ${target}: ${String(before.status || "-")} -> ${String(after.status || "-")}.`;
+    }
+
+    const mapByEntity = {
+      product: [
+        { key: "name", label: "nome" },
+        { key: "priceCents", label: "preco" },
+        { key: "stockQty", label: "estoque" },
+        { key: "active", label: "status ativo" }
+      ],
+      order: [
+        { key: "status", label: "status" },
+        { key: "paymentMethod", label: "metodo pagamento" },
+        { key: "installments", label: "parcelas" }
+      ],
+      user: [
+        { key: "name", label: "nome" },
+        { key: "email", label: "email" },
+        { key: "birthDate", label: "nascimento" },
+        { key: "cpf", label: "cpf" },
+        { key: "cep", label: "cep" }
+      ],
+      vip_subscriber: [
+        { key: "name", label: "nome" },
+        { key: "email", label: "email" },
+        { key: "birthDate", label: "nascimento" },
+        { key: "cpf", label: "cpf" },
+        { key: "cep", label: "cep" },
+        { key: "accountCreated", label: "conta criada" }
+      ]
+    };
+
+    const changedFields = getChangedFields(before, after, mapByEntity[entityType] || []);
+    if (changedFields.length > 0) {
+      return `Campos alterados: ${changedFields.join(", ")}.`;
+    }
+
+    return String(entry?.summary || "-");
+  }
+
   function renderAuditLogs() {
     if (!dom.auditBody) return;
     dom.auditBody.innerHTML = "";
@@ -476,15 +598,17 @@
       const row = document.createElement("tr");
       row.setAttribute("data-id", String(entry.id || ""));
       const status = getAuditStatus(entry);
+      const actionLabel = getAuditActionLabel(entry);
+      const summaryLabel = getAuditSummaryLabel(entry);
       row.innerHTML = `
         <td><small>${escapeHtml(formatDate(entry.createdAt))}</small></td>
         <td>${escapeHtml(entry.actorEmail || "-")}</td>
-        <td>${escapeHtml(entry.action || "-")}</td>
+        <td>${escapeHtml(actionLabel)}</td>
         <td>
           <div>${escapeHtml(entry.entityType || "-")}</div>
           <small>${escapeHtml(entry.entityId || "-")}</small>
         </td>
-        <td>${escapeHtml(entry.summary || "-")}</td>
+        <td>${escapeHtml(summaryLabel)}</td>
         <td><span class="audit-status ${status.tone}">${escapeHtml(status.label)}</span></td>
         <td>
           <div class="row-actions">
@@ -515,6 +639,7 @@
     const status = encodeURIComponent(String(dom.ordersStatusFilter?.value || "").trim());
     const data = await api(`/api/admin/orders?limit=200&offset=0&search=${search}&status=${status}`);
     state.orders = Array.isArray(data.orders) ? data.orders : [];
+    state.pendingOrderEdits = {};
     renderOrders();
   }
 
@@ -523,6 +648,7 @@
     const includeInactive = dom.productsIncludeInactive?.checked ? "1" : "0";
     const data = await api(`/api/admin/products?limit=300&offset=0&search=${search}&includeInactive=${includeInactive}`);
     state.products = Array.isArray(data.products) ? data.products : [];
+    state.pendingProductEdits = {};
     renderProducts();
   }
 
@@ -681,26 +807,64 @@
     }
   }
 
-  async function handleOrderAction(event) {
-    const target = event.target instanceof Element ? event.target.closest("button[data-action]") : null;
-    if (!(target instanceof HTMLButtonElement)) return;
-    if (target.getAttribute("data-action") !== "order-save") return;
+  function handleOrderFieldChange(event) {
+    const target = event.target;
+    if (!(target instanceof HTMLSelectElement)) return;
+    if (target.getAttribute("data-field") !== "status") return;
 
     const row = target.closest("tr[data-id]");
     if (!row) return;
     const id = String(row.getAttribute("data-id") || "");
-    const statusSelect = row.querySelector('select[data-field="status"]');
-    const status = statusSelect instanceof HTMLSelectElement ? statusSelect.value : "";
+    const original = state.orders.find((order) => String(order.id) === id);
+    if (!original) return;
 
-    try {
-      await api(`/api/admin/orders/${encodeURIComponent(id)}`, {
-        method: "PATCH",
-        body: JSON.stringify({ status })
-      });
-      await loadOrders();
-      setStatus("Pedido atualizado.", "ok");
-    } catch (error) {
-      setStatus(`Falha ao atualizar pedido: ${error.code || error.message}`, "error");
+    const nextStatus = String(target.value || "");
+    const currentStatus = String(original.status || "");
+
+    if (nextStatus === currentStatus) {
+      delete state.pendingOrderEdits[id];
+      setRowDirty(row, false);
+      return;
+    }
+
+    state.pendingOrderEdits[id] = { status: nextStatus };
+    setRowDirty(row, true);
+  }
+
+  async function handleOrdersSaveSection() {
+    const entries = Object.entries(state.pendingOrderEdits || {});
+    if (entries.length === 0) {
+      setStatus("Nenhuma alteracao pendente em pedidos.", "");
+      return;
+    }
+
+    const confirmed = await confirmAction({
+      title: "Salvar pedidos",
+      message: `Aplicar ${entries.length} alteracao(oes) de pedidos agora?`,
+      confirmLabel: "Salvar tudo",
+      tone: "ok"
+    });
+    if (!confirmed) return;
+
+    let success = 0;
+    for (const [id, patch] of entries) {
+      try {
+        // eslint-disable-next-line no-await-in-loop
+        await api(`/api/admin/orders/${encodeURIComponent(id)}`, {
+          method: "PATCH",
+          body: JSON.stringify(patch)
+        });
+        success += 1;
+      } catch {
+        // Ignora erro individual para seguir com os demais.
+      }
+    }
+
+    await Promise.all([loadOrders(), loadAuditLogs()]);
+    if (success === entries.length) {
+      setStatus(`${success} pedido(s) salvo(s) com sucesso.`, "ok");
+    } else {
+      setStatus(`Salvou ${success}/${entries.length} pedidos. Verifique os restantes.`, "error");
     }
   }
 
@@ -725,65 +889,111 @@
     }
   }
 
-  async function handleProductAction(event) {
-    const target = event.target instanceof Element ? event.target.closest("button[data-action]") : null;
-    if (!(target instanceof HTMLButtonElement)) return;
+  function buildProductPatchFromRow(row, original) {
+    if (!row || !original) return null;
+    const nameInput = row.querySelector('input[data-field="name"]');
+    const priceInput = row.querySelector('input[data-field="priceCents"]');
+    const stockInput = row.querySelector('input[data-field="stockQty"]');
+    const activeInput = row.querySelector('input[data-field="active"]');
+
+    const current = {
+      name: nameInput instanceof HTMLInputElement ? nameInput.value.trim() : String(original.name || ""),
+      priceCents: priceInput instanceof HTMLInputElement ? Number(priceInput.value || 0) : Number(original.unitAmount || 0),
+      stockQty: stockInput instanceof HTMLInputElement ? Number(stockInput.value || 0) : Number(original.stock || 0),
+      active: activeInput instanceof HTMLInputElement ? activeInput.checked : Boolean(original.active)
+    };
+
+    const patch = {};
+    if (String(current.name || "") !== String(original.name || "")) patch.name = current.name;
+    if (Number(current.priceCents || 0) !== Number(original.unitAmount || 0)) patch.priceCents = Number(current.priceCents || 0);
+    if (Number(current.stockQty || 0) !== Number(original.stock || 0)) patch.stockQty = Number(current.stockQty || 0);
+    if (Boolean(current.active) !== Boolean(original.active)) patch.active = Boolean(current.active);
+    return patch;
+  }
+
+  function handleProductFieldChange(event) {
+    const target = event.target;
+    if (!(target instanceof HTMLInputElement)) return;
+    const field = String(target.getAttribute("data-field") || "");
+    if (!["name", "priceCents", "stockQty", "active"].includes(field)) return;
 
     const row = target.closest("tr[data-id]");
     if (!row) return;
-
     const id = String(row.getAttribute("data-id") || "");
-    const action = String(target.getAttribute("data-action") || "");
+    const original = state.products.find((product) => String(product.id) === id);
+    if (!original) return;
 
-    if (action === "product-delete") {
-      const confirmed = await confirmAction({
-        title: "Arquivar produto",
-        message: "Deseja arquivar este produto?",
-        confirmLabel: "Arquivar",
-        tone: "danger"
-      });
-      if (!confirmed) return;
-      try {
-        await api(`/api/admin/products/${encodeURIComponent(id)}`, { method: "DELETE" });
-        await loadProducts();
-        setStatus("Produto arquivado.", "ok");
-      } catch (error) {
-        setStatus(`Falha ao arquivar produto: ${error.code || error.message}`, "error");
-      }
+    const patch = buildProductPatchFromRow(row, original) || {};
+    if (Object.keys(patch).length === 0) {
+      delete state.pendingProductEdits[id];
+      setRowDirty(row, false);
       return;
     }
 
-    if (action === "product-save") {
-      const nameInput = row.querySelector('input[data-field="name"]');
-      const priceInput = row.querySelector('input[data-field="priceCents"]');
-      const stockInput = row.querySelector('input[data-field="stockQty"]');
-      const activeInput = row.querySelector('input[data-field="active"]');
+    state.pendingProductEdits[id] = patch;
+    setRowDirty(row, true);
+  }
 
-      const payload = {
-        name: nameInput instanceof HTMLInputElement ? nameInput.value.trim() : "",
-        priceCents: priceInput instanceof HTMLInputElement ? Number(priceInput.value || 0) : 0,
-        stockQty: stockInput instanceof HTMLInputElement ? Number(stockInput.value || 0) : 0,
-        active: activeInput instanceof HTMLInputElement ? activeInput.checked : true
-      };
+  async function handleProductsSaveSection() {
+    const entries = Object.entries(state.pendingProductEdits || {});
+    if (entries.length === 0) {
+      setStatus("Nenhuma alteracao pendente em produtos.", "");
+      return;
+    }
 
-      const confirmed = await confirmAction({
-        title: "Salvar produto",
-        message: "Deseja salvar as alteracoes deste produto?",
-        confirmLabel: "Salvar",
-        tone: "ok"
-      });
-      if (!confirmed) return;
+    const confirmed = await confirmAction({
+      title: "Salvar produtos",
+      message: `Aplicar ${entries.length} alteracao(oes) de produtos agora?`,
+      confirmLabel: "Salvar tudo",
+      tone: "ok"
+    });
+    if (!confirmed) return;
 
+    let success = 0;
+    for (const [id, patch] of entries) {
       try {
+        // eslint-disable-next-line no-await-in-loop
         await api(`/api/admin/products/${encodeURIComponent(id)}`, {
           method: "PATCH",
-          body: JSON.stringify(payload)
+          body: JSON.stringify(patch)
         });
-        await loadProducts();
-        setStatus("Produto atualizado.", "ok");
-      } catch (error) {
-        setStatus(`Falha ao atualizar produto: ${error.code || error.message}`, "error");
+        success += 1;
+      } catch {
+        // Ignora erro individual para seguir com os demais.
       }
+    }
+
+    await Promise.all([loadProducts(), loadAuditLogs()]);
+    if (success === entries.length) {
+      setStatus(`${success} produto(s) salvo(s) com sucesso.`, "ok");
+    } else {
+      setStatus(`Salvou ${success}/${entries.length} produtos. Verifique os restantes.`, "error");
+    }
+  }
+
+  async function handleProductAction(event) {
+    const target = event.target instanceof Element ? event.target.closest("button[data-action]") : null;
+    if (!(target instanceof HTMLButtonElement)) return;
+    if (target.getAttribute("data-action") !== "product-delete") return;
+
+    const row = target.closest("tr[data-id]");
+    if (!row) return;
+    const id = String(row.getAttribute("data-id") || "");
+
+    const confirmed = await confirmAction({
+      title: "Arquivar produto",
+      message: "Deseja arquivar este produto?",
+      confirmLabel: "Arquivar",
+      tone: "danger"
+    });
+    if (!confirmed) return;
+
+    try {
+      await api(`/api/admin/products/${encodeURIComponent(id)}`, { method: "DELETE" });
+      await Promise.all([loadProducts(), loadAuditLogs()]);
+      setStatus("Produto arquivado.", "ok");
+    } catch (error) {
+      setStatus(`Falha ao arquivar produto: ${error.code || error.message}`, "error");
     }
   }
 
@@ -1064,7 +1274,8 @@
       }
     });
     dom.ordersStatusFilter?.addEventListener("change", loadOrders);
-    dom.ordersBody?.addEventListener("click", handleOrderAction);
+    dom.ordersBody?.addEventListener("change", handleOrderFieldChange);
+    dom.ordersSaveSectionBtn?.addEventListener("click", handleOrdersSaveSection);
 
     dom.productsRefreshBtn?.addEventListener("click", loadProducts);
     dom.productsSearch?.addEventListener("keydown", (event) => {
@@ -1075,7 +1286,10 @@
     });
     dom.productsIncludeInactive?.addEventListener("change", loadProducts);
     dom.createProductForm?.addEventListener("submit", handleProductCreate);
+    dom.productsBody?.addEventListener("input", handleProductFieldChange);
+    dom.productsBody?.addEventListener("change", handleProductFieldChange);
     dom.productsBody?.addEventListener("click", handleProductAction);
+    dom.productsSaveSectionBtn?.addEventListener("click", handleProductsSaveSection);
 
     dom.vipRefreshBtn?.addEventListener("click", loadVip);
     dom.createVipForm?.addEventListener("submit", handleVipCreate);

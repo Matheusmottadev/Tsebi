@@ -120,6 +120,8 @@
   }
 
   let genesisItems = [...fallbackGenesisItems];
+  const CART_KEY = "tsebi-cart-v1";
+  const LEGACY_CART_KEYS = ["tsebi-cart", "cart"];
 
   const grid = document.getElementById("genesisGrid");
   const filters = document.getElementById("genesisCategoryFilters");

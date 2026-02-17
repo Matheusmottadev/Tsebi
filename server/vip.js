@@ -41,7 +41,7 @@ const passwordSchema = z
 const vipRegisterSchema = z.object({
   name: z.string().trim().min(2).max(120),
   email: emailSchema,
-  password: passwordSchema,
+  password: z.string().max(128).optional().default(""),
   birthDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
   cpf: z
     .string()
@@ -129,6 +129,7 @@ vipRouter.post("/register", vipRegisterRateLimit, async (req, res) => {
   }
 
   const email = normalizeEmail(payload.email);
+  const rawPassword = String(payload.password || "");
 
   try {
     let subscriber = await upsertVipSubscriber({
@@ -148,10 +149,15 @@ vipRouter.post("/register", vipRegisterRateLimit, async (req, res) => {
       accountExists = true;
       subscriber = await setVipAccountCreated(email);
     } else {
+      const passwordParsed = passwordSchema.safeParse(rawPassword);
+      if (!passwordParsed.success) {
+        return res.status(400).json({ error: "PASSWORD_REQUIRED_FOR_NEW_ACCOUNT" });
+      }
+
       const created = await createUser({
         name: payload.name,
         email,
-        passwordHash: await bcrypt.hash(payload.password, 12),
+        passwordHash: await bcrypt.hash(rawPassword, 12),
         birthDate: payload.birthDate,
         cpf: payload.cpf,
         cep: payload.cep

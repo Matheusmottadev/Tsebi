@@ -1118,6 +1118,70 @@ function shouldAutofillAddressFromCep() {
   );
 }
 
+function normalizeCepLookupPayload(raw) {
+  return {
+    logradouro: String(raw?.logradouro || raw?.street || "").trim(),
+    bairro: String(raw?.bairro || raw?.neighborhood || "").trim(),
+    localidade: String(raw?.localidade || raw?.city || "").trim(),
+    uf: String(raw?.uf || raw?.state || "").trim().toUpperCase().slice(0, 2),
+    complemento: String(raw?.complemento || raw?.service || "").trim()
+  };
+}
+
+async function fetchCepLookupData(cep, signal) {
+  const sources = [
+    {
+      kind: "viacep",
+      url: `https://viacep.com.br/ws/${cep}/json/`,
+      map: (payload) => {
+        if (!payload || payload.erro) {
+          const error = new Error("CEP_NOT_FOUND");
+          error.code = "CEP_NOT_FOUND";
+          throw error;
+        }
+        return normalizeCepLookupPayload(payload);
+      }
+    },
+    {
+      kind: "brasilapi",
+      url: `https://brasilapi.com.br/api/cep/v1/${cep}`,
+      map: (payload) => normalizeCepLookupPayload(payload)
+    }
+  ];
+
+  let lastError = null;
+  for (const source of sources) {
+    try {
+      const response = await fetch(source.url, { signal, cache: "no-store" });
+      if (!response.ok) {
+        if (response.status === 404 || response.status === 400) {
+          const notFoundError = new Error("CEP_NOT_FOUND");
+          notFoundError.code = "CEP_NOT_FOUND";
+          throw notFoundError;
+        }
+        throw new Error(`CEP_LOOKUP_HTTP_${response.status}`);
+      }
+      const data = await response.json().catch(() => ({}));
+      return source.map(data);
+    } catch (error) {
+      if (error && error.name === "AbortError") throw error;
+      lastError = error;
+      if (error?.code === "CEP_NOT_FOUND") {
+        continue;
+      }
+    }
+  }
+
+  if (lastError?.code === "CEP_NOT_FOUND") {
+    const notFound = new Error("CEP_NOT_FOUND");
+    notFound.code = "CEP_NOT_FOUND";
+    throw notFound;
+  }
+  const failed = new Error("CEP_LOOKUP_FAILED");
+  failed.code = "CEP_LOOKUP_FAILED";
+  throw failed;
+}
+
 function applyAddressFromCepLookup(data) {
   checkoutState.shipping.street = String(data?.logradouro || "").trim();
   checkoutState.shipping.district = String(data?.bairro || "").trim();
@@ -1155,22 +1219,9 @@ async function lookupAddressByCep(cep, { force = false } = {}) {
   setFieldError("cep", "Buscando endereco...");
 
   try {
-    const response = await fetch(`https://viacep.com.br/ws/${cep}/json/`, {
-      signal: controller.signal,
-      cache: "no-store"
-    });
-    const data = await response.json().catch(() => ({}));
+    const data = await fetchCepLookupData(cep, controller.signal);
 
     if (requestSeq !== cepLookupRequestSeq || checkoutState.shipping.cep !== cep) {
-      return false;
-    }
-
-    if (!response.ok || data.erro) {
-      clearCepAutofilledAddressFields();
-      fillShippingForm();
-      saveShipping();
-      refreshShippingProgressButton();
-      setFieldError("cep", "CEP nao encontrado.");
       return false;
     }
 
@@ -1190,7 +1241,15 @@ async function lookupAddressByCep(cep, { force = false } = {}) {
   } catch (error) {
     if (error && error.name === "AbortError") return false;
     if (requestSeq === cepLookupRequestSeq) {
-      setFieldError("cep", "Falha ao consultar CEP. Tente novamente.");
+      if (error?.code === "CEP_NOT_FOUND") {
+        clearCepAutofilledAddressFields();
+        fillShippingForm();
+        saveShipping();
+        refreshShippingProgressButton();
+        setFieldError("cep", "CEP nao encontrado.");
+      } else {
+        setFieldError("cep", "Falha ao consultar CEP. Tente novamente.");
+      }
     }
     return false;
   } finally {

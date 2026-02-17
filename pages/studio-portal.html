@@ -13,7 +13,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;600&family=Montserrat:wght@400;500;600&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="css/studio-portal.css?v=20260217g" />
+  <link rel="stylesheet" href="css/studio-portal.css?v=20260217h" />
 </head>
 <body>
   <main class="admin-wrap">
@@ -41,7 +41,7 @@
 
     <section id="adminApp" hidden>
       <nav class="tabs" aria-label="Abas do painel">
-        <button type="button" class="tab is-active" data-tab="users">Usuários</button>
+        <button type="button" class="tab is-active" data-tab="users">Usuarios</button>
         <button type="button" class="tab" data-tab="orders">Pedidos</button>
         <button type="button" class="tab" data-tab="products">Produtos</button>
         <button type="button" class="tab" data-tab="vip">Lista VIP</button>
@@ -50,7 +50,7 @@
 
       <section class="panel tab-panel is-active" data-panel="users">
         <div class="panel-head">
-          <h2>Usuários</h2>
+          <h2>Usuarios</h2>
           <div class="inline-actions">
             <input id="usersSearch" type="search" placeholder="Buscar por nome/email" />
             <button id="usersRefreshBtn" type="button" class="btn btn-ghost">Atualizar</button>
@@ -60,11 +60,11 @@
         <form id="createUserForm" class="form-grid">
           <input id="newUserName" type="text" placeholder="Nome" required />
           <input id="newUserEmail" type="email" placeholder="Email" required />
-          <input id="newUserPassword" type="text" placeholder="Senha temporária" required />
+          <input id="newUserPassword" type="text" placeholder="Senha temporaria" required />
           <input id="newUserBirthDate" type="date" />
           <input id="newUserCpf" type="text" placeholder="CPF" />
           <input id="newUserCep" type="text" placeholder="CEP" />
-          <button type="submit" class="btn">Adicionar usuário</button>
+          <button type="submit" class="btn">Adicionar usuario</button>
         </form>
 
         <div class="table-wrap">
@@ -76,7 +76,7 @@
                 <th>CPF</th>
                 <th>CEP</th>
                 <th>Criado</th>
-                <th>Ações</th>
+                <th>Acoes</th>
               </tr>
             </thead>
             <tbody id="usersBody"></tbody>
@@ -111,11 +111,13 @@
                 <th>Total</th>
                 <th>Status</th>
                 <th>Data</th>
-                <th>Ações</th>
               </tr>
             </thead>
             <tbody id="ordersBody"></tbody>
           </table>
+        </div>
+        <div class="section-save">
+          <button id="ordersSaveSectionBtn" type="button" class="btn">Salvar alteracoes de pedidos</button>
         </div>
       </section>
 
@@ -132,7 +134,7 @@
         <form id="createProductForm" class="form-grid">
           <input id="newProductSku" type="text" placeholder="SKU (ex: vestido-longo)" required />
           <input id="newProductName" type="text" placeholder="Nome" required />
-          <input id="newProductPrice" type="number" min="0" step="1" placeholder="Preço em centavos" required />
+          <input id="newProductPrice" type="number" min="0" step="1" placeholder="Preco em centavos" required />
           <input id="newProductStock" type="number" min="0" step="1" placeholder="Estoque" required />
           <button type="submit" class="btn">Adicionar produto</button>
         </form>
@@ -143,14 +145,17 @@
               <tr>
                 <th>SKU</th>
                 <th>Nome</th>
-                <th>Preço (centavos)</th>
+                <th>Preco (centavos)</th>
                 <th>Estoque</th>
                 <th>Ativo</th>
-                <th>Ações</th>
+                <th>Acoes</th>
               </tr>
             </thead>
             <tbody id="productsBody"></tbody>
           </table>
+        </div>
+        <div class="section-save">
+          <button id="productsSaveSectionBtn" type="button" class="btn">Salvar alteracoes de produtos</button>
         </div>
       </section>
 
@@ -181,8 +186,8 @@
                 <th>CPF</th>
                 <th>CEP</th>
                 <th>Conta</th>
-                <th>Inscrição</th>
-                <th>Ações</th>
+                <th>Inscricao</th>
+                <th>Acoes</th>
               </tr>
             </thead>
             <tbody id="vipBody"></tbody>
@@ -233,7 +238,6 @@
     </div>
   </div>
 
-  <script src="JS/studio-portal.js?v=20260217h"></script>
+  <script src="JS/studio-portal.js?v=20260217j"></script>
 </body>
 </html>
-

@@ -11,7 +11,7 @@
   <title>Lançamento | Tsebi Brasil</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link rel="stylesheet" href="css/style.css?v=20260216c" />
+  <link rel="stylesheet" href="css/style.css?v=20260217f" />
   <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600&family=Montserrat:wght@300;400;500;600&display=swap" rel="stylesheet" />
   <style>
     .launch-main {
@@ -323,6 +323,22 @@
       font-family: "Montserrat", sans-serif;
       font-size: 14px;
       color: #111;
+    }
+
+    .vip-email-check {
+      min-height: 16px;
+      font-family: "Montserrat", sans-serif;
+      font-size: 11px;
+      line-height: 1.35;
+      color: #555;
+    }
+
+    .vip-email-check.error {
+      color: #a12828;
+    }
+
+    .vip-email-check.success {
+      color: #1b6c34;
     }
 
     .vip-legal {
@@ -672,6 +688,7 @@
             <div class="vip-field">
               <label for="vipEmail">E-mail</label>
               <input id="vipEmail" name="email" type="email" required />
+              <small id="vipEmailCheckMessage" class="vip-email-check" aria-live="polite"></small>
             </div>
             <div class="vip-field">
               <label for="vipBirthDate">Data de nascimento</label>
@@ -685,9 +702,13 @@
               <label for="vipCep">CEP (somente números)</label>
               <input id="vipCep" name="cep" type="text" inputmode="numeric" maxlength="9" required />
             </div>
-            <div class="vip-field">
-              <label for="vipPassword">Senha (mín. 8 caracteres, letras e números)</label>
+            <div class="vip-field" id="vipPasswordField">
+              <label for="vipPassword">Crie uma senha pra sua conta</label>
               <input id="vipPassword" name="password" type="password" minlength="8" maxlength="128" required />
+            </div>
+            <div class="vip-field" id="vipPasswordConfirmField">
+              <label for="vipPasswordConfirm">Confirmar senha</label>
+              <input id="vipPasswordConfirm" name="passwordConfirm" type="password" minlength="8" maxlength="128" required />
             </div>
           </div>
 
@@ -887,7 +908,7 @@
   </div>
 
   <script src="JS/launch-config.js"></script>
-  <script src="JS/script.js?v=20260216c"></script>
+  <script src="JS/script.js?v=20260217f"></script>
   <script>
     (function () {
       const switchButtons = Array.from(document.querySelectorAll("[data-collection-target]"));
@@ -896,11 +917,21 @@
       const form = document.getElementById("vipRegisterForm");
       const submitBtn = document.getElementById("vipSubmitBtn");
       const statusEl = document.getElementById("vipStatus");
+      const vipEmailInput = document.getElementById("vipEmail");
+      const vipEmailCheckMessageEl = document.getElementById("vipEmailCheckMessage");
+      const vipPasswordField = document.getElementById("vipPasswordField");
+      const vipPasswordInput = document.getElementById("vipPassword");
+      const vipPasswordConfirmField = document.getElementById("vipPasswordConfirmField");
+      const vipPasswordConfirmInput = document.getElementById("vipPasswordConfirm");
       const talkBtn = document.getElementById("talkToTeamBtn");
       const emailBox = document.getElementById("teamEmailBox");
       const copyBtn = document.getElementById("copyEmailBtn");
       const revealElements = Array.from(document.querySelectorAll(".reveal"));
       const launchVideos = Array.from(document.querySelectorAll(".launch-video"));
+      let vipAccountExists = false;
+      let vipCheckedEmail = "";
+      let vipEmailCheckTimer = null;
+      let vipEmailCheckRequestId = 0;
 
       function setupLaunchVideos() {
         const safePlayAll = () => {
@@ -1067,6 +1098,14 @@
         return String(value || "").replace(/\D/g, "").slice(0, maxLen);
       }
 
+      function normalizeEmail(value) {
+        return String(value || "").trim().toLowerCase();
+      }
+
+      function isValidEmail(value) {
+        return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizeEmail(value));
+      }
+
       function formatCpf(value) {
         const digits = digitsOnly(value, 11);
         if (digits.length <= 3) return digits;
@@ -1090,6 +1129,99 @@
       function setLoading(isLoading) {
         submitBtn.disabled = Boolean(isLoading);
         submitBtn.textContent = isLoading ? "Enviando..." : "Entrar na lista VIP";
+      }
+
+      function setVipEmailCheckMessage(message, type) {
+        if (!vipEmailCheckMessageEl) return;
+        vipEmailCheckMessageEl.textContent = message || "";
+        vipEmailCheckMessageEl.classList.remove("error", "success");
+        if (type === "error" || type === "success") {
+          vipEmailCheckMessageEl.classList.add(type);
+        }
+      }
+
+      function setVipPasswordRequirement(required) {
+        if (!vipPasswordField || !vipPasswordInput || !vipPasswordConfirmField || !vipPasswordConfirmInput) return;
+        const mustHavePassword = Boolean(required);
+        vipPasswordField.hidden = !mustHavePassword;
+        vipPasswordInput.disabled = !mustHavePassword;
+        vipPasswordInput.required = mustHavePassword;
+        vipPasswordConfirmField.hidden = !mustHavePassword;
+        vipPasswordConfirmInput.disabled = !mustHavePassword;
+        vipPasswordConfirmInput.required = mustHavePassword;
+        if (!mustHavePassword) {
+          vipPasswordInput.value = "";
+          vipPasswordConfirmInput.value = "";
+        }
+      }
+
+      async function refreshVipEmailAccountStatus(force) {
+        const email = normalizeEmail(vipEmailInput?.value || "");
+        if (!isValidEmail(email)) {
+          vipCheckedEmail = "";
+          vipAccountExists = false;
+          setVipPasswordRequirement(true);
+          setVipEmailCheckMessage("");
+          return { ok: false, skipped: true };
+        }
+
+        if (!force && vipCheckedEmail === email) {
+          return { ok: true, exists: vipAccountExists, cached: true };
+        }
+
+        const currentRequestId = ++vipEmailCheckRequestId;
+        setVipEmailCheckMessage("Verificando e-mail...");
+
+        try {
+          const response = await fetch("/api/auth/check-email", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            credentials: "include",
+            body: JSON.stringify({ email })
+          });
+
+          const data = await response.json().catch(function () { return {}; });
+          if (currentRequestId !== vipEmailCheckRequestId) {
+            return { ok: false, skipped: true };
+          }
+
+          if (!response.ok) {
+            throw new Error(String(data.error || "REQUEST_FAILED"));
+          }
+
+          vipCheckedEmail = email;
+          vipAccountExists = Boolean(data.exists);
+
+          if (vipAccountExists) {
+            setVipPasswordRequirement(false);
+            setVipEmailCheckMessage("E-mail ja cadastrado. Senha nao e necessaria para o VIP.", "success");
+          } else {
+            setVipPasswordRequirement(true);
+            setVipEmailCheckMessage("E-mail novo. Defina uma senha para criar sua conta.");
+          }
+
+          return { ok: true, exists: vipAccountExists };
+        } catch (_) {
+          if (currentRequestId !== vipEmailCheckRequestId) {
+            return { ok: false, skipped: true };
+          }
+
+          vipCheckedEmail = "";
+          vipAccountExists = false;
+          setVipPasswordRequirement(true);
+          setVipEmailCheckMessage("Nao foi possivel validar o e-mail. Senha segue obrigatoria.", "error");
+          return { ok: false };
+        }
+      }
+
+      function queueVipEmailAccountCheck() {
+        if (vipEmailCheckTimer) {
+          clearTimeout(vipEmailCheckTimer);
+        }
+        vipEmailCheckTimer = setTimeout(function () {
+          vipEmailCheckTimer = null;
+          refreshVipEmailAccountStatus(false);
+        }, 350);
       }
 
       talkBtn?.addEventListener("click", function () {
@@ -1118,22 +1250,72 @@
         event.target.value = formatCep(event.target.value);
       });
 
+      vipEmailInput?.addEventListener("input", function (event) {
+        const normalized = normalizeEmail(event?.target?.value || "");
+        if (!normalized) {
+          vipCheckedEmail = "";
+          vipAccountExists = false;
+          setVipPasswordRequirement(true);
+          setVipEmailCheckMessage("");
+          return;
+        }
+
+        if (vipCheckedEmail && normalized !== vipCheckedEmail) {
+          vipCheckedEmail = "";
+          vipAccountExists = false;
+          setVipPasswordRequirement(true);
+          setVipEmailCheckMessage("");
+        }
+
+        queueVipEmailAccountCheck();
+      });
+
+      vipEmailInput?.addEventListener("blur", function () {
+        if (vipEmailCheckTimer) {
+          clearTimeout(vipEmailCheckTimer);
+          vipEmailCheckTimer = null;
+        }
+        refreshVipEmailAccountStatus(true);
+      });
+
       form?.addEventListener("submit", async function (event) {
         event.preventDefault();
         setStatus("");
 
         const payload = {
           name: String(document.getElementById("vipName")?.value || "").trim(),
-          email: String(document.getElementById("vipEmail")?.value || "").trim(),
+          email: normalizeEmail(document.getElementById("vipEmail")?.value || ""),
           birthDate: String(document.getElementById("vipBirthDate")?.value || "").trim(),
           cpf: digitsOnly(document.getElementById("vipCpf")?.value || "", 11),
           cep: digitsOnly(document.getElementById("vipCep")?.value || "", 8),
-          password: String(document.getElementById("vipPassword")?.value || "")
+          password: String(document.getElementById("vipPassword")?.value || ""),
+          passwordConfirm: String(document.getElementById("vipPasswordConfirm")?.value || "")
         };
 
-        if (!payload.name || !payload.email || !payload.birthDate || payload.cpf.length !== 11 || payload.cep.length !== 8 || payload.password.length < 8) {
+        await refreshVipEmailAccountStatus(true);
+        const passwordIsRequired = !vipAccountExists;
+        if (passwordIsRequired && payload.password !== payload.passwordConfirm) {
+          setStatus("As senhas nao coincidem.", "error");
+          return;
+        }
+
+        if (
+          !payload.name ||
+          !isValidEmail(payload.email) ||
+          !payload.birthDate ||
+          payload.cpf.length !== 11 ||
+          payload.cep.length !== 8 ||
+          (passwordIsRequired && payload.password.length < 8)
+        ) {
           setStatus("Confira os dados do cadastro VIP antes de enviar.", "error");
           return;
+        }
+
+        if (!passwordIsRequired) {
+          delete payload.password;
+          delete payload.passwordConfirm;
+        } else {
+          delete payload.passwordConfirm;
         }
 
         setLoading(true);
@@ -1150,6 +1332,10 @@
 
           if (response.ok) {
             form.reset();
+            vipCheckedEmail = "";
+            vipAccountExists = false;
+            setVipPasswordRequirement(true);
+            setVipEmailCheckMessage("");
             if (data.accountCreated) {
               setStatus("Cadastro concluído. Você entrou na lista VIP e sua conta Tsebi foi criada.", "success");
             } else {
@@ -1163,6 +1349,12 @@
             return;
           }
 
+          if (data.error === "PASSWORD_REQUIRED_FOR_NEW_ACCOUNT") {
+            setVipPasswordRequirement(true);
+            setStatus("Este e-mail ainda nao tem conta. Defina uma senha valida para continuar.", "error");
+            return;
+          }
+
           setStatus("Não foi possível concluir agora. Tente novamente em instantes.", "error");
         } catch (_) {
           setStatus("Falha de conexão. Verifique sua internet e tente novamente.", "error");
@@ -1170,8 +1362,12 @@
           setLoading(false);
         }
       });
+      setVipPasswordRequirement(true);
+      setVipEmailCheckMessage("");
     })();
   </script>
 </body>
 </html>
+
+
 
