@@ -35,12 +35,33 @@ body {
   background: var(--bg);
   color: var(--text);
   font-family: "Montserrat", sans-serif;
+  position: relative;
+  overflow-x: hidden;
+}
+
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  background: center / min(74vw, 900px) no-repeat url("../images/marca-dagua.png");
+  opacity: 0.08;
+  pointer-events: none;
+  z-index: 0;
+}
+
+@media (prefers-color-scheme: dark) {
+  body::before {
+    opacity: 0.16;
+    filter: invert(1) brightness(1.9) contrast(1.08);
+  }
 }
 
 .admin-wrap {
   max-width: 1280px;
   margin: 0 auto;
   padding: 26px 18px 40px;
+  position: relative;
+  z-index: 1;
 }
 
 .admin-head {

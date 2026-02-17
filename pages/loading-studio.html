@@ -17,7 +17,6 @@
       --fg: #000000;
       --line-track: rgba(0, 0, 0, 0.18);
       --line-fill: #000000;
-      --wm-filter: none;
     }
 
     @media (prefers-color-scheme: dark) {
@@ -26,7 +25,6 @@
         --fg: #ffffff;
         --line-track: rgba(255, 255, 255, 0.2);
         --line-fill: #ffffff;
-        --wm-filter: invert(1);
       }
     }
 
@@ -39,20 +37,6 @@
       place-items: center;
       font-family: 'Montserrat', sans-serif;
       overflow: hidden;
-      position: relative;
-    }
-    .watermark {
-      position: fixed;
-      inset: 0;
-      display: grid;
-      place-items: center;
-      pointer-events: none;
-      opacity: 0.1;
-    }
-    .watermark img {
-      width: min(48vw, 360px);
-      height: auto;
-      filter: var(--wm-filter);
     }
     .loader-wrap {
       text-align: center;
@@ -112,10 +96,6 @@
   </style>
 </head>
 <body>
-  <div class="watermark" aria-hidden="true">
-    <img src="images/marca-dagua.png" alt="" />
-  </div>
-
   <main class="loader-wrap" aria-label="Carregando Studio">
     <h1 class="loader-logo">
       <span class="loader-logo-main">Tsebi</span>
