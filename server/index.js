@@ -23,6 +23,9 @@ const {
 const { listProducts, getProductByIdentifier } = require("./lib/product-repository");
 const { checkAvailability, commitStock } = require("./lib/inventory-repository");
 const { withTransaction } = require("./lib/db");
+const { shippingRouter } = require("../src/routes/shipping.routes");
+const { adminShippingRouter } = require("../src/routes/admin.shipping.routes");
+const { resolveQuoteForCheckout, selectShippingForOrder } = require("../src/shipping/shipping.service");
 
 dotenv.config();
 
@@ -80,7 +83,8 @@ const paymentIntentSchema = z.object({
       state: z.string().trim().max(2).optional().default(""),
       shippingMethod: z.string().trim().max(20).optional().default(""),
       shippingCost: z.coerce.number().optional().default(0),
-      shippingEstimate: z.string().trim().max(60).optional().default("")
+      shippingEstimate: z.string().trim().max(60).optional().default(""),
+      quoteId: z.string().trim().uuid().optional().nullable().default(null)
     })
     .nullable()
     .optional()
@@ -118,7 +122,8 @@ function normalizeShipping(rawShipping) {
     state: value("state").toUpperCase().slice(0, 2),
     shippingMethod: value("shippingMethod"),
     shippingCost: Math.max(0, Number(rawShipping.shippingCost) || 0),
-    shippingEstimate: value("shippingEstimate")
+    shippingEstimate: value("shippingEstimate"),
+    quoteId: String(rawShipping.quoteId || "").trim() || null
   };
 }
 
@@ -486,7 +491,9 @@ app.use("/api/auth", authRouter);
 app.use("/api/my", myRouter);
 app.use("/api/studio-auth", studioAuthRouter);
 app.use("/api/vip", vipRouter);
+app.use("/api", shippingRouter);
 app.use("/api/admin", adminRouter);
+app.use("/api/admin", adminShippingRouter);
 
 app.get("/api/products", async (req, res) => {
   try {
@@ -531,6 +538,11 @@ app.post("/api/orders/payment-intent", requireAuth, paymentIntentRateLimit, asyn
   const installments = parsed.data.installments;
   const normalizedItems = normalizeAndAggregateItems(parsed.data.items);
   const shipping = normalizeShipping(parsed.data.shipping || null);
+  const sessionUserId = req.session.userId;
+  const sessionUser = await findUserById(sessionUserId);
+  if (!sessionUser) {
+    return res.status(401).json({ error: "UNAUTHORIZED" });
+  }
 
   if (normalizedItems.length === 0) {
     return res.status(400).json({ error: "Cart is empty." });
@@ -545,17 +557,28 @@ app.post("/api/orders/payment-intent", requireAuth, paymentIntentRateLimit, asyn
   }
 
   const itemsAmount = availability.resolvedItems.reduce((sum, item) => sum + item.unitAmount * item.qty, 0);
-  const shippingAmount = getShippingCostFromRules(shipping);
+  let shippingAmount = getShippingCostFromRules(shipping);
+  let selectedShippingQuote = null;
+  if (shipping?.quoteId) {
+    try {
+      selectedShippingQuote = await resolveQuoteForCheckout({
+        quoteId: shipping.quoteId,
+        userId: sessionUserId,
+        destinationZip: shipping.cep
+      });
+      shippingAmount = Math.max(0, Number(selectedShippingQuote.priceCents || 0));
+    } catch (error) {
+      const status = Number(error?.status || 0) || 409;
+      return res.status(Math.max(400, Math.min(500, status))).json({
+        error: String(error?.code || "SHIPPING_QUOTE_INVALID")
+      });
+    }
+  }
+
   const orderAmount = itemsAmount + shippingAmount;
   const currency = "brl";
 
-  const sessionUserId = req.session.userId;
-  const sessionUser = await findUserById(sessionUserId);
-  if (!sessionUser) {
-    return res.status(401).json({ error: "UNAUTHORIZED" });
-  }
-
-  const order = await createOrder({
+  let order = await createOrder({
     status: "pending_payment",
     paymentMethod,
     installments,
@@ -567,16 +590,51 @@ app.post("/api/orders/payment-intent", requireAuth, paymentIntentRateLimit, asyn
     shipping: shipping
       ? {
           ...shipping,
-          shippingCost: shippingAmount / 100
+          shippingCost: shippingAmount / 100,
+          selectedProvider: selectedShippingQuote?.provider || "",
+          selectedService: selectedShippingQuote?.serviceName || "",
+          selectedServiceCode: selectedShippingQuote?.serviceCode || "",
+          selectedCarrierName: selectedShippingQuote?.carrierName || "",
+          shippingDeadlineDays: selectedShippingQuote?.deadlineDays == null ? null : selectedShippingQuote?.deadlineDays
         }
       : null,
+    shippingPriceCents: shippingAmount,
+    shippingSelectedProvider: selectedShippingQuote?.provider || "",
+    shippingSelectedService: selectedShippingQuote?.serviceName || "",
+    shippingSelectedServiceCode: selectedShippingQuote?.serviceCode || "",
+    shippingSelectedCarrierName: selectedShippingQuote?.carrierName || "",
+    shippingDeadlineDays: selectedShippingQuote?.deadlineDays == null ? null : selectedShippingQuote?.deadlineDays,
+    shippingDestinationZip: shipping?.cep || selectedShippingQuote?.destinationZip || "",
     userId: sessionUserId,
     userEmail: sessionUser.email || null,
     userName: sessionUser.name || null
   });
 
+  if (selectedShippingQuote?.id) {
+    try {
+      const selected = await selectShippingForOrder({
+        orderId: order.id,
+        userId: sessionUserId,
+        quoteId: selectedShippingQuote.id,
+        destinationZip: shipping?.cep || ""
+      });
+      if (selected?.order) {
+        order = selected.order;
+      }
+    } catch (error) {
+      await updateOrder(order.id, {
+        status: "failed",
+        failureReason: String(error?.code || "SHIPPING_SELECT_FAILED")
+      });
+      const status = Number(error?.status || 0) || 409;
+      return res.status(Math.max(400, Math.min(500, status))).json({
+        error: String(error?.code || "SHIPPING_SELECT_FAILED")
+      });
+    }
+  }
+
   const paymentIntentParams = {
-    amount: orderAmount,
+    amount: Math.max(0, Number(order?.amount || orderAmount)),
     currency,
     metadata: {
       orderId: order.id

@@ -14,6 +14,13 @@ function mapOrderRow(row, items = []) {
     amount: Number(row.total_cents || 0),
     itemsAmount: Number(row.items_cents || 0),
     shippingAmount: Number(row.shipping_cents || 0),
+    shippingPriceCents: Number(row.shipping_price_cents || row.shipping_cents || 0),
+    shippingSelectedProvider: row.shipping_selected_provider || "",
+    shippingSelectedService: row.shipping_selected_service || "",
+    shippingSelectedServiceCode: row.shipping_selected_service_code || "",
+    shippingSelectedCarrierName: row.shipping_selected_carrier_name || "",
+    shippingDeadlineDays: row.shipping_deadline_days == null ? null : Number(row.shipping_deadline_days),
+    shippingDestinationZip: row.shipping_destination_zip || "",
     items,
     shipping: row.shipping_json || null,
     userId: row.user_id,
@@ -102,13 +109,17 @@ async function createOrder(payload) {
       INSERT INTO orders (
         status, payment_method, installments, currency,
         total_cents, items_cents, shipping_cents,
-        shipping_json, user_id, user_email, user_name,
+        shipping_price_cents, shipping_selected_provider,
+        shipping_selected_service, shipping_selected_service_code,
+        shipping_selected_carrier_name, shipping_deadline_days,
+        shipping_destination_zip, shipping_json, user_id, user_email, user_name,
         stock_committed
       ) VALUES (
         $1, $2, $3, $4,
         $5, $6, $7,
-        $8::jsonb, $9::uuid, $10, $11,
-        $12
+        $8, $9, $10, $11,
+        $12, $13, $14, $15::jsonb, $16::uuid, $17, $18,
+        $19
       )
       RETURNING *
     `;
@@ -121,6 +132,13 @@ async function createOrder(payload) {
       Math.max(0, Number(payload.amount || 0)),
       Math.max(0, Number(payload.itemsAmount || 0)),
       Math.max(0, Number(payload.shippingAmount || 0)),
+      Math.max(0, Number(payload.shippingPriceCents || payload.shippingAmount || 0)),
+      String(payload.shippingSelectedProvider || "").trim().toLowerCase() || null,
+      String(payload.shippingSelectedService || "").trim() || null,
+      String(payload.shippingSelectedServiceCode || "").trim() || null,
+      String(payload.shippingSelectedCarrierName || "").trim() || null,
+      payload.shippingDeadlineDays == null ? null : Math.max(0, Number(payload.shippingDeadlineDays || 0)),
+      String(payload.shippingDestinationZip || "").replace(/\D/g, "").slice(0, 8) || null,
       JSON.stringify(payload.shipping || null),
       payload.userId || null,
       payload.userEmail || null,
@@ -161,6 +179,13 @@ const PATCH_TO_COLUMN = {
   amount: "total_cents",
   itemsAmount: "items_cents",
   shippingAmount: "shipping_cents",
+  shippingPriceCents: "shipping_price_cents",
+  shippingSelectedProvider: "shipping_selected_provider",
+  shippingSelectedService: "shipping_selected_service",
+  shippingSelectedServiceCode: "shipping_selected_service_code",
+  shippingSelectedCarrierName: "shipping_selected_carrier_name",
+  shippingDeadlineDays: "shipping_deadline_days",
+  shippingDestinationZip: "shipping_destination_zip",
   shipping: "shipping_json"
 };
 

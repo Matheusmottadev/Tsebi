@@ -15,6 +15,7 @@ const cepLookupCache = new Map();
 let cepLookupTimeoutId = 0;
 let cepLookupController = null;
 let cepLookupRequestSeq = 0;
+let shippingQuoteRequestSeq = 0;
 
 const checkoutState = {
   currentStep: 1,
@@ -38,7 +39,17 @@ const checkoutState = {
     state: "",
     shippingMethod: "",
     shippingCost: 0,
-    shippingEstimate: ""
+    shippingEstimate: "",
+    shippingQuoteId: "",
+    shippingProvider: "",
+    shippingServiceCode: "",
+    shippingServiceName: "",
+    shippingCarrierName: "",
+    shippingDeadlineDays: null
+  },
+  shippingQuoteOptions: {
+    standard: null,
+    express: null
   },
   authUserId: "guest",
   shippingStorageKey: "",
@@ -74,7 +85,13 @@ const DEFAULT_SHIPPING_STATE = {
   state: "",
   shippingMethod: "",
   shippingCost: 0,
-  shippingEstimate: ""
+  shippingEstimate: "",
+  shippingQuoteId: "",
+  shippingProvider: "",
+  shippingServiceCode: "",
+  shippingServiceName: "",
+  shippingCarrierName: "",
+  shippingDeadlineDays: null
 };
 
 const dom = {
@@ -416,23 +433,130 @@ async function refreshCartFromLatestProducts() {
   return { ok: true, removedOutOfStock };
 }
 
-function getShippingOptionsFromCep(cepDigits) {
-  const firstDigit = Number(String(cepDigits || "")[0] || 0);
-  let standard = 29;
-  let express = 49;
+function getShippingOptionElements(methodCode) {
+  const radio = dom.shippingForm?.querySelector(`input[name="shippingMethod"][value="${methodCode}"]`) || null;
+  if (!(radio instanceof HTMLInputElement)) {
+    return { radio: null, textEl: null, priceEl: null };
+  }
+  const option = radio.closest(".shipping-option");
+  if (!(option instanceof HTMLElement)) {
+    return { radio, textEl: null, priceEl: null };
+  }
+  const textEl = option.querySelector("span");
+  const priceEl = option.querySelector("strong");
+  return {
+    radio,
+    textEl: textEl instanceof HTMLElement ? textEl : null,
+    priceEl: priceEl instanceof HTMLElement ? priceEl : null
+  };
+}
 
-  if (firstDigit <= 3) {
-    standard = 22;
-    express = 39;
-  } else if (firstDigit >= 7) {
-    standard = 34;
-    express = 56;
+function ensureShippingOptionDefaults() {
+  ["standard", "express"].forEach((methodCode) => {
+    const elements = getShippingOptionElements(methodCode);
+    if (!elements.textEl) return;
+    if (!elements.textEl.dataset.defaultLabel) {
+      elements.textEl.dataset.defaultLabel = elements.textEl.textContent || "";
+    }
+  });
+}
+
+function clearSelectedShippingQuote() {
+  checkoutState.shipping.shippingMethod = "";
+  checkoutState.shipping.shippingCost = 0;
+  checkoutState.shipping.shippingEstimate = "";
+  checkoutState.shipping.shippingQuoteId = "";
+  checkoutState.shipping.shippingProvider = "";
+  checkoutState.shipping.shippingServiceCode = "";
+  checkoutState.shipping.shippingServiceName = "";
+  checkoutState.shipping.shippingCarrierName = "";
+  checkoutState.shipping.shippingDeadlineDays = null;
+}
+
+function applyShippingQuoteOption(methodCode, quote) {
+  const elements = getShippingOptionElements(methodCode);
+  if (!elements.radio) return;
+
+  if (!quote) {
+    elements.radio.disabled = true;
+    elements.radio.checked = false;
+    elements.radio.removeAttribute("data-quote-id");
+    elements.radio.removeAttribute("data-provider");
+    elements.radio.removeAttribute("data-service-code");
+    elements.radio.removeAttribute("data-service-name");
+    elements.radio.removeAttribute("data-carrier-name");
+    elements.radio.removeAttribute("data-deadline-days");
+    if (elements.textEl) {
+      elements.textEl.textContent = elements.textEl.dataset.defaultLabel || elements.textEl.textContent || "";
+    }
+    if (elements.priceEl) {
+      elements.priceEl.textContent = formatCurrency(0);
+    }
+    return;
   }
 
-  return {
-    standard: { code: "standard", estimate: "3-7 dias", price: standard },
-    express: { code: "express", estimate: "1-3 dias", price: express }
+  elements.radio.disabled = false;
+  elements.radio.dataset.quoteId = String(quote.id || "");
+  elements.radio.dataset.provider = String(quote.provider || "");
+  elements.radio.dataset.serviceCode = String(quote.serviceCode || "");
+  elements.radio.dataset.serviceName = String(quote.serviceName || "");
+  elements.radio.dataset.carrierName = String(quote.carrierName || "");
+  elements.radio.dataset.deadlineDays = quote.deadlineDays == null ? "" : String(quote.deadlineDays);
+
+  if (elements.textEl) {
+    const deadlineText =
+      quote.deadlineDays == null || Number(quote.deadlineDays) <= 0
+        ? "sem prazo estimado"
+        : `${quote.deadlineDays} dias`;
+    elements.textEl.textContent = `${quote.serviceName} (${deadlineText})`;
+  }
+  if (elements.priceEl) {
+    elements.priceEl.textContent = formatCurrency(Number(quote.priceCents || 0) / 100);
+  }
+}
+
+function applyShippingSelectionFromMethod(methodCode) {
+  const quote = checkoutState.shippingQuoteOptions?.[methodCode] || null;
+  if (!quote) {
+    clearSelectedShippingQuote();
+    return false;
+  }
+
+  checkoutState.shipping.shippingMethod = methodCode;
+  checkoutState.shipping.shippingQuoteId = String(quote.id || "");
+  checkoutState.shipping.shippingProvider = String(quote.provider || "");
+  checkoutState.shipping.shippingServiceCode = String(quote.serviceCode || "");
+  checkoutState.shipping.shippingServiceName = String(quote.serviceName || "");
+  checkoutState.shipping.shippingCarrierName = String(quote.carrierName || "");
+  checkoutState.shipping.shippingDeadlineDays = quote.deadlineDays == null ? null : Number(quote.deadlineDays || 0);
+  checkoutState.shipping.shippingCost = Number(quote.priceCents || 0) / 100;
+  checkoutState.shipping.shippingEstimate =
+    quote.deadlineDays == null || Number(quote.deadlineDays) <= 0 ? "" : `${quote.deadlineDays} dias`;
+  return true;
+}
+
+function applyShippingQuotesToUI(quotes) {
+  const sorted = (Array.isArray(quotes) ? quotes : [])
+    .slice()
+    .sort((a, b) => Number(a?.priceCents || 0) - Number(b?.priceCents || 0));
+
+  checkoutState.shippingQuoteOptions = {
+    standard: sorted[0] || null,
+    express: sorted[1] || null
   };
+
+  applyShippingQuoteOption("standard", checkoutState.shippingQuoteOptions.standard);
+  applyShippingQuoteOption("express", checkoutState.shippingQuoteOptions.express);
+
+  if (checkoutState.shipping.shippingMethod) {
+    const selected = applyShippingSelectionFromMethod(checkoutState.shipping.shippingMethod);
+    if (!selected) {
+      clearFieldError("shippingMethod");
+    }
+  }
+
+  updateSummary();
+  refreshShippingProgressButton();
 }
 
 function getSummaryTotal() {
@@ -477,9 +601,7 @@ function renderCartItems() {
   syncHeaderCartBadge();
 
   if (!hasItems) {
-    checkoutState.shipping.shippingMethod = "";
-    checkoutState.shipping.shippingCost = 0;
-    checkoutState.shipping.shippingEstimate = "";
+    clearShippingQuotes({ keepSelection: false });
     dom.shippingForm?.querySelectorAll('input[name="shippingMethod"]').forEach((input) => {
       input.checked = false;
     });
@@ -640,7 +762,13 @@ function buildShippingPayload() {
     state: checkoutState.shipping.state.trim().toUpperCase(),
     shippingMethod: checkoutState.shipping.shippingMethod,
     shippingCost: checkoutState.shipping.shippingCost,
-    shippingEstimate: checkoutState.shipping.shippingEstimate
+    shippingEstimate: checkoutState.shipping.shippingEstimate,
+    quoteId: checkoutState.shipping.shippingQuoteId || null,
+    shippingProvider: checkoutState.shipping.shippingProvider || "",
+    shippingServiceCode: checkoutState.shipping.shippingServiceCode || "",
+    shippingServiceName: checkoutState.shipping.shippingServiceName || "",
+    shippingCarrierName: checkoutState.shipping.shippingCarrierName || "",
+    shippingDeadlineDays: checkoutState.shipping.shippingDeadlineDays
   };
 }
 
@@ -845,6 +973,9 @@ function validateShipping() {
   if (!s.city || s.city.trim().length < 2) errors.city = "Informe a cidade.";
   if (!/^[A-Za-z]{2}$/.test(String(s.state || "").trim())) errors.state = "Use a sigla do estado.";
   if (!s.shippingMethod) errors.shippingMethod = "Selecione um método de entrega.";
+  if (s.shippingMethod && !s.shippingQuoteId) {
+    errors.shippingMethod = "Recalcule o frete para o CEP informado.";
+  }
 
   Object.entries(errors).forEach(([field, message]) => setFieldError(field, message));
   return { valid: Object.keys(errors).length === 0, errors };
@@ -865,7 +996,8 @@ function isShippingValidForProgress() {
       s.city &&
       s.city.trim().length >= 2 &&
       /^[A-Za-z]{2}$/.test(String(s.state || "").trim()) &&
-      s.shippingMethod
+      s.shippingMethod &&
+      s.shippingQuoteId
   );
 }
 
@@ -894,15 +1026,87 @@ function fillShippingForm() {
 }
 
 function updateShippingMethodPrices() {
-  const options = getShippingOptionsFromCep(checkoutState.shipping.cep || "");
-  if (dom.shippingStandardPrice) dom.shippingStandardPrice.textContent = formatCurrency(options.standard.price);
-  if (dom.shippingExpressPrice) dom.shippingExpressPrice.textContent = formatCurrency(options.express.price);
+  ensureShippingOptionDefaults();
 
-  if (!checkoutState.shipping.shippingMethod) return;
-  const selected = options[checkoutState.shipping.shippingMethod];
-  if (!selected) return;
-  checkoutState.shipping.shippingCost = selected.price;
-  checkoutState.shipping.shippingEstimate = selected.estimate;
+  const hasQuoteOptions = Boolean(
+    checkoutState.shippingQuoteOptions.standard || checkoutState.shippingQuoteOptions.express
+  );
+
+  if (hasQuoteOptions) {
+    applyShippingQuoteOption("standard", checkoutState.shippingQuoteOptions.standard);
+    applyShippingQuoteOption("express", checkoutState.shippingQuoteOptions.express);
+    if (checkoutState.shipping.shippingMethod) {
+      applyShippingSelectionFromMethod(checkoutState.shipping.shippingMethod);
+    }
+    return;
+  }
+  applyShippingQuoteOption("standard", null);
+  applyShippingQuoteOption("express", null);
+}
+
+function canQuoteShippingNow() {
+  const user = userStore?.getCurrentUser?.() || null;
+  return Boolean(user && user.id);
+}
+
+function clearShippingQuotes({ keepSelection = false } = {}) {
+  checkoutState.shippingQuoteOptions = {
+    standard: null,
+    express: null
+  };
+  if (!keepSelection) {
+    clearSelectedShippingQuote();
+    dom.shippingForm?.querySelectorAll('input[name="shippingMethod"]').forEach((input) => {
+      input.checked = false;
+    });
+  }
+  updateShippingMethodPrices();
+  updateSummary();
+  refreshShippingProgressButton();
+}
+
+async function fetchShippingQuotesForCep(cepDigits) {
+  const cep = normalizeCepDigits(cepDigits);
+  if (!/^\d{8}$/.test(cep)) {
+    clearShippingQuotes({ keepSelection: false });
+    return;
+  }
+
+  if (!canQuoteShippingNow()) return;
+  const requestSeq = ++shippingQuoteRequestSeq;
+  clearFieldError("shippingMethod");
+
+  try {
+    const response = await apiRequest("/api/shipping/quote", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        orderId: checkoutState.payment.orderId || undefined,
+        destinationZip: cep
+      })
+    });
+
+    if (requestSeq !== shippingQuoteRequestSeq) return;
+
+    const quotes = Array.isArray(response?.data?.quotes)
+      ? response.data.quotes
+      : Array.isArray(response?.quotes)
+        ? response.quotes
+        : [];
+
+    if (!quotes.length) {
+      clearShippingQuotes({ keepSelection: false });
+      setFieldError("shippingMethod", "Nenhuma opcao de frete disponivel para este CEP.");
+      return;
+    }
+
+    applyShippingQuotesToUI(quotes);
+    saveShipping();
+  } catch {
+    if (requestSeq !== shippingQuoteRequestSeq) return;
+    clearShippingQuotes({ keepSelection: false });
+    setFieldError("shippingMethod", "Falha ao cotar frete. Revise o CEP e tente novamente.");
+  }
 }
 
 function shouldAutofillAddressFromCep() {
@@ -1080,6 +1284,17 @@ async function ensurePaymentElementReady() {
 
     if (!order || !order.orderId || !order.clientSecret) {
       throw new Error("Não foi possível iniciar a sessão de pagamento.");
+    }
+
+    if (checkoutState.shipping.shippingQuoteId) {
+      await apiRequest(`/api/orders/${encodeURIComponent(order.orderId)}/shipping/select`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          quoteId: checkoutState.shipping.shippingQuoteId,
+          destinationZip: normalizeCepDigits(checkoutState.shipping.cep)
+        })
+      });
     }
 
     const appearance = {
@@ -1309,17 +1524,14 @@ function onShippingFieldInput(event) {
   if (id === "cep") {
     if (value !== previousCep) {
       clearCepAutofilledAddressFields();
+      clearShippingQuotes({ keepSelection: false });
       fillShippingForm();
       saveShipping();
     }
-    updateShippingMethodPrices();
-    if (checkoutState.shipping.shippingMethod) {
-      const options = getShippingOptionsFromCep(value);
-      const selected = options[checkoutState.shipping.shippingMethod];
-      if (selected) {
-        checkoutState.shipping.shippingCost = selected.price;
-        checkoutState.shipping.shippingEstimate = selected.estimate;
-      }
+    if (!/^\d{8}$/.test(value)) {
+      clearShippingQuotes({ keepSelection: false });
+    } else {
+      fetchShippingQuotesForCep(value);
     }
     updateSummary();
     scheduleCepLookup();
@@ -1335,11 +1547,14 @@ function onShippingMethodChange(event) {
   if (!(target instanceof HTMLInputElement)) return;
   if (target.name !== "shippingMethod") return;
 
-  checkoutState.shipping.shippingMethod = target.value;
-  const options = getShippingOptionsFromCep(checkoutState.shipping.cep || "");
-  const selected = options[target.value];
-  checkoutState.shipping.shippingCost = selected ? selected.price : 0;
-  checkoutState.shipping.shippingEstimate = selected ? selected.estimate : "";
+  const selectedFromQuote = applyShippingSelectionFromMethod(target.value);
+  if (!selectedFromQuote) {
+    clearSelectedShippingQuote();
+    setFieldError("shippingMethod", "Recalcule o frete para este CEP.");
+    updateSummary();
+    refreshShippingProgressButton();
+    return;
+  }
   clearFieldError("shippingMethod");
   saveShipping();
   invalidatePaymentSession();
@@ -1457,6 +1672,7 @@ function bindEvents() {
         ...DEFAULT_SHIPPING_STATE,
         ...persistedShipping
       };
+      clearSelectedShippingQuote();
       checkoutState.payment.billingName = "";
       checkoutState.payment.billingNameTouched = false;
     }
@@ -1466,6 +1682,11 @@ function bindEvents() {
     fillShippingForm();
     renderCheckoutAuthCta();
     updateShippingMethodPrices();
+    if (/^\d{8}$/.test(normalizeCepDigits(checkoutState.shipping.cep || ""))) {
+      fetchShippingQuotesForCep(checkoutState.shipping.cep);
+    } else {
+      clearShippingQuotes({ keepSelection: false });
+    }
     updateSummary();
     refreshShippingProgressButton();
     invalidatePaymentSession();
@@ -1493,6 +1714,7 @@ function hydrateState() {
     ...DEFAULT_SHIPPING_STATE,
     ...persistedShipping
   };
+  clearSelectedShippingQuote();
   prefillShippingFromUser();
   checkoutState.payment.billingName = String(checkoutState.shipping.fullName || "").trim();
   checkoutState.payment.billingNameTouched = false;
@@ -1507,6 +1729,9 @@ async function init() {
   if (dom.billingName) dom.billingName.value = checkoutState.payment.billingName || "";
   renderCheckoutAuthCta();
   updateShippingMethodPrices();
+  if (/^\d{8}$/.test(normalizeCepDigits(checkoutState.shipping.cep || "")) && canQuoteShippingNow()) {
+    fetchShippingQuotesForCep(checkoutState.shipping.cep);
+  }
   syncInstallmentsByPaymentMethod(checkoutState.payment.methodPreference);
   syncLockedPrefilledFields();
   refreshShippingProgressButton();

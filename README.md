@@ -37,6 +37,14 @@ APP_NAME=Tsebi
 EMAIL_PROVIDER=console
 EMAIL_FROM=no-reply@tsebi.com.br
 RESEND_API_KEY=
+SHIPPING_PROVIDER=melhorenvio
+MELHOR_ENVIO_TOKEN=
+MELHOR_ENVIO_ENV=sandbox
+SHIP_FROM_ZIP=01001000
+DEFAULT_PACKAGE_WEIGHT_KG=0.3
+DEFAULT_PACKAGE_LENGTH_CM=20
+DEFAULT_PACKAGE_WIDTH_CM=15
+DEFAULT_PACKAGE_HEIGHT_CM=5
 ADMIN_EMAILS=admin@seudominio.com.br
 ADMIN_MFA_ENCRYPTION_KEY=defina-uma-chave-forte-unica-aqui
 ADMIN_IDLE_TIMEOUT_MINUTES=20
@@ -88,6 +96,42 @@ Observacoes:
 3. Pagamento (Stripe Payment Element)
 
 `POST /api/orders/payment-intent` exige login (`401` sem sessao).
+
+## Frete (Melhor Envio)
+
+- Cotacao por CEP no endpoint `POST /api/shipping/quote`.
+- Selecao de cotacao no endpoint `POST /api/orders/:id/shipping/select`.
+- `PaymentIntent` considera `subtotal + frete`.
+- Selecao de frete e shipment pendente sao persistidos no banco.
+
+### Endpoints de frete
+
+- `POST /api/shipping/quote`
+- `POST /api/orders/:id/shipping/select`
+- `POST /api/admin/orders/:id/shipping/buy-label`
+- `GET /api/admin/orders/:id/shipping/label`
+- `GET /api/admin/orders/:id/shipping/track`
+
+Formato de resposta padrao destes endpoints:
+
+- sucesso: `{ ok: true, data: ... }`
+- falha: `{ ok: false, error: "CODIGO_DE_ERRO" }`
+
+### Estrutura interna de frete
+
+- `src/routes/shipping.routes.js`
+- `src/routes/admin.shipping.routes.js`
+- `src/shipping/provider.interface.js`
+- `src/shipping/providers/melhorenvio.js`
+- `src/shipping/providers/dummy.js`
+- `src/shipping/shipping.service.js`
+- `src/db/queries/shipping.queries.js`
+
+### Migration de frete
+
+- `server/db/migrations/005_shipping_system.sql`
+- cria `shipping_quotes` e `shipments`
+- adiciona campos de selecao de frete em `orders`
 
 ## Autenticacao
 
