@@ -38,13 +38,13 @@ function mapShippingError(error) {
   return { status: Math.max(400, Math.min(500, status)), code };
 }
 
-shippingRouter.post("/shipping/quote", requireAuth, shippingQuoteRateLimit, async (req, res) => {
+shippingRouter.post("/shipping/quote", shippingQuoteRateLimit, async (req, res) => {
   const parsed = shippingQuoteSchema.safeParse(req.body || {});
   if (!parsed.success) {
     return res.status(400).json({ ok: false, error: "INVALID_INPUT" });
   }
 
-  const userId = req.session.userId;
+  const userId = req.session?.userId || null;
   const destinationZip = parsed.data.destinationZip;
   const orderId = parsed.data.orderId || null;
 
