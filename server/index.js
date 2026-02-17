@@ -10,6 +10,7 @@ const rateLimit = require("express-rate-limit");
 const { z } = require("zod");
 const { createSessionMiddleware } = require("./session");
 const { authRouter, myRouter } = require("./auth");
+const { vipRouter } = require("./vip");
 const { findUserById } = require("./user-repository");
 const { requireAuth } = require("./middlewares/requireAuth");
 const {
@@ -25,6 +26,9 @@ dotenv.config();
 
 const app = express();
 const port = Number(process.env.PORT) || 4242;
+const isVercelRuntime =
+  String(process.env.VERCEL || "").trim() === "1" ||
+  String(process.env.VERCEL || "").trim().toLowerCase() === "true";
 const stripeSecretKey = process.env.STRIPE_SECRET_KEY || "";
 const stripePublishableKey = process.env.STRIPE_PUBLISHABLE_KEY || "";
 const stripeWebhookSecret = process.env.STRIPE_WEBHOOK_SECRET || "";
@@ -432,35 +436,38 @@ app.get("/favicon.ico", (req, res) => {
   res.status(204).end();
 });
 
-const pagesDir = path.resolve(__dirname, "..", "pages");
+if (!isVercelRuntime) {
+  const pagesDir = path.resolve(__dirname, "..", "pages");
 
-app.get("/", (req, res) => {
-  res.setHeader("Cache-Control", "no-cache");
-  res.sendFile(path.join(pagesDir, "index.html"));
-});
+  app.get("/", (req, res) => {
+    res.setHeader("Cache-Control", "no-cache");
+    res.sendFile(path.join(pagesDir, "index.html"));
+  });
 
-app.get("/:page.html", (req, res, next) => {
-  const pageName = `${req.params.page}.html`;
-  const filePath = path.join(pagesDir, pageName);
-  if (!fs.existsSync(filePath)) return next();
-  res.setHeader("Cache-Control", "no-cache");
-  return res.sendFile(filePath);
-});
+  app.get("/:page.html", (req, res, next) => {
+    const pageName = `${req.params.page}.html`;
+    const filePath = path.join(pagesDir, pageName);
+    if (!fs.existsSync(filePath)) return next();
+    res.setHeader("Cache-Control", "no-cache");
+    return res.sendFile(filePath);
+  });
 
-app.use(
-  express.static(path.resolve(__dirname, ".."), {
-    etag: true,
-    lastModified: true,
-    maxAge: "7d",
-    setHeaders: (res, filePath) => {
-      if (filePath.endsWith(".html")) {
-        res.setHeader("Cache-Control", "no-cache");
+  app.use(
+    express.static(path.resolve(__dirname, ".."), {
+      etag: true,
+      lastModified: true,
+      maxAge: "7d",
+      setHeaders: (res, filePath) => {
+        if (filePath.endsWith(".html")) {
+          res.setHeader("Cache-Control", "no-cache");
+        }
       }
-    }
-  })
-);
+    })
+  );
+}
 app.use("/api/auth", authRouter);
 app.use("/api/my", myRouter);
+app.use("/api/vip", vipRouter);
 
 app.get("/api/products", async (req, res) => {
   try {
@@ -607,7 +614,11 @@ app.get("/api/orders/:orderId", requireAuth, async (req, res) => {
   }
 });
 
-app.listen(port, () => {
-  // eslint-disable-next-line no-console
-  console.log(`TSEBI server running on http://localhost:${port}`);
-});
+if (!isVercelRuntime) {
+  app.listen(port, () => {
+    // eslint-disable-next-line no-console
+    console.log(`TSEBI server running on http://localhost:${port}`);
+  });
+}
+
+module.exports = app;

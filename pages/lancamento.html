@@ -562,7 +562,6 @@
         <section class="launch-video-block reveal is-full-bleed" aria-label="Vídeo da coleção Alicerce">
           <video class="launch-video" autoplay muted loop playsinline preload="auto">
             <source src="https://media.tsebi.com.br/alicerce-hero.mp4" type="video/mp4" />
-            <source src="images/alicerce-hero.mp4" type="video/mp4" />
           </video>
         </section>
 
@@ -842,9 +841,47 @@
           <button class="chip" type="button">ACESSÓRIOS</button>
         </div>
       </section>
+
+      <section class="search-section">
+        <h3>PRINCIPAIS PEÇAS</h3>
+        <div class="top-grid">
+          <a class="top-card" href="#">
+            <img class="top-img" loading="lazy" decoding="async" src="images/produtos/sug2.jpeg" alt="Sabrina charmosa">
+            <div class="top-meta">
+              <span class="tag">NOVO</span>
+              <span class="name">Sabrina charmosa</span>
+            </div>
+          </a>
+
+          <a class="top-card" href="#">
+            <img class="top-img" loading="lazy" decoding="async" src="images/produtos/sug3.jpeg" alt="Sabrina linda">
+            <div class="top-meta">
+              <span class="tag">NOVO</span>
+              <span class="name">Sabrina linda</span>
+            </div>
+          </a>
+
+          <a class="top-card" href="#">
+            <img class="top-img" loading="lazy" decoding="async" src="images/produtos/sug4.jpeg" alt="Sabrina maravilhosa">
+            <div class="top-meta">
+              <span class="tag">NOVO</span>
+              <span class="name">Sabrina maravilhosa</span>
+            </div>
+          </a>
+
+          <a class="top-card" href="#">
+            <img class="top-img" loading="lazy" decoding="async" src="images/produtos/sug1.jpeg" alt="Sabrina incrível">
+            <div class="top-meta">
+              <span class="tag">NOVO</span>
+              <span class="name">Sabrina incrível</span>
+            </div>
+          </a>
+        </div>
+      </section>
     </div>
   </div>
 
+  <script src="JS/launch-config.js"></script>
   <script src="JS/script.js?v=20260216c"></script>
   <script>
     (function () {
@@ -1097,7 +1134,7 @@
         setLoading(true);
 
         try {
-          const response = await fetch("/api/auth/register", {
+          const response = await fetch("/api/vip/register", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             credentials: "include",
@@ -1108,12 +1145,16 @@
 
           if (response.ok) {
             form.reset();
-            setStatus("Cadastro concluído. Você entrou na lista VIP e sua conta Tsebi foi criada.", "success");
+            if (data.accountCreated) {
+              setStatus("Cadastro concluído. Você entrou na lista VIP e sua conta Tsebi foi criada.", "success");
+            } else {
+              setStatus("Você entrou na lista VIP. Sua conta já existia e foi mantida.", "success");
+            }
             return;
           }
 
-          if (response.status === 409 || data.error === "EMAIL_ALREADY_EXISTS") {
-            setStatus("Este e-mail já está cadastrado. Faça login para continuar.", "error");
+          if (data.error === "VIP_DATABASE_NOT_CONFIGURED") {
+            setStatus("Lista VIP indisponível no momento. Tente novamente em instantes.", "error");
             return;
           }
 
