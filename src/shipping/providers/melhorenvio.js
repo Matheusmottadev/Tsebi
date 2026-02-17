@@ -262,6 +262,15 @@ function rebalanceProductsInsurance(products, cap) {
   });
 }
 
+function capProductsUnitaryValue(products, cap) {
+  const list = Array.isArray(products) ? products : [];
+  const safeCap = Math.max(1, toMoney(cap));
+  return list.map((item) => ({
+    ...item,
+    unitary_value: Math.min(Math.max(0.01, toMoney(item?.unitary_value ?? 1)), safeCap)
+  }));
+}
+
 function buildSenderAddress() {
   const postalCode = normalizeZip(process.env.SHIP_FROM_ZIP || "");
   return {
@@ -367,7 +376,7 @@ async function buyLabel({ order }) {
     ? toMoney(Math.min(Math.max(1, productsTotal), insuranceCap))
     : toMoney(Math.max(1, productsTotal));
   const products = nonCommercial
-    ? rebalanceProductsInsurance(rawProducts, insuranceValue)
+    ? rebalanceProductsInsurance(capProductsUnitaryValue(rawProducts, insuranceValue), insuranceValue)
     : rawProducts;
 
   const cartPayload = {
