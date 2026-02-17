@@ -18,19 +18,24 @@ function getSessionMaxAgeMs() {
 
 function createSessionStore() {
   const PgSession = pgSessionFactory(session);
-  return new PgSession({
+  const store = new PgSession({
     pool: getPool(),
     tableName: "user_sessions",
     createTableIfMissing: true,
     pruneSessionInterval: 15 * 60
   });
+  store.on("error", (error) => {
+    // Keep API alive even if session store has transient DB issues.
+    // eslint-disable-next-line no-console
+    console.error("[session] postgres store error", String(error?.message || error));
+  });
+  return store;
 }
 
 function createSessionMiddleware() {
-  return session({
+  const config = {
     name: sessionName,
     secret: sessionSecret,
-    store: createSessionStore(),
     resave: false,
     saveUninitialized: false,
     rolling: true,
@@ -40,7 +45,16 @@ function createSessionMiddleware() {
       secure: isProduction,
       maxAge: getSessionMaxAgeMs()
     }
-  });
+  };
+
+  try {
+    config.store = createSessionStore();
+  } catch (error) {
+    // eslint-disable-next-line no-console
+    console.error("[session] falling back to memory store", String(error?.message || error));
+  }
+
+  return session(config);
 }
 
 module.exports = {
