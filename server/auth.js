@@ -37,6 +37,16 @@ function getStripeClient() {
   return stripeClient;
 }
 
+function maskEmailForLog(email) {
+  const normalized = normalizeEmail(email);
+  const atIndex = normalized.indexOf("@");
+  if (atIndex <= 1) return normalized || "unknown";
+  const local = normalized.slice(0, atIndex);
+  const domain = normalized.slice(atIndex + 1);
+  const maskedLocal = `${local.slice(0, 2)}***`;
+  return domain ? `${maskedLocal}@${domain}` : maskedLocal;
+}
+
 const authRateLimit = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 10,
@@ -523,7 +533,20 @@ authRouter.post("/forgot-password", resetRateLimit, async (req, res) => {
       response.devCode = sent.issued?.code || null;
     }
     return res.json(response);
-  } catch {
+  } catch (error) {
+    const configuredProvider = String(
+      process.env.EMAIL_PROVIDER || (String(process.env.RESEND_API_KEY || "").trim() ? "resend" : "console")
+    )
+      .trim()
+      .toLowerCase();
+    // Logs only on server side (Railway), keeping response generic for security.
+    // eslint-disable-next-line no-console
+    console.error("[auth/forgot-password] email delivery failed", {
+      email: maskEmailForLog(email),
+      provider: configuredProvider || "unknown",
+      message: String(error?.message || "unknown_error"),
+      stack: String(error?.stack || "")
+    });
     if (process.env.NODE_ENV === "production") {
       // Em producao, evita vazar comportamento de email.
       return res.json({ ok: true });
