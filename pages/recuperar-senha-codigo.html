@@ -8,7 +8,7 @@
   <link rel="icon" type="image/svg+xml" href="images/favicon-dark.svg?v=20260217b" media="(prefers-color-scheme: dark)" />
   <link rel="icon" type="image/png" href="images/logo-tsebi.png?v=20260217" />
   <link rel="apple-touch-icon" href="images/logo-tsebi.png?v=20260217" />
-  <title>Recuperar senha | Tsebi Brasil</title>
+  <title>Redefinir senha | Tsebi Brasil</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600&family=Montserrat:wght@300;400;500;600&display=swap" rel="stylesheet" />
@@ -27,24 +27,37 @@
   <main class="account-auth-main">
     <section class="account-auth-card">
       <p class="account-auth-kicker">Conta Tsebi</p>
-      <h1>Recuperar senha</h1>
-      <p class="account-auth-flow-note">
-        Enviaremos um codigo para seu e-mail para voce criar uma nova senha.
+      <h1>Redefinir senha</h1>
+      <p class="account-auth-flow-note" id="resetCodeFlowNote">
+        Informe o codigo recebido por e-mail e defina sua nova senha.
       </p>
 
-      <form id="resetRequestForm" class="account-auth-form" novalidate>
+      <form id="resetVerifyForm" class="account-auth-form" novalidate>
         <label>
-          <span>E-mail</span>
-          <input type="email" id="resetEmailInput" required autocomplete="email" />
+          <span>Codigo de recuperacao</span>
+          <input type="text" id="resetCodeInput" inputmode="numeric" maxlength="6" autocomplete="one-time-code" />
         </label>
-        <button type="submit" class="account-auth-submit">Enviar codigo por e-mail</button>
+        <label>
+          <span>Nova senha</span>
+          <input type="password" id="resetPasswordInput" minlength="8" autocomplete="new-password" />
+        </label>
+        <label>
+          <span>Confirmar nova senha</span>
+          <input type="password" id="resetPasswordConfirmInput" minlength="8" autocomplete="new-password" />
+        </label>
+        <button type="submit" class="account-auth-submit">Redefinir senha</button>
       </form>
+
+      <div class="account-auth-row">
+        <button type="button" id="resendResetCodeBtn" class="account-auth-link" disabled>Reenviar codigo em 01:00</button>
+        <a class="account-auth-link" href="conta.html">Voltar ao login</a>
+      </div>
 
       <p class="account-auth-feedback" id="resetFeedback" aria-live="polite"></p>
     </section>
   </main>
 
   <script src="JS/user-utils.js?v=20260217c"></script>
-  <script src="JS/recuperar-senha.js?v=20260217b"></script>
+  <script src="JS/recuperar-senha-codigo.js?v=20260217a"></script>
 </body>
 </html>
