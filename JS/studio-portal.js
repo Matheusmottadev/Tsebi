@@ -426,7 +426,7 @@
         <td><input data-field="active" type="checkbox" ${product.active ? "checked" : ""} /></td>
         <td>
           <div class="row-actions">
-            <button type="button" class="btn btn-ghost" data-action="product-save">Salvar</button>
+            <button type="button" class="btn" data-action="product-save">Salvar</button>
             <button type="button" class="btn btn-danger" data-action="product-delete">Arquivar</button>
           </div>
         </td>
@@ -765,6 +765,14 @@
         stockQty: stockInput instanceof HTMLInputElement ? Number(stockInput.value || 0) : 0,
         active: activeInput instanceof HTMLInputElement ? activeInput.checked : true
       };
+
+      const confirmed = await confirmAction({
+        title: "Salvar produto",
+        message: "Deseja salvar as alteracoes deste produto?",
+        confirmLabel: "Salvar",
+        tone: "ok"
+      });
+      if (!confirmed) return;
 
       try {
         await api(`/api/admin/products/${encodeURIComponent(id)}`, {
