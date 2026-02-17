@@ -280,7 +280,18 @@ authRouter.post("/login", authRateLimit, async (req, res) => {
     return res.status(401).json({ error: "INVALID_CREDENTIALS" });
   }
 
-  const isMatch = await bcrypt.compare(password, user.passwordHash);
+  const storedHash = String(user.passwordHash || "").trim();
+  if (!storedHash) {
+    return res.status(401).json({ error: "INVALID_CREDENTIALS" });
+  }
+
+  let isMatch = false;
+  try {
+    isMatch = await bcrypt.compare(password, storedHash);
+  } catch {
+    return res.status(401).json({ error: "INVALID_CREDENTIALS" });
+  }
+
   if (!isMatch) {
     return res.status(401).json({ error: "INVALID_CREDENTIALS" });
   }
