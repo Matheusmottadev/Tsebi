@@ -13,7 +13,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;600&family=Montserrat:wght@400;500;600&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="css/studio-portal.css?v=20260217e" />
+  <link rel="stylesheet" href="css/studio-portal.css?v=20260217f" />
 </head>
 <body>
   <main class="admin-wrap">
@@ -191,6 +191,21 @@
     </section>
   </main>
 
-  <script src="JS/studio-portal.js?v=20260217e"></script>
+  <div id="actionModal" class="action-modal" hidden>
+    <div class="action-modal-dialog" role="dialog" aria-modal="true" aria-labelledby="actionModalTitle">
+      <h3 id="actionModalTitle">Confirmar acao</h3>
+      <p id="actionModalMessage" class="action-modal-message"></p>
+      <form id="actionModalForm" class="action-modal-form">
+        <div id="actionModalFields" class="action-modal-fields"></div>
+        <p id="actionModalError" class="action-modal-error" hidden></p>
+        <div class="action-modal-actions">
+          <button id="actionModalCancel" type="button" class="btn btn-ghost">Cancelar</button>
+          <button id="actionModalConfirm" type="submit" class="btn">Confirmar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script src="JS/studio-portal.js?v=20260217f"></script>
 </body>
 </html>

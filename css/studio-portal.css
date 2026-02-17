@@ -289,6 +289,83 @@ td small {
   color: var(--danger);
 }
 
+.action-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 30;
+  display: grid;
+  place-items: center;
+  padding: 18px;
+  background: rgba(0, 0, 0, 0.56);
+}
+
+.action-modal-dialog {
+  width: min(560px, 100%);
+  border: 1px solid var(--line);
+  background: var(--card);
+  color: var(--text);
+  padding: 16px;
+  box-shadow: 0 28px 70px rgba(0, 0, 0, 0.38);
+}
+
+.action-modal-dialog h3 {
+  margin: 0 0 8px;
+  font-family: "Playfair Display", serif;
+  font-size: 30px;
+  line-height: 1.1;
+}
+
+.action-modal-message {
+  margin: 0 0 12px;
+  color: var(--muted);
+  white-space: pre-wrap;
+}
+
+.action-modal-form {
+  display: grid;
+  gap: 10px;
+}
+
+.action-modal-fields {
+  display: grid;
+  gap: 10px;
+}
+
+.action-modal-field {
+  display: grid;
+  gap: 5px;
+  font-size: 12px;
+}
+
+.action-modal-check {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 38px;
+  border: 1px solid var(--line);
+  background: var(--bg-soft);
+  padding: 0 10px;
+  font-size: 12px;
+}
+
+.action-modal-check input {
+  min-width: 0;
+  min-height: 0;
+}
+
+.action-modal-error {
+  margin: 0;
+  color: var(--danger);
+  font-size: 12px;
+}
+
+.action-modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
 [hidden] {
   display: none !important;
 }

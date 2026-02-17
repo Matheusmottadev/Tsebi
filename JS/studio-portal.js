@@ -5,6 +5,14 @@
     adminHeadActions: document.getElementById("adminHeadActions"),
     adminIdentity: document.getElementById("adminIdentity"),
     adminStatus: document.getElementById("adminStatus"),
+    actionModal: document.getElementById("actionModal"),
+    actionModalTitle: document.getElementById("actionModalTitle"),
+    actionModalMessage: document.getElementById("actionModalMessage"),
+    actionModalForm: document.getElementById("actionModalForm"),
+    actionModalFields: document.getElementById("actionModalFields"),
+    actionModalError: document.getElementById("actionModalError"),
+    actionModalCancel: document.getElementById("actionModalCancel"),
+    actionModalConfirm: document.getElementById("actionModalConfirm"),
     refreshAllBtn: document.getElementById("refreshAllBtn"),
     regenerateRecoveryBtn: document.getElementById("regenerateRecoveryBtn"),
     disableMfaBtn: document.getElementById("disableMfaBtn"),
@@ -52,6 +60,7 @@
   const state = {
     activeTab: "users",
     csrfToken: "",
+    activeModal: null,
     users: [],
     orders: [],
     products: [],
@@ -116,6 +125,167 @@
 
   function digitsOnly(value, maxLength) {
     return String(value || "").replace(/\D/g, "").slice(0, maxLength);
+  }
+
+  function escapeAttr(value) {
+    return escapeHtml(value);
+  }
+
+  function closeActionModal(result) {
+    if (!state.activeModal) return;
+    const resolver = state.activeModal.resolve;
+    state.activeModal = null;
+
+    if (dom.actionModal) dom.actionModal.hidden = true;
+    if (dom.actionModalFields) dom.actionModalFields.innerHTML = "";
+    if (dom.actionModalError) {
+      dom.actionModalError.hidden = true;
+      dom.actionModalError.textContent = "";
+    }
+    if (dom.actionModalForm) dom.actionModalForm.reset();
+    if (dom.actionModalCancel) dom.actionModalCancel.hidden = false;
+
+    resolver(result || { confirmed: false, values: {} });
+  }
+
+  function readModalValues(fields) {
+    const values = {};
+    fields.forEach((field) => {
+      const key = String(field.name || "").trim();
+      if (!key) return;
+      const input = dom.actionModalFields?.querySelector(`[data-field-key="${key}"]`);
+      if (!(input instanceof HTMLInputElement)) return;
+      if (field.type === "checkbox") {
+        values[key] = Boolean(input.checked);
+      } else {
+        values[key] = String(input.value || "");
+      }
+    });
+    return values;
+  }
+
+  function validateModalValues(fields, values) {
+    for (const field of fields) {
+      const key = String(field.name || "").trim();
+      if (!key || !field.required) continue;
+      if (field.type === "checkbox") {
+        if (!values[key]) return String(field.requiredMessage || `Confirme: ${field.label || key}`);
+        continue;
+      }
+      if (!String(values[key] || "").trim()) {
+        return String(field.requiredMessage || `Preencha: ${field.label || key}`);
+      }
+    }
+    return "";
+  }
+
+  function renderModalFields(fields) {
+    if (!dom.actionModalFields) return;
+    dom.actionModalFields.innerHTML = fields
+      .map((field) => {
+        const key = String(field.name || "").trim();
+        if (!key) return "";
+        const label = escapeHtml(field.label || key);
+
+        if (field.type === "checkbox") {
+          return `
+            <label class="action-modal-check">
+              <input
+                data-field-key="${escapeAttr(key)}"
+                name="${escapeAttr(key)}"
+                type="checkbox"
+                ${field.checked ? "checked" : ""}
+              />
+              <span>${label}</span>
+            </label>
+          `;
+        }
+
+        const type = escapeAttr(field.type || "text");
+        const value = escapeAttr(field.value || "");
+        const placeholder = escapeAttr(field.placeholder || "");
+        const maxLength = Number(field.maxLength || 0);
+        const inputMode = escapeAttr(field.inputMode || "");
+
+        return `
+          <label class="action-modal-field">
+            <span>${label}</span>
+            <input
+              data-field-key="${escapeAttr(key)}"
+              name="${escapeAttr(key)}"
+              type="${type}"
+              value="${value}"
+              placeholder="${placeholder}"
+              ${maxLength > 0 ? `maxlength="${maxLength}"` : ""}
+              ${inputMode ? `inputmode="${inputMode}"` : ""}
+            />
+          </label>
+        `;
+      })
+      .join("");
+  }
+
+  function showActionModal(options = {}) {
+    if (!dom.actionModal || !dom.actionModalForm) {
+      return Promise.resolve({ confirmed: false, values: {} });
+    }
+
+    const fields = Array.isArray(options.fields) ? options.fields : [];
+    const tone = String(options.tone || "ok");
+    const title = String(options.title || "Confirmar acao");
+    const message = String(options.message || "");
+    const confirmLabel = String(options.confirmLabel || "Confirmar");
+    const cancelLabel = typeof options.cancelLabel === "string" ? options.cancelLabel : "Cancelar";
+    const hideCancel = cancelLabel.length === 0;
+
+    dom.actionModal.hidden = false;
+    dom.actionModal.setAttribute("data-tone", tone);
+    if (dom.actionModalTitle) dom.actionModalTitle.textContent = title;
+    if (dom.actionModalMessage) dom.actionModalMessage.textContent = message;
+    if (dom.actionModalError) {
+      dom.actionModalError.hidden = true;
+      dom.actionModalError.textContent = "";
+    }
+
+    renderModalFields(fields);
+
+    if (dom.actionModalConfirm) {
+      dom.actionModalConfirm.textContent = confirmLabel;
+      dom.actionModalConfirm.className = tone === "danger" ? "btn btn-danger" : "btn";
+    }
+
+    if (dom.actionModalCancel) {
+      dom.actionModalCancel.hidden = hideCancel;
+      dom.actionModalCancel.textContent = cancelLabel || "Cancelar";
+    }
+
+    const firstInput = dom.actionModalFields?.querySelector("input");
+    if (firstInput instanceof HTMLInputElement) {
+      firstInput.focus();
+    } else if (dom.actionModalConfirm instanceof HTMLButtonElement) {
+      dom.actionModalConfirm.focus();
+    }
+
+    return new Promise((resolve) => {
+      state.activeModal = {
+        fields,
+        resolve
+      };
+    });
+  }
+
+  async function confirmAction(options = {}) {
+    const result = await showActionModal({
+      ...options,
+      fields: []
+    });
+    return Boolean(result?.confirmed);
+  }
+
+  async function promptActionFields(options = {}) {
+    const result = await showActionModal(options);
+    if (!result?.confirmed) return null;
+    return result.values || {};
   }
 
   function redirectToStudioLogin(reason = "") {
@@ -402,7 +572,13 @@
     const action = String(target.getAttribute("data-action") || "");
 
     if (action === "user-delete") {
-      if (!window.confirm("Remover este usuario?")) return;
+      const confirmed = await confirmAction({
+        title: "Remover usuario",
+        message: "Deseja remover este usuario agora?",
+        confirmLabel: "Remover",
+        tone: "danger"
+      });
+      if (!confirmed) return;
       try {
         await api(`/api/admin/users/${encodeURIComponent(id)}`, { method: "DELETE" });
         await loadUsers();
@@ -417,24 +593,30 @@
       const current = state.users.find((user) => String(user.id) === id);
       if (!current) return;
 
-      const name = window.prompt("Nome", current.name || "");
-      if (name == null) return;
-      const email = window.prompt("Email", current.email || "");
-      if (email == null) return;
-      const birthDate = window.prompt("Nascimento (YYYY-MM-DD)", current.birthDate || "");
-      if (birthDate == null) return;
-      const cpf = window.prompt("CPF (somente numeros)", current.cpf || "") || "";
-      const cep = window.prompt("CEP (somente numeros)", current.cep || "") || "";
+      const values = await promptActionFields({
+        title: "Editar usuario",
+        message: "Atualize os campos e confirme.",
+        confirmLabel: "Salvar alteracoes",
+        tone: "ok",
+        fields: [
+          { name: "name", label: "Nome", value: current.name || "", required: true },
+          { name: "email", label: "Email", type: "email", value: current.email || "", required: true },
+          { name: "birthDate", label: "Nascimento (YYYY-MM-DD)", value: current.birthDate || "" },
+          { name: "cpf", label: "CPF (somente numeros)", value: current.cpf || "", inputMode: "numeric", maxLength: 11 },
+          { name: "cep", label: "CEP (somente numeros)", value: current.cep || "", inputMode: "numeric", maxLength: 8 }
+        ]
+      });
+      if (!values) return;
 
       try {
         await api(`/api/admin/users/${encodeURIComponent(id)}`, {
           method: "PATCH",
           body: JSON.stringify({
-            name: String(name || "").trim(),
-            email: String(email || "").trim(),
-            birthDate: String(birthDate || "").trim(),
-            cpf: digitsOnly(cpf, 11),
-            cep: digitsOnly(cep, 8)
+            name: String(values.name || "").trim(),
+            email: String(values.email || "").trim(),
+            birthDate: String(values.birthDate || "").trim(),
+            cpf: digitsOnly(values.cpf || "", 11),
+            cep: digitsOnly(values.cep || "", 8)
           })
         });
         await loadUsers();
@@ -500,7 +682,13 @@
     const action = String(target.getAttribute("data-action") || "");
 
     if (action === "product-delete") {
-      if (!window.confirm("Arquivar este produto?")) return;
+      const confirmed = await confirmAction({
+        title: "Arquivar produto",
+        message: "Deseja arquivar este produto?",
+        confirmLabel: "Arquivar",
+        tone: "danger"
+      });
+      if (!confirmed) return;
       try {
         await api(`/api/admin/products/${encodeURIComponent(id)}`, { method: "DELETE" });
         await loadProducts();
@@ -568,7 +756,13 @@
     const action = String(target.getAttribute("data-action") || "");
 
     if (action === "vip-delete") {
-      if (!window.confirm("Excluir este inscrito VIP?")) return;
+      const confirmed = await confirmAction({
+        title: "Excluir VIP",
+        message: "Deseja excluir este inscrito VIP?",
+        confirmLabel: "Excluir",
+        tone: "danger"
+      });
+      if (!confirmed) return;
       try {
         await api(`/api/admin/vip/subscribers/${encodeURIComponent(id)}`, { method: "DELETE" });
         await loadVip();
@@ -583,26 +777,32 @@
       const current = state.vip.find((item) => String(item.id) === id);
       if (!current) return;
 
-      const name = window.prompt("Nome", current.name || "");
-      if (name == null) return;
-      const email = window.prompt("Email", current.email || "");
-      if (email == null) return;
-      const birthDate = window.prompt("Nascimento (YYYY-MM-DD)", current.birthDate || "");
-      if (birthDate == null) return;
-      const cpf = window.prompt("CPF", current.cpf || "") || "";
-      const cep = window.prompt("CEP", current.cep || "") || "";
-      const accountCreated = window.confirm("Marcar conta como criada?");
+      const values = await promptActionFields({
+        title: "Editar VIP",
+        message: "Atualize os dados do inscrito VIP.",
+        confirmLabel: "Salvar alteracoes",
+        tone: "ok",
+        fields: [
+          { name: "name", label: "Nome", value: current.name || "", required: true },
+          { name: "email", label: "Email", type: "email", value: current.email || "", required: true },
+          { name: "birthDate", label: "Nascimento (YYYY-MM-DD)", value: current.birthDate || "" },
+          { name: "cpf", label: "CPF", value: current.cpf || "", inputMode: "numeric", maxLength: 11 },
+          { name: "cep", label: "CEP", value: current.cep || "", inputMode: "numeric", maxLength: 8 },
+          { name: "accountCreated", label: "Conta criada", type: "checkbox", checked: Boolean(current.accountCreated) }
+        ]
+      });
+      if (!values) return;
 
       try {
         await api(`/api/admin/vip/subscribers/${encodeURIComponent(id)}`, {
           method: "PATCH",
           body: JSON.stringify({
-            name: String(name || "").trim(),
-            email: String(email || "").trim(),
-            birthDate: String(birthDate || "").trim(),
-            cpf: digitsOnly(cpf, 11),
-            cep: digitsOnly(cep, 8),
-            accountCreated
+            name: String(values.name || "").trim(),
+            email: String(values.email || "").trim(),
+            birthDate: String(values.birthDate || "").trim(),
+            cpf: digitsOnly(values.cpf || "", 11),
+            cep: digitsOnly(values.cep || "", 8),
+            accountCreated: Boolean(values.accountCreated)
           })
         });
         await loadVip();
@@ -623,22 +823,42 @@
   }
 
   async function handleRecoveryRegenerate() {
-    const password = window.prompt("Confirme sua senha para gerar novos codigos MFA:");
-    if (password == null) return;
-    const token = window.prompt("Digite o codigo MFA atual (6 digitos):");
-    if (token == null) return;
+    const values = await promptActionFields({
+      title: "Gerar novos codigos MFA",
+      message: "Confirme com senha e codigo MFA atual.",
+      confirmLabel: "Gerar codigos",
+      tone: "ok",
+      fields: [
+        { name: "password", label: "Senha", type: "password", required: true },
+        {
+          name: "token",
+          label: "Codigo MFA (6 digitos)",
+          required: true,
+          inputMode: "numeric",
+          maxLength: 6
+        }
+      ]
+    });
+    if (!values) return;
 
     try {
       const data = await api("/api/studio-auth/mfa/recovery/regenerate", {
         method: "POST",
         body: JSON.stringify({
-          password: String(password || ""),
-          token: String(token || "").replace(/\D/g, "").slice(0, 6)
+          password: String(values.password || ""),
+          token: String(values.token || "").replace(/\D/g, "").slice(0, 6)
         })
       });
       const codes = Array.isArray(data?.recoveryCodes) ? data.recoveryCodes : [];
       if (codes.length > 0) {
-        window.alert(`Novos codigos de recuperacao:\n\n${codes.join("\n")}`);
+        await showActionModal({
+          title: "Codigos atualizados",
+          message: `Guarde estes codigos em local seguro:\n\n${codes.join("\n")}`,
+          confirmLabel: "Fechar",
+          cancelLabel: "",
+          tone: "ok",
+          fields: []
+        });
       }
       setStatus("Codigos de recuperacao atualizados.", "ok");
     } catch (error) {
@@ -647,20 +867,30 @@
   }
 
   async function handleDisableMfa() {
-    const confirmDisable = window.confirm("Desativar MFA agora? O painel sera bloqueado ate nova configuracao.");
-    if (!confirmDisable) return;
-
-    const password = window.prompt("Confirme sua senha:");
-    if (password == null) return;
-    const token = window.prompt("Digite o codigo MFA atual (6 digitos):");
-    if (token == null) return;
+    const values = await promptActionFields({
+      title: "Desativar MFA",
+      message: "Esta acao vai bloquear o Studio ate nova configuracao de MFA.",
+      confirmLabel: "Desativar MFA",
+      tone: "danger",
+      fields: [
+        { name: "password", label: "Senha", type: "password", required: true },
+        {
+          name: "token",
+          label: "Codigo MFA (6 digitos)",
+          required: true,
+          inputMode: "numeric",
+          maxLength: 6
+        }
+      ]
+    });
+    if (!values) return;
 
     try {
       await api("/api/studio-auth/mfa/disable", {
         method: "POST",
         body: JSON.stringify({
-          password: String(password || ""),
-          token: String(token || "").replace(/\D/g, "").slice(0, 6)
+          password: String(values.password || ""),
+          token: String(values.token || "").replace(/\D/g, "").slice(0, 6)
         })
       });
       setStatus("MFA desativado. Configure novamente para operar o Studio.", "ok");
@@ -670,7 +900,48 @@
     }
   }
 
+  function handleActionModalSubmit(event) {
+    event.preventDefault();
+    if (!state.activeModal) return;
+
+    const fields = Array.isArray(state.activeModal.fields) ? state.activeModal.fields : [];
+    const values = readModalValues(fields);
+    const validationError = validateModalValues(fields, values);
+
+    if (validationError) {
+      if (dom.actionModalError) {
+        dom.actionModalError.hidden = false;
+        dom.actionModalError.textContent = validationError;
+      }
+      return;
+    }
+
+    closeActionModal({ confirmed: true, values });
+  }
+
+  function handleActionModalCancel() {
+    closeActionModal({ confirmed: false, values: {} });
+  }
+
+  function handleActionModalBackdrop(event) {
+    if (!state.activeModal) return;
+    if (event.target === dom.actionModal) {
+      handleActionModalCancel();
+    }
+  }
+
+  function handleEscapeKey(event) {
+    if (event.key !== "Escape") return;
+    if (!state.activeModal) return;
+    handleActionModalCancel();
+  }
+
   function bindEvents() {
+    dom.actionModalForm?.addEventListener("submit", handleActionModalSubmit);
+    dom.actionModalCancel?.addEventListener("click", handleActionModalCancel);
+    dom.actionModal?.addEventListener("click", handleActionModalBackdrop);
+    document.addEventListener("keydown", handleEscapeKey);
+
     dom.tabs.forEach((button) => {
       button.addEventListener("click", () => {
         switchTab(String(button.getAttribute("data-tab") || "users"));
