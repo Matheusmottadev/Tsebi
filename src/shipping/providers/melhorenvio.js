@@ -27,6 +27,14 @@ function readEnv(name, fallback = "") {
   return String(process.env[name] || fallback).trim();
 }
 
+function readBooleanEnv(name, fallback) {
+  const value = String(process.env[name] || "").trim().toLowerCase();
+  if (!value) return fallback;
+  if (["1", "true", "yes", "on"].includes(value)) return true;
+  if (["0", "false", "no", "off"].includes(value)) return false;
+  return fallback;
+}
+
 function toNumber(value, fallback = 0) {
   const num = Number(value);
   return Number.isFinite(num) ? num : fallback;
@@ -222,6 +230,10 @@ function toMoney(value) {
   return Number(num.toFixed(2));
 }
 
+function getInsuranceCapForNonCommercial() {
+  return Math.max(1, toMoney(readEnv("MELHOR_ENVIO_NON_COMMERCIAL_INSURANCE_CAP", "1000")));
+}
+
 function buildSenderAddress() {
   const postalCode = normalizeZip(process.env.SHIP_FROM_ZIP || "");
   return {
@@ -321,6 +333,10 @@ async function buyLabel({ order }) {
     const unitaryValue = toMoney(product?.unitary_value);
     return sum + unitaryValue * quantity;
   }, 0);
+  const nonCommercial = readBooleanEnv("MELHOR_ENVIO_NON_COMMERCIAL", true);
+  const insuranceValue = nonCommercial
+    ? toMoney(Math.min(Math.max(1, productsTotal), getInsuranceCapForNonCommercial()))
+    : toMoney(Math.max(1, productsTotal));
 
   const cartPayload = {
     service: Number(serviceCode),
@@ -333,8 +349,8 @@ async function buyLabel({ order }) {
       own_hand: false,
       collect: false,
       reverse: false,
-      non_commercial: false,
-      insurance_value: toMoney(Math.max(1, productsTotal))
+      non_commercial: nonCommercial,
+      insurance_value: insuranceValue
     }
   };
 
