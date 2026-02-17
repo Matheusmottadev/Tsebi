@@ -200,7 +200,15 @@ function buildProductsForLabel(order) {
 }
 
 function normalizePhone(phone) {
-  return String(phone || "").replace(/\D/g, "").slice(0, 11);
+  const digits = String(phone || "").replace(/\D/g, "");
+  if (digits.length <= 11) return digits;
+  return digits.slice(-11);
+}
+
+function normalizeDocument(value) {
+  const digits = String(value || "").replace(/\D/g, "");
+  if (digits.length === 11 || digits.length === 14) return digits;
+  return "";
 }
 
 function toAddressLine(street, number) {
@@ -242,9 +250,11 @@ function buildRecipientAddress(order) {
   const state = String(shipping?.state || "").trim().toUpperCase().slice(0, 2);
   const phone = normalizePhone(String(shipping?.phone || "").trim()) || "11999999999";
   const email = String(shipping?.email || order?.userEmail || "").trim().toLowerCase() || "cliente@tsebi.com.br";
+  const document = normalizeDocument(shipping?.cpf || "");
 
   return {
     name: fullName,
+    document,
     phone,
     email,
     address: street || toAddressLine(street, number),
