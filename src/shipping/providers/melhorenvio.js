@@ -234,6 +234,34 @@ function getInsuranceCapForNonCommercial() {
   return Math.max(1, toMoney(readEnv("MELHOR_ENVIO_NON_COMMERCIAL_INSURANCE_CAP", "1000")));
 }
 
+function rebalanceProductsInsurance(products, cap) {
+  const list = Array.isArray(products) ? products : [];
+  if (!list.length) return [];
+  const safeCap = Math.max(1, toMoney(cap));
+
+  const total = list.reduce((sum, item) => {
+    const qty = Math.max(1, toNumber(item?.quantity, 1));
+    const iv = Math.max(0.01, toMoney(item?.insurance_value ?? item?.unitary_value ?? 1));
+    return sum + iv * qty;
+  }, 0);
+
+  if (total <= safeCap) {
+    return list.map((item) => ({
+      ...item,
+      insurance_value: Math.max(0.01, toMoney(item?.insurance_value ?? item?.unitary_value ?? 1))
+    }));
+  }
+
+  const factor = safeCap / total;
+  return list.map((item) => {
+    const base = Math.max(0.01, toMoney(item?.insurance_value ?? item?.unitary_value ?? 1));
+    return {
+      ...item,
+      insurance_value: Math.max(0.01, toMoney(base * factor))
+    };
+  });
+}
+
 function buildSenderAddress() {
   const postalCode = normalizeZip(process.env.SHIP_FROM_ZIP || "");
   return {
@@ -326,17 +354,21 @@ async function buyLabel({ order }) {
 
   const sender = buildSenderAddress();
   const recipient = buildRecipientAddress(order);
-  const products = buildProductsForLabel(order);
+  const rawProducts = buildProductsForLabel(order);
   const volumes = buildVolumes();
-  const productsTotal = products.reduce((sum, product) => {
+  const productsTotal = rawProducts.reduce((sum, product) => {
     const quantity = Math.max(1, toNumber(product?.quantity, 1));
     const unitaryValue = toMoney(product?.unitary_value);
     return sum + unitaryValue * quantity;
   }, 0);
   const nonCommercial = readBooleanEnv("MELHOR_ENVIO_NON_COMMERCIAL", true);
+  const insuranceCap = getInsuranceCapForNonCommercial();
   const insuranceValue = nonCommercial
-    ? toMoney(Math.min(Math.max(1, productsTotal), getInsuranceCapForNonCommercial()))
+    ? toMoney(Math.min(Math.max(1, productsTotal), insuranceCap))
     : toMoney(Math.max(1, productsTotal));
+  const products = nonCommercial
+    ? rebalanceProductsInsurance(rawProducts, insuranceValue)
+    : rawProducts;
 
   const cartPayload = {
     service: Number(serviceCode),
