@@ -333,7 +333,7 @@ async function buyLabel({ order }) {
       own_hand: false,
       collect: false,
       reverse: false,
-      non_commercial: true,
+      non_commercial: false,
       insurance_value: toMoney(Math.max(1, productsTotal))
     }
   };
