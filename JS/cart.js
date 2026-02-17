@@ -1345,17 +1345,6 @@ async function ensurePaymentElementReady() {
       throw new Error("Não foi possível iniciar a sessão de pagamento.");
     }
 
-    if (checkoutState.shipping.shippingQuoteId) {
-      await apiRequest(`/api/orders/${encodeURIComponent(order.orderId)}/shipping/select`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          quoteId: checkoutState.shipping.shippingQuoteId,
-          destinationZip: normalizeCepDigits(checkoutState.shipping.cep)
-        })
-      });
-    }
-
     const appearance = {
       theme: "stripe",
       variables: {

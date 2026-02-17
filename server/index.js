@@ -18,7 +18,8 @@ const { requireAuth } = require("./middlewares/requireAuth");
 const {
   createOrder,
   updateOrder,
-  findOrderById
+  findOrderById,
+  listOrdersByUserId
 } = require("./lib/order-repository");
 const { listProducts, getProductByIdentifier } = require("./lib/product-repository");
 const { checkAvailability, commitStock } = require("./lib/inventory-repository");
@@ -147,6 +148,92 @@ function getShippingCostFromRules(shipping) {
   return 0;
 }
 
+function normalizeItemsForComparison(items) {
+  return (Array.isArray(items) ? items : [])
+    .map((item) => ({
+      id: String(item?.id || "").trim(),
+      qty: Math.max(1, Number(item?.qty || 0)),
+      unitAmount: Math.max(0, Number(item?.unitAmount || 0))
+    }))
+    .filter((item) => item.id)
+    .sort((a, b) => a.id.localeCompare(b.id));
+}
+
+function areSameItemSet(a, b) {
+  if (a.length !== b.length) return false;
+  for (let index = 0; index < a.length; index += 1) {
+    const left = a[index];
+    const right = b[index];
+    if (!right) return false;
+    if (left.id !== right.id || left.qty !== right.qty || left.unitAmount !== right.unitAmount) return false;
+  }
+  return true;
+}
+
+function isReusableOrderStatus(status) {
+  const normalized = String(status || "").trim().toLowerCase();
+  return normalized === "pending_payment" || normalized === "processing";
+}
+
+async function findReusableCheckoutOrder({
+  userId,
+  paymentMethod,
+  installments,
+  itemsAmount,
+  shippingAmount,
+  orderAmount,
+  shipping,
+  resolvedItems
+}) {
+  const orders = await listOrdersByUserId(userId);
+  const now = Date.now();
+  const requestedItems = normalizeItemsForComparison(resolvedItems);
+  const expectedShippingZip = String(shipping?.cep || "").replace(/\D/g, "").slice(0, 8);
+  const expectedShippingMethod = String(shipping?.shippingMethod || "").trim().toLowerCase();
+
+  for (const order of orders) {
+    if (!order || !isReusableOrderStatus(order.status)) continue;
+    if (now - new Date(order.createdAt || 0).getTime() > 30 * 60 * 1000) continue;
+    if (String(order.paymentMethod || "automatic") !== String(paymentMethod || "automatic")) continue;
+    if (Math.max(1, Number(order.installments || 1)) !== Math.max(1, Number(installments || 1))) continue;
+    if (Number(order.itemsAmount || 0) !== Number(itemsAmount || 0)) continue;
+    if (Number(order.shippingAmount || 0) !== Number(shippingAmount || 0)) continue;
+    if (Number(order.amount || 0) !== Number(orderAmount || 0)) continue;
+
+    const orderShippingZip = String(order.shippingDestinationZip || order?.shipping?.cep || "")
+      .replace(/\D/g, "")
+      .slice(0, 8);
+    const orderShippingMethod = String(order?.shipping?.shippingMethod || "").trim().toLowerCase();
+    if (expectedShippingZip && orderShippingZip !== expectedShippingZip) continue;
+    if (expectedShippingMethod && orderShippingMethod !== expectedShippingMethod) continue;
+
+    const orderItems = normalizeItemsForComparison(order.items);
+    if (!areSameItemSet(orderItems, requestedItems)) continue;
+    return order;
+  }
+
+  return null;
+}
+
+async function getReusablePaymentIntentClientSecret(order, expectedAmount) {
+  if (!stripe || !order?.stripePaymentIntentId) return null;
+  const intent = await stripe.paymentIntents.retrieve(order.stripePaymentIntentId);
+  const status = String(intent?.status || "").toLowerCase();
+  const amount = Number(intent?.amount || 0);
+  if (amount !== Math.max(0, Number(expectedAmount || 0))) return null;
+
+  if (
+    status === "requires_payment_method" ||
+    status === "requires_confirmation" ||
+    status === "requires_action" ||
+    status === "processing"
+  ) {
+    return String(intent?.client_secret || "").trim() || null;
+  }
+
+  return null;
+}
+
 async function markOrderPaid(order) {
   if (!order) return order;
   if (order.status === "paid" && order.stockCommitted) return order;
@@ -213,8 +300,8 @@ async function reconcileOrderWithStripe(order) {
     return updateOrder(order.id, { status: "processing" });
   }
 
-  if (status === "requires_payment_method") {
-    return markOrderFailed(order, intent?.last_payment_error?.message || status);
+  if (status === "requires_payment_method" || status === "requires_confirmation" || status === "requires_action") {
+    return updateOrder(order.id, { status: "pending_payment" });
   }
 
   return order;
@@ -577,6 +664,26 @@ app.post("/api/orders/payment-intent", requireAuth, paymentIntentRateLimit, asyn
 
   const orderAmount = itemsAmount + shippingAmount;
   const currency = "brl";
+
+  try {
+    const reusableOrder = await findReusableCheckoutOrder({
+      userId: sessionUserId,
+      paymentMethod,
+      installments,
+      itemsAmount,
+      shippingAmount,
+      orderAmount,
+      shipping,
+      resolvedItems: availability.resolvedItems
+    });
+
+    if (reusableOrder) {
+      const reusableClientSecret = await getReusablePaymentIntentClientSecret(reusableOrder, orderAmount);
+      if (reusableClientSecret) {
+        return res.status(200).json({ orderId: reusableOrder.id, clientSecret: reusableClientSecret });
+      }
+    }
+  } catch {}
 
   let order = await createOrder({
     status: "pending_payment",
