@@ -90,31 +90,12 @@ async function quoteShipping({ orderId = null, userId = null, destinationZip, it
     throw createShippingError("SHIP_FROM_ZIP_NOT_CONFIGURED", 500);
   }
 
-  const configuredProviderName = getConfiguredProviderName();
-  const provider = getProvider(configuredProviderName);
-  const quoteInput = {
+  const provider = getProvider();
+  const providerQuotes = await provider.quote({
     fromZip,
     toZip,
     packages: buildDefaultPackages(itemsCount)
-  };
-
-  let providerQuotes = [];
-  try {
-    providerQuotes = await provider.quote(quoteInput);
-  } catch (error) {
-    // Keep checkout operational if Melhor Envio auth/integration is temporarily broken.
-    if (configuredProviderName === "melhorenvio") {
-      // eslint-disable-next-line no-console
-      console.error("[shipping] melhorenvio quote failed, using dummy fallback", {
-        code: String(error?.code || error?.message || "unknown_error"),
-        status: Number(error?.status || 0) || null
-      });
-      const fallbackProvider = getProvider("dummy");
-      providerQuotes = await fallbackProvider.quote(quoteInput);
-    } else {
-      throw error;
-    }
-  }
+  });
 
   const normalizedQuotes = sanitizeQuoteList(providerQuotes);
   if (normalizedQuotes.length === 0) {
