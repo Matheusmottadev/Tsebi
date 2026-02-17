@@ -1041,11 +1041,31 @@ function initHeaderMenu() {
 function initHeroVideoLoop() {
   const heroVideo = document.querySelector(".hero-video");
   if (!heroVideo) return;
+  const fallbackSrc = String(heroVideo.getAttribute("data-fallback-src") || "").trim();
+  let hasAppliedFallback = false;
+
+  function applyVideoFallback() {
+    if (!fallbackSrc || hasAppliedFallback) return;
+    hasAppliedFallback = true;
+
+    // Rebuild source list to force browser fallback load when local asset is invalid.
+    heroVideo.innerHTML = "";
+    const source = document.createElement("source");
+    source.src = fallbackSrc;
+    source.type = "video/mp4";
+    heroVideo.appendChild(source);
+    heroVideo.load();
+    heroVideo.play().catch(() => {});
+  }
 
   heroVideo.addEventListener("ended", () => {
     heroVideo.currentTime = 0;
     heroVideo.play().catch(() => {});
   });
+
+  heroVideo.addEventListener("error", applyVideoFallback);
+  const firstSource = heroVideo.querySelector("source");
+  firstSource?.addEventListener("error", applyVideoFallback);
 
   document.addEventListener("visibilitychange", () => {
     if (!document.hidden) {
