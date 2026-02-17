@@ -219,6 +219,13 @@ function normalizeDocument(value) {
   return "";
 }
 
+function normalizeText(value) {
+  return String(value || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .trim();
+}
+
 function toAddressLine(street, number) {
   const a = String(street || "").trim();
   const b = String(number || "").trim();
@@ -273,15 +280,17 @@ function capProductsUnitaryValue(products, cap) {
 
 function buildSenderAddress() {
   const postalCode = normalizeZip(process.env.SHIP_FROM_ZIP || "");
+  const document = normalizeDocument(readEnv("SHIP_FROM_DOCUMENT", ""));
   return {
-    name: readEnv("SHIP_FROM_NAME", "Tsebi"),
+    name: normalizeText(readEnv("SHIP_FROM_NAME", "Tsebi")),
+    document,
     phone: normalizePhone(readEnv("SHIP_FROM_PHONE", "11999999999")) || "11999999999",
-    email: readEnv("SHIP_FROM_EMAIL", "contato@tsebi.com.br"),
-    address: readEnv("SHIP_FROM_ADDRESS", "Endereco de origem"),
+    email: readEnv("SHIP_FROM_EMAIL", "contato@tsebi.com.br").toLowerCase(),
+    address: normalizeText(readEnv("SHIP_FROM_ADDRESS", "Endereco de origem")),
     number: readEnv("SHIP_FROM_NUMBER", "0"),
-    complement: readEnv("SHIP_FROM_COMPLEMENT", ""),
-    district: readEnv("SHIP_FROM_DISTRICT", "Centro"),
-    city: readEnv("SHIP_FROM_CITY", "Sao Paulo"),
+    complement: normalizeText(readEnv("SHIP_FROM_COMPLEMENT", "")),
+    district: normalizeText(readEnv("SHIP_FROM_DISTRICT", "Centro")),
+    city: normalizeText(readEnv("SHIP_FROM_CITY", "Sao Paulo")),
     state_abbr: readEnv("SHIP_FROM_STATE", "SP").toUpperCase().slice(0, 2),
     postal_code: postalCode,
     country_id: "BR"
@@ -291,11 +300,11 @@ function buildSenderAddress() {
 function buildRecipientAddress(order) {
   const shipping = order?.shipping || {};
   const toZip = normalizeZip(order?.shippingDestinationZip || shipping?.cep || "");
-  const fullName = String(shipping?.fullName || order?.userName || "Cliente Tsebi").trim().slice(0, 120);
-  const street = String(shipping?.street || "").trim();
+  const fullName = normalizeText(String(shipping?.fullName || order?.userName || "Cliente Tsebi")).slice(0, 120);
+  const street = normalizeText(String(shipping?.street || ""));
   const number = String(shipping?.number || "").trim();
-  const district = String(shipping?.district || "").trim();
-  const city = String(shipping?.city || "").trim();
+  const district = normalizeText(String(shipping?.district || ""));
+  const city = normalizeText(String(shipping?.city || ""));
   const state = String(shipping?.state || "").trim().toUpperCase().slice(0, 2);
   const phone = normalizePhone(String(shipping?.phone || "").trim()) || "11999999999";
   const email = String(shipping?.email || order?.userEmail || "").trim().toLowerCase() || "cliente@tsebi.com.br";
@@ -308,7 +317,7 @@ function buildRecipientAddress(order) {
     email,
     address: street || toAddressLine(street, number),
     number: number || "S/N",
-    complement: String(shipping?.complement || "").trim(),
+    complement: normalizeText(String(shipping?.complement || "")),
     district: district || "Centro",
     city: city || "Sao Paulo",
     state_abbr: state || "SP",
