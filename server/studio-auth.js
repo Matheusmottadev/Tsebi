@@ -195,60 +195,64 @@ studioAuthRouter.get("/me", async (req, res) => {
 });
 
 studioAuthRouter.post("/login", loginRateLimit, async (req, res) => {
-  const parsed = loginSchema.safeParse(req.body || {});
-  if (!parsed.success) {
-    return res.status(401).json({ error: "INVALID_CREDENTIALS" });
-  }
-
-  const adminEmails = readAdminEmailSet();
-  if (!adminEmails.size) {
-    clearAdminAuthSession(req, res);
-    return res.status(403).json({ error: "ADMIN_NOT_CONFIGURED" });
-  }
-
-  const email = normalizeEmail(parsed.data.email);
-  const user = await findUserByEmail(email);
-  if (!user) {
-    return res.status(401).json({ error: "INVALID_CREDENTIALS" });
-  }
-
-  const storedHash = String(user.passwordHash || "").trim();
-  if (!storedHash) {
-    return res.status(401).json({ error: "INVALID_CREDENTIALS" });
-  }
-
-  let matches = false;
   try {
-    matches = await bcrypt.compare(parsed.data.password, storedHash);
+    const parsed = loginSchema.safeParse(req.body || {});
+    if (!parsed.success) {
+      return res.status(401).json({ error: "INVALID_CREDENTIALS" });
+    }
+
+    const adminEmails = readAdminEmailSet();
+    if (!adminEmails.size) {
+      clearAdminAuthSession(req, res);
+      return res.status(403).json({ error: "ADMIN_NOT_CONFIGURED" });
+    }
+
+    const email = normalizeEmail(parsed.data.email);
+    const user = await findUserByEmail(email);
+    if (!user) {
+      return res.status(401).json({ error: "INVALID_CREDENTIALS" });
+    }
+
+    const storedHash = String(user.passwordHash || "").trim();
+    if (!storedHash) {
+      return res.status(401).json({ error: "INVALID_CREDENTIALS" });
+    }
+
+    let matches = false;
+    try {
+      matches = await bcrypt.compare(parsed.data.password, storedHash);
+    } catch {
+      return res.status(401).json({ error: "INVALID_CREDENTIALS" });
+    }
+
+    if (!matches) {
+      return res.status(401).json({ error: "INVALID_CREDENTIALS" });
+    }
+
+    if (!adminEmails.has(email)) {
+      clearAdminAuthSession(req, res);
+      return res.status(403).json({ error: "FORBIDDEN" });
+    }
+
+    req.session.adminAuth = {
+      userId: user.id,
+      email,
+      mfaVerified: false,
+      pendingMfaSecretEnc: null,
+      lastActiveAt: 0,
+      csrfToken: null
+    };
+    clearAdminCsrfCookie(res);
+
+    return res.json({
+      ok: true,
+      stage: user.adminMfaEnabled ? "mfa_required" : "mfa_setup_required",
+      mfaEnabled: Boolean(user.adminMfaEnabled),
+      admin: publicUser(user)
+    });
   } catch {
-    return res.status(401).json({ error: "INVALID_CREDENTIALS" });
+    return res.status(500).json({ error: "STUDIO_LOGIN_FAILED" });
   }
-
-  if (!matches) {
-    return res.status(401).json({ error: "INVALID_CREDENTIALS" });
-  }
-
-  if (!adminEmails.has(email)) {
-    clearAdminAuthSession(req, res);
-    return res.status(403).json({ error: "FORBIDDEN" });
-  }
-
-  req.session.adminAuth = {
-    userId: user.id,
-    email,
-    mfaVerified: false,
-    pendingMfaSecretEnc: null,
-    lastActiveAt: 0,
-    csrfToken: null
-  };
-  clearAdminCsrfCookie(res);
-
-  return res.json({
-    ok: true,
-    stage: user.adminMfaEnabled ? "mfa_required" : "mfa_setup_required",
-    mfaEnabled: Boolean(user.adminMfaEnabled),
-    admin: publicUser(user)
-  });
 });
 
 studioAuthRouter.post("/mfa/setup/init", mfaRateLimit, async (req, res) => {
