@@ -2,6 +2,7 @@
   const dom = {
     adminApp: document.getElementById("adminApp"),
     adminLocked: document.getElementById("adminLocked"),
+    adminHeadActions: document.getElementById("adminHeadActions"),
     adminIdentity: document.getElementById("adminIdentity"),
     adminStatus: document.getElementById("adminStatus"),
     refreshAllBtn: document.getElementById("refreshAllBtn"),
@@ -58,6 +59,33 @@
   };
 
   const orderStatuses = ["pending_payment", "processing", "paid", "failed", "canceled", "refunded"];
+  const studioFlowKey = "tsebi-studio-entry-ok";
+
+  function getCurrentStudioPath() {
+    return `${window.location.pathname}${window.location.search}${window.location.hash}`;
+  }
+
+  function redirectToStudioLoading() {
+    const params = new URLSearchParams();
+    params.set("returnTo", getCurrentStudioPath());
+    window.location.href = `/studio?${params.toString()}`;
+  }
+
+  function ensureStudioEntryFlow() {
+    const hasFlowFlag = sessionStorage.getItem(studioFlowKey) === "1";
+    if (hasFlowFlag) return true;
+    redirectToStudioLoading();
+    return false;
+  }
+
+  function setHeadActionsVisible(visible) {
+    if (!dom.adminHeadActions) return;
+    dom.adminHeadActions.hidden = !visible;
+  }
+
+  if (!ensureStudioEntryFlow()) {
+    return;
+  }
 
   function setStatus(message, tone = "") {
     if (!dom.adminStatus) return;
@@ -88,10 +116,6 @@
 
   function digitsOnly(value, maxLength) {
     return String(value || "").replace(/\D/g, "").slice(0, maxLength);
-  }
-
-  function getCurrentStudioPath() {
-    return `${window.location.pathname}${window.location.search}${window.location.hash}`;
   }
 
   function redirectToStudioLogin(reason = "") {
@@ -316,6 +340,7 @@
         dom.adminIdentity.textContent = "Voce nao esta autenticado no Studio.";
         dom.adminApp.hidden = true;
         dom.adminLocked.hidden = false;
+        setHeadActionsVisible(false);
         setStatus("Entre com o login exclusivo do Studio para continuar.", "error");
         return false;
       }
@@ -324,6 +349,7 @@
       dom.adminIdentity.textContent = `Acesso admin liberado para ${session?.admin?.name || session?.admin?.email || "Administrador"}.`;
       dom.adminApp.hidden = false;
       dom.adminLocked.hidden = true;
+      setHeadActionsVisible(true);
       return true;
     } catch (error) {
       if (isStudioAuthError(error.code)) {
@@ -334,6 +360,7 @@
       dom.adminIdentity.textContent = "Falha ao validar sessao de administrador.";
       dom.adminApp.hidden = true;
       dom.adminLocked.hidden = false;
+      setHeadActionsVisible(false);
       setStatus(
         error.code === "ADMIN_NOT_CONFIGURED"
           ? "Defina ADMIN_EMAILS no Railway para liberar o painel admin."
@@ -692,6 +719,7 @@
   }
 
   async function init() {
+    setHeadActionsVisible(false);
     bindEvents();
     switchTab("users");
     const allowed = await ensureAdmin();

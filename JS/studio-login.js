@@ -25,6 +25,7 @@
     verify: dom.stepVerify,
     recovery: dom.stepRecovery
   };
+  const studioFlowKey = "tsebi-studio-entry-ok";
 
   function getSafeReturnTo() {
     const params = new URLSearchParams(window.location.search);
@@ -53,6 +54,9 @@
   }
 
   function redirectToStudio() {
+    try {
+      sessionStorage.setItem(studioFlowKey, "1");
+    } catch {}
     window.location.href = returnTo;
   }
 

@@ -13,7 +13,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;600&family=Montserrat:wght@400;500;600&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="css/studio-portal.css?v=20260217c" />
+  <link rel="stylesheet" href="css/studio-portal.css?v=20260217d" />
 </head>
 <body>
   <main class="admin-wrap">
@@ -23,7 +23,7 @@
         <h1>Studio Portal</h1>
         <p class="admin-sub" id="adminIdentity">Validando acesso...</p>
       </div>
-      <div class="admin-head-actions">
+      <div class="admin-head-actions" id="adminHeadActions" hidden>
         <button id="refreshAllBtn" type="button" class="btn">Atualizar tudo</button>
         <button id="regenerateRecoveryBtn" type="button" class="btn btn-ghost">Novos codigos MFA</button>
         <button id="disableMfaBtn" type="button" class="btn btn-danger">Desativar MFA</button>
@@ -191,6 +191,6 @@
     </section>
   </main>
 
-  <script src="JS/studio-portal.js?v=20260217c"></script>
+  <script src="JS/studio-portal.js?v=20260217d"></script>
 </body>
 </html>

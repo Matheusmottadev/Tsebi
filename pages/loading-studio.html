@@ -126,6 +126,18 @@
   </main>
 
   <script>
+    const studioFlowKey = "tsebi-studio-entry-ok";
+    const searchParams = new URLSearchParams(window.location.search);
+    const rawReturnTo = String(searchParams.get("returnTo") || "").trim();
+    const safeReturnTo =
+      rawReturnTo && !rawReturnTo.startsWith("//")
+        ? rawReturnTo
+        : "studio-portal.html";
+
+    try {
+      sessionStorage.setItem(studioFlowKey, "1");
+    } catch {}
+
     const progressEl = document.getElementById("loaderProgress");
     let current = 0;
     const timer = window.setInterval(() => {
@@ -139,7 +151,9 @@
     }, 80);
 
     window.setTimeout(() => {
-      window.location.href = "studio-login.html";
+      const nextParams = new URLSearchParams();
+      nextParams.set("returnTo", safeReturnTo);
+      window.location.href = `studio-login.html?${nextParams.toString()}`;
     }, 2300);
   </script>
 </body>
