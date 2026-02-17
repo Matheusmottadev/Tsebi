@@ -158,7 +158,7 @@ function mapProduct(row) {
     currency: String(row?.currency || "brl").toLowerCase(),
     stock: Math.max(0, Number(row?.stock_qty || 0)),
     active: Boolean(row?.active),
-    image: String(metadata.image || DEFAULT_IMAGE),
+    image: String(row?.image_url || metadata.image || DEFAULT_IMAGE),
     href: `produto.html?id=${encodeURIComponent(sku)}`
   };
 }
@@ -166,7 +166,7 @@ function mapProduct(row) {
 async function listProducts() {
   const result = await query(
     `
-    SELECT id, sku, name, price_cents, stock_qty, currency, active
+    SELECT id, sku, name, price_cents, stock_qty, currency, active, image_url
     FROM products
     WHERE active = true
     ORDER BY created_at DESC
@@ -194,7 +194,7 @@ async function listAdminProducts({ limit = 200, offset = 0, search = "", include
   const whereSql = conditions.length ? `WHERE ${conditions.join(" AND ")}` : "";
   const result = await query(
     `
-    SELECT id, sku, name, price_cents, stock_qty, currency, active
+    SELECT id, sku, name, price_cents, stock_qty, currency, active, image_url
     FROM products
     ${whereSql}
     ORDER BY created_at DESC
@@ -212,7 +212,7 @@ async function getProductByIdentifier(identifier) {
 
   const result = await query(
     `
-    SELECT id, sku, name, price_cents, stock_qty, currency, active
+    SELECT id, sku, name, price_cents, stock_qty, currency, active, image_url
     FROM products
     WHERE lower(sku) = lower($1)
        OR id::text = $1
@@ -241,11 +241,11 @@ async function createProduct(payload = {}) {
     const result = await query(
       `
       INSERT INTO products (
-        sku, name, price_cents, stock_qty, currency, active
+        sku, name, price_cents, stock_qty, currency, active, image_url
       ) VALUES (
-        $1, $2, $3, $4, $5, $6
+        $1, $2, $3, $4, $5, $6, $7
       )
-      RETURNING id, sku, name, price_cents, stock_qty, currency, active
+      RETURNING id, sku, name, price_cents, stock_qty, currency, active, image_url
       `,
       [
         sku,
@@ -253,7 +253,8 @@ async function createProduct(payload = {}) {
         Math.max(0, Math.round(Number(payload.priceCents || 0))),
         Math.max(0, Math.floor(Number(payload.stockQty || 0))),
         String(payload.currency || "brl").trim().toLowerCase() || "brl",
-        Boolean(payload.active !== false)
+        Boolean(payload.active !== false),
+        String(payload.imageUrl || "").trim() || null
       ]
     );
 
@@ -282,10 +283,11 @@ async function updateProductByIdentifier(identifier, patch = {}) {
       stock_qty = $4,
       currency = $5,
       active = $6,
+      image_url = $7,
       updated_at = NOW()
     WHERE id::text = $1
        OR lower(sku) = lower($1)
-    RETURNING id, sku, name, price_cents, stock_qty, currency, active
+    RETURNING id, sku, name, price_cents, stock_qty, currency, active, image_url
     `,
     [
       normalized,
@@ -293,7 +295,8 @@ async function updateProductByIdentifier(identifier, patch = {}) {
       Math.max(0, Math.round(Number(patch.priceCents ?? current.unitAmount ?? 0))),
       Math.max(0, Math.floor(Number(patch.stockQty ?? current.stock ?? 0))),
       String(patch.currency ?? current.currency ?? "brl").trim().toLowerCase() || "brl",
-      Boolean(patch.active ?? current.active)
+      Boolean(patch.active ?? current.active),
+      String(patch.imageUrl ?? current.image ?? "").trim() || null
     ]
   );
 
@@ -310,7 +313,7 @@ async function archiveProductByIdentifier(identifier) {
         updated_at = NOW()
     WHERE id::text = $1
        OR lower(sku) = lower($1)
-    RETURNING id, sku, name, price_cents, stock_qty, currency, active
+    RETURNING id, sku, name, price_cents, stock_qty, currency, active, image_url
     `,
     [normalized]
   );
@@ -327,7 +330,7 @@ async function deleteProductByIdentifier(identifier) {
       DELETE FROM products
       WHERE id::text = $1
          OR lower(sku) = lower($1)
-      RETURNING id, sku, name, price_cents, stock_qty, currency, active
+      RETURNING id, sku, name, price_cents, stock_qty, currency, active, image_url
       `,
       [normalized]
     );
@@ -348,9 +351,9 @@ async function restoreProductFromSnapshot(snapshot = {}) {
     const result = await query(
       `
       INSERT INTO products (
-        sku, name, price_cents, stock_qty, currency, active, created_at, updated_at
+        sku, name, price_cents, stock_qty, currency, active, image_url, created_at, updated_at
       ) VALUES (
-        $1, $2, $3, $4, $5, $6, COALESCE($7::timestamptz, NOW()), COALESCE($8::timestamptz, NOW())
+        $1, $2, $3, $4, $5, $6, $7, COALESCE($8::timestamptz, NOW()), COALESCE($9::timestamptz, NOW())
       )
       ON CONFLICT (sku) DO UPDATE
       SET
@@ -359,8 +362,9 @@ async function restoreProductFromSnapshot(snapshot = {}) {
         stock_qty = EXCLUDED.stock_qty,
         currency = EXCLUDED.currency,
         active = EXCLUDED.active,
+        image_url = EXCLUDED.image_url,
         updated_at = COALESCE(EXCLUDED.updated_at, NOW())
-      RETURNING id, sku, name, price_cents, stock_qty, currency, active
+      RETURNING id, sku, name, price_cents, stock_qty, currency, active, image_url
       `,
       [
         sku,
@@ -369,6 +373,7 @@ async function restoreProductFromSnapshot(snapshot = {}) {
         Math.max(0, Math.floor(Number(snapshot.stock || snapshot.stockQty || 0))),
         String(snapshot.currency || "brl").trim().toLowerCase() || "brl",
         Boolean(snapshot.active !== false),
+        String(snapshot.image || snapshot.imageUrl || "").trim() || null,
         snapshot.createdAt || null,
         snapshot.updatedAt || null
       ]

@@ -47,6 +47,7 @@
     newProductName: document.getElementById("newProductName"),
     newProductPrice: document.getElementById("newProductPrice"),
     newProductStock: document.getElementById("newProductStock"),
+    newProductImageUrl: document.getElementById("newProductImageUrl"),
 
     vipRefreshBtn: document.getElementById("vipRefreshBtn"),
     vipBody: document.getElementById("vipBody"),
@@ -438,6 +439,10 @@
         Object.prototype.hasOwnProperty.call(pending, "stockQty")
           ? Number(pending.stockQty || 0)
           : Number(product.stock || 0);
+      const imageUrlValue =
+        Object.prototype.hasOwnProperty.call(pending, "imageUrl")
+          ? String(pending.imageUrl || "")
+          : String(product.image || "");
       const activeValue =
         Object.prototype.hasOwnProperty.call(pending, "active")
           ? Boolean(pending.active)
@@ -447,6 +452,7 @@
         <td><input data-field="name" value="${escapeHtml(nameValue)}" /></td>
         <td><input data-field="priceCents" type="number" min="0" step="1" value="${priceValue}" /></td>
         <td><input data-field="stockQty" type="number" min="0" step="1" value="${stockValue}" /></td>
+        <td><input data-field="imageUrl" value="${escapeHtml(imageUrlValue)}" placeholder="https://..." /></td>
         <td><input data-field="active" type="checkbox" ${activeValue ? "checked" : ""} /></td>
         <td>
           <div class="row-actions">
@@ -875,6 +881,7 @@
       name: String(dom.newProductName?.value || "").trim(),
       priceCents: Number(dom.newProductPrice?.value || 0),
       stockQty: Number(dom.newProductStock?.value || 0),
+      imageUrl: String(dom.newProductImageUrl?.value || "").trim(),
       currency: "brl",
       active: true
     };
@@ -894,12 +901,14 @@
     const nameInput = row.querySelector('input[data-field="name"]');
     const priceInput = row.querySelector('input[data-field="priceCents"]');
     const stockInput = row.querySelector('input[data-field="stockQty"]');
+    const imageUrlInput = row.querySelector('input[data-field="imageUrl"]');
     const activeInput = row.querySelector('input[data-field="active"]');
 
     const current = {
       name: nameInput instanceof HTMLInputElement ? nameInput.value.trim() : String(original.name || ""),
       priceCents: priceInput instanceof HTMLInputElement ? Number(priceInput.value || 0) : Number(original.unitAmount || 0),
       stockQty: stockInput instanceof HTMLInputElement ? Number(stockInput.value || 0) : Number(original.stock || 0),
+      imageUrl: imageUrlInput instanceof HTMLInputElement ? imageUrlInput.value.trim() : String(original.image || ""),
       active: activeInput instanceof HTMLInputElement ? activeInput.checked : Boolean(original.active)
     };
 
@@ -907,6 +916,7 @@
     if (String(current.name || "") !== String(original.name || "")) patch.name = current.name;
     if (Number(current.priceCents || 0) !== Number(original.unitAmount || 0)) patch.priceCents = Number(current.priceCents || 0);
     if (Number(current.stockQty || 0) !== Number(original.stock || 0)) patch.stockQty = Number(current.stockQty || 0);
+    if (String(current.imageUrl || "") !== String(original.image || "")) patch.imageUrl = String(current.imageUrl || "");
     if (Boolean(current.active) !== Boolean(original.active)) patch.active = Boolean(current.active);
     return patch;
   }
@@ -915,7 +925,7 @@
     const target = event.target;
     if (!(target instanceof HTMLInputElement)) return;
     const field = String(target.getAttribute("data-field") || "");
-    if (!["name", "priceCents", "stockQty", "active"].includes(field)) return;
+    if (!["name", "priceCents", "stockQty", "imageUrl", "active"].includes(field)) return;
 
     const row = target.closest("tr[data-id]");
     if (!row) return;

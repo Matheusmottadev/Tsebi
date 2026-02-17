@@ -116,6 +116,7 @@ const productCreateSchema = z.object({
   priceCents: z.coerce.number().int().min(0).max(9_999_999),
   stockQty: z.coerce.number().int().min(0).max(999_999),
   currency: z.string().trim().min(3).max(3).optional().default("brl"),
+  imageUrl: z.string().trim().max(600).optional().default(""),
   active: z.boolean().optional().default(true)
 });
 
@@ -124,6 +125,7 @@ const productPatchSchema = z.object({
   priceCents: z.coerce.number().int().min(0).max(9_999_999).optional(),
   stockQty: z.coerce.number().int().min(0).max(999_999).optional(),
   currency: z.string().trim().min(3).max(3).optional(),
+  imageUrl: z.string().trim().max(600).optional(),
   active: z.boolean().optional()
 });
 
@@ -282,6 +284,7 @@ function sanitizeProductForAudit(product) {
     priceCents: Number(product.unitAmount || 0),
     stockQty: Number(product.stock || 0),
     currency: product.currency || "brl",
+    imageUrl: String(product.image || ""),
     active: Boolean(product.active),
     createdAt: product.createdAt || null,
     updatedAt: product.updatedAt || null
@@ -295,6 +298,7 @@ function buildProductPatchFromSnapshot(product) {
     priceCents: Number(product.unitAmount || 0),
     stockQty: Number(product.stock || 0),
     currency: product.currency || "brl",
+    imageUrl: String(product.image || ""),
     active: Boolean(product.active)
   };
 }
