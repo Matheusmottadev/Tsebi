@@ -290,26 +290,26 @@ async function buyLabel({ order }) {
   const recipient = buildRecipientAddress(order);
   const products = buildProductsForLabel(order);
 
-  const cartPayload = [
-    {
-      service: serviceCode,
-      from: sender,
-      to: recipient,
-      products,
-      options: {
-        receipt: false,
-        own_hand: false,
-        collect: false
-      }
+  const cartPayload = {
+    service: serviceCode,
+    from: sender,
+    to: recipient,
+    products,
+    options: {
+      receipt: false,
+      own_hand: false,
+      collect: false
     }
-  ];
+  };
 
   const cartResponse = await melhorEnvioRequest("/me/cart", {
     method: "POST",
     body: cartPayload
   });
 
-  const orderFromCart = Array.isArray(cartResponse) ? cartResponse[0] : cartResponse;
+  const orderFromCart = Array.isArray(cartResponse)
+    ? cartResponse[0]
+    : cartResponse?.data?.[0] || cartResponse?.data || cartResponse;
   const labelExternalId = String(orderFromCart?.id || "").trim();
   if (!labelExternalId) {
     const error = new Error("MELHOR_ENVIO_CART_ID_NOT_FOUND");
