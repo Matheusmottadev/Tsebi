@@ -10,7 +10,6 @@ const feedbackEl = document.getElementById("authFeedback");
 const emailCheckForm = document.getElementById("emailCheckForm");
 const loginForm = document.getElementById("loginForm");
 const registerForm = document.getElementById("registerForm");
-const forgotPasswordForm = document.getElementById("forgotPasswordForm");
 
 const emailCheckInput = document.getElementById("emailCheckInput");
 const detectedEmailLogin = document.getElementById("detectedEmailLogin");
@@ -21,9 +20,6 @@ const loginCodeField = document.getElementById("loginCodeField");
 const loginEmailCodeInput = document.getElementById("loginEmailCode");
 const resendLoginCodeBtn = document.getElementById("resendLoginCodeBtn");
 const forgotPasswordBtn = document.getElementById("forgotPasswordBtn");
-
-const forgotPasswordCodeInput = document.getElementById("forgotPasswordCode");
-const forgotPasswordNewPasswordInput = document.getElementById("forgotPasswordNewPassword");
 
 const registerCodeField = document.getElementById("registerCodeField");
 const registerEmailCodeInput = document.getElementById("registerEmailCode");
@@ -100,6 +96,19 @@ function codeHint(devCode) {
   return ` (dev: ${devCode})`;
 }
 
+function buildForgotPasswordUrl() {
+  const params = new URLSearchParams();
+  if (selectedEmail) params.set("email", selectedEmail);
+  if (returnUrl) params.set("returnUrl", returnUrl);
+  const query = params.toString();
+  return query ? `recuperar-senha.html?${query}` : "recuperar-senha.html";
+}
+
+function syncForgotPasswordLink() {
+  if (!(forgotPasswordBtn instanceof HTMLAnchorElement)) return;
+  forgotPasswordBtn.href = buildForgotPasswordUrl();
+}
+
 function showPanel(panelName) {
   Object.entries(panels).forEach(([name, panel]) => {
     if (!panel) return;
@@ -128,7 +137,6 @@ function setLoginStage(nextStage) {
   if (loginCodeField) loginCodeField.hidden = !inCodeStage;
   if (resendLoginCodeBtn) resendLoginCodeBtn.hidden = !inCodeStage;
   if (forgotPasswordBtn) forgotPasswordBtn.hidden = inCodeStage;
-  if (forgotPasswordForm) forgotPasswordForm.hidden = true;
 
   if (loginPasswordInput) {
     loginPasswordInput.disabled = inCodeStage;
@@ -193,9 +201,6 @@ function resetToEmailStep() {
   if (emailCheckInput) emailCheckInput.value = "";
   if (loginPasswordInput) loginPasswordInput.value = "";
   if (loginEmailCodeInput) loginEmailCodeInput.value = "";
-  if (forgotPasswordCodeInput) forgotPasswordCodeInput.value = "";
-  if (forgotPasswordNewPasswordInput) forgotPasswordNewPasswordInput.value = "";
-  if (forgotPasswordForm) forgotPasswordForm.hidden = true;
 
   const registerIds = [
     "registerName",
@@ -211,6 +216,7 @@ function resetToEmailStep() {
     if (input instanceof HTMLInputElement) input.value = "";
   });
 
+  syncForgotPasswordLink();
   showPanel("email");
 }
 
@@ -237,6 +243,7 @@ async function handleEmailCheck(event) {
   if (!result.ok) {
     if (detectedEmailLogin) detectedEmailLogin.textContent = selectedEmail;
     setLoginStage("password");
+    syncForgotPasswordLink();
     showPanel("login");
     setFeedback("Nao foi possivel validar automaticamente. Continue com sua senha.", false);
     return;
@@ -245,6 +252,7 @@ async function handleEmailCheck(event) {
   if (result.exists) {
     if (detectedEmailLogin) detectedEmailLogin.textContent = selectedEmail;
     setLoginStage("password");
+    syncForgotPasswordLink();
     showPanel("login");
     return;
   }
@@ -345,6 +353,7 @@ async function handleRegister(event) {
       if (result.code === "EMAIL_ALREADY_EXISTS") {
         if (detectedEmailLogin) detectedEmailLogin.textContent = selectedEmail;
         setLoginStage("password");
+        syncForgotPasswordLink();
         showPanel("login");
         setFeedback("Este e-mail ja possui conta. Entre com sua senha.", true);
         return;
@@ -413,55 +422,6 @@ async function handleResendLoginCode() {
   }
 }
 
-async function handleForgotPasswordRequest() {
-  if (!store || !selectedEmail) return;
-
-  const sent = await store.requestPasswordReset(selectedEmail);
-  if (!sent.ok) {
-    setFeedback(sent.error || "Nao foi possivel iniciar redefinicao.", true);
-    return;
-  }
-
-  if (forgotPasswordForm) forgotPasswordForm.hidden = false;
-  setFeedback(`Enviamos um codigo de redefinicao para ${selectedEmail}.${codeHint(sent.devCode)}`);
-  forgotPasswordCodeInput?.focus();
-}
-
-async function handleForgotPasswordSubmit(event) {
-  event.preventDefault();
-  if (!store || !selectedEmail) return;
-
-  const code = normalizeDigits(forgotPasswordCodeInput?.value || "", 6);
-  const password = String(forgotPasswordNewPasswordInput?.value || "");
-  if (code.length !== 6) {
-    setFeedback("Informe o codigo de 6 digitos.", true);
-    return;
-  }
-
-  setFormLoading(forgotPasswordForm, true);
-  const result = await store.verifyPasswordResetCode({
-    email: selectedEmail,
-    code,
-    password
-  });
-  setFormLoading(forgotPasswordForm, false);
-
-  if (!result.ok) {
-    setFeedback(result.error || "Nao foi possivel redefinir senha.", true);
-    return;
-  }
-
-  if (forgotPasswordForm) forgotPasswordForm.hidden = true;
-  if (forgotPasswordCodeInput) forgotPasswordCodeInput.value = "";
-  if (forgotPasswordNewPasswordInput) forgotPasswordNewPasswordInput.value = "";
-  if (loginPasswordInput) {
-    loginPasswordInput.value = password;
-    loginPasswordInput.disabled = false;
-  }
-  setLoginStage("password");
-  setFeedback("Senha redefinida. Agora faca login com a nova senha.");
-}
-
 async function boot() {
   if (!store) {
     setFeedback("Servico de conta indisponivel.", true);
@@ -477,7 +437,6 @@ async function boot() {
   emailCheckForm?.addEventListener("submit", handleEmailCheck);
   loginForm?.addEventListener("submit", handleLogin);
   registerForm?.addEventListener("submit", handleRegister);
-  forgotPasswordForm?.addEventListener("submit", handleForgotPasswordSubmit);
 
   document.getElementById("registerCpf")?.addEventListener("input", (event) => {
     const input = event.target;
@@ -501,13 +460,16 @@ async function boot() {
     }
     setFeedback(`Codigo reenviado.${codeHint(resent.devCode)}`);
   });
-
-  forgotPasswordBtn?.addEventListener("click", handleForgotPasswordRequest);
+  forgotPasswordBtn?.addEventListener("click", () => {
+    if (!(forgotPasswordBtn instanceof HTMLAnchorElement)) return;
+    forgotPasswordBtn.href = buildForgotPasswordUrl();
+  });
   changeEmailFromLogin?.addEventListener("click", resetToEmailStep);
   changeEmailFromRegister?.addEventListener("click", resetToEmailStep);
 
   setLoginStage("password");
   setRegisterStage("form");
+  syncForgotPasswordLink();
   showPanel("email");
 }
 

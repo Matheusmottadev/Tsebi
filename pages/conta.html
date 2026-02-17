@@ -53,19 +53,7 @@
           <button type="submit" class="account-auth-submit">Entrar</button>
         </form>
         <button type="button" id="resendLoginCodeBtn" class="account-auth-link" hidden>Reenviar codigo</button>
-        <button type="button" id="forgotPasswordBtn" class="account-auth-link">Esqueci minha senha</button>
-
-        <form id="forgotPasswordForm" class="account-auth-form" hidden novalidate>
-          <label>
-            <span>Codigo de redefinicao</span>
-            <input type="text" id="forgotPasswordCode" inputmode="numeric" maxlength="6" autocomplete="one-time-code" />
-          </label>
-          <label>
-            <span>Nova senha</span>
-            <input type="password" id="forgotPasswordNewPassword" minlength="8" autocomplete="new-password" />
-          </label>
-          <button type="submit" class="account-auth-submit">Redefinir senha</button>
-        </form>
+        <a id="forgotPasswordBtn" class="account-auth-link" href="recuperar-senha.html">Esqueci minha senha</a>
         <button type="button" id="changeEmailFromLogin" class="account-auth-link">Usar outro e-mail</button>
       </section>
 
@@ -111,7 +99,7 @@
   </main>
 
   <script src="JS/user-utils.js?v=20260217c"></script>
-  <script src="JS/conta.js?v=20260217m"></script>
+  <script src="JS/conta.js?v=20260217n"></script>
 </body>
 </html>
 

@@ -101,6 +101,20 @@
   cursor: pointer;
 }
 
+.account-auth-link[disabled]{
+  opacity: .45;
+  cursor: not-allowed;
+  text-decoration: none;
+}
+
+.account-auth-row{
+  margin-top: 10px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+  align-items: center;
+}
+
 .account-auth-feedback{
   margin-top: 18px;
   min-height: 18px;
