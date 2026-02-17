@@ -23,6 +23,10 @@ function getFromZip() {
   return normalizeZip(process.env.SHIP_FROM_ZIP || "");
 }
 
+function readEnv(name, fallback = "") {
+  return String(process.env[name] || fallback).trim();
+}
+
 function toNumber(value, fallback = 0) {
   const num = Number(value);
   return Number.isFinite(num) ? num : fallback;
@@ -169,26 +173,80 @@ function buildProductsForLabel(order) {
   if (items.length === 0) {
     return [
       {
-        id: "order-item-1",
+        name: "Produto Tsebi",
+        unitary_value: 0,
+        quantity: 1,
         width: fallbackWidth,
         height: fallbackHeight,
         length: fallbackLength,
-        weight: fallbackWeight,
-        insurance_value: 0,
-        quantity: 1
+        weight: fallbackWeight
       }
     ];
   }
 
   return items.map((item, index) => ({
-    id: String(item?.id || `item-${index + 1}`),
+    name: String(item?.title || item?.name || item?.sku || `item-${index + 1}`).trim().slice(0, 120),
+    unitary_value: Math.max(0.01, toNumber(item?.unitAmount, 0) / 100),
+    quantity: Math.max(1, Math.round(toNumber(item?.qty, 1))),
     width: fallbackWidth,
     height: fallbackHeight,
     length: fallbackLength,
-    weight: fallbackWeight,
-    insurance_value: Math.max(0, toNumber(item?.unitAmount, 0) / 100),
-    quantity: Math.max(1, Math.round(toNumber(item?.qty, 1)))
+    weight: fallbackWeight
   }));
+}
+
+function normalizePhone(phone) {
+  return String(phone || "").replace(/\D/g, "").slice(0, 11);
+}
+
+function toAddressLine(street, number) {
+  const a = String(street || "").trim();
+  const b = String(number || "").trim();
+  return [a, b].filter(Boolean).join(", ").slice(0, 200);
+}
+
+function buildSenderAddress() {
+  const postalCode = normalizeZip(process.env.SHIP_FROM_ZIP || "");
+  return {
+    name: readEnv("SHIP_FROM_NAME", "Tsebi"),
+    phone: normalizePhone(readEnv("SHIP_FROM_PHONE", "11999999999")) || "11999999999",
+    email: readEnv("SHIP_FROM_EMAIL", "contato@tsebi.com.br"),
+    address: readEnv("SHIP_FROM_ADDRESS", "Endereco de origem"),
+    number: readEnv("SHIP_FROM_NUMBER", "0"),
+    complement: readEnv("SHIP_FROM_COMPLEMENT", ""),
+    district: readEnv("SHIP_FROM_DISTRICT", "Centro"),
+    city: readEnv("SHIP_FROM_CITY", "Sao Paulo"),
+    state_abbr: readEnv("SHIP_FROM_STATE", "SP").toUpperCase().slice(0, 2),
+    postal_code: postalCode,
+    country_id: "BR"
+  };
+}
+
+function buildRecipientAddress(order) {
+  const shipping = order?.shipping || {};
+  const toZip = normalizeZip(order?.shippingDestinationZip || shipping?.cep || "");
+  const fullName = String(shipping?.fullName || order?.userName || "Cliente Tsebi").trim().slice(0, 120);
+  const street = String(shipping?.street || "").trim();
+  const number = String(shipping?.number || "").trim();
+  const district = String(shipping?.district || "").trim();
+  const city = String(shipping?.city || "").trim();
+  const state = String(shipping?.state || "").trim().toUpperCase().slice(0, 2);
+  const phone = normalizePhone(String(shipping?.phone || "").trim()) || "11999999999";
+  const email = String(shipping?.email || order?.userEmail || "").trim() || "cliente@tsebi.com.br";
+
+  return {
+    name: fullName,
+    phone,
+    email,
+    address: street || toAddressLine(street, number),
+    number: number || "S/N",
+    complement: String(shipping?.complement || "").trim(),
+    district: district || "Centro",
+    city: city || "Sao Paulo",
+    state_abbr: state || "SP",
+    postal_code: toZip,
+    country_id: "BR"
+  };
 }
 
 async function buyLabel({ order }) {
@@ -200,19 +258,40 @@ async function buyLabel({ order }) {
     throw error;
   }
 
-  const serviceCode = String(order?.shippingSelectedServiceCode || "").trim();
+  let serviceCode = String(order?.shippingSelectedServiceCode || "").trim();
+  if (!/^\d+$/.test(serviceCode)) {
+    const recalculated = await quote({
+      fromZip,
+      toZip,
+      packages: [
+        {
+          quantity: 1,
+          weightKg: Math.max(0.1, toNumber(process.env.DEFAULT_PACKAGE_WEIGHT_KG || 0.3, 0.3)),
+          lengthCm: Math.max(1, Math.round(toNumber(process.env.DEFAULT_PACKAGE_LENGTH_CM || 20, 20))),
+          widthCm: Math.max(1, Math.round(toNumber(process.env.DEFAULT_PACKAGE_WIDTH_CM || 15, 15))),
+          heightCm: Math.max(1, Math.round(toNumber(process.env.DEFAULT_PACKAGE_HEIGHT_CM || 5, 5)))
+        }
+      ]
+    });
+    serviceCode = String(recalculated?.[0]?.serviceCode || "").trim();
+  }
+
   if (!serviceCode) {
     const error = new Error("ORDER_MISSING_SHIPPING_SERVICE_CODE");
     error.code = "ORDER_MISSING_SHIPPING_SERVICE_CODE";
     throw error;
   }
 
+  const sender = buildSenderAddress();
+  const recipient = buildRecipientAddress(order);
+  const products = buildProductsForLabel(order);
+
   const cartPayload = [
     {
       service: serviceCode,
-      from: { postal_code: fromZip },
-      to: { postal_code: toZip },
-      products: buildProductsForLabel(order),
+      from: sender,
+      to: recipient,
+      products,
       options: {
         receipt: false,
         own_hand: false,
