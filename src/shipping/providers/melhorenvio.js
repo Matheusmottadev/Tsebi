@@ -173,25 +173,29 @@ function buildProductsForLabel(order) {
   if (items.length === 0) {
     return [
       {
+        id: "order-item-1",
         name: "Produto Tsebi",
-        unitary_value: 0,
+        unitary_value: 1,
         quantity: 1,
         width: fallbackWidth,
         height: fallbackHeight,
         length: fallbackLength,
-        weight: fallbackWeight
+        weight: fallbackWeight,
+        insurance_value: 1
       }
     ];
   }
 
   return items.map((item, index) => ({
+    id: String(item?.id || `item-${index + 1}`),
     name: String(item?.title || item?.name || item?.sku || `item-${index + 1}`).trim().slice(0, 120),
     unitary_value: Math.max(0.01, toNumber(item?.unitAmount, 0) / 100),
     quantity: Math.max(1, Math.round(toNumber(item?.qty, 1))),
     width: fallbackWidth,
     height: fallbackHeight,
     length: fallbackLength,
-    weight: fallbackWeight
+    weight: fallbackWeight,
+    insurance_value: Math.max(0.01, toNumber(item?.unitAmount, 0) / 100)
   }));
 }
 
