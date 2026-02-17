@@ -5,7 +5,14 @@ const QRCode = require("qrcode");
 const { normalizeEmail } = require("../user-repository");
 
 const isProduction = process.env.NODE_ENV === "production";
-const csrfCookieName = process.env.ADMIN_CSRF_COOKIE_NAME || "tsebi.admin.csrf";
+function sanitizeCookieName(value, fallback = "tsebi.admin.csrf") {
+  const raw = String(value || "").trim();
+  // RFC6265 token (no spaces, quotes, separators).
+  if (/^[!#$%&'*+\-.^_`|~0-9A-Za-z]+$/.test(raw)) return raw;
+  return fallback;
+}
+
+const csrfCookieName = sanitizeCookieName(process.env.ADMIN_CSRF_COOKIE_NAME, "tsebi.admin.csrf");
 const mfaIssuer = String(process.env.ADMIN_MFA_ISSUER || "Tsebi Studio").trim() || "Tsebi Studio";
 
 function parseInteger(value, fallback) {
@@ -166,21 +173,25 @@ function parseCookieHeader(cookieHeader) {
 }
 
 function setAdminCsrfCookie(res, token) {
-  res.cookie(csrfCookieName, String(token || ""), {
-    httpOnly: true,
-    sameSite: "strict",
-    secure: isProduction,
-    path: "/"
-  });
+  try {
+    res.cookie(csrfCookieName, String(token || ""), {
+      httpOnly: true,
+      sameSite: "strict",
+      secure: isProduction,
+      path: "/"
+    });
+  } catch {}
 }
 
 function clearAdminCsrfCookie(res) {
-  res.clearCookie(csrfCookieName, {
-    httpOnly: true,
-    sameSite: "strict",
-    secure: isProduction,
-    path: "/"
-  });
+  try {
+    res.clearCookie(csrfCookieName, {
+      httpOnly: true,
+      sameSite: "strict",
+      secure: isProduction,
+      path: "/"
+    });
+  } catch {}
 }
 
 module.exports = {

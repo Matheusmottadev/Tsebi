@@ -195,29 +195,35 @@ studioAuthRouter.get("/me", async (req, res) => {
 });
 
 studioAuthRouter.post("/login", loginRateLimit, async (req, res) => {
+  let failStage = "unknown";
   try {
+    failStage = "validate_input";
     const parsed = loginSchema.safeParse(req.body || {});
     if (!parsed.success) {
       return res.status(401).json({ error: "INVALID_CREDENTIALS" });
     }
 
+    failStage = "read_admin_emails";
     const adminEmails = readAdminEmailSet();
     if (!adminEmails.size) {
       clearAdminAuthSession(req, res);
       return res.status(403).json({ error: "ADMIN_NOT_CONFIGURED" });
     }
 
+    failStage = "load_user";
     const email = normalizeEmail(parsed.data.email);
     const user = await findUserByEmail(email);
     if (!user) {
       return res.status(401).json({ error: "INVALID_CREDENTIALS" });
     }
 
+    failStage = "check_password_hash";
     const storedHash = String(user.passwordHash || "").trim();
     if (!storedHash) {
       return res.status(401).json({ error: "INVALID_CREDENTIALS" });
     }
 
+    failStage = "compare_password";
     let matches = false;
     try {
       matches = await bcrypt.compare(parsed.data.password, storedHash);
@@ -229,9 +235,15 @@ studioAuthRouter.post("/login", loginRateLimit, async (req, res) => {
       return res.status(401).json({ error: "INVALID_CREDENTIALS" });
     }
 
+    failStage = "check_admin_allowlist";
     if (!adminEmails.has(email)) {
       clearAdminAuthSession(req, res);
       return res.status(403).json({ error: "FORBIDDEN" });
+    }
+
+    failStage = "session_assign";
+    if (!req.session) {
+      return res.status(500).json({ error: "SESSION_NOT_AVAILABLE" });
     }
 
     req.session.adminAuth = {
@@ -251,7 +263,7 @@ studioAuthRouter.post("/login", loginRateLimit, async (req, res) => {
       admin: publicUser(user)
     });
   } catch {
-    return res.status(500).json({ error: "STUDIO_LOGIN_FAILED" });
+    return res.status(500).json({ error: "STUDIO_LOGIN_FAILED", stage: failStage });
   }
 });
 
