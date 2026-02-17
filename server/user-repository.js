@@ -1,4 +1,5 @@
 const crypto = require("node:crypto");
+const bcrypt = require("bcrypt");
 const { query, withTransaction } = require("./lib/db");
 
 function normalizeEmail(email) {
@@ -49,6 +50,11 @@ function fromRow(row) {
     addresses: toDbAddresses(row.addresses),
     defaultAddressId: String(row.default_address_id || "").trim(),
     passwordHash: row.password_hash,
+    adminMfaEnabled: Boolean(row.admin_mfa_enabled),
+    adminMfaSecretEnc: String(row.admin_mfa_secret_enc || "").trim(),
+    adminMfaRecoveryCodes: Array.isArray(row.admin_mfa_recovery_codes) ? row.admin_mfa_recovery_codes : [],
+    adminMfaEnabledAt: row.admin_mfa_enabled_at || null,
+    adminMfaDisabledAt: row.admin_mfa_disabled_at || null,
     createdAt: row.created_at,
     updatedAt: row.updated_at
   };
@@ -328,6 +334,98 @@ async function consumePasswordResetToken(token) {
   });
 }
 
+async function setAdminMfaCredentials(userId, { secretEnc, recoveryCodeHashes }) {
+  const safeSecret = String(secretEnc || "").trim();
+  const safeHashes = Array.isArray(recoveryCodeHashes)
+    ? recoveryCodeHashes.map((entry) => String(entry || "").trim()).filter(Boolean)
+    : [];
+
+  const result = await query(
+    `
+    UPDATE users
+    SET
+      admin_mfa_enabled = TRUE,
+      admin_mfa_secret_enc = $2,
+      admin_mfa_recovery_codes = $3::jsonb,
+      admin_mfa_enabled_at = NOW(),
+      admin_mfa_disabled_at = NULL,
+      updated_at = NOW()
+    WHERE id = $1
+    RETURNING *
+    `,
+    [userId, safeSecret, JSON.stringify(safeHashes)]
+  );
+
+  return fromRow(result.rows[0] || null);
+}
+
+async function replaceAdminRecoveryCodes(userId, recoveryCodeHashes) {
+  const safeHashes = Array.isArray(recoveryCodeHashes)
+    ? recoveryCodeHashes.map((entry) => String(entry || "").trim()).filter(Boolean)
+    : [];
+
+  const result = await query(
+    `
+    UPDATE users
+    SET
+      admin_mfa_recovery_codes = $2::jsonb,
+      updated_at = NOW()
+    WHERE id = $1
+    RETURNING *
+    `,
+    [userId, JSON.stringify(safeHashes)]
+  );
+
+  return fromRow(result.rows[0] || null);
+}
+
+async function consumeAdminRecoveryCode(userId, recoveryCode) {
+  const normalizedCode = String(recoveryCode || "").trim();
+  if (!normalizedCode) return { ok: false, user: null };
+
+  const user = await findUserById(userId);
+  if (!user || !Array.isArray(user.adminMfaRecoveryCodes) || user.adminMfaRecoveryCodes.length === 0) {
+    return { ok: false, user };
+  }
+
+  let matchedIndex = -1;
+  for (let index = 0; index < user.adminMfaRecoveryCodes.length; index += 1) {
+    // eslint-disable-next-line no-await-in-loop
+    const isMatch = await bcrypt.compare(normalizedCode, String(user.adminMfaRecoveryCodes[index] || ""));
+    if (isMatch) {
+      matchedIndex = index;
+      break;
+    }
+  }
+
+  if (matchedIndex < 0) {
+    return { ok: false, user };
+  }
+
+  const nextHashes = user.adminMfaRecoveryCodes.filter((_, index) => index !== matchedIndex);
+  const updated = await replaceAdminRecoveryCodes(userId, nextHashes);
+  return { ok: true, user: updated };
+}
+
+async function disableAdminMfa(userId) {
+  const result = await query(
+    `
+    UPDATE users
+    SET
+      admin_mfa_enabled = FALSE,
+      admin_mfa_secret_enc = NULL,
+      admin_mfa_recovery_codes = '[]'::jsonb,
+      admin_mfa_disabled_at = NOW(),
+      updated_at = NOW()
+    WHERE id = $1
+    RETURNING *
+    `,
+    [userId]
+  );
+
+  return fromRow(result.rows[0] || null);
+}
+
 module.exports = {
   normalizeEmail,
   publicUser,
@@ -339,5 +437,9 @@ module.exports = {
   adminUpdateUser,
   deleteUserById,
   createPasswordResetToken,
-  consumePasswordResetToken
+  consumePasswordResetToken,
+  setAdminMfaCredentials,
+  replaceAdminRecoveryCodes,
+  consumeAdminRecoveryCode,
+  disableAdminMfa
 };

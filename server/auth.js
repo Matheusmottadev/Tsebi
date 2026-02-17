@@ -291,8 +291,10 @@ authRouter.post("/login", authRateLimit, async (req, res) => {
 
 authRouter.post("/logout", (req, res) => {
   if (!req.session) return res.json({ ok: true });
-  req.session.destroy(() => {
-    res.clearCookie("tsebi.sid");
+  if (req.session.userId) {
+    delete req.session.userId;
+  }
+  req.session.save(() => {
     res.json({ ok: true });
   });
 });

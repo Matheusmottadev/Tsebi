@@ -23,7 +23,7 @@ const {
   deleteVipSubscriberById
 } = require("./lib/vip-repository");
 const { getVipDatabaseUrl } = require("./lib/vip-db");
-const { requireAdmin } = require("./middlewares/requireAdmin");
+const { requireAdmin, requireAdminCsrfForMutations } = require("./middlewares/requireAdmin");
 
 const adminRouter = express.Router();
 
@@ -37,6 +37,7 @@ const adminRateLimit = rateLimit({
 
 adminRouter.use(adminRateLimit);
 adminRouter.use(requireAdmin);
+adminRouter.use(requireAdminCsrfForMutations);
 
 const statusSchema = z.enum([
   "pending_payment",

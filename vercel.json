@@ -13,6 +13,14 @@
       "destination": "/pages/studio-portal.html"
     },
     {
+      "source": "/studio",
+      "destination": "/pages/loading-studio.html"
+    },
+    {
+      "source": "/studio-login",
+      "destination": "/pages/studio-login.html"
+    },
+    {
       "source": "/:page.html",
       "destination": "/pages/:page.html"
     }

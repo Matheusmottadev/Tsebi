@@ -1,0 +1,6 @@
+ALTER TABLE users
+  ADD COLUMN IF NOT EXISTS admin_mfa_enabled BOOLEAN NOT NULL DEFAULT FALSE,
+  ADD COLUMN IF NOT EXISTS admin_mfa_secret_enc TEXT,
+  ADD COLUMN IF NOT EXISTS admin_mfa_recovery_codes JSONB NOT NULL DEFAULT '[]'::jsonb,
+  ADD COLUMN IF NOT EXISTS admin_mfa_enabled_at TIMESTAMPTZ,
+  ADD COLUMN IF NOT EXISTS admin_mfa_disabled_at TIMESTAMPTZ;

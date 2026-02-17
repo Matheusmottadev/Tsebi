@@ -10,6 +10,7 @@ const rateLimit = require("express-rate-limit");
 const { z } = require("zod");
 const { createSessionMiddleware } = require("./session");
 const { authRouter, myRouter } = require("./auth");
+const { studioAuthRouter } = require("./studio-auth");
 const { vipRouter } = require("./vip");
 const { adminRouter } = require("./admin");
 const { findUserById } = require("./user-repository");
@@ -450,6 +451,16 @@ if (!isVercelRuntime) {
     res.sendFile(path.join(pagesDir, "studio-portal.html"));
   });
 
+  app.get("/studio", (req, res) => {
+    res.setHeader("Cache-Control", "no-cache");
+    res.sendFile(path.join(pagesDir, "loading-studio.html"));
+  });
+
+  app.get("/studio-login", (req, res) => {
+    res.setHeader("Cache-Control", "no-cache");
+    res.sendFile(path.join(pagesDir, "studio-login.html"));
+  });
+
   app.get("/:page.html", (req, res, next) => {
     const pageName = `${req.params.page}.html`;
     const filePath = path.join(pagesDir, pageName);
@@ -473,6 +484,7 @@ if (!isVercelRuntime) {
 }
 app.use("/api/auth", authRouter);
 app.use("/api/my", myRouter);
+app.use("/api/studio-auth", studioAuthRouter);
 app.use("/api/vip", vipRouter);
 app.use("/api/admin", adminRouter);
 

@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="icon" type="image/svg+xml" href="images/favicon-light.svg?v=20260217b" media="(prefers-color-scheme: light)" />
+  <link rel="icon" type="image/svg+xml" href="images/favicon-dark.svg?v=20260217b" media="(prefers-color-scheme: dark)" />
+  <link rel="icon" type="image/png" href="images/logo-tsebi.png?v=20260217" />
+  <link rel="apple-touch-icon" href="images/logo-tsebi.png?v=20260217" />
+  <title>Carregando | Tsebi Studio</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600&family=Montserrat:wght@400;500&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg: #ffffff;
+      --fg: #000000;
+      --line-track: rgba(0, 0, 0, 0.18);
+      --line-fill: #000000;
+      --wm-filter: none;
+    }
+
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #000000;
+        --fg: #ffffff;
+        --line-track: rgba(255, 255, 255, 0.2);
+        --line-fill: #ffffff;
+        --wm-filter: invert(1);
+      }
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { width: 100%; height: 100%; }
+    body {
+      background: var(--bg);
+      color: var(--fg);
+      display: grid;
+      place-items: center;
+      font-family: 'Montserrat', sans-serif;
+      overflow: hidden;
+      position: relative;
+    }
+    .watermark {
+      position: fixed;
+      inset: 0;
+      display: grid;
+      place-items: center;
+      pointer-events: none;
+      opacity: 0.1;
+    }
+    .watermark img {
+      width: min(48vw, 360px);
+      height: auto;
+      filter: var(--wm-filter);
+    }
+    .loader-wrap {
+      text-align: center;
+      display: grid;
+      gap: 18px;
+      justify-items: center;
+      width: min(90vw, 540px);
+      z-index: 1;
+    }
+    .loader-logo {
+      font-family: 'Playfair Display', serif;
+      display: inline-flex;
+      align-items: baseline;
+      gap: 8px;
+      letter-spacing: 0.4px;
+      white-space: nowrap;
+      clip-path: inset(0 100% 0 0);
+      animation: revealMask 1.35s ease-out .2s forwards;
+    }
+    .loader-logo-main {
+      font-size: clamp(40px, 7vw, 68px);
+      line-height: 1;
+    }
+    .loader-logo-sub {
+      font-size: clamp(25px, 4vw, 42px);
+      line-height: 1;
+    }
+    .loader-line {
+      width: 100%;
+      height: 2px;
+      background: var(--line-track);
+      position: relative;
+      overflow: hidden;
+    }
+    .loader-line::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: var(--line-fill);
+      transform-origin: left center;
+      transform: scaleX(0);
+      animation: fillLine 2.2s ease-out forwards;
+    }
+    .loader-progress {
+      font-size: 14px;
+      letter-spacing: 2px;
+      color: var(--fg);
+    }
+    @keyframes revealMask {
+      from { clip-path: inset(0 100% 0 0); }
+      to { clip-path: inset(0 0 0 0); }
+    }
+    @keyframes fillLine {
+      from { transform: scaleX(0); }
+      to { transform: scaleX(1); }
+    }
+  </style>
+</head>
+<body>
+  <div class="watermark" aria-hidden="true">
+    <img src="images/marca-dagua.png" alt="" />
+  </div>
+
+  <main class="loader-wrap" aria-label="Carregando Studio">
+    <h1 class="loader-logo">
+      <span class="loader-logo-main">Tsebi</span>
+      <span class="loader-logo-sub">Studio</span>
+    </h1>
+    <div class="loader-line" aria-hidden="true"></div>
+    <p id="loaderProgress" class="loader-progress">000%</p>
+  </main>
+
+  <script>
+    const progressEl = document.getElementById("loaderProgress");
+    let current = 0;
+    const timer = window.setInterval(() => {
+      current = Math.min(100, current + 4);
+      if (progressEl) {
+        progressEl.textContent = String(current).padStart(3, "0") + "%";
+      }
+      if (current >= 100) {
+        window.clearInterval(timer);
+      }
+    }, 80);
+
+    window.setTimeout(() => {
+      window.location.href = "studio-login.html";
+    }, 2300);
+  </script>
+</body>
+</html>

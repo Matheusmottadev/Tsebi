@@ -1,10 +1,12 @@
-(() => {
+﻿(() => {
   const dom = {
     adminApp: document.getElementById("adminApp"),
     adminLocked: document.getElementById("adminLocked"),
     adminIdentity: document.getElementById("adminIdentity"),
     adminStatus: document.getElementById("adminStatus"),
     refreshAllBtn: document.getElementById("refreshAllBtn"),
+    regenerateRecoveryBtn: document.getElementById("regenerateRecoveryBtn"),
+    disableMfaBtn: document.getElementById("disableMfaBtn"),
     logoutBtn: document.getElementById("logoutBtn"),
     tabs: Array.from(document.querySelectorAll(".tab")),
     panels: Array.from(document.querySelectorAll(".tab-panel")),
@@ -48,6 +50,7 @@
 
   const state = {
     activeTab: "users",
+    csrfToken: "",
     users: [],
     orders: [],
     products: [],
@@ -58,7 +61,7 @@
 
   function setStatus(message, tone = "") {
     if (!dom.adminStatus) return;
-    dom.adminStatus.textContent = message || "";
+    dom.adminStatus.textContent = String(message || "");
     dom.adminStatus.classList.toggle("error", tone === "error");
     dom.adminStatus.classList.toggle("ok", tone === "ok");
   }
@@ -87,14 +90,47 @@
     return String(value || "").replace(/\D/g, "").slice(0, maxLength);
   }
 
+  function getCurrentStudioPath() {
+    return `${window.location.pathname}${window.location.search}${window.location.hash}`;
+  }
+
+  function redirectToStudioLogin(reason = "") {
+    const params = new URLSearchParams();
+    params.set("returnTo", getCurrentStudioPath());
+    if (reason) params.set("reason", String(reason));
+    window.location.href = `studio-login.html?${params.toString()}`;
+  }
+
+  function isMutatingMethod(method) {
+    return ["POST", "PUT", "PATCH", "DELETE"].includes(String(method || "").toUpperCase());
+  }
+
+  function isStudioAuthError(code) {
+    return [
+      "ADMIN_UNAUTHORIZED",
+      "ADMIN_SESSION_EXPIRED",
+      "ADMIN_MFA_REQUIRED",
+      "ADMIN_MFA_SETUP_REQUIRED"
+    ].includes(String(code || ""));
+  }
+
   async function api(path, options = {}) {
+    const method = String(options.method || "GET").toUpperCase();
+    const suppressAuthRedirect = Boolean(options.suppressAuthRedirect);
+    const headers = {
+      ...(options.headers || {}),
+      ...(options.body ? { "Content-Type": "application/json" } : {})
+    };
+
+    if (isMutatingMethod(method) && state.csrfToken) {
+      headers["x-csrf-token"] = state.csrfToken;
+    }
+
     const response = await fetch(path, {
       ...options,
+      method,
       credentials: "include",
-      headers: {
-        ...(options.headers || {}),
-        ...(options.body ? { "Content-Type": "application/json" } : {})
-      }
+      headers
     });
 
     const data = await response.json().catch(() => ({}));
@@ -102,6 +138,11 @@
       const error = new Error(String(data && data.error ? data.error : "REQUEST_FAILED"));
       error.code = String(data && data.error ? data.error : "REQUEST_FAILED");
       error.status = response.status;
+
+      if (!suppressAuthRedirect && isStudioAuthError(error.code)) {
+        redirectToStudioLogin(error.code);
+      }
+
       throw error;
     }
 
@@ -266,19 +307,37 @@
 
   async function ensureAdmin() {
     try {
-      const data = await api("/api/admin/me");
-      dom.adminIdentity.textContent = `Acesso admin liberado para ${data?.admin?.name || data?.admin?.email || "Administrador"}.`;
+      const session = await api("/api/studio-auth/me", { suppressAuthRedirect: true });
+      if (!session?.authenticated) {
+        if (session?.stage === "mfa_required" || session?.stage === "mfa_setup_required") {
+          redirectToStudioLogin(session.stage);
+          return false;
+        }
+        dom.adminIdentity.textContent = "Voce nao esta autenticado no Studio.";
+        dom.adminApp.hidden = true;
+        dom.adminLocked.hidden = false;
+        setStatus("Entre com o login exclusivo do Studio para continuar.", "error");
+        return false;
+      }
+
+      state.csrfToken = String(session.csrfToken || "");
+      dom.adminIdentity.textContent = `Acesso admin liberado para ${session?.admin?.name || session?.admin?.email || "Administrador"}.`;
       dom.adminApp.hidden = false;
       dom.adminLocked.hidden = true;
       return true;
     } catch (error) {
-      dom.adminIdentity.textContent = "Você não está autenticado como administrador.";
+      if (isStudioAuthError(error.code)) {
+        redirectToStudioLogin(error.code);
+        return false;
+      }
+
+      dom.adminIdentity.textContent = "Falha ao validar sessao de administrador.";
       dom.adminApp.hidden = true;
       dom.adminLocked.hidden = false;
       setStatus(
         error.code === "ADMIN_NOT_CONFIGURED"
           ? "Defina ADMIN_EMAILS no Railway para liberar o painel admin."
-          : "Acesso negado ao painel admin.",
+          : `Acesso negado ao painel admin: ${error.code || error.message}`,
         "error"
       );
       return false;
@@ -300,9 +359,9 @@
       await api("/api/admin/users", { method: "POST", body: JSON.stringify(payload) });
       clearForm(dom.createUserForm);
       await loadUsers();
-      setStatus("Usuário criado com sucesso.", "ok");
+      setStatus("Usuario criado com sucesso.", "ok");
     } catch (error) {
-      setStatus(`Falha ao criar usuário: ${error.code || error.message}`, "error");
+      setStatus(`Falha ao criar usuario: ${error.code || error.message}`, "error");
     }
   }
 
@@ -316,13 +375,13 @@
     const action = String(target.getAttribute("data-action") || "");
 
     if (action === "user-delete") {
-      if (!window.confirm("Remover este usuário?")) return;
+      if (!window.confirm("Remover este usuario?")) return;
       try {
         await api(`/api/admin/users/${encodeURIComponent(id)}`, { method: "DELETE" });
         await loadUsers();
-        setStatus("Usuário removido.", "ok");
+        setStatus("Usuario removido.", "ok");
       } catch (error) {
-        setStatus(`Falha ao remover usuário: ${error.code || error.message}`, "error");
+        setStatus(`Falha ao remover usuario: ${error.code || error.message}`, "error");
       }
       return;
     }
@@ -337,8 +396,8 @@
       if (email == null) return;
       const birthDate = window.prompt("Nascimento (YYYY-MM-DD)", current.birthDate || "");
       if (birthDate == null) return;
-      const cpf = window.prompt("CPF (somente números)", current.cpf || "") || "";
-      const cep = window.prompt("CEP (somente números)", current.cep || "") || "";
+      const cpf = window.prompt("CPF (somente numeros)", current.cpf || "") || "";
+      const cep = window.prompt("CEP (somente numeros)", current.cep || "") || "";
 
       try {
         await api(`/api/admin/users/${encodeURIComponent(id)}`, {
@@ -352,9 +411,9 @@
           })
         });
         await loadUsers();
-        setStatus("Usuário atualizado.", "ok");
+        setStatus("Usuario atualizado.", "ok");
       } catch (error) {
-        setStatus(`Falha ao editar usuário: ${error.code || error.message}`, "error");
+        setStatus(`Falha ao editar usuario: ${error.code || error.message}`, "error");
       }
     }
   }
@@ -529,10 +588,58 @@
 
   async function handleLogout() {
     try {
-      await fetch("/api/auth/logout", { method: "POST", credentials: "include" });
-      window.location.href = "conta.html";
+      await fetch("/api/studio-auth/logout", { method: "POST", credentials: "include" });
+      redirectToStudioLogin();
     } catch {
-      window.location.href = "conta.html";
+      redirectToStudioLogin();
+    }
+  }
+
+  async function handleRecoveryRegenerate() {
+    const password = window.prompt("Confirme sua senha para gerar novos codigos MFA:");
+    if (password == null) return;
+    const token = window.prompt("Digite o codigo MFA atual (6 digitos):");
+    if (token == null) return;
+
+    try {
+      const data = await api("/api/studio-auth/mfa/recovery/regenerate", {
+        method: "POST",
+        body: JSON.stringify({
+          password: String(password || ""),
+          token: String(token || "").replace(/\D/g, "").slice(0, 6)
+        })
+      });
+      const codes = Array.isArray(data?.recoveryCodes) ? data.recoveryCodes : [];
+      if (codes.length > 0) {
+        window.alert(`Novos codigos de recuperacao:\n\n${codes.join("\n")}`);
+      }
+      setStatus("Codigos de recuperacao atualizados.", "ok");
+    } catch (error) {
+      setStatus(`Falha ao renovar codigos MFA: ${error.code || error.message}`, "error");
+    }
+  }
+
+  async function handleDisableMfa() {
+    const confirmDisable = window.confirm("Desativar MFA agora? O painel sera bloqueado ate nova configuracao.");
+    if (!confirmDisable) return;
+
+    const password = window.prompt("Confirme sua senha:");
+    if (password == null) return;
+    const token = window.prompt("Digite o codigo MFA atual (6 digitos):");
+    if (token == null) return;
+
+    try {
+      await api("/api/studio-auth/mfa/disable", {
+        method: "POST",
+        body: JSON.stringify({
+          password: String(password || ""),
+          token: String(token || "").replace(/\D/g, "").slice(0, 6)
+        })
+      });
+      setStatus("MFA desativado. Configure novamente para operar o Studio.", "ok");
+      redirectToStudioLogin("mfa_setup_required");
+    } catch (error) {
+      setStatus(`Falha ao desativar MFA: ${error.code || error.message}`, "error");
     }
   }
 
@@ -544,6 +651,8 @@
     });
 
     dom.refreshAllBtn?.addEventListener("click", loadAll);
+    dom.regenerateRecoveryBtn?.addEventListener("click", handleRecoveryRegenerate);
+    dom.disableMfaBtn?.addEventListener("click", handleDisableMfa);
     dom.logoutBtn?.addEventListener("click", handleLogout);
 
     dom.usersRefreshBtn?.addEventListener("click", loadUsers);

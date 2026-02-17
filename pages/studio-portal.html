@@ -13,7 +13,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;600&family=Montserrat:wght@400;500;600&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="css/studio-portal.css?v=20260217b" />
+  <link rel="stylesheet" href="css/studio-portal.css?v=20260217c" />
 </head>
 <body>
   <main class="admin-wrap">
@@ -25,6 +25,8 @@
       </div>
       <div class="admin-head-actions">
         <button id="refreshAllBtn" type="button" class="btn">Atualizar tudo</button>
+        <button id="regenerateRecoveryBtn" type="button" class="btn btn-ghost">Novos codigos MFA</button>
+        <button id="disableMfaBtn" type="button" class="btn btn-danger">Desativar MFA</button>
         <button id="logoutBtn" type="button" class="btn btn-ghost">Sair</button>
       </div>
     </header>
@@ -33,8 +35,8 @@
 
     <section id="adminLocked" class="panel" hidden>
       <h2>Acesso restrito</h2>
-      <p>Entre com um usuário administrador para acessar o painel.</p>
-      <a class="btn" href="conta.html">Ir para login</a>
+      <p>Entre com o login exclusivo do Studio para acessar o painel.</p>
+      <a class="btn" href="studio-login.html">Ir para login do Studio</a>
     </section>
 
     <section id="adminApp" hidden>
@@ -189,6 +191,6 @@
     </section>
   </main>
 
-  <script src="JS/studio-portal.js?v=20260217b"></script>
+  <script src="JS/studio-portal.js?v=20260217c"></script>
 </body>
 </html>

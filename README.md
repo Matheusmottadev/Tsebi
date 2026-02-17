@@ -34,6 +34,10 @@ SESSION_SECRET=change-this-secret
 SESSION_COOKIE_NAME=tsebi.sid
 CORS_ORIGIN=http://localhost:4242
 ADMIN_EMAILS=admin@seudominio.com.br
+ADMIN_MFA_ENCRYPTION_KEY=defina-uma-chave-forte-unica-aqui
+ADMIN_IDLE_TIMEOUT_MINUTES=20
+ADMIN_MFA_ISSUER=Tsebi Studio
+ADMIN_CSRF_COOKIE_NAME=tsebi.admin.csrf
 ```
 
 ## Rodando local com PostgreSQL
@@ -92,6 +96,16 @@ Observacoes:
 - `POST /api/auth/forgot-password`
 - `POST /api/auth/reset-password`
 
+### Endpoints Studio Auth (admin)
+
+- `GET /api/studio-auth/me`
+- `POST /api/studio-auth/login`
+- `POST /api/studio-auth/mfa/setup/init`
+- `POST /api/studio-auth/mfa/verify`
+- `POST /api/studio-auth/mfa/recovery/regenerate`
+- `POST /api/studio-auth/mfa/disable`
+- `POST /api/studio-auth/logout`
+
 ### Recuperacao de senha
 
 - `forgot-password` gera token com expiracao e salva no DB.
@@ -121,10 +135,23 @@ Observacoes:
 - Senha com hash `bcrypt`
 - Cookies de sessao: `httpOnly`, `sameSite=lax`, `secure` somente em producao
 
+## Seguranca do Studio (admin)
+
+- Login do Studio separado do login de cliente:
+  - Pagina: `/studio-login` (ou `/studio-login.html`)
+  - Loading: `/studio` (ou `/loading-studio.html`)
+  - Painel: `/studio-portal` (ou `/studio-portal.html`)
+- MFA TOTP obrigatorio para admins (`/api/studio-auth/*`).
+- Segredo MFA admin criptografado no banco usando `ADMIN_MFA_ENCRYPTION_KEY`.
+- Codigos de recuperacao de MFA armazenados em hash e consumidos 1x.
+- Timeout de inatividade admin controlado por `ADMIN_IDLE_TIMEOUT_MINUTES`.
+- CSRF em rotas mutaveis admin (`POST/PATCH/DELETE`) com validacao de cookie + header `x-csrf-token`.
+- Logout do cliente e logout do Studio sao separados para evitar mistura de fluxo.
+
 ## Admin panel
 
-- URL: `/studio-portal` (ou `/studio-portal.html`)
-- Requer usuario logado cujo email esteja em `ADMIN_EMAILS` (separado por virgula)
+- URL principal: `/studio` (loading) -> `/studio-login` -> `/studio-portal`
+- Requer email em `ADMIN_EMAILS` e MFA concluido
 - Modulos iniciais:
   - Usuarios (listar, criar, editar, excluir)
   - Pedidos (listar, alterar status)
@@ -141,6 +168,14 @@ Pode ser usado em Render/Railway/Fly:
 4. Publicar app com `npm start`
 5. Garantir HTTPS
 6. Configurar webhook Stripe para `/api/stripe/webhook`
+
+### Variaveis obrigatorias em Railway/Vercel (Studio)
+
+- `ADMIN_EMAILS` com os emails admin (separados por virgula)
+- `ADMIN_MFA_ENCRYPTION_KEY` (chave forte exclusiva para criptografar segredo MFA)
+- `ADMIN_IDLE_TIMEOUT_MINUTES` (ex.: `20`)
+- `ADMIN_MFA_ISSUER` (nome exibido no app autenticador, ex.: `Tsebi Studio`)
+- `ADMIN_CSRF_COOKIE_NAME` (opcional; padrao `tsebi.admin.csrf`)
 
 ## Compatibilidade
 
