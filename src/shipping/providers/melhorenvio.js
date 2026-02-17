@@ -209,6 +209,11 @@ function toAddressLine(street, number) {
   return [a, b].filter(Boolean).join(", ").slice(0, 200);
 }
 
+function toMoney(value) {
+  const num = Math.max(0, toNumber(value, 0));
+  return Number(num.toFixed(2));
+}
+
 function buildSenderAddress() {
   const postalCode = normalizeZip(process.env.SHIP_FROM_ZIP || "");
   return {
@@ -236,7 +241,7 @@ function buildRecipientAddress(order) {
   const city = String(shipping?.city || "").trim();
   const state = String(shipping?.state || "").trim().toUpperCase().slice(0, 2);
   const phone = normalizePhone(String(shipping?.phone || "").trim()) || "11999999999";
-  const email = String(shipping?.email || order?.userEmail || "").trim() || "cliente@tsebi.com.br";
+  const email = String(shipping?.email || order?.userEmail || "").trim().toLowerCase() || "cliente@tsebi.com.br";
 
   return {
     name: fullName,
@@ -251,6 +256,17 @@ function buildRecipientAddress(order) {
     postal_code: toZip,
     country_id: "BR"
   };
+}
+
+function buildVolumes() {
+  return [
+    {
+      height: Math.max(1, Math.round(toNumber(process.env.DEFAULT_PACKAGE_HEIGHT_CM || 5, 5))),
+      width: Math.max(1, Math.round(toNumber(process.env.DEFAULT_PACKAGE_WIDTH_CM || 15, 15))),
+      length: Math.max(1, Math.round(toNumber(process.env.DEFAULT_PACKAGE_LENGTH_CM || 20, 20))),
+      weight: Math.max(0.1, toNumber(process.env.DEFAULT_PACKAGE_WEIGHT_KG || 0.3, 0.3))
+    }
+  ];
 }
 
 async function buyLabel({ order }) {
@@ -289,16 +305,26 @@ async function buyLabel({ order }) {
   const sender = buildSenderAddress();
   const recipient = buildRecipientAddress(order);
   const products = buildProductsForLabel(order);
+  const volumes = buildVolumes();
+  const productsTotal = products.reduce((sum, product) => {
+    const quantity = Math.max(1, toNumber(product?.quantity, 1));
+    const unitaryValue = toMoney(product?.unitary_value);
+    return sum + unitaryValue * quantity;
+  }, 0);
 
   const cartPayload = {
-    service: serviceCode,
+    service: Number(serviceCode),
     from: sender,
     to: recipient,
     products,
+    volumes,
     options: {
       receipt: false,
       own_hand: false,
-      collect: false
+      collect: false,
+      reverse: false,
+      non_commercial: true,
+      insurance_value: toMoney(Math.max(1, productsTotal))
     }
   };
 
