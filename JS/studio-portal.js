@@ -347,6 +347,8 @@
       const error = new Error(String(data && data.error ? data.error : "REQUEST_FAILED"));
       error.code = String(data && data.error ? data.error : "REQUEST_FAILED");
       error.status = response.status;
+      error.detail = data && Object.prototype.hasOwnProperty.call(data, "detail") ? data.detail : null;
+      error.payload = data;
 
       if (!suppressAuthRedirect && isStudioAuthError(error.code)) {
         redirectToStudioLogin(error.code);
@@ -356,6 +358,27 @@
     }
 
     return data;
+  }
+
+  function pickErrorText(error, fallback = "Falha na requisicao.") {
+    const detail = error?.detail || null;
+    if (typeof detail === "string" && detail.trim()) return detail.trim();
+
+    const providerResponse = detail?.response || null;
+    const requestId = providerResponse?.request_id || detail?.request_id || "";
+    const providerMessage =
+      providerResponse?.message ||
+      providerResponse?.error ||
+      detail?.message ||
+      error?.code ||
+      error?.message ||
+      fallback;
+
+    const safeMessage = String(providerMessage || fallback).trim() || fallback;
+    if (requestId) {
+      return `${safeMessage} (request_id: ${requestId})`;
+    }
+    return safeMessage;
   }
 
   function switchTab(tab) {
@@ -1002,7 +1025,7 @@
       } catch (error) {
         target.disabled = false;
         target.textContent = "Rastrear";
-        setStatus(`Falha ao rastrear etiqueta: ${error.code || error.message}`, "error");
+        setStatus(`Falha ao rastrear etiqueta: ${pickErrorText(error, "TRACK_REQUEST_FAILED")}`, "error");
       }
       return;
     }
@@ -1041,7 +1064,7 @@
     } catch (error) {
       target.disabled = false;
       target.textContent = "Comprar etiqueta";
-      setStatus(`Falha ao comprar etiqueta: ${error.code || error.message}`, "error");
+      setStatus(`Falha ao comprar etiqueta: ${pickErrorText(error, "BUY_LABEL_FAILED")}`, "error");
     }
   }
 
