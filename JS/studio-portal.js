@@ -35,8 +35,6 @@
     ordersStatusFilter: document.getElementById("ordersStatusFilter"),
     ordersRefreshBtn: document.getElementById("ordersRefreshBtn"),
     ordersBody: document.getElementById("ordersBody"),
-    shippingOrdersRefreshBtn: document.getElementById("shippingOrdersRefreshBtn"),
-    shippingOrdersBody: document.getElementById("shippingOrdersBody"),
     ordersSaveSectionBtn: document.getElementById("ordersSaveSectionBtn"),
 
     productsSearch: document.getElementById("productsSearch"),
@@ -406,22 +404,57 @@
       const selectOptions = orderStatuses
         .map((status) => `<option value="${status}" ${selectedStatus === status ? "selected" : ""}>${status}</option>`)
         .join("");
+      const shipment = getOrderShippingLabel(order);
+      const shipmentStatus = String(shipment?.status || "").trim();
+      const trackingCode = String(shipment?.trackingCode || "").trim();
+      const buyEnabled = canBuyShippingLabel(order, shipment);
+      const trackEnabled = canTrackShippingLabel(order, shipment);
       row.innerHTML = `
+        <td><small>${escapeHtml(formatDate(order.createdAt))}</small></td>
         <td><small>${escapeHtml(order.id)}</small></td>
         <td>
           <div>${escapeHtml(order.userName || "-")}</div>
           <small>${escapeHtml(order.userEmail || "-")}</small>
         </td>
-        <td>${escapeHtml(moneyFromCents(order.amount, order.currency))}</td>
+        <td>${escapeHtml(moneyFromCents(order.shippingPriceCents || order.shippingAmount || 0, order.currency))}</td>
+        <td>
+          <div>${escapeHtml(moneyFromCents(order.amount, order.currency))}</div>
+          <small>
+            itens ${escapeHtml(moneyFromCents(order.itemsAmount || 0, order.currency))}
+            + frete ${escapeHtml(moneyFromCents(order.shippingPriceCents || order.shippingAmount || 0, order.currency))}
+          </small>
+        </td>
         <td>
           <select data-field="status">${selectOptions}</select>
         </td>
-        <td><small>${escapeHtml(formatDate(order.createdAt))}</small></td>
+        <td>
+          <div>${escapeHtml(formatShippingService(order))}</div>
+          <small>${escapeHtml(shipmentStatus || "-")}</small>
+        </td>
+        <td>
+          <button
+            type="button"
+            class="btn"
+            data-action="shipping-buy-label"
+            ${buyEnabled ? "" : "disabled"}
+          >
+            ${escapeHtml(getShippingActionLabel(order, shipment))}
+          </button>
+        </td>
+        <td>
+          <button
+            type="button"
+            class="btn btn-ghost"
+            data-action="shipping-track-label"
+            ${trackEnabled ? "" : "disabled"}
+          >
+            ${escapeHtml(trackEnabled && trackingCode ? `Rastrear (${trackingCode})` : "Rastrear")}
+          </button>
+        </td>
       `;
       setRowDirty(row, Boolean(state.pendingOrderEdits[String(order.id)]));
       dom.ordersBody.appendChild(row);
     });
-    renderShippingOrders();
   }
 
   function getOrderShippingLabel(order) {
@@ -444,11 +477,13 @@
     return parts.join(" | ") || "-";
   }
 
-  function canBuyShippingLabel(order) {
+  function canBuyShippingLabel(order, shipment = null) {
     const provider = String(order?.shippingSelectedProvider || "").trim().toLowerCase();
     const hasServiceCode = Boolean(String(order?.shippingSelectedServiceCode || "").trim());
     const isPaid = String(order?.status || "").trim().toLowerCase() === "paid";
-    return provider === "melhorenvio" && hasServiceCode && isPaid;
+    const shipmentStatus = String(shipment?.status || "").trim().toUpperCase();
+    const hasBoughtLabel = shipmentStatus === "ETIQUETA_COMPRADA" || shipmentStatus === "EM_TRANSITO" || shipmentStatus === "ENTREGUE";
+    return provider === "melhorenvio" && hasServiceCode && isPaid && !hasBoughtLabel;
   }
 
   function canTrackShippingLabel(order, shipment) {
@@ -457,72 +492,16 @@
     return provider === "melhorenvio" && Boolean(trackingCode);
   }
 
-  function getShippingActionLabel(order) {
-    if (canBuyShippingLabel(order)) return "Comprar etiqueta";
+  function getShippingActionLabel(order, shipment = null) {
+    if (canBuyShippingLabel(order, shipment)) return "Comprar etiqueta";
+    const shipmentStatus = String(shipment?.status || "").trim().toUpperCase();
+    if (shipmentStatus === "ETIQUETA_COMPRADA" || shipmentStatus === "EM_TRANSITO" || shipmentStatus === "ENTREGUE") {
+      return "Etiqueta comprada";
+    }
     const provider = String(order?.shippingSelectedProvider || "").trim().toLowerCase();
     if (provider !== "melhorenvio") return "Sem Melhor Envio";
     if (String(order?.status || "").trim().toLowerCase() !== "paid") return "Aguardando pagamento";
     return "Frete incompleto";
-  }
-
-  function renderShippingOrders() {
-    if (!dom.shippingOrdersBody) return;
-    dom.shippingOrdersBody.innerHTML = "";
-
-    const shippingOrders = state.orders.filter(
-      (order) => String(order?.shippingSelectedProvider || "").trim().toLowerCase() === "melhorenvio"
-    );
-
-    if (shippingOrders.length === 0) {
-      const row = document.createElement("tr");
-      row.innerHTML = `<td colspan="7"><small>Nenhum pedido com Melhor Envio encontrado.</small></td>`;
-      dom.shippingOrdersBody.appendChild(row);
-      return;
-    }
-
-    shippingOrders.forEach((order) => {
-      const row = document.createElement("tr");
-      row.setAttribute("data-order-id", String(order.id));
-      const shipment = getOrderShippingLabel(order);
-      const shipmentStatus = shipment?.status ? String(shipment.status) : "ETIQUETA_PENDENTE";
-      const trackingCode = String(shipment?.trackingCode || "").trim();
-      const trackingCodeView = trackingCode || "-";
-      row.innerHTML = `
-        <td><small>${escapeHtml(order.id)}</small></td>
-        <td>
-          <div>${escapeHtml(order.userName || "-")}</div>
-          <small>${escapeHtml(order.userEmail || "-")}</small>
-        </td>
-        <td>${escapeHtml(moneyFromCents(order.shippingPriceCents || order.shippingAmount || 0, order.currency))}</td>
-        <td>
-          <div>${escapeHtml(formatShippingService(order))}</div>
-          <small>${escapeHtml(shipmentStatus)}</small>
-        </td>
-        <td><small>${escapeHtml(trackingCodeView)}</small></td>
-        <td>${escapeHtml(order.status || "-")}</td>
-        <td>
-          <div class="row-actions">
-            <button
-              type="button"
-              class="btn"
-              data-action="shipping-buy-label"
-              ${canBuyShippingLabel(order) ? "" : "disabled"}
-            >
-              ${escapeHtml(getShippingActionLabel(order))}
-            </button>
-            <button
-              type="button"
-              class="btn btn-ghost"
-              data-action="shipping-track-label"
-              ${canTrackShippingLabel(order, shipment) ? "" : "disabled"}
-            >
-              Rastrear
-            </button>
-          </div>
-        </td>
-      `;
-      dom.shippingOrdersBody.appendChild(row);
-    });
   }
 
   function renderProducts() {
@@ -991,9 +970,9 @@
     const action = String(target.getAttribute("data-action") || "");
     if (!["shipping-buy-label", "shipping-track-label"].includes(action)) return;
 
-    const row = target.closest("tr[data-order-id]");
+    const row = target.closest("tr[data-id]");
     if (!row) return;
-    const orderId = String(row.getAttribute("data-order-id") || "").trim();
+    const orderId = String(row.getAttribute("data-id") || "").trim();
     if (!orderId) return;
 
     const order = state.orders.find((item) => String(item.id) === orderId);
@@ -1013,7 +992,7 @@
           state.shippingLabelsByOrderId[orderId] = shipment;
           order.shipment = shipment;
         }
-        renderShippingOrders();
+        renderOrders();
         setStatus(
           tracking?.status
             ? `Rastreio atualizado: ${tracking.status}`
@@ -1028,7 +1007,8 @@
       return;
     }
 
-    if (!canBuyShippingLabel(order)) return;
+    const currentShipment = getOrderShippingLabel(order);
+    if (!canBuyShippingLabel(order, currentShipment)) return;
 
     const confirmed = await confirmAction({
       title: "Comprar etiqueta",
@@ -1051,7 +1031,7 @@
         state.shippingLabelsByOrderId[orderId] = shipment;
         order.shipment = shipment;
       }
-      renderShippingOrders();
+      renderOrders();
       setStatus(
         shipment?.trackingCode
           ? `Etiqueta comprada com sucesso. Rastreio: ${shipment.trackingCode}`
@@ -1476,8 +1456,7 @@
     });
     dom.ordersStatusFilter?.addEventListener("change", loadOrders);
     dom.ordersBody?.addEventListener("change", handleOrderFieldChange);
-    dom.shippingOrdersRefreshBtn?.addEventListener("click", loadOrders);
-    dom.shippingOrdersBody?.addEventListener("click", handleShippingOrderAction);
+    dom.ordersBody?.addEventListener("click", handleShippingOrderAction);
     dom.ordersSaveSectionBtn?.addEventListener("click", handleOrdersSaveSection);
 
     dom.productsRefreshBtn?.addEventListener("click", loadProducts);
