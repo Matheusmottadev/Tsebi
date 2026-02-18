@@ -37,6 +37,7 @@ const {
   markAdminAuditLogReversed,
   isAuditLogReversible
 } = require("./lib/admin-audit-repository");
+const { listShipmentsByOrderIds } = require("../src/db/queries/shipping.queries");
 const { getVipDatabaseUrl } = require("./lib/vip-db");
 const { requireAdmin, requireAdminCsrfForMutations } = require("./middlewares/requireAdmin");
 
@@ -736,8 +737,15 @@ adminRouter.get("/orders", async (req, res) => {
       return payload.includes(search);
     });
     const paged = paginateArray(filtered, limit, offset);
+    const shipmentsByOrderId = await listShipmentsByOrderIds(
+      paged.rows.map((order) => String(order.id)).filter(Boolean)
+    );
+    const ordersWithShipping = paged.rows.map((order) => ({
+      ...order,
+      shipment: shipmentsByOrderId.get(String(order.id)) || null
+    }));
     return res.json({
-      orders: paged.rows,
+      orders: ordersWithShipping,
       total: paged.total,
       limit: paged.limit,
       offset: paged.offset

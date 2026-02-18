@@ -145,6 +145,22 @@ h1 {
   font-weight: 600;
 }
 
+.subsection-head {
+  margin-top: 18px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.subsection-head h3 {
+  margin: 0;
+  font-family: "Playfair Display", serif;
+  font-size: 22px;
+  font-weight: 600;
+}
+
 .inline-actions {
   display: flex;
   gap: 8px;

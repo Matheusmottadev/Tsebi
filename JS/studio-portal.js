@@ -35,6 +35,8 @@
     ordersStatusFilter: document.getElementById("ordersStatusFilter"),
     ordersRefreshBtn: document.getElementById("ordersRefreshBtn"),
     ordersBody: document.getElementById("ordersBody"),
+    shippingOrdersRefreshBtn: document.getElementById("shippingOrdersRefreshBtn"),
+    shippingOrdersBody: document.getElementById("shippingOrdersBody"),
     ordersSaveSectionBtn: document.getElementById("ordersSaveSectionBtn"),
 
     productsSearch: document.getElementById("productsSearch"),
@@ -73,7 +75,8 @@
     vip: [],
     auditLogs: [],
     pendingOrderEdits: {},
-    pendingProductEdits: {}
+    pendingProductEdits: {},
+    shippingLabelsByOrderId: {}
   };
 
   const orderStatuses = ["pending_payment", "processing", "paid", "failed", "canceled", "refunded"];
@@ -418,6 +421,108 @@
       setRowDirty(row, Boolean(state.pendingOrderEdits[String(order.id)]));
       dom.ordersBody.appendChild(row);
     });
+    renderShippingOrders();
+  }
+
+  function getOrderShippingLabel(order) {
+    const saved = state.shippingLabelsByOrderId[String(order?.id || "")];
+    if (saved) return saved;
+    if (order?.shipment) return order.shipment;
+    return null;
+  }
+
+  function formatShippingService(order) {
+    const carrier = String(order?.shippingSelectedCarrierName || "").trim();
+    const service = String(order?.shippingSelectedService || "").trim();
+    const deadline = order?.shippingDeadlineDays == null ? null : Number(order.shippingDeadlineDays || 0);
+    const parts = [];
+    if (carrier) parts.push(carrier);
+    if (service) parts.push(service);
+    if (deadline != null && Number.isFinite(deadline) && deadline > 0) {
+      parts.push(`${deadline} dia(s)`);
+    }
+    return parts.join(" | ") || "-";
+  }
+
+  function canBuyShippingLabel(order) {
+    const provider = String(order?.shippingSelectedProvider || "").trim().toLowerCase();
+    const hasServiceCode = Boolean(String(order?.shippingSelectedServiceCode || "").trim());
+    const isPaid = String(order?.status || "").trim().toLowerCase() === "paid";
+    return provider === "melhorenvio" && hasServiceCode && isPaid;
+  }
+
+  function canTrackShippingLabel(order, shipment) {
+    const provider = String(order?.shippingSelectedProvider || "").trim().toLowerCase();
+    const trackingCode = String(shipment?.trackingCode || "").trim();
+    return provider === "melhorenvio" && Boolean(trackingCode);
+  }
+
+  function getShippingActionLabel(order) {
+    if (canBuyShippingLabel(order)) return "Comprar etiqueta";
+    const provider = String(order?.shippingSelectedProvider || "").trim().toLowerCase();
+    if (provider !== "melhorenvio") return "Sem Melhor Envio";
+    if (String(order?.status || "").trim().toLowerCase() !== "paid") return "Aguardando pagamento";
+    return "Frete incompleto";
+  }
+
+  function renderShippingOrders() {
+    if (!dom.shippingOrdersBody) return;
+    dom.shippingOrdersBody.innerHTML = "";
+
+    const shippingOrders = state.orders.filter(
+      (order) => String(order?.shippingSelectedProvider || "").trim().toLowerCase() === "melhorenvio"
+    );
+
+    if (shippingOrders.length === 0) {
+      const row = document.createElement("tr");
+      row.innerHTML = `<td colspan="7"><small>Nenhum pedido com Melhor Envio encontrado.</small></td>`;
+      dom.shippingOrdersBody.appendChild(row);
+      return;
+    }
+
+    shippingOrders.forEach((order) => {
+      const row = document.createElement("tr");
+      row.setAttribute("data-order-id", String(order.id));
+      const shipment = getOrderShippingLabel(order);
+      const shipmentStatus = shipment?.status ? String(shipment.status) : "ETIQUETA_PENDENTE";
+      const trackingCode = String(shipment?.trackingCode || "").trim();
+      const trackingCodeView = trackingCode || "-";
+      row.innerHTML = `
+        <td><small>${escapeHtml(order.id)}</small></td>
+        <td>
+          <div>${escapeHtml(order.userName || "-")}</div>
+          <small>${escapeHtml(order.userEmail || "-")}</small>
+        </td>
+        <td>${escapeHtml(moneyFromCents(order.shippingPriceCents || order.shippingAmount || 0, order.currency))}</td>
+        <td>
+          <div>${escapeHtml(formatShippingService(order))}</div>
+          <small>${escapeHtml(shipmentStatus)}</small>
+        </td>
+        <td><small>${escapeHtml(trackingCodeView)}</small></td>
+        <td>${escapeHtml(order.status || "-")}</td>
+        <td>
+          <div class="row-actions">
+            <button
+              type="button"
+              class="btn"
+              data-action="shipping-buy-label"
+              ${canBuyShippingLabel(order) ? "" : "disabled"}
+            >
+              ${escapeHtml(getShippingActionLabel(order))}
+            </button>
+            <button
+              type="button"
+              class="btn btn-ghost"
+              data-action="shipping-track-label"
+              ${canTrackShippingLabel(order, shipment) ? "" : "disabled"}
+            >
+              Rastrear
+            </button>
+          </div>
+        </td>
+      `;
+      dom.shippingOrdersBody.appendChild(row);
+    });
   }
 
   function renderProducts() {
@@ -645,6 +750,12 @@
     const status = encodeURIComponent(String(dom.ordersStatusFilter?.value || "").trim());
     const data = await api(`/api/admin/orders?limit=200&offset=0&search=${search}&status=${status}`);
     state.orders = Array.isArray(data.orders) ? data.orders : [];
+    state.shippingLabelsByOrderId = {};
+    state.orders.forEach((order) => {
+      if (order?.shipment) {
+        state.shippingLabelsByOrderId[String(order.id)] = order.shipment;
+      }
+    });
     state.pendingOrderEdits = {};
     renderOrders();
   }
@@ -871,6 +982,86 @@
       setStatus(`${success} pedido(s) salvo(s) com sucesso.`, "ok");
     } else {
       setStatus(`Salvou ${success}/${entries.length} pedidos. Verifique os restantes.`, "error");
+    }
+  }
+
+  async function handleShippingOrderAction(event) {
+    const target = event.target instanceof Element ? event.target.closest("button[data-action]") : null;
+    if (!(target instanceof HTMLButtonElement)) return;
+    const action = String(target.getAttribute("data-action") || "");
+    if (!["shipping-buy-label", "shipping-track-label"].includes(action)) return;
+
+    const row = target.closest("tr[data-order-id]");
+    if (!row) return;
+    const orderId = String(row.getAttribute("data-order-id") || "").trim();
+    if (!orderId) return;
+
+    const order = state.orders.find((item) => String(item.id) === orderId);
+    if (!order) return;
+
+    if (action === "shipping-track-label") {
+      const currentShipment = getOrderShippingLabel(order);
+      if (!canTrackShippingLabel(order, currentShipment)) return;
+
+      target.disabled = true;
+      target.textContent = "Rastreando...";
+      try {
+        const data = await api(`/api/admin/orders/${encodeURIComponent(orderId)}/shipping/track`);
+        const shipment = data?.data?.shipment || null;
+        const tracking = data?.data?.tracking || null;
+        if (shipment) {
+          state.shippingLabelsByOrderId[orderId] = shipment;
+          order.shipment = shipment;
+        }
+        renderShippingOrders();
+        setStatus(
+          tracking?.status
+            ? `Rastreio atualizado: ${tracking.status}`
+            : "Rastreio atualizado com sucesso.",
+          "ok"
+        );
+      } catch (error) {
+        target.disabled = false;
+        target.textContent = "Rastrear";
+        setStatus(`Falha ao rastrear etiqueta: ${error.code || error.message}`, "error");
+      }
+      return;
+    }
+
+    if (!canBuyShippingLabel(order)) return;
+
+    const confirmed = await confirmAction({
+      title: "Comprar etiqueta",
+      message: `Comprar etiqueta do Melhor Envio para o pedido ${orderId}?`,
+      confirmLabel: "Comprar agora",
+      tone: "ok"
+    });
+    if (!confirmed) return;
+
+    target.disabled = true;
+    target.textContent = "Comprando...";
+
+    try {
+      const data = await api(`/api/admin/orders/${encodeURIComponent(orderId)}/shipping/buy-label`, {
+        method: "POST",
+        body: JSON.stringify({})
+      });
+      const shipment = data?.data?.shipment || null;
+      if (shipment) {
+        state.shippingLabelsByOrderId[orderId] = shipment;
+        order.shipment = shipment;
+      }
+      renderShippingOrders();
+      setStatus(
+        shipment?.trackingCode
+          ? `Etiqueta comprada com sucesso. Rastreio: ${shipment.trackingCode}`
+          : "Etiqueta comprada com sucesso.",
+        "ok"
+      );
+    } catch (error) {
+      target.disabled = false;
+      target.textContent = "Comprar etiqueta";
+      setStatus(`Falha ao comprar etiqueta: ${error.code || error.message}`, "error");
     }
   }
 
@@ -1285,6 +1476,8 @@
     });
     dom.ordersStatusFilter?.addEventListener("change", loadOrders);
     dom.ordersBody?.addEventListener("change", handleOrderFieldChange);
+    dom.shippingOrdersRefreshBtn?.addEventListener("click", loadOrders);
+    dom.shippingOrdersBody?.addEventListener("click", handleShippingOrderAction);
     dom.ordersSaveSectionBtn?.addEventListener("click", handleOrdersSaveSection);
 
     dom.productsRefreshBtn?.addEventListener("click", loadProducts);

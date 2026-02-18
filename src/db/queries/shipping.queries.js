@@ -238,6 +238,27 @@ async function findShipmentByOrderId(orderId) {
   return mapShipmentRow(result.rows[0] || null);
 }
 
+async function listShipmentsByOrderIds(orderIds = []) {
+  if (!Array.isArray(orderIds) || orderIds.length === 0) return new Map();
+
+  const result = await query(
+    `
+    SELECT *
+    FROM shipments
+    WHERE order_id = ANY($1::uuid[])
+    `,
+    [orderIds]
+  );
+
+  const byOrderId = new Map();
+  result.rows.forEach((row) => {
+    const shipment = mapShipmentRow(row);
+    if (!shipment) return;
+    byOrderId.set(String(shipment.orderId), shipment);
+  });
+  return byOrderId;
+}
+
 async function markShipmentLabelPurchased({
   orderId,
   labelExternalId,
@@ -313,6 +334,7 @@ module.exports = {
   applyShippingSelectionToOrder,
   upsertShipmentPending,
   findShipmentByOrderId,
+  listShipmentsByOrderIds,
   markShipmentLabelPurchased,
   updateShipmentTracking
 };
