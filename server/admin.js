@@ -48,7 +48,14 @@ const {
 } = require("./lib/admin-audit-repository");
 const { ensureAdminProfile, updateAdminProfile } = require("./lib/admin-profile-repository");
 const { listAdminLoginEvents } = require("./lib/admin-login-events-repository");
-const { uploadBuffer: uploadR2Buffer } = require("./lib/cloudflare-r2-upload");
+// Lazy load R2 upload module to avoid build-time errors
+let uploadR2Buffer = null;
+function getR2Upload() {
+  if (!uploadR2Buffer) {
+    uploadR2Buffer = require("./lib/cloudflare-r2-upload").uploadBuffer;
+  }
+  return uploadR2Buffer;
+}
 const { listShipmentsByOrderIds } = require("../src/db/queries/shipping.queries");
 const { getVipDatabaseUrl } = require("./lib/vip-db");
 const { requireAdmin, requireAdminCsrfForMutations } = require("./middlewares/requireAdmin");
@@ -1337,7 +1344,7 @@ adminRouter.post(
 
       const folder = String(process.env.R2_FOLDER || "tsebi/products").trim() || "tsebi/products";
       const publicId = `product_${String(before.sku || before.id || id).trim()}`;
-      const uploaded = await uploadR2Buffer(req.body, { folder, publicId });
+      const uploaded = await getR2Upload()(req.body, { folder, publicId });
       const url = String(uploaded?.secure_url || uploaded?.url || "").trim();
       if (!url) return res.status(500).json({ error: "IMAGE_UPLOAD_FAILED" });
 
