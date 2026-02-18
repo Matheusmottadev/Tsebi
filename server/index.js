@@ -429,6 +429,10 @@ async function processWebhookEvent(event) {
         `,
         [order.id]
       );
+      const previousStatus = String(order.status || "").toLowerCase();
+      if (previousStatus !== "processing" && previousStatus !== "paid") {
+        pendingNotifications.push({ type: "payment_confirmed", orderId: order.id });
+      }
       pendingNotifications.push({ type: "payment_approved", orderId: order.id });
       return;
     }
@@ -438,6 +442,10 @@ async function processWebhookEvent(event) {
         `UPDATE orders SET status = 'processing', updated_at = NOW() WHERE id = $1`,
         [order.id]
       );
+      const previousStatus = String(order.status || "").toLowerCase();
+      if (previousStatus !== "processing" && previousStatus !== "paid") {
+        pendingNotifications.push({ type: "payment_confirmed", orderId: order.id });
+      }
       return;
     }
 
@@ -487,10 +495,16 @@ async function processWebhookEvent(event) {
   });
 
   for (const notification of pendingNotifications) {
-    if (notification.type !== "payment_approved") continue;
+    if (notification.type !== "payment_approved" && notification.type !== "payment_confirmed") continue;
     try {
       const order = await findOrderById(notification.orderId);
-      if (order && String(order.status || "").toLowerCase() === "paid") {
+      if (!order) continue;
+      const currentStatus = String(order.status || "").toLowerCase();
+      if (notification.type === "payment_confirmed" && (currentStatus === "processing" || currentStatus === "paid")) {
+        await notifyOrderConfirmed(order);
+        continue;
+      }
+      if (notification.type === "payment_approved" && currentStatus === "paid") {
         await notifyPaymentApproved(order);
       }
     } catch {}
@@ -784,10 +798,6 @@ app.post("/api/orders/payment-intent", requireAuth, paymentIntentRateLimit, asyn
     const updatedOrder = await updateOrder(order.id, {
       stripePaymentIntentId: paymentIntent.id
     });
-
-    if (updatedOrder) {
-      notifyOrderConfirmed(updatedOrder).catch(() => {});
-    }
 
     return res.status(201).json({ orderId: updatedOrder.id, clientSecret: paymentIntent.client_secret });
   } catch (error) {
