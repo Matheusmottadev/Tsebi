@@ -27,7 +27,9 @@ const { checkAvailability, commitStock } = require("./lib/inventory-repository")
 const { withTransaction } = require("./lib/db");
 const { shippingRouter } = require("../src/routes/shipping.routes");
 const { adminShippingRouter } = require("../src/routes/admin.shipping.routes");
+const { orderTrackingRouter } = require("../src/routes/order-tracking.routes");
 const { resolveQuoteForCheckout, selectShippingForOrder } = require("../src/shipping/shipping.service");
+const { syncMelhorEnvioTrackingJob } = require("../src/shipping/order-tracking.service");
 
 dotenv.config();
 
@@ -40,6 +42,7 @@ const stripeSecretKey = process.env.STRIPE_SECRET_KEY || "";
 const stripePublishableKey = process.env.STRIPE_PUBLISHABLE_KEY || "";
 const stripeWebhookSecret = process.env.STRIPE_WEBHOOK_SECRET || "";
 const stripe = stripeSecretKey ? new Stripe(stripeSecretKey) : null;
+let melhorEnvioSyncTimer = null;
 
 app.set("trust proxy", 1);
 
@@ -158,6 +161,51 @@ function normalizeItemsForComparison(items) {
     }))
     .filter((item) => item.id)
     .sort((a, b) => a.id.localeCompare(b.id));
+}
+
+function parseBooleanEnv(value, fallback = false) {
+  const normalized = String(value || "").trim().toLowerCase();
+  if (!normalized) return fallback;
+  if (["1", "true", "yes", "on"].includes(normalized)) return true;
+  if (["0", "false", "no", "off"].includes(normalized)) return false;
+  return fallback;
+}
+
+function getMelhorEnvioSyncIntervalMs() {
+  const rawMinutes = Number(process.env.MELHORENVIO_SYNC_INTERVAL_MINUTES || 45);
+  const minutes = Number.isFinite(rawMinutes) ? rawMinutes : 45;
+  const bounded = Math.max(30, Math.min(60, Math.round(minutes)));
+  return bounded * 60 * 1000;
+}
+
+async function runScheduledMelhorEnvioSync() {
+  try {
+    const result = await syncMelhorEnvioTrackingJob({ limit: 150 });
+    // eslint-disable-next-line no-console
+    console.log("[melhorenvio-sync] completed", result);
+  } catch (error) {
+    // eslint-disable-next-line no-console
+    console.error("[melhorenvio-sync] failed", String(error?.message || "unknown_error"));
+  }
+}
+
+function startMelhorEnvioSyncScheduler() {
+  if (isVercelRuntime) return;
+  if (parseBooleanEnv(process.env.MELHORENVIO_SYNC_DISABLE_AUTO, false)) return;
+  if (melhorEnvioSyncTimer) return;
+
+  const intervalMs = getMelhorEnvioSyncIntervalMs();
+  melhorEnvioSyncTimer = setInterval(() => {
+    runScheduledMelhorEnvioSync();
+  }, intervalMs);
+
+  if (typeof melhorEnvioSyncTimer.unref === "function") {
+    melhorEnvioSyncTimer.unref();
+  }
+
+  if (parseBooleanEnv(process.env.MELHORENVIO_SYNC_RUN_ON_BOOT, false)) {
+    runScheduledMelhorEnvioSync();
+  }
 }
 
 function areSameItemSet(a, b) {
@@ -610,6 +658,7 @@ app.use("/api/my", myRouter);
 app.use("/api/studio-auth", studioAuthRouter);
 app.use("/api/vip", vipRouter);
 app.use("/api", shippingRouter);
+app.use("/api", orderTrackingRouter);
 app.use("/api/admin", adminRouter);
 app.use("/api/admin", adminShippingRouter);
 
@@ -825,6 +874,7 @@ app.get("/api/orders/:orderId", requireAuth, async (req, res) => {
 });
 
 if (!isVercelRuntime) {
+  startMelhorEnvioSyncScheduler();
   app.listen(port, () => {
     // eslint-disable-next-line no-console
     console.log(`TSEBI server running on http://localhost:${port}`);

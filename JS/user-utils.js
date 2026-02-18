@@ -105,6 +105,8 @@
     if (code === "REFUND_WINDOW_EXPIRED") return "Prazo de reembolso expirado (10 minutos após a compra).";
     if (code === "CANCEL_FAILED") return "Não foi possível cancelar o pedido.";
     if (code === "REFUND_FAILED") return "Não foi possível solicitar o reembolso.";
+    if (code === "TOO_MANY_REQUESTS") return "Muitas tentativas. Aguarde e tente novamente.";
+    if (code === "FORBIDDEN") return "Acesso não autorizado.";
     return "Não foi possível concluir a operação.";
   }
 
@@ -356,6 +358,28 @@
     }
   }
 
+  async function fetchTrackingOrders() {
+    try {
+      const data = await apiRequest("/api/account/orders", { method: "GET" });
+      return { ok: true, orders: Array.isArray(data.orders) ? data.orders : [] };
+    } catch (error) {
+      return { ok: false, error: mapAuthError(error.message), code: String(error.message || ""), orders: [] };
+    }
+  }
+
+  async function fetchTrackOrderByNumberAndEmail(orderNumber, email) {
+    try {
+      const params = new URLSearchParams({
+        orderNumber: String(orderNumber || "").trim(),
+        email: normalizeEmail(email)
+      });
+      const data = await apiRequest(`/api/orders/track?${params.toString()}`, { method: "GET" });
+      return { ok: true, order: data.order || null };
+    } catch (error) {
+      return { ok: false, error: mapAuthError(error.message), code: String(error.message || ""), order: null };
+    }
+  }
+
   async function cancelMyOrder(orderId) {
     try {
       const id = encodeURIComponent(String(orderId || "").trim());
@@ -556,6 +580,8 @@
     fetchMe,
     fetchMyOrders,
     fetchMyOrder,
+    fetchTrackingOrders,
+    fetchTrackOrderByNumberAndEmail,
     cancelMyOrder,
     refundMyOrder,
     updateMyProfile,

@@ -7,9 +7,15 @@ const profileBirthDateInput = document.getElementById("profileBirthDate");
 const profileCpfInput = document.getElementById("profileCpf");
 const profileCepInput = document.getElementById("profileCep");
 const profileForm = document.getElementById("profileForm");
-const trackOrderForm = document.getElementById("trackOrderForm");
-const trackOrderIdInput = document.getElementById("trackOrderId");
 const trackOrderResult = document.getElementById("trackOrderResult");
+const trackingPublicSearch = document.getElementById("trackingPublicSearch");
+const trackingAccountOrdersWrap = document.getElementById("trackingAccountOrdersWrap");
+const trackingOrdersList = document.getElementById("trackingOrdersList");
+const trackingLoading = document.getElementById("trackingLoading");
+const trackingEmptyState = document.getElementById("trackingEmptyState");
+const publicTrackForm = document.getElementById("publicTrackForm");
+const publicTrackOrderNumberInput = document.getElementById("publicTrackOrderNumber");
+const publicTrackEmailInput = document.getElementById("publicTrackEmail");
 const ordersList = document.getElementById("ordersList");
 const ordersEmpty = document.getElementById("ordersEmpty");
 const feedbackEl = document.getElementById("accountFeedback");
@@ -33,10 +39,33 @@ const cancelAddressEditBtn = document.getElementById("cancelAddressEditBtn");
 const addressesList = document.getElementById("addressesList");
 const addressesEmpty = document.getElementById("addressesEmpty");
 
+const ACCOUNT_PANEL_NAMES = new Set(["track", "history", "profile", "addresses", "favorites"]);
+const TRACKING_STEPS = [
+  "ORDER_PLACED",
+  "PROCESSING",
+  "SHIPPED",
+  "IN_TRANSIT",
+  "OUT_FOR_DELIVERY",
+  "DELIVERED",
+  "EXCEPTION"
+];
+
 let myOrders = [];
 let myAddresses = [];
+let trackingOrders = [];
+let selectedTrackingOrderKey = "";
 let defaultAddressId = "";
-const ACCOUNT_PANEL_NAMES = new Set(["track", "history", "profile", "addresses", "favorites"]);
+let currentUser = null;
+let isPublicTrackMode = false;
+
+function escapeHtml(value) {
+  return String(value || "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/\"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
 
 function formatCurrencyFromCents(value, currency = "brl") {
   return (Number(value || 0) / 100).toLocaleString("pt-BR", {
@@ -56,6 +85,29 @@ function formatOrderStatus(status) {
   return s || "N/A";
 }
 
+function formatTrackingStatus(status) {
+  const value = String(status || "").toUpperCase();
+  if (value === "ORDER_PLACED") return "Confirmado";
+  if (value === "PROCESSING") return "Em preparação";
+  if (value === "SHIPPED") return "Postado";
+  if (value === "IN_TRANSIT") return "Em transporte";
+  if (value === "OUT_FOR_DELIVERY") return "Saiu para entrega";
+  if (value === "DELIVERED") return "Entregue";
+  if (value === "EXCEPTION") return "Problema";
+  return "Em transporte";
+}
+
+function formatTrackingStepName(step) {
+  if (step === "ORDER_PLACED") return "Confirmado";
+  if (step === "PROCESSING") return "Preparação";
+  if (step === "SHIPPED") return "Postado";
+  if (step === "IN_TRANSIT") return "Transporte";
+  if (step === "OUT_FOR_DELIVERY") return "Saiu para entrega";
+  if (step === "DELIVERED") return "Entregue";
+  if (step === "EXCEPTION") return "Problema";
+  return step;
+}
+
 function formatOrderDate(dateValue) {
   const date = new Date(dateValue);
   if (Number.isNaN(date.getTime())) return "-";
@@ -67,20 +119,42 @@ function normalizeOrderIdentifier(value) {
 }
 
 function formatOrderDisplayId(order) {
+  const orderNumber = String(order?.orderNumber || "").trim();
+  if (orderNumber) return orderNumber;
   const rawId = String(order?.id || "").trim();
   if (!rawId) return "-";
   const compact = normalizeOrderIdentifier(rawId);
-  const shortCode = compact.slice(-8) || compact;
+  const shortCode = compact.slice(-10) || compact;
   return `PED-${shortCode}`;
 }
 
-function orderMatchesIdentifier(order, input) {
-  const search = normalizeOrderIdentifier(input);
-  if (!search) return false;
-  const full = normalizeOrderIdentifier(order?.id);
-  if (!full) return false;
-  const shortCode = full.slice(-8);
-  return search === full || search === shortCode || search === `PED${shortCode}`;
+function normalizePanelName(value) {
+  const panelName = String(value || "").trim().toLowerCase();
+  return ACCOUNT_PANEL_NAMES.has(panelName) ? panelName : "";
+}
+
+function getInitialPanelFromLocation() {
+  const params = new URLSearchParams(window.location.search);
+  const fromQuery = normalizePanelName(params.get("panel"));
+  if (fromQuery) return fromQuery;
+
+  const fromHash = normalizePanelName(String(window.location.hash || "").replace(/^#/, ""));
+  if (fromHash) return fromHash;
+
+  return "track";
+}
+
+function activatePanel(name) {
+  navButtons.forEach((button) => {
+    const active = button.dataset.panel === name;
+    button.classList.toggle("is-active", active);
+  });
+
+  panels.forEach((panel) => {
+    const active = panel.dataset.panel === name;
+    panel.hidden = !active;
+    panel.classList.toggle("is-active", active);
+  });
 }
 
 function setFeedback(message, isError = false) {
@@ -117,33 +191,199 @@ function normalizeBirthDate(value) {
   return `${yyyy}-${mm}-${dd}`;
 }
 
-function activatePanel(name) {
-  navButtons.forEach((button) => {
-    const active = button.dataset.panel === name;
-    button.classList.toggle("is-active", active);
-  });
+function setTrackingLoading(isLoading) {
+  if (!trackingLoading) return;
+  trackingLoading.hidden = !isLoading;
+}
 
-  panels.forEach((panel) => {
-    const active = panel.dataset.panel === name;
-    panel.hidden = !active;
-    panel.classList.toggle("is-active", active);
+function setTrackingEmptyState(message = "") {
+  if (!trackingEmptyState) return;
+  if (!message) {
+    trackingEmptyState.hidden = true;
+    trackingEmptyState.textContent = "";
+    return;
+  }
+
+  trackingEmptyState.hidden = false;
+  trackingEmptyState.textContent = message;
+}
+
+function clearTrackingResult() {
+  if (!trackOrderResult) return;
+  trackOrderResult.hidden = true;
+  trackOrderResult.innerHTML = "";
+}
+
+function formatTrackingDate(dateValue) {
+  const date = new Date(dateValue || "");
+  if (Number.isNaN(date.getTime())) return "-";
+  return date.toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo" });
+}
+
+function buildTimelineMarkup(currentStatus) {
+  const status = String(currentStatus || "").toUpperCase();
+  const activeIndex = Math.max(0, TRACKING_STEPS.indexOf(status));
+
+  return TRACKING_STEPS.map((step, index) => {
+    let stateClass = "is-pending";
+    if (index < activeIndex) stateClass = "is-complete";
+    if (index === activeIndex) stateClass = "is-active";
+
+    return `
+      <li class="tracking-step ${stateClass}">
+        <span class="tracking-step-dot" aria-hidden="true"></span>
+        <span class="tracking-step-name">${escapeHtml(formatTrackingStepName(step))}</span>
+      </li>
+    `;
+  }).join("");
+}
+
+function renderTrackingOrder(order) {
+  if (!trackOrderResult) return;
+  if (!order) {
+    clearTrackingResult();
+    return;
+  }
+
+  const orderNumber = formatOrderDisplayId(order);
+  const statusLabel = formatTrackingStatus(order.currentStatus);
+  const events = Array.isArray(order.trackingEvents) ? [...order.trackingEvents] : [];
+  const eventsDesc = events.sort((a, b) => new Date(b.occurredAt || 0).getTime() - new Date(a.occurredAt || 0).getTime());
+  const items = Array.isArray(order.items) ? order.items : [];
+
+  const eventsMarkup = eventsDesc.length
+    ? eventsDesc
+        .map((event) => `
+          <article class="tracking-event-item">
+            <p class="tracking-event-date">${escapeHtml(formatTrackingDate(event.occurredAt))}</p>
+            <p class="tracking-event-description">${escapeHtml(event.description || "Atualização de rastreio")}</p>
+            ${event.location ? `<p class="tracking-event-location">${escapeHtml(event.location)}</p>` : ""}
+          </article>
+        `)
+        .join("")
+    : `<p class="tracking-event-description">Sem eventos de rastreio no momento.</p>`;
+
+  const itemsMarkup = items.length
+    ? items
+        .map((item) => {
+          const image = String(item.image || "images/produtos/sug1.jpeg").trim() || "images/produtos/sug1.jpeg";
+          return `
+            <article class="tracking-item">
+              <img class="tracking-item-image" src="${escapeHtml(image)}" alt="${escapeHtml(item.name || "Item")}" loading="lazy" />
+              <p class="tracking-item-name">${escapeHtml(item.name || item.id || "Item")}</p>
+              <p class="tracking-item-qty">QTY ${escapeHtml(String(item.qty || 1))}</p>
+            </article>
+          `;
+        })
+        .join("")
+    : `<p class="tracking-event-description">Nenhum item encontrado.</p>`;
+
+  trackOrderResult.hidden = false;
+  trackOrderResult.innerHTML = `
+    <section class="tracking-order-main">
+      <div class="tracking-order-main-grid">
+        <article class="tracking-main-field">
+          <span>Número do pedido</span>
+          <strong>${escapeHtml(orderNumber)}</strong>
+        </article>
+        <article class="tracking-main-field">
+          <span>Data da compra</span>
+          <em>${escapeHtml(formatTrackingDate(order.purchaseDate))}</em>
+        </article>
+        <article class="tracking-main-field">
+          <span>Status atual</span>
+          <span class="tracking-status-badge">${escapeHtml(statusLabel)}</span>
+        </article>
+        <article class="tracking-main-field">
+          <span>Transportadora</span>
+          <em>${escapeHtml(order.carrier || "Melhor Envio")}</em>
+        </article>
+        <article class="tracking-main-field">
+          <span>Código de rastreio</span>
+          <em>${escapeHtml(order.trackingCode || "Aguardando")}</em>
+        </article>
+        <article class="tracking-main-field">
+          <span>Última atualização</span>
+          <em>${escapeHtml(formatTrackingDate(order.lastTrackingUpdate || order.updatedAt || order.purchaseDate))}</em>
+        </article>
+      </div>
+    </section>
+
+    <section class="tracking-timeline-card">
+      <h3 class="tracking-section-title">Timeline</h3>
+      <ol class="tracking-timeline">
+        ${buildTimelineMarkup(order.currentStatus)}
+      </ol>
+    </section>
+
+    <section class="tracking-events-card">
+      <h3 class="tracking-section-title">Eventos</h3>
+      <div class="tracking-events-list">
+        ${eventsMarkup}
+      </div>
+    </section>
+
+    <section class="tracking-items-card">
+      <h3 class="tracking-section-title">Itens do pedido</h3>
+      <div class="tracking-items-list">
+        ${itemsMarkup}
+      </div>
+    </section>
+  `;
+}
+
+function renderTrackingOrderChips(orders) {
+  if (!trackingOrdersList) return;
+  trackingOrdersList.innerHTML = "";
+
+  (Array.isArray(orders) ? orders : []).forEach((order) => {
+    const key = String(order.orderNumber || order.id || "").trim();
+    if (!key) return;
+
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "tracking-order-chip";
+    button.setAttribute("data-order-key", key);
+    button.textContent = formatOrderDisplayId(order);
+    button.classList.toggle("is-active", key === selectedTrackingOrderKey);
+    button.addEventListener("click", () => {
+      const email = String(order.email || currentUser?.email || "").trim();
+      if (!email) return;
+      loadTrackingOrderByLookup(key, email);
+    });
+
+    trackingOrdersList.appendChild(button);
   });
 }
 
-function normalizePanelName(value) {
-  const panelName = String(value || "").trim().toLowerCase();
-  return ACCOUNT_PANEL_NAMES.has(panelName) ? panelName : "";
+function markActiveTrackingChip(orderKey) {
+  const key = String(orderKey || "").trim();
+  Array.from(trackingOrdersList?.querySelectorAll(".tracking-order-chip") || []).forEach((node) => {
+    const active = String(node.getAttribute("data-order-key") || "") === key;
+    node.classList.toggle("is-active", active);
+  });
 }
 
-function getInitialPanelFromLocation() {
-  const params = new URLSearchParams(window.location.search);
-  const fromQuery = normalizePanelName(params.get("panel"));
-  if (fromQuery) return fromQuery;
+async function loadTrackingOrderByLookup(orderNumber, email) {
+  setFeedback("");
+  setTrackingEmptyState("");
+  clearTrackingResult();
+  setTrackingLoading(true);
 
-  const fromHash = normalizePanelName(String(window.location.hash || "").replace(/^#/, ""));
-  if (fromHash) return fromHash;
+  const result = await store.fetchTrackOrderByNumberAndEmail(orderNumber, email);
 
-  return "track";
+  setTrackingLoading(false);
+
+  if (!result.ok || !result.order) {
+    setTrackingEmptyState("Não foi possível localizar este pedido.");
+    setFeedback(result.error || "Pedido não encontrado.", true);
+    return;
+  }
+
+  selectedTrackingOrderKey = String(result.order.orderNumber || result.order.id || orderNumber || "").trim();
+  markActiveTrackingChip(selectedTrackingOrderKey);
+  renderTrackingOrder(result.order);
+  setFeedback("Rastreio atualizado.");
 }
 
 function renderUser(user) {
@@ -172,10 +412,10 @@ function renderOrderCard(order) {
   const article = document.createElement("article");
   article.className = "account-order-item";
   article.innerHTML = `
-    <p class="account-order-title">Pedido #${formatOrderDisplayId(order)}</p>
-    <p>Status: ${formatOrderStatus(order.status)}</p>
-    <p>Total: ${formatCurrencyFromCents(order.amount, order.currency)}</p>
-    <p>Data: ${formatOrderDate(order.createdAt)}</p>
+    <p class="account-order-title">Pedido #${escapeHtml(formatOrderDisplayId(order))}</p>
+    <p>Status: ${escapeHtml(formatOrderStatus(order.status))}</p>
+    <p>Total: ${escapeHtml(formatCurrencyFromCents(order.amount, order.currency))}</p>
+    <p>Data: ${escapeHtml(formatOrderDate(order.createdAt))}</p>
     <p><a href="order.html?orderId=${encodeURIComponent(order.id)}">Ver detalhes</a></p>
   `;
   return article;
@@ -194,19 +434,6 @@ function renderOrders(orders) {
   orders.forEach((order) => {
     ordersList.appendChild(renderOrderCard(order));
   });
-}
-
-function renderTrackedOrder(order) {
-  if (!trackOrderResult) return;
-  if (!order) {
-    trackOrderResult.hidden = true;
-    trackOrderResult.innerHTML = "";
-    return;
-  }
-
-  trackOrderResult.hidden = false;
-  trackOrderResult.innerHTML = "";
-  trackOrderResult.appendChild(renderOrderCard(order));
 }
 
 function readAddressForm() {
@@ -272,15 +499,15 @@ function renderAddresses() {
     const article = document.createElement("article");
     article.className = "account-address-item";
     article.innerHTML = `
-      <p class="account-order-title">${address.label}</p>
-      <p>${address.fullName}</p>
-      <p>${address.street}, ${address.number}${address.complement ? ` - ${address.complement}` : ""}</p>
-      <p>${address.district} - ${address.city}/${address.state}</p>
-      <p>CEP: ${formatCep(address.cep)}</p>
+      <p class="account-order-title">${escapeHtml(address.label)}</p>
+      <p>${escapeHtml(address.fullName)}</p>
+      <p>${escapeHtml(address.street)}, ${escapeHtml(address.number)}${address.complement ? ` - ${escapeHtml(address.complement)}` : ""}</p>
+      <p>${escapeHtml(address.district)} - ${escapeHtml(address.city)}/${escapeHtml(address.state)}</p>
+      <p>CEP: ${escapeHtml(formatCep(address.cep))}</p>
       <div class="account-address-item-actions">
-        <button type="button" data-address-action="default" data-address-id="${address.id}" ${address.isDefault ? "disabled" : ""}>${address.isDefault ? "Padrão" : "Definir padrão"}</button>
-        <button type="button" data-address-action="edit" data-address-id="${address.id}">Editar</button>
-        <button type="button" data-address-action="delete" data-address-id="${address.id}">Excluir</button>
+        <button type="button" data-address-action="default" data-address-id="${escapeHtml(address.id)}" ${address.isDefault ? "disabled" : ""}>${address.isDefault ? "Padrão" : "Definir padrão"}</button>
+        <button type="button" data-address-action="edit" data-address-id="${escapeHtml(address.id)}">Editar</button>
+        <button type="button" data-address-action="delete" data-address-id="${escapeHtml(address.id)}">Excluir</button>
       </div>
     `;
     addressesList.appendChild(article);
@@ -318,30 +545,47 @@ async function loadAddresses() {
   applyAddressState(result);
 }
 
-async function handleTrackOrder(event) {
+async function loadTrackingOrdersForAccount() {
+  const result = await store.fetchTrackingOrders();
+  if (!result.ok) {
+    trackingOrders = [];
+    renderTrackingOrderChips([]);
+    setTrackingEmptyState("Não foi possível carregar seus pedidos para rastreamento.");
+    setFeedback(result.error || "Não foi possível carregar o rastreio.", true);
+    return;
+  }
+
+  trackingOrders = Array.isArray(result.orders) ? result.orders : [];
+  if (!trackingOrders.length) {
+    renderTrackingOrderChips([]);
+    setTrackingEmptyState("Você ainda não possui pedidos com rastreamento disponível.");
+    clearTrackingResult();
+    return;
+  }
+
+  if (trackingAccountOrdersWrap) trackingAccountOrdersWrap.hidden = false;
+  renderTrackingOrderChips(trackingOrders);
+
+  const selected =
+    trackingOrders.find((order) => String(order.orderNumber || order.id || "") === selectedTrackingOrderKey) ||
+    trackingOrders[0];
+
+  selectedTrackingOrderKey = String(selected.orderNumber || selected.id || "");
+  markActiveTrackingChip(selectedTrackingOrderKey);
+  await loadTrackingOrderByLookup(selectedTrackingOrderKey, String(selected.email || currentUser?.email || ""));
+}
+
+async function handlePublicTrackSubmit(event) {
   event.preventDefault();
-  const orderId = String(trackOrderIdInput?.value || "").trim();
-  if (!orderId) {
-    setFeedback("Informe o número do pedido.", true);
+  const orderNumber = String(publicTrackOrderNumberInput?.value || "").trim();
+  const email = String(publicTrackEmailInput?.value || "").trim();
+
+  if (!orderNumber || !email) {
+    setFeedback("Informe o número do pedido e o e-mail.", true);
     return;
   }
 
-  const fromList = myOrders.find((order) => orderMatchesIdentifier(order, orderId));
-  if (fromList) {
-    renderTrackedOrder(fromList);
-    setFeedback("Pedido encontrado.");
-    return;
-  }
-
-  const result = await store.fetchMyOrder(orderId);
-  if (!result.ok || !result.order) {
-    renderTrackedOrder(null);
-    setFeedback("Pedido não encontrado na sua conta.", true);
-    return;
-  }
-
-  renderTrackedOrder(result.order);
-  setFeedback("Pedido encontrado.");
+  await loadTrackingOrderByLookup(orderNumber, email);
 }
 
 async function handleProfileUpdate(event) {
@@ -438,32 +682,75 @@ async function handleLogout() {
   window.location.href = "conta.html";
 }
 
+function enterPublicTrackMode() {
+  isPublicTrackMode = true;
+  document.body.classList.add("is-public-track-mode");
+  activatePanel("track");
+
+  navButtons.forEach((button) => {
+    button.hidden = button.dataset.panel !== "track";
+  });
+
+  if (trackingPublicSearch) trackingPublicSearch.hidden = false;
+  if (trackingAccountOrdersWrap) trackingAccountOrdersWrap.hidden = true;
+  if (logoutBtn) logoutBtn.hidden = true;
+  if (titleEl) titleEl.textContent = "Acompanhar pedido";
+  if (emailEl) emailEl.textContent = "Consulte seu pedido sem login";
+
+  const params = new URLSearchParams(window.location.search);
+  const orderNumber = String(params.get("orderNumber") || "").trim();
+  const email = String(params.get("email") || "").trim();
+  if (orderNumber && publicTrackOrderNumberInput) publicTrackOrderNumberInput.value = orderNumber;
+  if (email && publicTrackEmailInput) publicTrackEmailInput.value = email;
+}
+
 async function boot() {
   if (!store) {
     setFeedback("Serviço de conta indisponível.", true);
     return;
   }
 
+  const initialPanel = getInitialPanelFromLocation();
+  activatePanel(initialPanel);
+
   const me = await store.fetchMe();
-  if (!me.ok || !me.user) {
-    window.location.href = "conta.html";
+  const isAuthenticated = Boolean(me.ok && me.user);
+
+  if (!isAuthenticated) {
+    if (initialPanel !== "track") {
+      window.location.href = "conta.html";
+      return;
+    }
+
+    enterPublicTrackMode();
     return;
   }
 
+  currentUser = me.user;
   renderUser(me.user);
   await Promise.all([loadOrders(), loadAddresses()]);
-  activatePanel(getInitialPanelFromLocation());
+
+  if (trackingPublicSearch) trackingPublicSearch.hidden = true;
+  if (trackingAccountOrdersWrap) trackingAccountOrdersWrap.hidden = false;
+
+  if (initialPanel === "track") {
+    await loadTrackingOrdersForAccount();
+  }
 }
 
 navButtons.forEach((button) => {
   button.addEventListener("click", () => {
     const panelName = button.dataset.panel || "track";
+    if (isPublicTrackMode && panelName !== "track") return;
     activatePanel(panelName);
+    if (!isPublicTrackMode && panelName === "track") {
+      loadTrackingOrdersForAccount();
+    }
   });
 });
 
 profileForm?.addEventListener("submit", handleProfileUpdate);
-trackOrderForm?.addEventListener("submit", handleTrackOrder);
+publicTrackForm?.addEventListener("submit", handlePublicTrackSubmit);
 addressForm?.addEventListener("submit", handleAddressSubmit);
 addressesList?.addEventListener("click", handleAddressAction);
 cancelAddressEditBtn?.addEventListener("click", clearAddressForm);

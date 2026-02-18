@@ -1,0 +1,449 @@
+.tracking-lux-shell {
+  display: grid;
+  gap: 20px;
+}
+
+.tracking-lux-header {
+  padding-bottom: 10px;
+  border-bottom: 1px solid #efebe2;
+}
+
+.tracking-lux-kicker {
+  margin: 0;
+  font-family: "Montserrat", sans-serif;
+  letter-spacing: 0.18em;
+  font-size: 10px;
+  text-transform: uppercase;
+  color: #7a756c;
+}
+
+.tracking-lux-header h2 {
+  margin: 10px 0 6px;
+  font-family: "Playfair Display", serif;
+  font-size: clamp(34px, 5vw, 54px);
+  line-height: 1.05;
+  font-weight: 600;
+}
+
+.tracking-lux-header p {
+  margin: 0;
+  font-family: "Montserrat", sans-serif;
+  color: #5c574f;
+  font-size: 13px;
+}
+
+.tracking-orders-label {
+  margin: 0 0 10px;
+  font-family: "Montserrat", sans-serif;
+  letter-spacing: 0.1em;
+  font-size: 11px;
+  text-transform: uppercase;
+  color: #6a655c;
+}
+
+.tracking-orders-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.tracking-order-chip {
+  border: 1px solid #dfd8cc;
+  background: #fcfbf8;
+  color: #282521;
+  min-height: 38px;
+  padding: 0 12px;
+  font-family: "Montserrat", sans-serif;
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: all 0.22s ease;
+}
+
+.tracking-order-chip:hover {
+  border-color: #111;
+  transform: translateY(-1px);
+}
+
+.tracking-order-chip.is-active {
+  background: #111;
+  border-color: #111;
+  color: #fff;
+}
+
+.tracking-search-form {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: 1fr 1fr auto;
+  align-items: end;
+}
+
+.tracking-search-form label {
+  display: grid;
+  gap: 6px;
+}
+
+.tracking-search-form span {
+  font-family: "Montserrat", sans-serif;
+  letter-spacing: 0.1em;
+  font-size: 10px;
+  text-transform: uppercase;
+}
+
+.tracking-search-form input {
+  min-height: 44px;
+  border: 1px solid #d9d2c7;
+  background: #fff;
+  padding: 0 12px;
+  font-family: "Montserrat", sans-serif;
+  font-size: 13px;
+}
+
+.tracking-loading {
+  display: grid;
+  gap: 12px;
+}
+
+.tracking-skeleton {
+  position: relative;
+  border: 1px solid #ece8e0;
+  background: linear-gradient(105deg, #faf8f4 12%, #f0ece4 28%, #faf8f4 44%);
+  background-size: 220% 220%;
+  animation: trackingShimmer 1.2s linear infinite;
+}
+
+.tracking-skeleton-card {
+  height: 140px;
+}
+
+.tracking-skeleton-timeline {
+  height: 92px;
+}
+
+.tracking-skeleton-list {
+  height: 170px;
+}
+
+.tracking-empty-state {
+  margin: 0;
+  border: 1px dashed #d9d2c7;
+  padding: 16px;
+  font-family: "Montserrat", sans-serif;
+  font-size: 13px;
+  color: #666056;
+}
+
+.tracking-order-result {
+  display: grid;
+  gap: 14px;
+  animation: trackingReveal 0.45s ease;
+}
+
+.tracking-order-main {
+  border: 1px solid #e6dfd4;
+  background: #fff;
+  padding: 20px;
+}
+
+.tracking-order-main-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px 18px;
+}
+
+.tracking-main-field {
+  display: grid;
+  gap: 4px;
+}
+
+.tracking-main-field span {
+  font-family: "Montserrat", sans-serif;
+  letter-spacing: 0.1em;
+  font-size: 10px;
+  text-transform: uppercase;
+  color: #7a756c;
+}
+
+.tracking-main-field strong {
+  font-family: "Playfair Display", serif;
+  font-size: 22px;
+  color: #191816;
+}
+
+.tracking-main-field em {
+  font-family: "Montserrat", sans-serif;
+  font-style: normal;
+  font-size: 13px;
+  color: #49453f;
+}
+
+.tracking-status-badge {
+  display: inline-flex;
+  width: fit-content;
+  min-height: 32px;
+  align-items: center;
+  padding: 0 12px;
+  border-radius: 999px;
+  border: 1px solid #131313;
+  background: #131313;
+  color: #fff;
+  font-family: "Montserrat", sans-serif;
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.tracking-timeline-card,
+.tracking-events-card,
+.tracking-items-card {
+  border: 1px solid #e6dfd4;
+  background: #fff;
+  padding: 16px 18px;
+}
+
+.tracking-section-title {
+  margin: 0 0 14px;
+  font-family: "Playfair Display", serif;
+  font-size: 28px;
+}
+
+.tracking-timeline {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 8px;
+  position: relative;
+}
+
+.tracking-timeline::before {
+  content: "";
+  position: absolute;
+  left: 34px;
+  right: 34px;
+  top: 12px;
+  height: 1px;
+  background: #ddd6cb;
+}
+
+.tracking-step {
+  position: relative;
+  display: grid;
+  gap: 8px;
+  justify-items: center;
+  text-align: center;
+}
+
+.tracking-step-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 999px;
+  border: 1px solid #bbb4a8;
+  background: #fff;
+  position: relative;
+  z-index: 1;
+}
+
+.tracking-step.is-complete .tracking-step-dot {
+  border-color: #141311;
+  background: #141311;
+}
+
+.tracking-step.is-active .tracking-step-dot {
+  border-color: #141311;
+  background: #141311;
+  box-shadow: 0 0 0 7px rgba(20, 19, 17, 0.08);
+  animation: trackingPulse 1.5s ease-in-out infinite;
+}
+
+.tracking-step-name {
+  font-family: "Montserrat", sans-serif;
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #5d584f;
+}
+
+.tracking-step.is-active .tracking-step-name {
+  color: #161412;
+  font-weight: 600;
+}
+
+.tracking-events-list {
+  display: grid;
+  gap: 10px;
+}
+
+.tracking-event-item {
+  border-bottom: 1px solid #f0ece5;
+  padding-bottom: 10px;
+  display: grid;
+  gap: 3px;
+}
+
+.tracking-event-item:last-child {
+  border-bottom: 0;
+  padding-bottom: 0;
+}
+
+.tracking-event-date {
+  font-family: "Montserrat", sans-serif;
+  font-size: 11px;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: #7b766c;
+}
+
+.tracking-event-description {
+  font-family: "Montserrat", sans-serif;
+  font-size: 13px;
+  color: #292621;
+}
+
+.tracking-event-location {
+  font-family: "Montserrat", sans-serif;
+  font-size: 12px;
+  color: #636057;
+}
+
+.tracking-items-list {
+  display: grid;
+  gap: 10px;
+}
+
+.tracking-item {
+  display: grid;
+  grid-template-columns: 62px 1fr auto;
+  align-items: center;
+  gap: 10px;
+  border-bottom: 1px solid #f0ece5;
+  padding-bottom: 10px;
+}
+
+.tracking-item:last-child {
+  border-bottom: 0;
+  padding-bottom: 0;
+}
+
+.tracking-item-image {
+  width: 62px;
+  height: 74px;
+  object-fit: cover;
+  background: #f6f3ed;
+}
+
+.tracking-item-name {
+  font-family: "Playfair Display", serif;
+  font-size: 20px;
+  color: #1a1815;
+}
+
+.tracking-item-qty {
+  font-family: "Montserrat", sans-serif;
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #686359;
+}
+
+.account-auth-page.is-public-track-mode .account-sidebar,
+.account-auth-page.is-public-track-mode #panel-history,
+.account-auth-page.is-public-track-mode #panel-profile,
+.account-auth-page.is-public-track-mode #panel-addresses,
+.account-auth-page.is-public-track-mode #panel-favorites {
+  display: none !important;
+}
+
+.account-auth-page.is-public-track-mode .account-shell {
+  grid-template-columns: 1fr;
+}
+
+.account-auth-page.is-public-track-mode .account-content {
+  min-height: auto;
+}
+
+.account-auth-page.is-public-track-mode .account-dashboard-head {
+  justify-content: flex-start;
+}
+
+.account-auth-page.is-public-track-mode #logoutBtn {
+  display: none;
+}
+
+@media (max-width: 980px) {
+  .tracking-search-form {
+    grid-template-columns: 1fr;
+  }
+
+  .tracking-order-main-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .tracking-timeline {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+
+  .tracking-timeline::before {
+    left: 5px;
+    top: 14px;
+    width: 1px;
+    height: calc(100% - 28px);
+    right: auto;
+  }
+
+  .tracking-step {
+    grid-template-columns: auto 1fr;
+    align-items: center;
+    justify-items: start;
+    text-align: left;
+    gap: 10px;
+  }
+
+  .tracking-step-name {
+    font-size: 11px;
+  }
+}
+
+@media (max-width: 680px) {
+  .tracking-order-main-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .tracking-item {
+    grid-template-columns: 52px 1fr;
+  }
+
+  .tracking-item-qty {
+    grid-column: 2;
+  }
+}
+
+@keyframes trackingPulse {
+  0%,
+  100% {
+    box-shadow: 0 0 0 7px rgba(20, 19, 17, 0.08);
+  }
+  50% {
+    box-shadow: 0 0 0 10px rgba(20, 19, 17, 0.14);
+  }
+}
+
+@keyframes trackingShimmer {
+  0% {
+    background-position: 0% 50%;
+  }
+  100% {
+    background-position: 100% 50%;
+  }
+}
+
+@keyframes trackingReveal {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}

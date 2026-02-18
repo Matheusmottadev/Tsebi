@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8" />
@@ -30,12 +30,13 @@
   <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600&family=Montserrat:wght@300;400;500;600&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="css/style.css?v=20260217f" />
   <link rel="stylesheet" href="css/account-auth.css" />
+  <link rel="stylesheet" href="css/order-tracking.css?v=20260218a" />
 </head>
 <body class="account-auth-page">
   <header class="cart-simple-header">
     <a class="cart-simple-logo" href="index.html">TSEBI</a>
     <nav class="cart-simple-actions">
-      <a href="index.html">Voltar à loja</a>
+      <a href="index.html">Voltar Ã  loja</a>
       <a href="cart.html">Carrinho</a>
     </nav>
   </header>
@@ -45,39 +46,64 @@
       <div class="account-dashboard-head">
         <div>
           <p class="account-auth-kicker">Minha conta</p>
-          <h1 id="myAccountTitle">Olá</h1>
+          <h1 id="myAccountTitle">OlÃ¡</h1>
           <p id="myAccountEmail"></p>
         </div>
         <button type="button" class="account-auth-submit account-logout-btn" id="logoutBtn">Sair</button>
       </div>
 
-      <section class="account-shell" aria-label="Menu e conteúdo da conta">
+      <section class="account-shell" aria-label="Menu e conteÃºdo da conta">
         <aside class="account-sidebar">
           <button type="button" class="account-nav-btn is-active" data-panel="track">Acompanhar pedido</button>
-          <button type="button" class="account-nav-btn" data-panel="history">Histórico de pedidos</button>
+          <button type="button" class="account-nav-btn" data-panel="history">HistÃ³rico de pedidos</button>
           <button type="button" class="account-nav-btn" data-panel="profile">Meus dados</button>
-          <button type="button" class="account-nav-btn" data-panel="addresses">Endereços</button>
+          <button type="button" class="account-nav-btn" data-panel="addresses">EndereÃ§os</button>
           <button type="button" class="account-nav-btn" data-panel="favorites">Favoritos</button>
         </aside>
 
         <div class="account-content">
           <section class="account-panel is-active" id="panel-track" data-panel="track">
-            <h2>Acompanhar pedido</h2>
-            <p class="account-panel-note">Digite o número do pedido para consultar o status em tempo real.</p>
-            <form id="trackOrderForm" class="account-auth-form account-track-form" novalidate>
-              <label>
-                <span>Número do pedido</span>
-                <input type="text" id="trackOrderId" placeholder="Ex.: PED-1A2B3C4D" required />
-              </label>
-              <button type="submit" class="account-auth-submit">Buscar pedido</button>
-            </form>
-            <div id="trackOrderResult" class="account-order-single" hidden></div>
+            <div class="tracking-lux-shell">
+              <header class="tracking-lux-header">
+                <p class="tracking-lux-kicker">Order Tracking</p>
+                <h2>Acompanhar pedido</h2>
+                <p>Atualizações em tempo real da sua entrega</p>
+              </header>
+
+              <section id="trackingAccountOrdersWrap" class="tracking-account-orders" hidden>
+                <p class="tracking-orders-label">Seus pedidos</p>
+                <div id="trackingOrdersList" class="tracking-orders-list" role="listbox" aria-label="Lista de pedidos"></div>
+              </section>
+
+              <section id="trackingPublicSearch" class="tracking-public-search" hidden>
+                <form id="publicTrackForm" class="tracking-search-form" novalidate>
+                  <label>
+                    <span>Número do pedido</span>
+                    <input type="text" id="publicTrackOrderNumber" placeholder="Ex.: PED-AB12CD34EF" required />
+                  </label>
+                  <label>
+                    <span>E-mail</span>
+                    <input type="email" id="publicTrackEmail" placeholder="seu@email.com" required />
+                  </label>
+                  <button type="submit" class="account-auth-submit">Buscar</button>
+                </form>
+              </section>
+
+              <section id="trackingLoading" class="tracking-loading" hidden aria-live="polite" aria-label="Carregando rastreio">
+                <div class="tracking-skeleton tracking-skeleton-card"></div>
+                <div class="tracking-skeleton tracking-skeleton-timeline"></div>
+                <div class="tracking-skeleton tracking-skeleton-list"></div>
+              </section>
+
+              <p id="trackingEmptyState" class="tracking-empty-state" hidden>Nenhum pedido encontrado para rastreamento.</p>
+              <div id="trackOrderResult" class="tracking-order-result" hidden></div>
+            </div>
           </section>
 
           <section class="account-panel" id="panel-history" data-panel="history" hidden>
-            <h2>Histórico de pedidos</h2>
+            <h2>HistÃ³rico de pedidos</h2>
             <div id="ordersList" class="account-orders-list"></div>
-            <p id="ordersEmpty" hidden>Você ainda não possui pedidos em sua conta.</p>
+            <p id="ordersEmpty" hidden>VocÃª ainda nÃ£o possui pedidos em sua conta.</p>
           </section>
 
           <section class="account-panel" id="panel-profile" data-panel="profile" hidden>
@@ -104,12 +130,12 @@
           </section>
 
           <section class="account-panel" id="panel-addresses" data-panel="addresses" hidden>
-            <h2>Endereços</h2>
-            <p class="account-panel-note">Cadastre mais de um endereço e defina qual será o padrão para checkout.</p>
+            <h2>EndereÃ§os</h2>
+            <p class="account-panel-note">Cadastre mais de um endereÃ§o e defina qual serÃ¡ o padrÃ£o para checkout.</p>
             <form id="addressForm" class="account-auth-form account-address-form" novalidate>
               <input type="hidden" id="addressId" />
               <label>
-                <span>Apelido do endereço</span>
+                <span>Apelido do endereÃ§o</span>
                 <input type="text" id="addressLabel" placeholder="Ex.: Casa, Trabalho" required />
               </label>
               <label>
@@ -125,7 +151,7 @@
                 <input type="text" id="addressStreet" required />
               </label>
               <label>
-                <span>Número</span>
+                <span>NÃºmero</span>
                 <input type="text" id="addressNumber" required />
               </label>
               <label>
@@ -145,17 +171,17 @@
                 <input type="text" id="addressState" maxlength="2" required />
               </label>
               <div class="account-address-actions">
-                <button type="submit" class="account-auth-submit" id="saveAddressBtn">Salvar endereço</button>
-                <button type="button" class="account-auth-link" id="cancelAddressEditBtn" hidden>Cancelar edição</button>
+                <button type="submit" class="account-auth-submit" id="saveAddressBtn">Salvar endereÃ§o</button>
+                <button type="button" class="account-auth-link" id="cancelAddressEditBtn" hidden>Cancelar ediÃ§Ã£o</button>
               </div>
             </form>
             <div id="addressesList" class="account-address-list"></div>
-            <p id="addressesEmpty" class="account-panel-note" hidden>Nenhum endereço cadastrado.</p>
+            <p id="addressesEmpty" class="account-panel-note" hidden>Nenhum endereÃ§o cadastrado.</p>
           </section>
 
           <section class="account-panel" id="panel-favorites" data-panel="favorites" hidden>
             <h2>Favoritos</h2>
-            <p class="account-panel-note">Em breve você poderá gerenciar seus favoritos nesta tela.</p>
+            <p class="account-panel-note">Em breve vocÃª poderÃ¡ gerenciar seus favoritos nesta tela.</p>
             <a class="account-inline-link" href="index.html">Voltar para a loja</a>
           </section>
         </div>
@@ -165,9 +191,10 @@
     </section>
   </main>
 
-  <script src="JS/user-utils.js?v=20260217b"></script>
-  <script src="JS/minha-conta.js?v=20260217a"></script>
+  <script src="JS/user-utils.js?v=20260218a"></script>
+  <script src="JS/minha-conta.js?v=20260218a"></script>
 </body>
 </html>
+
 
 

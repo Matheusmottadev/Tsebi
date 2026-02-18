@@ -30,6 +30,8 @@ function getConfiguredProviderName() {
   const explicit = String(process.env.SHIPPING_PROVIDER || "").trim().toLowerCase();
   if (explicit) return explicit;
   if (String(process.env.MELHOR_ENVIO_TOKEN || "").trim()) return "melhorenvio";
+  if (String(process.env.MELHORENVIO_CLIENT_ID || "").trim()) return "melhorenvio";
+  if (String(process.env.MELHORENVIO_BASE_URL || "").trim()) return "melhorenvio";
   return "dummy";
 }
 

@@ -8,6 +8,7 @@ const {
   notifyShipmentMilestoneTransition
 } = require("../../server/lib/order-notification-service");
 const { buyLabelForOrder, getLabelForOrder, trackOrderShipment } = require("../shipping/shipping.service");
+const { attachManualShippingToOrder } = require("../shipping/order-tracking.service");
 
 const adminShippingRouter = express.Router();
 
@@ -21,6 +22,10 @@ const adminShippingRateLimit = rateLimit({
 
 const orderIdSchema = z.object({
   id: z.string().uuid()
+});
+const manualShippingSchema = z.object({
+  tracking_code: z.string().trim().min(3).max(120),
+  carrier: z.string().trim().min(2).max(120)
 });
 
 function mapShippingError(error) {
@@ -114,6 +119,32 @@ adminShippingRouter.get("/orders/:id/shipping/track", async (req, res) => {
       shipment: data?.shipment || null
     }).catch(() => {});
     return res.json({ ok: true, data });
+  } catch (error) {
+    const mapped = mapShippingError(error);
+    return res.status(mapped.status).json({ ok: false, error: mapped.code, detail: mapped.detail });
+  }
+});
+
+adminShippingRouter.post("/orders/:id/shipping", async (req, res) => {
+  const parsedParams = orderIdSchema.safeParse(req.params || {});
+  const parsedBody = manualShippingSchema.safeParse(req.body || {});
+  if (!parsedParams.success || !parsedBody.success) {
+    return res.status(400).json({ ok: false, error: "INVALID_INPUT" });
+  }
+
+  try {
+    const tracked = await attachManualShippingToOrder(parsedParams.data.id, {
+      trackingCode: parsedBody.data.tracking_code,
+      carrier: parsedBody.data.carrier
+    });
+
+    return res.json({
+      ok: true,
+      data: {
+        orderId: parsedParams.data.id,
+        order: tracked
+      }
+    });
   } catch (error) {
     const mapped = mapShippingError(error);
     return res.status(mapped.status).json({ ok: false, error: mapped.code, detail: mapped.detail });

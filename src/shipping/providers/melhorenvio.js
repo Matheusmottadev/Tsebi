@@ -1,22 +1,8 @@
 const crypto = require("node:crypto");
+const { melhorEnvioApiRequest } = require("../melhorenvio-auth");
 
 function normalizeZip(zip) {
   return String(zip || "").replace(/\D/g, "").slice(0, 8);
-}
-
-function getEnvName() {
-  return String(process.env.MELHOR_ENVIO_ENV || "sandbox").trim().toLowerCase() || "sandbox";
-}
-
-function getBaseUrl() {
-  if (getEnvName() === "production") {
-    return "https://melhorenvio.com.br/api/v2";
-  }
-  return "https://sandbox.melhorenvio.com.br/api/v2";
-}
-
-function getToken() {
-  return String(process.env.MELHOR_ENVIO_TOKEN || "").trim();
 }
 
 function getFromZip() {
@@ -94,42 +80,10 @@ function buildQuoteProducts(packages = []) {
 }
 
 async function melhorEnvioRequest(path, { method = "GET", body } = {}) {
-  const token = getToken();
-  if (!token) {
-    const error = new Error("MELHOR_ENVIO_TOKEN_NOT_CONFIGURED");
-    error.code = "MELHOR_ENVIO_TOKEN_NOT_CONFIGURED";
-    throw error;
-  }
-
-  const response = await fetch(`${getBaseUrl()}${path}`, {
+  return melhorEnvioApiRequest(path, {
     method,
-    headers: {
-      Accept: "application/json",
-      Authorization: `Bearer ${token}`,
-      "Content-Type": "application/json",
-      "User-Agent": "Tsebi/Shipping"
-    },
-    body: body == null ? undefined : JSON.stringify(body)
+    body
   });
-
-  const text = await response.text().catch(() => "");
-  let data = null;
-  try {
-    data = text ? JSON.parse(text) : null;
-  } catch {
-    data = null;
-  }
-
-  if (!response.ok) {
-    const detail = data?.message || data?.error || text || "MELHOR_ENVIO_REQUEST_FAILED";
-    const error = new Error(String(detail));
-    error.code = "MELHOR_ENVIO_REQUEST_FAILED";
-    error.status = response.status;
-    error.payload = data || text;
-    throw error;
-  }
-
-  return data;
 }
 
 async function quote({ fromZip, toZip, packages = [] }) {
@@ -219,6 +173,16 @@ function normalizeDocument(value) {
   return "";
 }
 
+function normalizeCpf(value) {
+  const digits = String(value || "").replace(/\D/g, "");
+  return digits.length === 11 ? digits : "";
+}
+
+function normalizeCnpj(value) {
+  const digits = String(value || "").replace(/\D/g, "");
+  return digits.length === 14 ? digits : "";
+}
+
 function normalizeText(value) {
   return String(value || "")
     .normalize("NFD")
@@ -280,10 +244,15 @@ function capProductsUnitaryValue(products, cap) {
 
 function buildSenderAddress() {
   const postalCode = normalizeZip(process.env.SHIP_FROM_ZIP || "");
-  const document = normalizeDocument(readEnv("SHIP_FROM_DOCUMENT", ""));
-  return {
+  const rawDocument = normalizeDocument(readEnv("SHIP_FROM_DOCUMENT", ""));
+  const responsibleCpf = normalizeCpf(
+    readEnv("SHIP_FROM_RESPONSIBLE_CPF", "") || readEnv("SHIP_FROM_CPF", "")
+  );
+  const cnpjFromDocument = rawDocument.length === 14 ? rawDocument : "";
+  const cpfFromDocument = rawDocument.length === 11 ? rawDocument : "";
+  const sender = {
     name: normalizeText(readEnv("SHIP_FROM_NAME", "Tsebi")),
-    document,
+    document: cpfFromDocument || responsibleCpf || "",
     phone: normalizePhone(readEnv("SHIP_FROM_PHONE", "11999999999")) || "11999999999",
     email: readEnv("SHIP_FROM_EMAIL", "contato@tsebi.com.br").toLowerCase(),
     address: normalizeText(readEnv("SHIP_FROM_ADDRESS", "Endereco de origem")),
@@ -295,6 +264,26 @@ function buildSenderAddress() {
     postal_code: postalCode,
     country_id: "BR"
   };
+
+  const explicitCnpj = normalizeCnpj(readEnv("SHIP_FROM_CNPJ", ""));
+  const companyDocument = explicitCnpj || cnpjFromDocument;
+  if (companyDocument) {
+    sender.company_document = companyDocument;
+  }
+
+  if (companyDocument && !sender.document) {
+    const error = new Error("SHIP_FROM_RESPONSIBLE_CPF_REQUIRED");
+    error.code = "SHIP_FROM_RESPONSIBLE_CPF_REQUIRED";
+    error.status = 500;
+    error.details = {
+      message:
+        "Para remetente com CNPJ no Melhor Envio, configure SHIP_FROM_RESPONSIBLE_CPF com um CPF valido.",
+      env: ["SHIP_FROM_DOCUMENT", "SHIP_FROM_CNPJ", "SHIP_FROM_RESPONSIBLE_CPF"]
+    };
+    throw error;
+  }
+
+  return sender;
 }
 
 function buildRecipientAddress(order) {
@@ -512,16 +501,44 @@ async function track({ trackingCode }) {
     throw error;
   }
 
-  const result = await melhorEnvioRequest(
-    `/me/tracking?tracking_code=${encodeURIComponent(tracking)}`,
-    { method: "GET" }
-  );
+  let result = null;
+  let source = "shipment_tracking";
+
+  try {
+    const batch = await melhorEnvioRequest("/me/shipment/tracking", {
+      method: "POST",
+      body: {
+        orders: [tracking]
+      }
+    });
+    if (batch && typeof batch === "object") {
+      const list = Object.values(batch);
+      result =
+        list.find((entry) => String(entry?.tracking || "").trim().toUpperCase() === tracking.toUpperCase()) ||
+        list.find((entry) => String(entry?.melhorenvio_tracking || "").trim().toUpperCase() === tracking.toUpperCase()) ||
+        list[0] ||
+        null;
+    }
+  } catch {
+    result = null;
+  }
+
+  if (!result) {
+    source = "legacy_tracking";
+    result = await melhorEnvioRequest(
+      `/me/tracking?tracking_code=${encodeURIComponent(tracking)}`,
+      { method: "GET" }
+    );
+  }
 
   return {
     trackingCode: tracking,
-    status: String(result?.status || result?.current_status || "").trim().toUpperCase() || "EM_TRANSITO",
+    status: String(result?.status || result?.current_status || "").trim().toUpperCase() || "IN_TRANSIT",
     events: Array.isArray(result?.events) ? result.events : [],
-    rawPayload: result
+    rawPayload: {
+      source,
+      payload: result
+    }
   };
 }
 

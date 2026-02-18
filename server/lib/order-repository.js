@@ -4,7 +4,9 @@ function mapOrderRow(row, items = []) {
   if (!row) return null;
   return {
     id: row.id,
+    orderNumber: row.order_number || "",
     status: row.status,
+    currentStatus: row.current_status || "ORDER_PLACED",
     stockCommitted: Boolean(row.stock_committed),
     createdAt: row.created_at,
     updatedAt: row.updated_at,
@@ -21,6 +23,9 @@ function mapOrderRow(row, items = []) {
     shippingSelectedCarrierName: row.shipping_selected_carrier_name || "",
     shippingDeadlineDays: row.shipping_deadline_days == null ? null : Number(row.shipping_deadline_days),
     shippingDestinationZip: row.shipping_destination_zip || "",
+    trackingCode: row.tracking_code || "",
+    carrier: row.carrier || "",
+    lastTrackingUpdate: row.last_tracking_update || null,
     items,
     shipping: row.shipping_json || null,
     userId: row.user_id,
@@ -29,6 +34,8 @@ function mapOrderRow(row, items = []) {
     stripePaymentIntentId: row.stripe_payment_intent_id,
     stripeRefundId: row.stripe_refund_id,
     paidAt: row.paid_at,
+    shippedAt: row.shipped_at,
+    deliveredAt: row.delivered_at,
     canceledAt: row.canceled_at,
     refundedAt: row.refunded_at,
     failureReason: row.failure_reason,
@@ -186,7 +193,13 @@ const PATCH_TO_COLUMN = {
   shippingSelectedCarrierName: "shipping_selected_carrier_name",
   shippingDeadlineDays: "shipping_deadline_days",
   shippingDestinationZip: "shipping_destination_zip",
-  shipping: "shipping_json"
+  shipping: "shipping_json",
+  currentStatus: "current_status",
+  trackingCode: "tracking_code",
+  carrier: "carrier",
+  lastTrackingUpdate: "last_tracking_update",
+  shippedAt: "shipped_at",
+  deliveredAt: "delivered_at"
 };
 
 async function updateOrder(orderId, patch) {

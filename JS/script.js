@@ -1425,8 +1425,7 @@ function initAccountEntryPoints() {
 }
 
 function initTrackOrderEntryPoints() {
-  const trackPanelPath = "/minha-conta.html?panel=track";
-  const loginUrl = `conta.html?returnUrl=${encodeURIComponent(trackPanelPath)}`;
+  const trackPanelPath = "minha-conta.html?panel=track";
   const trackLinks = Array.from(document.querySelectorAll('a[data-link-key="track-order"]'));
 
   if (!trackLinks.length) {
@@ -1440,9 +1439,8 @@ function initTrackOrderEntryPoints() {
   if (!trackLinks.length) return;
 
   function render() {
-    const user = userStore?.getCurrentUser?.() || null;
     trackLinks.forEach((link) => {
-      link.href = user ? "minha-conta.html?panel=track" : loginUrl;
+      link.href = trackPanelPath;
       link.dataset.linkKey = "track-order";
     });
   }
