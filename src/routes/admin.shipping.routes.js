@@ -3,6 +3,10 @@ const rateLimit = require("express-rate-limit");
 const { z } = require("zod");
 const { findOrderById } = require("../../server/lib/order-repository");
 const { requireAdmin, requireAdminCsrfForMutations } = require("../../server/middlewares/requireAdmin");
+const {
+  notifyOrderShipped,
+  notifyShipmentMilestoneTransition
+} = require("../../server/lib/order-notification-service");
 const { buyLabelForOrder, getLabelForOrder, trackOrderShipment } = require("../shipping/shipping.service");
 
 const adminShippingRouter = express.Router();
@@ -60,6 +64,11 @@ adminShippingRouter.post("/orders/:id/shipping/buy-label", async (req, res) => {
   try {
     const order = await loadOrderOr404(parsedParams.data.id);
     const shipment = await buyLabelForOrder(order);
+    const previousStatus = String(shipment?.previousStatus || "").trim().toUpperCase();
+    const currentStatus = String(shipment?.status || "").trim().toUpperCase();
+    if (currentStatus === "ETIQUETA_COMPRADA" && previousStatus !== "ETIQUETA_COMPRADA") {
+      notifyOrderShipped(order, shipment).catch(() => {});
+    }
     return res.json({
       ok: true,
       data: {
@@ -98,6 +107,12 @@ adminShippingRouter.get("/orders/:id/shipping/track", async (req, res) => {
   try {
     const order = await loadOrderOr404(parsedParams.data.id);
     const data = await trackOrderShipment(order);
+    notifyShipmentMilestoneTransition({
+      order,
+      previousStatus: data?.previousStatus || "",
+      nextStatus: data?.shipment?.status || data?.tracking?.status || "",
+      shipment: data?.shipment || null
+    }).catch(() => {});
     return res.json({ ok: true, data });
   } catch (error) {
     const mapped = mapShippingError(error);

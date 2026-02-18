@@ -20,6 +20,30 @@
   color: #141414;
 }
 
+.checkout-v2 input,
+.checkout-v2 select,
+.checkout-v2 textarea{
+  -webkit-text-fill-color: #141414;
+}
+
+.checkout-v2 input[readonly],
+.checkout-v2 input.is-locked{
+  -webkit-text-fill-color: #4f4b45;
+  opacity: 1;
+}
+
+.checkout-v2 a[x-apple-data-detectors],
+.checkout-v2 [x-apple-data-detectors],
+.checkout-v2 a[href^="tel"],
+.checkout-v2 a[href^="mailto"]{
+  color: inherit !important;
+  text-decoration: inherit !important;
+  font-size: inherit !important;
+  font-family: inherit !important;
+  font-weight: inherit !important;
+  line-height: inherit !important;
+}
+
 .checkout-v2 input:-webkit-autofill,
 .checkout-v2 input:-webkit-autofill:hover,
 .checkout-v2 input:-webkit-autofill:focus,

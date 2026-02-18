@@ -21,6 +21,7 @@ const {
   findOrderById,
   listOrdersByUserId
 } = require("./lib/order-repository");
+const { notifyOrderConfirmed, notifyPaymentApproved } = require("./lib/order-notification-service");
 const { listProducts, getProductByIdentifier } = require("./lib/product-repository");
 const { checkAvailability, commitStock } = require("./lib/inventory-repository");
 const { withTransaction } = require("./lib/db");
@@ -289,7 +290,11 @@ async function reconcileOrderWithStripe(order) {
   const status = String(intent?.status || "").toLowerCase();
 
   if (status === "succeeded") {
-    return markOrderPaid(order);
+    const updated = await markOrderPaid(order);
+    if (String(order.status || "").toLowerCase() !== "paid" && String(updated?.status || "").toLowerCase() === "paid") {
+      notifyPaymentApproved(updated).catch(() => {});
+    }
+    return updated;
   }
 
   if (status === "canceled") {
@@ -375,6 +380,7 @@ async function processWebhookEvent(event) {
     event.type === "charge.refunded"
       ? String(stripeObject.payment_intent || "").trim()
       : String(stripeObject.id || "").trim();
+  const pendingNotifications = [];
 
   await withTransaction(async (client) => {
     const isNewEvent = await tryRegisterWebhookEvent(client, event);
@@ -423,6 +429,7 @@ async function processWebhookEvent(event) {
         `,
         [order.id]
       );
+      pendingNotifications.push({ type: "payment_approved", orderId: order.id });
       return;
     }
 
@@ -478,6 +485,16 @@ async function processWebhookEvent(event) {
       );
     }
   });
+
+  for (const notification of pendingNotifications) {
+    if (notification.type !== "payment_approved") continue;
+    try {
+      const order = await findOrderById(notification.orderId);
+      if (order && String(order.status || "").toLowerCase() === "paid") {
+        await notifyPaymentApproved(order);
+      }
+    } catch {}
+  }
 }
 
 app.use(
@@ -767,6 +784,10 @@ app.post("/api/orders/payment-intent", requireAuth, paymentIntentRateLimit, asyn
     const updatedOrder = await updateOrder(order.id, {
       stripePaymentIntentId: paymentIntent.id
     });
+
+    if (updatedOrder) {
+      notifyOrderConfirmed(updatedOrder).catch(() => {});
+    }
 
     return res.status(201).json({ orderId: updatedOrder.id, clientSecret: paymentIntent.client_secret });
   } catch (error) {

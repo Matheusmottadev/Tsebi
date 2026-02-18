@@ -92,6 +92,88 @@ function buildCodeEmail({ title, intro, code, minutes }) {
   return { text, html };
 }
 
+function formatOrderCode(orderId) {
+  const id = String(orderId || "").trim();
+  if (!id) return "";
+  return `PED-${id.slice(-8).toUpperCase()}`;
+}
+
+function formatMoneyFromCents(value) {
+  const amount = Math.max(0, Number(value || 0)) / 100;
+  try {
+    return new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(amount);
+  } catch {
+    return `R$ ${amount.toFixed(2)}`;
+  }
+}
+
+function getPublicBaseUrl() {
+  const explicit = String(process.env.APP_BASE_URL || process.env.PUBLIC_APP_URL || process.env.SITE_URL || "").trim();
+  if (explicit) return explicit.replace(/\/+$/, "");
+  const corsOrigin = String(process.env.CORS_ORIGIN || "")
+    .split(",")
+    .map((item) => item.trim())
+    .find(Boolean);
+  return corsOrigin ? corsOrigin.replace(/\/+$/, "") : "";
+}
+
+function buildOrderDetails({ order, shipment, statusLabel }) {
+  const orderCode = formatOrderCode(order?.id);
+  const total = formatMoneyFromCents(order?.amount || 0);
+  const trackingCode = String(shipment?.trackingCode || "").trim();
+  const carrierName = String(order?.shippingSelectedCarrierName || "").trim();
+  const serviceName = String(order?.shippingSelectedService || "").trim();
+  const orderLinkBase = getPublicBaseUrl();
+  const orderLink = orderLinkBase && order?.id ? `${orderLinkBase}/order.html?orderId=${encodeURIComponent(order.id)}` : "";
+
+  const lines = [
+    `Pedido: ${orderCode || order?.id || "-"}`,
+    `Status: ${statusLabel}`,
+    `Total: ${total}`
+  ];
+  if (carrierName) lines.push(`Transportadora: ${carrierName}`);
+  if (serviceName) lines.push(`Servico: ${serviceName}`);
+  if (trackingCode) lines.push(`Codigo de rastreio: ${trackingCode}`);
+  if (orderLink) lines.push(`Acompanhar pedido: ${orderLink}`);
+
+  return {
+    orderCode,
+    total,
+    trackingCode,
+    orderLink,
+    lines
+  };
+}
+
+function buildOrderLifecycleEmail({ title, intro, statusLabel, order, shipment = null }) {
+  const safeTitle = escapeHtml(title);
+  const safeIntro = escapeHtml(intro);
+  const safeStatus = escapeHtml(statusLabel);
+  const appName = escapeHtml(getAppName());
+  const details = buildOrderDetails({ order, shipment, statusLabel });
+
+  const text = `${title}\n\n${intro}\n\n${details.lines.join("\n")}\n\n${getAppName()}`;
+  const htmlLines = details.lines.map((line) => `<li>${escapeHtml(line)}</li>`).join("");
+  const orderLinkHtml = details.orderLink
+    ? `<p style="margin:14px 0 0;"><a href="${escapeHtml(details.orderLink)}" style="color:#111;text-decoration:underline;">Ver detalhes do pedido</a></p>`
+    : "";
+
+  const html = `
+    <div style="font-family:Arial,sans-serif;color:#111;line-height:1.5;">
+      <h2 style="margin:0 0 10px;">${safeTitle}</h2>
+      <p style="margin:0 0 14px;">${safeIntro}</p>
+      <p style="margin:0 0 8px;"><strong>Status atual:</strong> ${safeStatus}</p>
+      <ul style="margin:0 0 10px 18px;padding:0;">
+        ${htmlLines}
+      </ul>
+      ${orderLinkHtml}
+      <p style="margin:12px 0 0;color:#777;">${appName}</p>
+    </div>
+  `;
+
+  return { text, html };
+}
+
 async function sendAccountVerificationEmail({ to, code, minutes = 20 }) {
   const content = buildCodeEmail({
     title: "Verifique seu email",
@@ -137,9 +219,92 @@ async function sendPasswordResetEmail({ to, code, minutes = 15 }) {
   });
 }
 
+async function sendOrderConfirmedEmail({ to, order }) {
+  const content = buildOrderLifecycleEmail({
+    title: "Pedido confirmado",
+    intro: "Recebemos o seu pedido com sucesso. Assim que o pagamento for aprovado, avisaremos por email.",
+    statusLabel: "Pedido confirmado",
+    order
+  });
+
+  return sendEmail({
+    to,
+    subject: `${getAppName()} - Pedido confirmado`,
+    ...content
+  });
+}
+
+async function sendPaymentApprovedEmail({ to, order }) {
+  const content = buildOrderLifecycleEmail({
+    title: "Pagamento aprovado",
+    intro: "Pagamento aprovado com sucesso. Seu pedido entrou em preparacao.",
+    statusLabel: "Pagamento aprovado",
+    order
+  });
+
+  return sendEmail({
+    to,
+    subject: `${getAppName()} - Pagamento aprovado`,
+    ...content
+  });
+}
+
+async function sendOrderShippedEmail({ to, order, shipment }) {
+  const content = buildOrderLifecycleEmail({
+    title: "Pedido enviado",
+    intro: "Seu pedido foi enviado e a etiqueta de transporte foi gerada.",
+    statusLabel: "Pedido enviado",
+    order,
+    shipment
+  });
+
+  return sendEmail({
+    to,
+    subject: `${getAppName()} - Pedido enviado`,
+    ...content
+  });
+}
+
+async function sendOrderOutForDeliveryEmail({ to, order, shipment }) {
+  const content = buildOrderLifecycleEmail({
+    title: "Saiu para entrega",
+    intro: "Seu pedido esta a caminho. Fique atento para o recebimento.",
+    statusLabel: "Saiu para entrega",
+    order,
+    shipment
+  });
+
+  return sendEmail({
+    to,
+    subject: `${getAppName()} - Saiu para entrega`,
+    ...content
+  });
+}
+
+async function sendOrderDeliveredEmail({ to, order, shipment }) {
+  const content = buildOrderLifecycleEmail({
+    title: "Pedido entregue",
+    intro: "Confirmamos que seu pedido foi entregue.",
+    statusLabel: "Entregue",
+    order,
+    shipment
+  });
+
+  return sendEmail({
+    to,
+    subject: `${getAppName()} - Pedido entregue`,
+    ...content
+  });
+}
+
 module.exports = {
   sendEmail,
   sendAccountVerificationEmail,
   sendLoginVerificationEmail,
-  sendPasswordResetEmail
+  sendPasswordResetEmail,
+  sendOrderConfirmedEmail,
+  sendPaymentApprovedEmail,
+  sendOrderShippedEmail,
+  sendOrderOutForDeliveryEmail,
+  sendOrderDeliveredEmail
 };

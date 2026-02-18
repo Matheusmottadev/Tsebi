@@ -225,6 +225,7 @@ async function buyLabelForOrder(order) {
   }
 
   const existingShipment = await findShipmentByOrderId(order.id);
+  const previousStatus = String(existingShipment?.status || "").trim().toUpperCase();
   if (!existingShipment) {
     await ensureShipmentPendingFromOrder(order);
   }
@@ -241,7 +242,12 @@ async function buyLabelForOrder(order) {
     rawPayload: bought?.rawPayload || {}
   });
 
-  return updated;
+  return updated
+    ? {
+        ...updated,
+        previousStatus
+      }
+    : updated;
 }
 
 async function getLabelForOrder(order) {
@@ -267,6 +273,7 @@ async function trackOrderShipment(order) {
   const shipment = await findShipmentByOrderId(order.id);
   if (!shipment) throw createShippingError("SHIPMENT_NOT_FOUND", 404);
   if (!shipment.trackingCode) throw createShippingError("TRACKING_NOT_AVAILABLE", 409);
+  const previousStatus = String(shipment.status || "").trim().toUpperCase();
 
   const provider = getProvider(shipment.provider || order.shippingSelectedProvider || getConfiguredProviderName());
   const tracking = await provider.track({
@@ -284,6 +291,7 @@ async function trackOrderShipment(order) {
   });
 
   return {
+    previousStatus,
     shipment: updatedShipment || shipment,
     tracking
   };

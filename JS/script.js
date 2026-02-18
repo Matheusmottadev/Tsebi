@@ -302,6 +302,7 @@ async function bootstrap() {
   initHeroVideoLoop();
   initCartEntryPoints();
   initAccountEntryPoints();
+  initTrackOrderEntryPoints();
   initNewsletterPopup();
 }
 
@@ -1014,6 +1015,40 @@ function initCategorySwitch() {
   let currentCategory = "feminino";
   let switchTimer = null;
 
+  function getCardHref(card) {
+    const mediaLink = card?.querySelector(".category-media");
+    const href = String(mediaLink?.getAttribute("href") || "").trim();
+    return href && href !== "#" ? href : "";
+  }
+
+  function navigateCard(card) {
+    const href = getCardHref(card);
+    if (!href) return;
+    window.location.href = href;
+  }
+
+  categoryCards.forEach((card) => {
+    const title = card.querySelector("h3");
+    if (title instanceof HTMLElement) {
+      title.style.cursor = "pointer";
+      title.setAttribute("role", "link");
+      title.setAttribute("tabindex", "0");
+      title.addEventListener("click", () => navigateCard(card));
+      title.addEventListener("keydown", (event) => {
+        if (event.key !== "Enter" && event.key !== " ") return;
+        event.preventDefault();
+        navigateCard(card);
+      });
+    }
+
+    card.addEventListener("click", (event) => {
+      const target = event.target;
+      if (!(target instanceof Element)) return;
+      if (target.closest("a, button")) return;
+      navigateCard(card);
+    });
+  });
+
   function applyCategoryContent(category) {
     const items = categoryContent[category];
     if (!items) return;
@@ -1382,6 +1417,33 @@ function initAccountEntryPoints() {
       link.href = user ? "minha-conta.html" : loginUrl;
       if (link.classList.contains("quick-action")) return;
       link.textContent = label;
+    });
+  }
+
+  render();
+  window.addEventListener("tsebi:auth-changed", render);
+}
+
+function initTrackOrderEntryPoints() {
+  const trackPanelPath = "/minha-conta.html?panel=track";
+  const loginUrl = `conta.html?returnUrl=${encodeURIComponent(trackPanelPath)}`;
+  const trackLinks = Array.from(document.querySelectorAll('a[data-link-key="track-order"]'));
+
+  if (!trackLinks.length) {
+    const footerLinks = Array.from(document.querySelectorAll(".site-footer a"));
+    footerLinks.forEach((link) => {
+      const linkText = String(link.textContent || "").trim().toLowerCase();
+      if (linkText === "acompanhe seu pedido") trackLinks.push(link);
+    });
+  }
+
+  if (!trackLinks.length) return;
+
+  function render() {
+    const user = userStore?.getCurrentUser?.() || null;
+    trackLinks.forEach((link) => {
+      link.href = user ? "minha-conta.html?panel=track" : loginUrl;
+      link.dataset.linkKey = "track-order";
     });
   }
 

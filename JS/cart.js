@@ -535,14 +535,42 @@ function applyShippingSelectionFromMethod(methodCode) {
   return true;
 }
 
+function isUsableShippingQuote(quote) {
+  if (!quote || typeof quote !== "object") return false;
+  const serviceName = String(quote.serviceName || "").trim();
+  if (!serviceName) return false;
+
+  const providerError = String(quote?.rawPayload?.error || "").trim();
+  if (providerError) return false;
+
+  const priceCents = Number(quote.priceCents);
+  if (!Number.isFinite(priceCents) || priceCents < 0) return false;
+  return true;
+}
+
 function applyShippingQuotesToUI(quotes) {
   const sorted = (Array.isArray(quotes) ? quotes : [])
+    .filter(isUsableShippingQuote)
     .slice()
     .sort((a, b) => Number(a?.priceCents || 0) - Number(b?.priceCents || 0));
 
+  const standardQuote = sorted[0] || null;
+  const fastest = sorted
+    .slice()
+    .sort((a, b) => {
+      const aDeadline = Number.isFinite(Number(a?.deadlineDays)) ? Number(a.deadlineDays) : Number.POSITIVE_INFINITY;
+      const bDeadline = Number.isFinite(Number(b?.deadlineDays)) ? Number(b.deadlineDays) : Number.POSITIVE_INFINITY;
+      if (aDeadline !== bDeadline) return aDeadline - bDeadline;
+      return Number(a?.priceCents || 0) - Number(b?.priceCents || 0);
+    });
+  const expressQuote =
+    fastest.find((quote) => String(quote?.id || "") !== String(standardQuote?.id || "")) ||
+    sorted[1] ||
+    null;
+
   checkoutState.shippingQuoteOptions = {
-    standard: sorted[0] || null,
-    express: sorted[1] || null
+    standard: standardQuote,
+    express: expressQuote
   };
 
   applyShippingQuoteOption("standard", checkoutState.shippingQuoteOptions.standard);

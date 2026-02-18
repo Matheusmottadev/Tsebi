@@ -195,6 +195,16 @@ Formato de resposta padrao destes endpoints:
 - `POST /api/my/orders/:orderId/cancel`
 - `POST /api/my/orders/:orderId/refund`
 
+## Emails transacionais de pedido (Resend)
+
+Quando `EMAIL_PROVIDER=resend`, o sistema envia automaticamente:
+
+- `Pedido confirmado` (apos criacao do pedido/PaymentIntent)
+- `Pagamento aprovado` (webhook `payment_intent.succeeded` e ajuste admin para `paid`)
+- `Pedido enviado` (apos compra da etiqueta)
+- `Saiu para entrega` (quando rastreio muda para esse marco)
+- `Entregue` (quando rastreio muda para entregue)
+
 ## Estoque e webhook
 
 - Estoque e validado antes do PaymentIntent.

@@ -36,6 +36,7 @@ const addressesEmpty = document.getElementById("addressesEmpty");
 let myOrders = [];
 let myAddresses = [];
 let defaultAddressId = "";
+const ACCOUNT_PANEL_NAMES = new Set(["track", "history", "profile", "addresses", "favorites"]);
 
 function formatCurrencyFromCents(value, currency = "brl") {
   return (Number(value || 0) / 100).toLocaleString("pt-BR", {
@@ -127,6 +128,22 @@ function activatePanel(name) {
     panel.hidden = !active;
     panel.classList.toggle("is-active", active);
   });
+}
+
+function normalizePanelName(value) {
+  const panelName = String(value || "").trim().toLowerCase();
+  return ACCOUNT_PANEL_NAMES.has(panelName) ? panelName : "";
+}
+
+function getInitialPanelFromLocation() {
+  const params = new URLSearchParams(window.location.search);
+  const fromQuery = normalizePanelName(params.get("panel"));
+  if (fromQuery) return fromQuery;
+
+  const fromHash = normalizePanelName(String(window.location.hash || "").replace(/^#/, ""));
+  if (fromHash) return fromHash;
+
+  return "track";
 }
 
 function renderUser(user) {
@@ -435,7 +452,7 @@ async function boot() {
 
   renderUser(me.user);
   await Promise.all([loadOrders(), loadAddresses()]);
-  activatePanel("track");
+  activatePanel(getInitialPanelFromLocation());
 }
 
 navButtons.forEach((button) => {
