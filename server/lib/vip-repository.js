@@ -110,6 +110,58 @@ async function listVipSubscribers({ limit = 100, offset = 0 } = {}) {
   return result.rows.map(mapVipRow).filter(Boolean);
 }
 
+async function searchVipSubscribers({
+  query = "",
+  page = 1,
+  pageSize = 50
+} = {}) {
+  const safePage = Math.max(1, Number(page) || 1);
+  const safePageSize = Math.max(1, Math.min(200, Number(pageSize) || 50));
+  const offset = (safePage - 1) * safePageSize;
+
+  const normalizedQuery = String(query || "").trim().toLowerCase();
+  const values = [];
+  const where = [];
+
+  if (normalizedQuery) {
+    values.push(`%${normalizedQuery}%`);
+    const idx = values.length;
+    where.push(`(lower(name) LIKE $${idx} OR lower(email) LIKE $${idx})`);
+  }
+
+  const whereSql = where.length ? `WHERE ${where.join(" AND ")}` : "";
+  values.push(safePageSize, offset);
+  const limitIdx = values.length - 1;
+  const offsetIdx = values.length;
+
+  const listResult = await queryVip(
+    `
+    SELECT *
+    FROM vip_subscribers
+    ${whereSql}
+    ORDER BY subscribed_at DESC, id DESC
+    LIMIT $${limitIdx} OFFSET $${offsetIdx}
+    `,
+    values
+  );
+
+  const countResult = await queryVip(
+    `
+    SELECT COUNT(*)::int AS total
+    FROM vip_subscribers
+    ${whereSql}
+    `,
+    values.slice(0, values.length - 2)
+  );
+
+  return {
+    rows: listResult.rows.map(mapVipRow).filter(Boolean),
+    total: Number(countResult.rows[0]?.total || 0),
+    page: safePage,
+    pageSize: safePageSize
+  };
+}
+
 async function findVipSubscriberById(id) {
   const normalizedId = Number(id);
   if (!Number.isInteger(normalizedId) || normalizedId <= 0) return null;
@@ -273,6 +325,7 @@ module.exports = {
   upsertVipSubscriber,
   setVipAccountCreated,
   listVipSubscribers,
+  searchVipSubscribers,
   findVipSubscriberById,
   findVipSubscriberByEmail,
   deleteVipSubscriberById,

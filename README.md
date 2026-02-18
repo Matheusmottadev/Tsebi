@@ -65,6 +65,12 @@ ADMIN_IDLE_TIMEOUT_MINUTES=20
 ADMIN_MFA_ISSUER=Tsebi Studio
 ADMIN_CSRF_COOKIE_NAME=tsebi.admin.csrf
 ADMIN_AUDIT_RETENTION_DAYS=30
+
+# Upload de imagens (produtos no Studio Portal)
+CLOUDINARY_CLOUD_NAME=
+CLOUDINARY_API_KEY=
+CLOUDINARY_API_SECRET=
+CLOUDINARY_FOLDER=tsebi/products
 ```
 
 ## Rodando local com PostgreSQL

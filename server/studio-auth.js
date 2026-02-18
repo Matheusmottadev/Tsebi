@@ -12,6 +12,8 @@ const {
   consumeAdminRecoveryCode,
   disableAdminMfa
 } = require("./user-repository");
+const { ensureAdminProfile } = require("./lib/admin-profile-repository");
+const { insertAdminLoginEvent } = require("./lib/admin-login-events-repository");
 const {
   csrfCookieName,
   getAdminIdleTimeoutMs,
@@ -200,6 +202,13 @@ studioAuthRouter.post("/login", loginRateLimit, async (req, res) => {
     failStage = "validate_input";
     const parsed = loginSchema.safeParse(req.body || {});
     if (!parsed.success) {
+      insertAdminLoginEvent({
+        adminId: null,
+        userId: null,
+        success: false,
+        ip: req.ip || "",
+        userAgent: String(req.headers["user-agent"] || "")
+      }).catch(() => {});
       return res.status(401).json({ error: "INVALID_CREDENTIALS" });
     }
 
@@ -214,12 +223,26 @@ studioAuthRouter.post("/login", loginRateLimit, async (req, res) => {
     const email = normalizeEmail(parsed.data.email);
     const user = await findUserByEmail(email);
     if (!user) {
+      insertAdminLoginEvent({
+        adminId: null,
+        userId: null,
+        success: false,
+        ip: req.ip || "",
+        userAgent: String(req.headers["user-agent"] || "")
+      }).catch(() => {});
       return res.status(401).json({ error: "INVALID_CREDENTIALS" });
     }
 
     failStage = "check_password_hash";
     const storedHash = String(user.passwordHash || "").trim();
     if (!storedHash) {
+      insertAdminLoginEvent({
+        adminId: null,
+        userId: user.id || null,
+        success: false,
+        ip: req.ip || "",
+        userAgent: String(req.headers["user-agent"] || "")
+      }).catch(() => {});
       return res.status(401).json({ error: "INVALID_CREDENTIALS" });
     }
 
@@ -228,16 +251,37 @@ studioAuthRouter.post("/login", loginRateLimit, async (req, res) => {
     try {
       matches = await bcrypt.compare(parsed.data.password, storedHash);
     } catch {
+      insertAdminLoginEvent({
+        adminId: null,
+        userId: user.id || null,
+        success: false,
+        ip: req.ip || "",
+        userAgent: String(req.headers["user-agent"] || "")
+      }).catch(() => {});
       return res.status(401).json({ error: "INVALID_CREDENTIALS" });
     }
 
     if (!matches) {
+      insertAdminLoginEvent({
+        adminId: null,
+        userId: user.id || null,
+        success: false,
+        ip: req.ip || "",
+        userAgent: String(req.headers["user-agent"] || "")
+      }).catch(() => {});
       return res.status(401).json({ error: "INVALID_CREDENTIALS" });
     }
 
     failStage = "check_admin_allowlist";
     if (!adminEmails.has(email)) {
       clearAdminAuthSession(req, res);
+      insertAdminLoginEvent({
+        adminId: null,
+        userId: user.id || null,
+        success: false,
+        ip: req.ip || "",
+        userAgent: String(req.headers["user-agent"] || "")
+      }).catch(() => {});
       return res.status(403).json({ error: "FORBIDDEN" });
     }
 
@@ -263,6 +307,13 @@ studioAuthRouter.post("/login", loginRateLimit, async (req, res) => {
       admin: publicUser(user)
     });
   } catch {
+    insertAdminLoginEvent({
+      adminId: null,
+      userId: null,
+      success: false,
+      ip: req.ip || "",
+      userAgent: String(req.headers["user-agent"] || "")
+    }).catch(() => {});
     return res.status(500).json({ error: "STUDIO_LOGIN_FAILED", stage: failStage });
   }
 });
@@ -365,10 +416,32 @@ studioAuthRouter.post("/mfa/verify", mfaRateLimit, async (req, res) => {
     }
 
     if (!verified) {
+      insertAdminLoginEvent({
+        adminId: null,
+        userId: state.user.id || null,
+        success: false,
+        ip: req.ip || "",
+        userAgent: String(req.headers["user-agent"] || "")
+      }).catch(() => {});
       return res.status(401).json({ error: "INVALID_MFA_CODE" });
     }
 
     grantVerifiedStudioSession(req, res, state.user, state.auth);
+    ensureAdminProfile({
+      userId: state.user.id,
+      email: state.user.email,
+      fallbackName: state.user.name || ""
+    })
+      .then((profile) =>
+        insertAdminLoginEvent({
+          adminId: profile?.id || null,
+          userId: state.user.id || null,
+          success: true,
+          ip: req.ip || "",
+          userAgent: String(req.headers["user-agent"] || "")
+        })
+      )
+      .catch(() => {});
     return res.json({
       ok: true,
       stage: "authenticated",

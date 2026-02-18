@@ -1,10 +1,12 @@
-﻿const { query } = require("./db");
+const { query } = require("./db");
 
 function mapLoginEvent(row) {
   if (!row) return null;
   return {
     id: row.id,
     adminId: row.admin_id || null,
+    adminEmail: String(row.admin_email || ""),
+    adminNickname: String(row.admin_nickname || ""),
     userId: row.user_id || null,
     success: Boolean(row.success),
     ip: String(row.ip || ""),
@@ -77,10 +79,14 @@ async function listAdminLoginEvents({
 
   const listResult = await query(
     `
-    SELECT *
-    FROM admin_login_events
+    SELECT
+      e.*,
+      COALESCE(a.email, '') AS admin_email,
+      COALESCE(a.nickname, '') AS admin_nickname
+    FROM admin_login_events e
+    LEFT JOIN admins a ON a.id = e.admin_id
     ${whereSql}
-    ORDER BY created_at DESC
+    ORDER BY e.created_at DESC
     LIMIT $${values.length - 1} OFFSET $${values.length}
     `,
     values

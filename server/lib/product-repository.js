@@ -159,6 +159,8 @@ function mapProduct(row) {
     stock: Math.max(0, Number(row?.stock_qty || 0)),
     active: Boolean(row?.active),
     image: String(row?.image_url || metadata.image || DEFAULT_IMAGE),
+    createdAt: row?.created_at || null,
+    updatedAt: row?.updated_at || null,
     href: `produto.html?id=${encodeURIComponent(sku)}`
   };
 }
@@ -166,7 +168,7 @@ function mapProduct(row) {
 async function listProducts() {
   const result = await query(
     `
-    SELECT id, sku, name, price_cents, stock_qty, currency, active, image_url
+    SELECT id, sku, name, price_cents, stock_qty, currency, active, image_url, created_at, updated_at
     FROM products
     WHERE active = true
     ORDER BY created_at DESC
@@ -194,7 +196,7 @@ async function listAdminProducts({ limit = 200, offset = 0, search = "", include
   const whereSql = conditions.length ? `WHERE ${conditions.join(" AND ")}` : "";
   const result = await query(
     `
-    SELECT id, sku, name, price_cents, stock_qty, currency, active, image_url
+    SELECT id, sku, name, price_cents, stock_qty, currency, active, image_url, created_at, updated_at
     FROM products
     ${whereSql}
     ORDER BY created_at DESC
@@ -206,13 +208,75 @@ async function listAdminProducts({ limit = 200, offset = 0, search = "", include
   return result.rows.map(mapProduct);
 }
 
+async function searchAdminProducts({
+  query: q = "",
+  status = "",
+  stock = "",
+  page = 1,
+  pageSize = 50
+} = {}) {
+  const safePage = Math.max(1, Number(page) || 1);
+  const safePageSize = Math.max(1, Math.min(200, Number(pageSize) || 50));
+  const offset = (safePage - 1) * safePageSize;
+
+  const normalizedQuery = String(q || "").trim().toLowerCase();
+  const normalizedStatus = String(status || "").trim().toLowerCase();
+  const normalizedStock = String(stock || "").trim().toLowerCase();
+
+  const conditions = [];
+  const values = [];
+
+  if (normalizedStatus === "active") conditions.push("active = true");
+  if (normalizedStatus === "inactive") conditions.push("active = false");
+
+  if (normalizedStock === "out") conditions.push("stock_qty <= 0");
+  if (normalizedStock === "in") conditions.push("stock_qty > 0");
+
+  if (normalizedQuery) {
+    values.push(`%${normalizedQuery}%`);
+    conditions.push("(lower(name) LIKE $" + values.length + " OR lower(sku) LIKE $" + values.length + ")");
+  }
+
+  const whereSql = conditions.length ? `WHERE ${conditions.join(" AND ")}` : "";
+  values.push(safePageSize, offset);
+  const limitIdx = values.length - 1;
+  const offsetIdx = values.length;
+
+  const listResult = await query(
+    `
+    SELECT id, sku, name, price_cents, stock_qty, currency, active, image_url, created_at, updated_at
+    FROM products
+    ${whereSql}
+    ORDER BY updated_at DESC, created_at DESC
+    LIMIT $${limitIdx} OFFSET $${offsetIdx}
+    `,
+    values
+  );
+
+  const countResult = await query(
+    `
+    SELECT COUNT(*)::int AS total
+    FROM products
+    ${whereSql}
+    `,
+    values.slice(0, values.length - 2)
+  );
+
+  return {
+    rows: listResult.rows.map(mapProduct),
+    total: Number(countResult.rows[0]?.total || 0),
+    page: safePage,
+    pageSize: safePageSize
+  };
+}
+
 async function getProductByIdentifier(identifier) {
   const normalized = String(identifier || "").trim();
   if (!normalized) return null;
 
   const result = await query(
     `
-    SELECT id, sku, name, price_cents, stock_qty, currency, active, image_url
+    SELECT id, sku, name, price_cents, stock_qty, currency, active, image_url, created_at, updated_at
     FROM products
     WHERE lower(sku) = lower($1)
        OR id::text = $1
@@ -245,7 +309,7 @@ async function createProduct(payload = {}) {
       ) VALUES (
         $1, $2, $3, $4, $5, $6, $7
       )
-      RETURNING id, sku, name, price_cents, stock_qty, currency, active, image_url
+      RETURNING id, sku, name, price_cents, stock_qty, currency, active, image_url, created_at, updated_at
       `,
       [
         sku,
@@ -287,7 +351,7 @@ async function updateProductByIdentifier(identifier, patch = {}) {
       updated_at = NOW()
     WHERE id::text = $1
        OR lower(sku) = lower($1)
-    RETURNING id, sku, name, price_cents, stock_qty, currency, active, image_url
+    RETURNING id, sku, name, price_cents, stock_qty, currency, active, image_url, created_at, updated_at
     `,
     [
       normalized,
@@ -313,7 +377,7 @@ async function archiveProductByIdentifier(identifier) {
         updated_at = NOW()
     WHERE id::text = $1
        OR lower(sku) = lower($1)
-    RETURNING id, sku, name, price_cents, stock_qty, currency, active, image_url
+    RETURNING id, sku, name, price_cents, stock_qty, currency, active, image_url, created_at, updated_at
     `,
     [normalized]
   );
@@ -330,7 +394,7 @@ async function deleteProductByIdentifier(identifier) {
       DELETE FROM products
       WHERE id::text = $1
          OR lower(sku) = lower($1)
-      RETURNING id, sku, name, price_cents, stock_qty, currency, active, image_url
+      RETURNING id, sku, name, price_cents, stock_qty, currency, active, image_url, created_at, updated_at
       `,
       [normalized]
     );
@@ -364,7 +428,7 @@ async function restoreProductFromSnapshot(snapshot = {}) {
         active = EXCLUDED.active,
         image_url = EXCLUDED.image_url,
         updated_at = COALESCE(EXCLUDED.updated_at, NOW())
-      RETURNING id, sku, name, price_cents, stock_qty, currency, active, image_url
+      RETURNING id, sku, name, price_cents, stock_qty, currency, active, image_url, created_at, updated_at
       `,
       [
         sku,
@@ -390,6 +454,7 @@ async function restoreProductFromSnapshot(snapshot = {}) {
 module.exports = {
   listProducts,
   listAdminProducts,
+  searchAdminProducts,
   getProductByIdentifier,
   createProduct,
   updateProductByIdentifier,

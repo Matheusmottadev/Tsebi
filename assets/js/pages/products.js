@@ -1,0 +1,379 @@
+import { api, getCsrfToken } from "../api.js";
+import { toast } from "../ui/toast.js";
+import { confirmDiff } from "../ui/modalConfirmDiff.js";
+import { renderPagination, renderTable } from "../ui/table.js";
+
+function escapeHtml(value) {
+  return String(value || "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/\"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+function formatMoneyFromCents(cents, currency = "BRL") {
+  const amount = Math.max(0, Number(cents || 0)) / 100;
+  return amount.toLocaleString("pt-BR", { style: "currency", currency: String(currency || "BRL").toUpperCase() });
+}
+
+function formatDate(value) {
+  const date = new Date(String(value || ""));
+  if (Number.isNaN(date.getTime())) return "—";
+  return date.toLocaleString("pt-BR");
+}
+
+function statusPill(active) {
+  return active ? `<span class="pill">Ativo</span>` : `<span class="pill pill-danger">Inativo</span>`;
+}
+
+function buildDiff(before, after, labels) {
+  const diffs = [];
+  Object.keys(labels).forEach((key) => {
+    const left = before?.[key];
+    const right = after?.[key];
+    if (String(left ?? "") !== String(right ?? "")) {
+      diffs.push({ field: labels[key], before: left ?? "", after: right ?? "" });
+    }
+  });
+  return diffs;
+}
+
+export function createProductsPage({ mount, drawer, getStatusFilter, getStockFilter }) {
+  const state = {
+    query: "",
+    page: 1,
+    pageSize: 30,
+    total: 0,
+    rows: []
+  };
+
+  async function load() {
+    const status = String(getStatusFilter?.() || "").trim();
+    const stock = String(getStockFilter?.() || "").trim();
+    const data = await api(
+      `/api/admin/products?query=${encodeURIComponent(state.query)}&status=${encodeURIComponent(status)}&stock=${encodeURIComponent(stock)}&page=${state.page}&pageSize=${state.pageSize}`
+    );
+    state.rows = Array.isArray(data.rows) ? data.rows : Array.isArray(data.products) ? data.products : [];
+    state.total = Number(data.total || 0);
+  }
+
+  function render() {
+    mount.innerHTML = "";
+    const table = renderTable({
+      columns: [
+        {
+          label: "Produto",
+          render: (p) =>
+            `<div style="display:flex;align-items:center;gap:10px;">
+              <img src="${escapeHtml(p.image || "")}" alt="" style="width:38px;height:38px;object-fit:cover;border-radius:12px;border:1px solid var(--line);" />
+              <div>
+                <div style="font-weight:600">${escapeHtml(p.name || "—")}</div>
+                <div style="color:var(--muted);font-size:12px">${escapeHtml(p.sku || p.id || "")}</div>
+              </div>
+            </div>`
+        },
+        { label: "SKU", render: (p) => `<div>${escapeHtml(p.sku || p.id || "—")}</div>` },
+        { label: "Preço", render: (p) => `<div>${escapeHtml(formatMoneyFromCents(p.unitAmount, p.currency))}</div>` },
+        { label: "Estoque", render: (p) => `<div>${escapeHtml(p.stock)}</div>` },
+        { label: "Status", render: (p) => statusPill(Boolean(p.active)) },
+        { label: "Atualizado", render: (p) => `<div>${escapeHtml(formatDate(p.updatedAt || p.createdAt))}</div>` }
+      ],
+      rows: state.rows,
+      getRowId: (p) => p.id,
+      onRowClick: (row) => openDrawer(row.id)
+    });
+
+    const pager = renderPagination({
+      page: state.page,
+      pageSize: state.pageSize,
+      total: state.total,
+      onChange: async (nextPage) => {
+        state.page = nextPage;
+        await reload();
+      }
+    });
+
+    mount.appendChild(table);
+    mount.appendChild(pager);
+  }
+
+  function buildDrawerContent(product) {
+    const original = {
+      name: String(product.name || ""),
+      priceCents: String(Number(product.unitAmount || 0)),
+      stockQty: String(Number(product.stock || 0)),
+      currency: String(product.currency || "brl"),
+      imageUrl: String(product.image || ""),
+      active: Boolean(product.active)
+    };
+
+    const root = document.createElement("div");
+    root.innerHTML = `
+      <div class="section">
+        <h3>Detalhes</h3>
+        <div class="form-grid">
+          <label class="label full">
+            <span>Nome</span>
+            <input class="field" data-key="name" type="text" value="${escapeHtml(original.name)}" />
+          </label>
+          <label class="label">
+            <span>Preço (centavos)</span>
+            <input class="field" data-key="priceCents" type="number" min="0" step="1" value="${escapeHtml(original.priceCents)}" />
+          </label>
+          <label class="label">
+            <span>Estoque</span>
+            <input class="field" data-key="stockQty" type="number" min="0" step="1" value="${escapeHtml(original.stockQty)}" />
+          </label>
+          <label class="label">
+            <span>Moeda</span>
+            <input class="field" data-key="currency" type="text" value="${escapeHtml(original.currency)}" />
+          </label>
+          <label class="label">
+            <span>Status</span>
+            <select class="field" data-key="active">
+              <option value="true" ${original.active ? "selected" : ""}>Ativo</option>
+              <option value="false" ${!original.active ? "selected" : ""}>Inativo</option>
+            </select>
+          </label>
+          <label class="label full">
+            <span>Imagem</span>
+            <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+              <img src="${escapeHtml(original.imageUrl)}" alt="" style="width:86px;height:86px;object-fit:cover;border-radius:16px;border:1px solid var(--line);" />
+              <input class="field" data-key="imageUrl" type="text" value="${escapeHtml(original.imageUrl)}" placeholder="https://..." style="flex:1;min-width:min(320px, 92vw);" />
+              <input class="field" data-action="imageFile" type="file" accept="image/*" />
+            </div>
+            <span style="color:var(--muted);font-size:12px;">Upload envia direto para o Cloudinary (não salva no disco do Railway).</span>
+          </label>
+        </div>
+        <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:12px;">
+          <button type="button" class="btn btn-ghost" data-action="cancel">Cancelar</button>
+          <button type="button" class="btn" data-action="save">Salvar alterações</button>
+        </div>
+      </div>
+
+      <div class="section danger-zone">
+        <h3>Danger zone</h3>
+        <button type="button" class="btn btn-danger" data-action="archive">Arquivar/ocultar</button>
+      </div>
+    `;
+
+    root.addEventListener("input", (event) => {
+      const el = event.target;
+      if (!(el instanceof HTMLInputElement) && !(el instanceof HTMLSelectElement)) return;
+      const key = String(el.dataset.key || "");
+      if (!key) return;
+      const current = el instanceof HTMLSelectElement ? el.value : el.value;
+      const before = key === "active" ? String(Boolean(original.active)) : String(original[key] ?? "");
+      el.classList.toggle("dirty", String(current ?? "") !== before);
+    });
+
+    return { root, original };
+  }
+
+  async function openDrawer(productId) {
+    const data = await api(`/api/admin/products/${encodeURIComponent(productId)}`);
+    const product = data?.product || null;
+    if (!product) {
+      toast("Produto não encontrado.", { tone: "error" });
+      return;
+    }
+
+    const { root, original } = buildDrawerContent(product);
+
+    async function save() {
+      const patch = {};
+      root.querySelectorAll("[data-key]").forEach((el) => {
+        const key = String(el.dataset.key || "");
+        if (!key) return;
+        let value = el instanceof HTMLSelectElement ? el.value : el.value;
+        if (key === "active") value = value === "true";
+        if (String(value ?? "") !== String(key === "active" ? Boolean(original.active) : original[key] ?? "")) {
+          patch[key] = value;
+        }
+      });
+
+      if (Object.keys(patch).length === 0) {
+        toast("Nenhuma alteração para salvar.", { tone: "info" });
+        return;
+      }
+
+      const preview = { ...original, ...patch };
+      const diffs = buildDiff(
+        original,
+        preview,
+        {
+          name: "Nome",
+          priceCents: "Preço (centavos)",
+          stockQty: "Estoque",
+          currency: "Moeda",
+          imageUrl: "Imagem (URL)",
+          active: "Status ativo"
+        }
+      );
+      const ok = await confirmDiff({
+        title: "Confirmar alterações",
+        message: "Revise o diff antes de salvar.",
+        diffs,
+        tone: "ok"
+      });
+      if (!ok) return;
+
+      await api(`/api/admin/products/${encodeURIComponent(productId)}`, { method: "PATCH", json: patch });
+      toast("Produto atualizado.", { tone: "success" });
+      drawer.close();
+      await reload();
+    }
+
+    async function archive() {
+      const ok = await confirmDiff({
+        title: "Arquivar produto",
+        message: "Isso marca o produto como inativo (oculto).",
+        diffs: [{ field: "Ação", before: "—", after: "Arquivar/ocultar" }],
+        tone: "danger"
+      });
+      if (!ok) return;
+      await api(`/api/admin/products/${encodeURIComponent(productId)}`, { method: "DELETE" });
+      toast("Produto arquivado.", { tone: "success" });
+      drawer.close();
+      await reload();
+    }
+
+    async function uploadImage(file) {
+      if (!file) return;
+      const ok = await confirmDiff({
+        title: "Enviar imagem",
+        message: `Enviar "${file.name}" agora?`,
+        diffs: [{ field: "Arquivo", before: "—", after: file.name }],
+        tone: "ok"
+      });
+      if (!ok) return;
+
+      const buf = await file.arrayBuffer();
+      const res = await fetch(`/api/admin/products/${encodeURIComponent(productId)}/image`, {
+        method: "POST",
+        credentials: "include",
+        headers: {
+          "Content-Type": file.type || "application/octet-stream",
+          "x-csrf-token": getCsrfToken() || ""
+        },
+        body: buf
+      });
+      const payload = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        throw new Error(String(payload?.error || "IMAGE_UPLOAD_FAILED"));
+      }
+      toast("Imagem enviada.", { tone: "success" });
+      drawer.close();
+      await reload();
+    }
+
+    root.addEventListener("click", async (event) => {
+      const btn = event.target instanceof Element ? event.target.closest("button[data-action]") : null;
+      if (!(btn instanceof HTMLButtonElement)) return;
+      const action = String(btn.dataset.action || "");
+      try {
+        if (action === "save") await save();
+        if (action === "cancel") drawer.close();
+        if (action === "archive") await archive();
+      } catch (error) {
+        toast(`Falha: ${error?.code || error?.message || "REQUEST_FAILED"}`, { tone: "error" });
+      }
+    });
+
+    root.addEventListener("change", async (event) => {
+      const input = event.target;
+      if (!(input instanceof HTMLInputElement)) return;
+      if (String(input.dataset.action || "") !== "imageFile") return;
+      const file = input.files && input.files[0] ? input.files[0] : null;
+      input.value = "";
+      try {
+        await uploadImage(file);
+      } catch (error) {
+        toast(`Falha ao enviar imagem: ${error?.message || "IMAGE_UPLOAD_FAILED"}`, { tone: "error" });
+      }
+    });
+
+    drawer.open({
+      titleText: `Produto • ${product.sku || product.id}`,
+      content: root
+    });
+  }
+
+  async function reload() {
+    try {
+      await load();
+      render();
+    } catch (error) {
+      toast(`Falha ao carregar produtos: ${error?.code || error?.message || "REQUEST_FAILED"}`, { tone: "error" });
+      mount.innerHTML = `<div style="padding:14px;color:var(--muted);">Falha ao carregar produtos.</div>`;
+    }
+  }
+
+  return {
+    setQuery: (q) => {
+      state.query = String(q || "").trim();
+      state.page = 1;
+    },
+    reload,
+    openCreate: async () => {
+      const root = document.createElement("div");
+      root.innerHTML = `
+        <div class="section">
+          <h3>Novo produto</h3>
+          <div class="form-grid">
+            <label class="label full"><span>SKU</span><input class="field" data-key="sku" type="text" placeholder="ex: vestido-longo" /></label>
+            <label class="label full"><span>Nome</span><input class="field" data-key="name" type="text" /></label>
+            <label class="label"><span>Preço (centavos)</span><input class="field" data-key="priceCents" type="number" min="0" step="1" /></label>
+            <label class="label"><span>Estoque</span><input class="field" data-key="stockQty" type="number" min="0" step="1" /></label>
+            <label class="label"><span>Moeda</span><input class="field" data-key="currency" type="text" value="brl" /></label>
+            <label class="label"><span>Status</span>
+              <select class="field" data-key="active">
+                <option value="true" selected>Ativo</option>
+                <option value="false">Inativo</option>
+              </select>
+            </label>
+            <label class="label full"><span>Imagem (URL opcional)</span><input class="field" data-key="imageUrl" type="text" placeholder="https://..." /></label>
+          </div>
+          <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:12px;">
+            <button type="button" class="btn btn-ghost" data-action="cancel">Cancelar</button>
+            <button type="button" class="btn" data-action="create">Criar</button>
+          </div>
+        </div>
+      `;
+
+      root.addEventListener("click", async (event) => {
+        const btn = event.target instanceof Element ? event.target.closest("button[data-action]") : null;
+        if (!(btn instanceof HTMLButtonElement)) return;
+        const action = String(btn.dataset.action || "");
+        if (action === "cancel") {
+          drawer.close();
+          return;
+        }
+        if (action !== "create") return;
+
+        const payload = {};
+        root.querySelectorAll("[data-key]").forEach((el) => {
+          const key = String(el.dataset.key || "");
+          if (!key) return;
+          let value = el.value;
+          if (key === "active") value = value === "true";
+          if (key === "priceCents" || key === "stockQty") value = Number(value || 0);
+          payload[key] = value;
+        });
+
+        try {
+          await api("/api/admin/products", { method: "POST", json: payload });
+          toast("Produto criado.", { tone: "success" });
+          drawer.close();
+          await reload();
+        } catch (error) {
+          toast(`Falha ao criar produto: ${error?.code || error?.message || "REQUEST_FAILED"}`, { tone: "error" });
+        }
+      });
+
+      drawer.open({ titleText: "Produtos • criar", content: root });
+    }
+  };
+}
+

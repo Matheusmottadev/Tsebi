@@ -11,6 +11,7 @@ const {
   findUserById,
   createUser,
   updateUser,
+  markUserLoggedInNow,
   markUserEmailVerified
 } = require("./user-repository");
 const { listOrdersByUserId, updateOrder } = require("./lib/order-repository");
@@ -478,6 +479,7 @@ authRouter.post("/login", authRateLimit, async (req, res) => {
 
     if (!isLoginEmailVerificationRequired()) {
       req.session.userId = user.id;
+      markUserLoggedInNow(user.id).catch(() => {});
       return res.json({ ok: true, user: publicUser(user), stage: "authenticated" });
     }
 
@@ -508,6 +510,7 @@ authRouter.post("/login/verify-code", authRateLimit, async (req, res) => {
   }
 
   req.session.userId = user.id;
+  markUserLoggedInNow(user.id).catch(() => {});
   return res.json({ ok: true, user: publicUser(user) });
 });
 

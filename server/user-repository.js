@@ -44,6 +44,9 @@ function fromRow(row) {
     id: row.id,
     name: row.name,
     email: normalizeEmail(row.email),
+    phone: String(row.phone || "").trim(),
+    loginDisabled: Boolean(row.login_disabled),
+    lastLoginAt: row.last_login_at || null,
     emailVerified: Boolean(row.email_verified),
     emailVerifiedAt: row.email_verified_at || null,
     birthDate: formatBirthDate(row.birth_date),
@@ -120,21 +123,106 @@ async function listUsers({ limit = 100, offset = 0, search = "" } = {}) {
   return result.rows.map(fromRow).filter(Boolean);
 }
 
-async function createUser({ name, email, passwordHash, birthDate, cpf, cep, emailVerified = false }) {
+function maskCpfForList(cpf) {
+  const digits = String(cpf || "").replace(/\D/g, "");
+  if (digits.length !== 11) return "";
+  return `***.***.***-${digits.slice(-2)}`;
+}
+
+function adminUserListItem(user) {
+  if (!user) return null;
+  return {
+    id: user.id,
+    name: user.name,
+    nickname: "",
+    email: user.email,
+    phone: user.phone || "",
+    status: user.loginDisabled ? "disabled" : "active",
+    lastLoginAt: user.lastLoginAt || null,
+    createdAt: user.createdAt || null,
+    cpfMasked: maskCpfForList(user.cpf || ""),
+    cpf: "",
+    cep: user.cep || ""
+  };
+}
+
+async function searchUsersAdmin({
+  query: q = "",
+  status = "",
+  page = 1,
+  pageSize = 50
+} = {}) {
+  const safePage = Math.max(1, Number(page) || 1);
+  const safePageSize = Math.max(1, Math.min(200, Number(pageSize) || 50));
+  const offset = (safePage - 1) * safePageSize;
+
+  const where = [];
+  const values = [];
+
+  const normalizedQuery = String(q || "").trim().toLowerCase();
+  if (normalizedQuery) {
+    values.push(`%${normalizedQuery}%`);
+    const idx = values.length;
+    where.push(`(lower(name) LIKE $${idx} OR lower(email) LIKE $${idx})`);
+  }
+
+  const normalizedStatus = String(status || "").trim().toLowerCase();
+  if (normalizedStatus === "active") {
+    where.push(`login_disabled = false`);
+  } else if (normalizedStatus === "disabled") {
+    where.push(`login_disabled = true`);
+  }
+
+  const whereSql = where.length ? `WHERE ${where.join(" AND ")}` : "";
+  values.push(safePageSize, offset);
+  const limitIdx = values.length - 1;
+  const offsetIdx = values.length;
+
+  const listResult = await query(
+    `
+    SELECT *
+    FROM users
+    ${whereSql}
+    ORDER BY created_at DESC
+    LIMIT $${limitIdx} OFFSET $${offsetIdx}
+    `,
+    values
+  );
+
+  const countResult = await query(
+    `
+    SELECT COUNT(*)::int AS total
+    FROM users
+    ${whereSql}
+    `,
+    values.slice(0, values.length - 2)
+  );
+
+  const rows = listResult.rows.map(fromRow).filter(Boolean);
+  return {
+    rows: rows.map(adminUserListItem).filter(Boolean),
+    total: Number(countResult.rows[0]?.total || 0),
+    page: safePage,
+    pageSize: safePageSize
+  };
+}
+
+async function createUser({ name, email, phone = "", passwordHash, birthDate, cpf, cep, emailVerified = false }) {
   const normalizedEmail = normalizeEmail(email);
   try {
     const result = await query(
       `
         INSERT INTO users (
-          name, email, password_hash, birth_date, cpf, cep, addresses, default_address_id, email_verified, email_verified_at
+          name, email, phone, password_hash, birth_date, cpf, cep, addresses, default_address_id, email_verified, email_verified_at
         ) VALUES (
-          $1, $2, $3, NULLIF($4, '')::date, $5, $6, '[]'::jsonb, '', $7, CASE WHEN $7 THEN NOW() ELSE NULL END
+          $1, $2, NULLIF($3, ''), $4, NULLIF($5, '')::date, $6, $7, '[]'::jsonb, '', $8, CASE WHEN $8 THEN NOW() ELSE NULL END
         )
         RETURNING *
         `,
         [
           String(name || "").trim(),
           normalizedEmail,
+          String(phone || "").trim().slice(0, 40),
           passwordHash,
           String(birthDate || ""),
           String(cpf || "").replace(/\D/g, "").slice(0, 11) || null,
@@ -203,6 +291,7 @@ async function adminUpdateUser(id, patch = {}) {
   const next = {
     name: patch.name ?? current.name,
     email: patch.email ?? current.email,
+    phone: patch.phone ?? current.phone,
     birthDate: patch.birthDate ?? current.birthDate,
     cpf: patch.cpf ?? current.cpf,
     cep: patch.cep ?? current.cep
@@ -215,9 +304,10 @@ async function adminUpdateUser(id, patch = {}) {
       SET
         name = $2,
         email = $3,
-        birth_date = NULLIF($4, '')::date,
-        cpf = $5,
-        cep = $6,
+        phone = NULLIF($4, ''),
+        birth_date = NULLIF($5, '')::date,
+        cpf = $6,
+        cep = $7,
         updated_at = NOW()
       WHERE id = $1
       RETURNING *
@@ -226,6 +316,7 @@ async function adminUpdateUser(id, patch = {}) {
         id,
         String(next.name || "").trim(),
         normalizeEmail(next.email),
+        String(next.phone || "").trim().slice(0, 40),
         String(next.birthDate || ""),
         String(next.cpf || "").replace(/\D/g, "").slice(0, 11) || null,
         String(next.cep || "").replace(/\D/g, "").slice(0, 8) || null
@@ -238,6 +329,105 @@ async function adminUpdateUser(id, patch = {}) {
       return { error: "EMAIL_ALREADY_EXISTS" };
     }
     throw error;
+  }
+}
+
+async function adminDisableUserLogin(id) {
+  const current = await findUserById(id);
+  if (!current) return null;
+
+  const result = await query(
+    `
+    UPDATE users
+    SET
+      login_disabled = TRUE,
+      password_hash = NULL,
+      updated_at = NOW()
+    WHERE id = $1
+    RETURNING *
+    `,
+    [id]
+  );
+
+  return fromRow(result.rows[0] || null);
+}
+
+async function adminSetUserTempPassword(id, passwordHash) {
+  const current = await findUserById(id);
+  if (!current) return null;
+
+  const safeHash = String(passwordHash || "").trim();
+  if (!safeHash) return null;
+
+  const result = await query(
+    `
+    UPDATE users
+    SET
+      login_disabled = FALSE,
+      password_hash = $2,
+      updated_at = NOW()
+    WHERE id = $1
+    RETURNING *
+    `,
+    [id, safeHash]
+  );
+
+  return fromRow(result.rows[0] || null);
+}
+
+async function adminRestoreUserAuthSnapshot(id, snapshot = {}) {
+  const current = await findUserById(id);
+  if (!current) return null;
+
+  const passwordHash = snapshot.passwordHash == null ? current.passwordHash : String(snapshot.passwordHash || "").trim();
+  const loginDisabled =
+    snapshot.loginDisabled == null ? Boolean(current.loginDisabled) : Boolean(snapshot.loginDisabled);
+
+  const result = await query(
+    `
+    UPDATE users
+    SET
+      login_disabled = $2,
+      password_hash = $3,
+      updated_at = NOW()
+    WHERE id = $1
+    RETURNING *
+    `,
+    [id, loginDisabled, passwordHash || null]
+  );
+
+  return fromRow(result.rows[0] || null);
+}
+
+async function markUserLoggedInNow(userId) {
+  if (!userId) return null;
+  const result = await query(
+    `
+    UPDATE users
+    SET last_login_at = NOW(),
+        updated_at = NOW()
+    WHERE id = $1
+    RETURNING *
+    `,
+    [userId]
+  );
+  return fromRow(result.rows[0] || null);
+}
+
+async function invalidateUserSessions(userId) {
+  if (!userId) return { ok: false, error: "INVALID_ID" };
+
+  try {
+    await query(
+      `
+      DELETE FROM user_sessions
+      WHERE (sess::jsonb ->> 'userId') = $1
+      `,
+      [String(userId)]
+    );
+    return { ok: true };
+  } catch (error) {
+    return { ok: false, error: "SESSION_INVALIDATION_FAILED" };
   }
 }
 
@@ -560,9 +750,15 @@ module.exports = {
   findUserByEmail,
   findUserById,
   listUsers,
+  searchUsersAdmin,
   createUser,
   updateUser,
   adminUpdateUser,
+  adminDisableUserLogin,
+  adminSetUserTempPassword,
+  adminRestoreUserAuthSnapshot,
+  markUserLoggedInNow,
+  invalidateUserSessions,
   deleteUserById,
   createPasswordResetToken,
   consumePasswordResetToken,

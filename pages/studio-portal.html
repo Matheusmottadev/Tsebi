@@ -28,237 +28,134 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;600&family=Montserrat:wght@400;500;600&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="css/studio-portal.css?v=20260218i" />
+  <link rel="stylesheet" href="assets/css/studio-admin.css?v=20260218a" />
 </head>
 <body>
-  <main class="admin-wrap">
-    <header class="admin-head">
-      <div>
-        <p class="admin-kicker">Painel interno</p>
-        <h1>Studio Portal</h1>
-        <p class="admin-sub" id="adminIdentity">Validando acesso...</p>
+  <main class="admin-shell" id="studioPortalRoot">
+    <header class="topbar">
+      <div class="brand">
+        <div class="brand-kicker">Painel interno</div>
+        <div class="brand-title">Studio Portal</div>
       </div>
-      <div class="admin-head-actions" id="adminHeadActions" hidden>
-        <button id="refreshAllBtn" type="button" class="btn">Atualizar tudo</button>
-        <button id="regenerateRecoveryBtn" type="button" class="btn btn-ghost">Novos codigos MFA</button>
-        <button id="disableMfaBtn" type="button" class="btn btn-danger">Desativar MFA</button>
-        <button id="logoutBtn" type="button" class="btn btn-ghost">Sair</button>
+
+      <div class="topbar-actions">
+        <div class="search" role="search">
+          <input id="globalSearch" type="search" placeholder="Buscar nesta aba..." autocomplete="off" />
+        </div>
+        <button id="refreshBtn" type="button" class="btn btn-ghost">Atualizar</button>
+        <div class="avatar" id="adminAvatar" title="Admin">—</div>
+        <div class="menu">
+          <button id="adminMenuBtn" type="button" class="btn btn-ghost">Menu</button>
+          <div id="adminMenuPanel" class="menu-panel" hidden>
+            <button class="menu-item" type="button" data-action="profile">Perfil</button>
+            <button class="menu-item" type="button" data-action="theme">Tema</button>
+            <button class="menu-item" type="button" data-action="accent">Paleta</button>
+            <button class="menu-item" type="button" data-action="logout">Sair</button>
+          </div>
+        </div>
       </div>
     </header>
 
-    <p id="adminStatus" class="status"></p>
+    <nav class="tabs" aria-label="Abas do painel">
+      <button type="button" class="tab is-active" data-tab="users">Usuários</button>
+      <button type="button" class="tab" data-tab="orders">Pedidos</button>
+      <button type="button" class="tab" data-tab="products">Produtos</button>
+      <button type="button" class="tab" data-tab="vip">Lista VIP</button>
+      <button type="button" class="tab" data-tab="audit">Auditoria</button>
+    </nav>
 
-    <section id="adminLocked" class="panel" hidden>
-      <h2>Acesso restrito</h2>
-      <p>Entre com o login exclusivo do Studio para acessar o painel.</p>
-      <a class="btn" href="studio-login.html">Ir para login do Studio</a>
+    <section class="panel" id="panelUsers" data-panel="users">
+      <div class="panel-head">
+        <div class="panel-title">
+          <h2>Usuários</h2>
+          <p>Editar dados, senha temporária e ações críticas com auditoria.</p>
+        </div>
+        <div class="panel-actions">
+          <select id="usersStatus">
+            <option value="">Todos</option>
+            <option value="active">Ativos</option>
+            <option value="disabled">Login desativado</option>
+          </select>
+          <button id="usersCreateBtn" type="button" class="btn">Cadastrar</button>
+        </div>
+      </div>
+      <div id="usersMount"></div>
     </section>
 
-    <section id="adminApp" hidden>
-      <nav class="tabs" aria-label="Abas do painel">
-        <button type="button" class="tab is-active" data-tab="users">Usuarios</button>
-        <button type="button" class="tab" data-tab="orders">Pedidos</button>
-        <button type="button" class="tab" data-tab="products">Produtos</button>
-        <button type="button" class="tab" data-tab="vip">Lista VIP</button>
-        <button type="button" class="tab" data-tab="audit">Auditoria</button>
-      </nav>
-
-      <section class="panel tab-panel is-active" data-panel="users">
-        <div class="panel-head">
-          <h2>Usuarios</h2>
-          <div class="inline-actions">
-            <input id="usersSearch" type="search" placeholder="Buscar por nome/email" />
-            <button id="usersRefreshBtn" type="button" class="btn btn-ghost">Atualizar</button>
-          </div>
-        </div>
-
-        <form id="createUserForm" class="form-grid">
-          <input id="newUserName" type="text" placeholder="Nome" required />
-          <input id="newUserEmail" type="email" placeholder="Email" required />
-          <input id="newUserPassword" type="text" placeholder="Senha temporaria" required />
-          <input id="newUserBirthDate" type="date" />
-          <input id="newUserCpf" type="text" placeholder="CPF" />
-          <input id="newUserCep" type="text" placeholder="CEP" />
-          <button type="submit" class="btn">Adicionar usuario</button>
-        </form>
-
-        <div class="table-wrap">
-          <table>
-            <thead>
-              <tr>
-                <th>Nome</th>
-                <th>Email</th>
-                <th>CPF</th>
-                <th>CEP</th>
-                <th>Criado</th>
-                <th>Acoes</th>
-              </tr>
-            </thead>
-            <tbody id="usersBody"></tbody>
-          </table>
-        </div>
-      </section>
-
-      <section class="panel tab-panel" data-panel="orders" hidden>
-        <div class="panel-head">
+    <section class="panel" id="panelOrders" data-panel="orders" hidden>
+      <div class="panel-head">
+        <div class="panel-title">
           <h2>Pedidos</h2>
-          <div class="inline-actions">
-            <input id="ordersSearch" type="search" placeholder="Buscar por ID/email" />
-            <select id="ordersStatusFilter">
-              <option value="">Todos status</option>
-              <option value="pending_payment">Pendente</option>
-              <option value="processing">Processando</option>
-              <option value="paid">Pago</option>
-              <option value="failed">Falhou</option>
-              <option value="canceled">Cancelado</option>
-              <option value="refunded">Reembolsado</option>
-            </select>
-            <button id="ordersRefreshBtn" type="button" class="btn btn-ghost">Atualizar</button>
-          </div>
+          <p>Tracking manual, status, notas e prazos (sem fluxo de etiqueta).</p>
         </div>
+        <div class="panel-actions">
+          <select id="ordersStatus">
+            <option value="">Todos status</option>
+            <option value="pending_payment">Pendente</option>
+            <option value="processing">Processando</option>
+            <option value="paid">Pago</option>
+            <option value="failed">Falhou</option>
+            <option value="canceled">Cancelado</option>
+            <option value="refunded">Reembolsado</option>
+          </select>
+        </div>
+      </div>
+      <div id="ordersMount"></div>
+    </section>
 
-        <div class="table-wrap">
-          <table>
-            <thead>
-              <tr>
-                <th>Data</th>
-                <th>ID do pedido</th>
-                <th>Cliente</th>
-                <th>Valor do frete</th>
-                <th>Total (itens + frete)</th>
-                <th>Status</th>
-                <th>Servico de frete</th>
-                <th>Comprar etiqueta</th>
-                <th>Rastreio</th>
-              </tr>
-            </thead>
-            <tbody id="ordersBody"></tbody>
-          </table>
-        </div>
-        <div class="section-save">
-          <button id="ordersSaveSectionBtn" type="button" class="btn">Salvar alteracoes de pedidos</button>
-        </div>
-      </section>
-
-      <section class="panel tab-panel" data-panel="products" hidden>
-        <div class="panel-head">
+    <section class="panel" id="panelProducts" data-panel="products" hidden>
+      <div class="panel-head">
+        <div class="panel-title">
           <h2>Produtos</h2>
-          <div class="inline-actions">
-            <input id="productsSearch" type="search" placeholder="Buscar por SKU/nome" />
-            <label class="toggle-inline"><input id="productsIncludeInactive" type="checkbox" checked /> Inativos</label>
-            <button id="productsRefreshBtn" type="button" class="btn btn-ghost">Atualizar</button>
-          </div>
+          <p>Editar dados, foto, estoque e status com confirmação e diff.</p>
         </div>
-
-        <form id="createProductForm" class="form-grid">
-          <input id="newProductSku" type="text" placeholder="SKU (ex: vestido-longo)" required />
-          <input id="newProductName" type="text" placeholder="Nome" required />
-          <input id="newProductPrice" type="number" min="0" step="1" placeholder="Preco em centavos" required />
-          <input id="newProductStock" type="number" min="0" step="1" placeholder="Estoque" required />
-          <input id="newProductImageUrl" type="text" placeholder="URL da foto (opcional)" />
-          <button type="submit" class="btn">Adicionar produto</button>
-        </form>
-
-        <div class="table-wrap">
-          <table>
-            <thead>
-              <tr>
-                <th>SKU</th>
-                <th>Nome</th>
-                <th>Preco (centavos)</th>
-                <th>Estoque</th>
-                <th>Foto (URL)</th>
-                <th>Ativo</th>
-                <th>Acoes</th>
-              </tr>
-            </thead>
-            <tbody id="productsBody"></tbody>
-          </table>
+        <div class="panel-actions">
+          <select id="productsStatus">
+            <option value="">Todos</option>
+            <option value="active">Ativos</option>
+            <option value="inactive">Inativos</option>
+          </select>
+          <select id="productsStock">
+            <option value="">Todo estoque</option>
+            <option value="in">Em estoque</option>
+            <option value="out">Sem estoque</option>
+          </select>
+          <button id="productsCreateBtn" type="button" class="btn">Criar</button>
         </div>
-        <div class="section-save">
-          <button id="productsSaveSectionBtn" type="button" class="btn">Salvar alteracoes de produtos</button>
-        </div>
-      </section>
+      </div>
+      <div id="productsMount"></div>
+    </section>
 
-      <section class="panel tab-panel" data-panel="vip" hidden>
-        <div class="panel-head">
+    <section class="panel" id="panelVip" data-panel="vip" hidden>
+      <div class="panel-head">
+        <div class="panel-title">
           <h2>Lista VIP</h2>
-          <div class="inline-actions">
-            <button id="vipRefreshBtn" type="button" class="btn btn-ghost">Atualizar</button>
-          </div>
+          <p>Inscritos com busca, edição e auditoria.</p>
         </div>
-
-        <form id="createVipForm" class="form-grid">
-          <input id="newVipName" type="text" placeholder="Nome" required />
-          <input id="newVipEmail" type="email" placeholder="Email" required />
-          <input id="newVipBirthDate" type="date" />
-          <input id="newVipCpf" type="text" placeholder="CPF" />
-          <input id="newVipCep" type="text" placeholder="CEP" />
-          <label class="toggle-inline"><input id="newVipAccountCreated" type="checkbox" /> Conta criada</label>
-          <button type="submit" class="btn">Adicionar VIP</button>
-        </form>
-
-        <div class="table-wrap">
-          <table>
-            <thead>
-              <tr>
-                <th>Nome</th>
-                <th>Email</th>
-                <th>CPF</th>
-                <th>CEP</th>
-                <th>Conta</th>
-                <th>Inscricao</th>
-                <th>Acoes</th>
-              </tr>
-            </thead>
-            <tbody id="vipBody"></tbody>
-          </table>
+        <div class="panel-actions">
+          <button id="vipCreateBtn" type="button" class="btn">Cadastrar</button>
         </div>
-      </section>
+      </div>
+      <div id="vipMount"></div>
+    </section>
 
-      <section class="panel tab-panel" data-panel="audit" hidden>
-        <div class="panel-head">
+    <section class="panel" id="panelAudit" data-panel="audit" hidden>
+      <div class="panel-head">
+        <div class="panel-title">
           <h2>Auditoria</h2>
-          <div class="inline-actions">
-            <button id="auditRefreshBtn" type="button" class="btn btn-ghost">Atualizar</button>
-          </div>
+          <p>Alterações e logins admin (reversão até 30 dias quando aplicável).</p>
         </div>
-
-        <div class="table-wrap">
-          <table>
-            <thead>
-              <tr>
-                <th>Quando</th>
-                <th>Admin</th>
-                <th>Acao</th>
-                <th>Entidade</th>
-                <th>Resumo</th>
-                <th>Status</th>
-                <th>Acoes</th>
-              </tr>
-            </thead>
-            <tbody id="auditBody"></tbody>
-          </table>
+        <div class="panel-actions">
+          <select id="auditMode">
+            <option value="changes">Alterações</option>
+            <option value="logins">Logins admin</option>
+          </select>
         </div>
-      </section>
+      </div>
+      <div id="auditMount"></div>
     </section>
   </main>
 
-  <div id="actionModal" class="action-modal" hidden>
-    <div class="action-modal-dialog" role="dialog" aria-modal="true" aria-labelledby="actionModalTitle">
-      <h3 id="actionModalTitle">Confirmar acao</h3>
-      <p id="actionModalMessage" class="action-modal-message"></p>
-      <form id="actionModalForm" class="action-modal-form">
-        <div id="actionModalFields" class="action-modal-fields"></div>
-        <p id="actionModalError" class="action-modal-error" hidden></p>
-        <div class="action-modal-actions">
-          <button id="actionModalCancel" type="button" class="btn btn-ghost">Cancelar</button>
-          <button id="actionModalConfirm" type="submit" class="btn">Confirmar</button>
-        </div>
-      </form>
-    </div>
-  </div>
-
-  <script src="JS/studio-portal.js?v=20260218e"></script>
+  <script type="module" src="assets/js/pages/studio-portal.js?v=20260218a"></script>
 </body>
 </html>
