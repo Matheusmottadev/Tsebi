@@ -66,11 +66,16 @@ ADMIN_MFA_ISSUER=Tsebi Studio
 ADMIN_CSRF_COOKIE_NAME=tsebi.admin.csrf
 ADMIN_AUDIT_RETENTION_DAYS=30
 
-# Upload de imagens (produtos no Studio Portal)
-CLOUDINARY_CLOUD_NAME=
-CLOUDINARY_API_KEY=
-CLOUDINARY_API_SECRET=
-CLOUDINARY_FOLDER=tsebi/products
+# Upload de imagens (produtos no Studio Portal) - Cloudflare R2
+# Obtenha essas credenciais em: https://dash.cloudflare.com -> R2 -> Manage R2 API Tokens
+R2_ACCOUNT_ID=
+R2_ACCESS_KEY_ID=
+R2_SECRET_ACCESS_KEY=
+R2_BUCKET_NAME=
+# URL pública do bucket R2 (ex: https://pub-xxxxx.r2.dev ou domínio customizado)
+R2_PUBLIC_URL=
+# Opcional: pasta destino no R2 (padrão: tsebi/products)
+R2_FOLDER=tsebi/products
 ```
 
 ## Rodando local com PostgreSQL

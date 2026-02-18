@@ -143,7 +143,7 @@ export function createProductsPage({ mount, drawer, getStatusFilter, getStockFil
               <input class="field" data-key="imageUrl" type="text" value="${escapeHtml(original.imageUrl)}" placeholder="https://..." style="flex:1;min-width:min(320px, 92vw);" />
               <input class="field" data-action="imageFile" type="file" accept="image/*" />
             </div>
-            <span style="color:var(--muted);font-size:12px;">Upload envia direto para o Cloudinary (não salva no disco do Railway).</span>
+            <span style="color:var(--muted);font-size:12px;">Upload envia direto para o Cloudflare R2 (não salva no disco do Railway).</span>
           </label>
         </div>
         <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:12px;">

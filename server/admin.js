@@ -48,7 +48,7 @@ const {
 } = require("./lib/admin-audit-repository");
 const { ensureAdminProfile, updateAdminProfile } = require("./lib/admin-profile-repository");
 const { listAdminLoginEvents } = require("./lib/admin-login-events-repository");
-const { uploadBuffer: uploadCloudinaryBuffer } = require("./lib/cloudinary-upload");
+const { uploadBuffer: uploadR2Buffer } = require("./lib/cloudflare-r2-upload");
 const { listShipmentsByOrderIds } = require("../src/db/queries/shipping.queries");
 const { getVipDatabaseUrl } = require("./lib/vip-db");
 const { requireAdmin, requireAdminCsrfForMutations } = require("./middlewares/requireAdmin");
@@ -1335,9 +1335,9 @@ adminRouter.post(
       const before = await getProductByIdentifier(id);
       if (!before) return res.status(404).json({ error: "NOT_FOUND" });
 
-      const folder = String(process.env.CLOUDINARY_FOLDER || "tsebi/products").trim() || "tsebi/products";
+      const folder = String(process.env.R2_FOLDER || "tsebi/products").trim() || "tsebi/products";
       const publicId = `product_${String(before.sku || before.id || id).trim()}`;
-      const uploaded = await uploadCloudinaryBuffer(req.body, { folder, publicId });
+      const uploaded = await uploadR2Buffer(req.body, { folder, publicId });
       const url = String(uploaded?.secure_url || uploaded?.url || "").trim();
       if (!url) return res.status(500).json({ error: "IMAGE_UPLOAD_FAILED" });
 
@@ -1372,8 +1372,12 @@ adminRouter.post(
         }
       });
     } catch (error) {
-      if (String(error?.code || "") === "CLOUDINARY_NOT_CONFIGURED") {
-        return res.status(500).json({ error: "CLOUDINARY_NOT_CONFIGURED" });
+      if (String(error?.code || "") === "R2_NOT_CONFIGURED") {
+        return res.status(500).json({ error: "R2_NOT_CONFIGURED" });
+      }
+      if (String(error?.code || "") === "R2_UPLOAD_FAILED") {
+        console.error("R2 upload error:", error);
+        return res.status(500).json({ error: "IMAGE_UPLOAD_FAILED" });
       }
       return res.status(500).json({ error: "IMAGE_UPLOAD_FAILED" });
     }
