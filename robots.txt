@@ -1,0 +1,19 @@
+User-agent: *
+Allow: /
+Disallow: /api/
+Disallow: /studio
+Disallow: /studio-login
+Disallow: /studio-portal
+Disallow: /studio-portal.html
+Disallow: /vip-admin.html
+Disallow: /conta.html
+Disallow: /cart.html
+Disallow: /minha-conta.html
+Disallow: /order.html
+Disallow: /payment-result.html
+Disallow: /recuperar-senha.html
+Disallow: /recuperar-senha-codigo.html
+Disallow: /loading-careers.html
+Disallow: /loading-studio.html
+
+Sitemap: https://tsebi.com.br/sitemap.xml

@@ -1164,6 +1164,7 @@ function initHeaderMenu() {
   const closeBtn = document.getElementById("closeHeaderMenu");
 
   if (!menu || !openBtn) return;
+  let prelaunchNoticeTimer = null;
 
   function openMenu() {
     menu.classList.add("is-open");
@@ -1175,6 +1176,63 @@ function initHeaderMenu() {
     menu.classList.remove("is-open");
     menu.setAttribute("aria-hidden", "true");
     document.body.classList.remove("menu-open");
+  }
+
+  function ensurePrelaunchMenuNotice() {
+    let notice = document.getElementById("prelaunchMenuNotice");
+    if (notice) return notice;
+
+    notice = document.createElement("div");
+    notice.id = "prelaunchMenuNotice";
+    notice.setAttribute("role", "status");
+    notice.setAttribute("aria-live", "polite");
+    notice.style.position = "fixed";
+    notice.style.left = "50%";
+    notice.style.bottom = "20px";
+    notice.style.transform = "translate(-50%, 18px)";
+    notice.style.opacity = "0";
+    notice.style.pointerEvents = "none";
+    notice.style.transition = "opacity 0.2s ease, transform 0.2s ease";
+    notice.style.background = "#101010";
+    notice.style.color = "#f7f7f7";
+    notice.style.border = "1px solid rgba(255,255,255,0.24)";
+    notice.style.padding = "12px 14px";
+    notice.style.zIndex = "2200";
+    notice.style.display = "flex";
+    notice.style.alignItems = "center";
+    notice.style.gap = "12px";
+    notice.style.maxWidth = "calc(100vw - 24px)";
+    notice.style.fontFamily = "Montserrat, sans-serif";
+    notice.style.fontSize = "12px";
+    notice.style.letterSpacing = "0.2px";
+    notice.innerHTML =
+      '<span>Menu indisponivel por enquanto. As pecas ainda serao lancadas.</span>' +
+      '<a href="lancamento.html" style="color:#fff;text-decoration:underline;white-space:nowrap;">Ver lancamento</a>';
+    document.body.appendChild(notice);
+    return notice;
+  }
+
+  function showPrelaunchMenuNotice() {
+    const notice = ensurePrelaunchMenuNotice();
+    notice.style.opacity = "1";
+    notice.style.transform = "translate(-50%, 0)";
+    notice.style.pointerEvents = "auto";
+    window.clearTimeout(prelaunchNoticeTimer);
+    prelaunchNoticeTimer = window.setTimeout(() => {
+      notice.style.opacity = "0";
+      notice.style.transform = "translate(-50%, 18px)";
+      notice.style.pointerEvents = "none";
+    }, 4200);
+  }
+
+  if (isPrelaunchMode) {
+    openBtn.addEventListener("click", (event) => {
+      event.preventDefault();
+      closeMenu();
+      showPrelaunchMenuNotice();
+    });
+    closeBtn?.addEventListener("click", closeMenu);
+    return;
   }
 
   openBtn.addEventListener("click", openMenu);
