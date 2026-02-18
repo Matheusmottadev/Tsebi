@@ -686,9 +686,30 @@ adminRouter.patch("/me", async (req, res) => {
   const parsed = adminProfilePatchSchema.safeParse(req.body || {});
   if (!parsed.success) return res.status(400).json({ error: "INVALID_INPUT" });
 
+  const userId = req.adminUser?.id || null;
+  if (!userId) {
+    return res.status(401).json({ error: "ADMIN_USER_NOT_FOUND" });
+  }
+
   try {
-    const updated = await updateAdminProfile(req.adminUser?.id || null, parsed.data);
-    if (!updated) return res.status(404).json({ error: "NOT_FOUND" });
+    // Garantir que o perfil existe antes de atualizar
+    if (!req.adminProfile) {
+      req.adminProfile = await ensureAdminProfile({
+        userId,
+        email: req.adminUser?.email || "",
+        fallbackName: req.adminUser?.name || ""
+      });
+    }
+
+    const updated = await updateAdminProfile(userId, parsed.data, {
+      email: req.adminUser?.email || "",
+      fallbackName: req.adminUser?.name || ""
+    });
+    
+    if (!updated) {
+      console.error(`[admin] updateAdminProfile retornou null para userId=${userId}, email=${req.adminUser?.email || "N/A"}`);
+      return res.status(500).json({ error: "ADMIN_PROFILE_UPDATE_FAILED" });
+    }
 
     await recordAuditLog(req, {
       action: "update",
@@ -703,7 +724,8 @@ adminRouter.patch("/me", async (req, res) => {
 
     req.adminProfile = updated;
     return res.json({ ok: true, profile: updated });
-  } catch {
+  } catch (error) {
+    console.error("[admin] Erro ao atualizar perfil:", error);
     return res.status(500).json({ error: "ADMIN_PROFILE_UPDATE_FAILED" });
   }
 });
