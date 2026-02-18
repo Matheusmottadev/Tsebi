@@ -48,8 +48,7 @@ const checkoutState = {
     shippingDeadlineDays: null
   },
   shippingQuoteOptions: {
-    standard: null,
-    express: null
+    list: []
   },
   authUserId: "guest",
   shippingStorageKey: "",
@@ -123,9 +122,7 @@ const dom = {
   summaryEstimate: document.getElementById("summaryEstimate"),
   summary: document.getElementById("checkoutSummary"),
   summaryCollapseBtn: document.getElementById("summaryCollapseBtn"),
-  shippingStandardPrice: document.getElementById("shippingStandardPrice"),
-  shippingExpressPrice: document.getElementById("shippingExpressPrice")
-  ,
+  shippingOptionsList: document.getElementById("shippingOptionsList"),
   checkoutAuthCta: document.getElementById("checkoutAuthCta"),
   headerCartLinks: Array.from(document.querySelectorAll('a[aria-label="Carrinho"]'))
 };
@@ -433,34 +430,6 @@ async function refreshCartFromLatestProducts() {
   return { ok: true, removedOutOfStock };
 }
 
-function getShippingOptionElements(methodCode) {
-  const radio = dom.shippingForm?.querySelector(`input[name="shippingMethod"][value="${methodCode}"]`) || null;
-  if (!(radio instanceof HTMLInputElement)) {
-    return { radio: null, textEl: null, priceEl: null };
-  }
-  const option = radio.closest(".shipping-option");
-  if (!(option instanceof HTMLElement)) {
-    return { radio, textEl: null, priceEl: null };
-  }
-  const textEl = option.querySelector("span");
-  const priceEl = option.querySelector("strong");
-  return {
-    radio,
-    textEl: textEl instanceof HTMLElement ? textEl : null,
-    priceEl: priceEl instanceof HTMLElement ? priceEl : null
-  };
-}
-
-function ensureShippingOptionDefaults() {
-  ["standard", "express"].forEach((methodCode) => {
-    const elements = getShippingOptionElements(methodCode);
-    if (!elements.textEl) return;
-    if (!elements.textEl.dataset.defaultLabel) {
-      elements.textEl.dataset.defaultLabel = elements.textEl.textContent || "";
-    }
-  });
-}
-
 function clearSelectedShippingQuote() {
   checkoutState.shipping.shippingMethod = "";
   checkoutState.shipping.shippingCost = 0;
@@ -473,56 +442,70 @@ function clearSelectedShippingQuote() {
   checkoutState.shipping.shippingDeadlineDays = null;
 }
 
-function applyShippingQuoteOption(methodCode, quote) {
-  const elements = getShippingOptionElements(methodCode);
-  if (!elements.radio) return;
+function getShippingQuoteByMethod(methodCode) {
+  const wanted = String(methodCode || "").trim();
+  if (!wanted) return null;
+  const list = Array.isArray(checkoutState.shippingQuoteOptions?.list)
+    ? checkoutState.shippingQuoteOptions.list
+    : [];
+  return list.find((quote) => String(quote?.id || "").trim() === wanted) || null;
+}
 
-  if (!quote) {
-    elements.radio.disabled = true;
-    elements.radio.checked = false;
-    elements.radio.removeAttribute("data-quote-id");
-    elements.radio.removeAttribute("data-provider");
-    elements.radio.removeAttribute("data-service-code");
-    elements.radio.removeAttribute("data-service-name");
-    elements.radio.removeAttribute("data-carrier-name");
-    elements.radio.removeAttribute("data-deadline-days");
-    if (elements.textEl) {
-      elements.textEl.textContent = elements.textEl.dataset.defaultLabel || elements.textEl.textContent || "";
-    }
-    if (elements.priceEl) {
-      elements.priceEl.textContent = formatCurrency(0);
-    }
+function renderShippingOptionsList(quotes) {
+  if (!dom.shippingOptionsList) return;
+  const list = Array.isArray(quotes) ? quotes : [];
+
+  if (list.length === 0) {
+    dom.shippingOptionsList.innerHTML = `
+      <label class="shipping-option">
+        <input type="radio" name="shippingMethod" value="" disabled />
+        <span>Informe o CEP para carregar as opcoes de frete</span>
+        <strong>R$ 0,00</strong>
+      </label>
+    `;
     return;
   }
 
-  elements.radio.disabled = false;
-  elements.radio.dataset.quoteId = String(quote.id || "");
-  elements.radio.dataset.provider = String(quote.provider || "");
-  elements.radio.dataset.serviceCode = String(quote.serviceCode || "");
-  elements.radio.dataset.serviceName = String(quote.serviceName || "");
-  elements.radio.dataset.carrierName = String(quote.carrierName || "");
-  elements.radio.dataset.deadlineDays = quote.deadlineDays == null ? "" : String(quote.deadlineDays);
+  dom.shippingOptionsList.innerHTML = list
+    .map((quote) => {
+      const quoteId = String(quote?.id || "").trim();
+      const serviceName = sanitizeDisplayText(String(quote?.serviceName || "Frete"));
+      const carrierName = sanitizeDisplayText(String(quote?.carrierName || ""));
+      const deadlineDays = Number(quote?.deadlineDays);
+      const deadlineText =
+        Number.isFinite(deadlineDays) && deadlineDays > 0 ? `${deadlineDays} dias` : "sem prazo estimado";
+      const selected =
+        String(checkoutState.shipping.shippingMethod || "").trim() === quoteId ||
+        String(checkoutState.shipping.shippingQuoteId || "").trim() === quoteId;
 
-  if (elements.textEl) {
-    const deadlineText =
-      quote.deadlineDays == null || Number(quote.deadlineDays) <= 0
-        ? "sem prazo estimado"
-        : `${quote.deadlineDays} dias`;
-    elements.textEl.textContent = `${quote.serviceName} (${deadlineText})`;
-  }
-  if (elements.priceEl) {
-    elements.priceEl.textContent = formatCurrency(Number(quote.priceCents || 0) / 100);
-  }
+      const label = carrierName
+        ? `${serviceName} - ${carrierName} (${deadlineText})`
+        : `${serviceName} (${deadlineText})`;
+
+      return `
+        <label class="shipping-option">
+          <input
+            type="radio"
+            name="shippingMethod"
+            value="${quoteId}"
+            ${selected ? "checked" : ""}
+          />
+          <span>${escapeHtml(label)}</span>
+          <strong>${escapeHtml(formatCurrency(Number(quote?.priceCents || 0) / 100))}</strong>
+        </label>
+      `;
+    })
+    .join("");
 }
 
 function applyShippingSelectionFromMethod(methodCode) {
-  const quote = checkoutState.shippingQuoteOptions?.[methodCode] || null;
+  const quote = getShippingQuoteByMethod(methodCode);
   if (!quote) {
     clearSelectedShippingQuote();
     return false;
   }
 
-  checkoutState.shipping.shippingMethod = methodCode;
+  checkoutState.shipping.shippingMethod = String(quote.id || "");
   checkoutState.shipping.shippingQuoteId = String(quote.id || "");
   checkoutState.shipping.shippingProvider = String(quote.provider || "");
   checkoutState.shipping.shippingServiceCode = String(quote.serviceCode || "");
@@ -554,31 +537,16 @@ function applyShippingQuotesToUI(quotes) {
     .slice()
     .sort((a, b) => Number(a?.priceCents || 0) - Number(b?.priceCents || 0));
 
-  const standardQuote = sorted[0] || null;
-  const fastest = sorted
-    .slice()
-    .sort((a, b) => {
-      const aDeadline = Number.isFinite(Number(a?.deadlineDays)) ? Number(a.deadlineDays) : Number.POSITIVE_INFINITY;
-      const bDeadline = Number.isFinite(Number(b?.deadlineDays)) ? Number(b.deadlineDays) : Number.POSITIVE_INFINITY;
-      if (aDeadline !== bDeadline) return aDeadline - bDeadline;
-      return Number(a?.priceCents || 0) - Number(b?.priceCents || 0);
-    });
-  const expressQuote =
-    fastest.find((quote) => String(quote?.id || "") !== String(standardQuote?.id || "")) ||
-    sorted[1] ||
-    null;
-
   checkoutState.shippingQuoteOptions = {
-    standard: standardQuote,
-    express: expressQuote
+    list: sorted
   };
-
-  applyShippingQuoteOption("standard", checkoutState.shippingQuoteOptions.standard);
-  applyShippingQuoteOption("express", checkoutState.shippingQuoteOptions.express);
+  renderShippingOptionsList(checkoutState.shippingQuoteOptions.list);
 
   if (checkoutState.shipping.shippingMethod) {
     const selected = applyShippingSelectionFromMethod(checkoutState.shipping.shippingMethod);
     if (!selected) {
+      clearSelectedShippingQuote();
+      renderShippingOptionsList(checkoutState.shippingQuoteOptions.list);
       clearFieldError("shippingMethod");
     }
   }
@@ -1064,22 +1032,10 @@ function fillShippingForm() {
 }
 
 function updateShippingMethodPrices() {
-  ensureShippingOptionDefaults();
-
-  const hasQuoteOptions = Boolean(
-    checkoutState.shippingQuoteOptions.standard || checkoutState.shippingQuoteOptions.express
-  );
-
-  if (hasQuoteOptions) {
-    applyShippingQuoteOption("standard", checkoutState.shippingQuoteOptions.standard);
-    applyShippingQuoteOption("express", checkoutState.shippingQuoteOptions.express);
-    if (checkoutState.shipping.shippingMethod) {
-      applyShippingSelectionFromMethod(checkoutState.shipping.shippingMethod);
-    }
-    return;
+  renderShippingOptionsList(checkoutState.shippingQuoteOptions.list);
+  if (checkoutState.shipping.shippingMethod) {
+    applyShippingSelectionFromMethod(checkoutState.shipping.shippingMethod);
   }
-  applyShippingQuoteOption("standard", null);
-  applyShippingQuoteOption("express", null);
 }
 
 function canQuoteShippingNow() {
@@ -1089,8 +1045,7 @@ function canQuoteShippingNow() {
 
 function clearShippingQuotes({ keepSelection = false } = {}) {
   checkoutState.shippingQuoteOptions = {
-    standard: null,
-    express: null
+    list: []
   };
   if (!keepSelection) {
     clearSelectedShippingQuote();

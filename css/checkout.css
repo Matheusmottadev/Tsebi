@@ -487,6 +487,11 @@
   gap: 10px;
 }
 
+#shippingOptionsList{
+  display: grid;
+  gap: 10px;
+}
+
 .shipping-methods legend{
   font-family: "Montserrat", sans-serif;
   font-size: 11px;
