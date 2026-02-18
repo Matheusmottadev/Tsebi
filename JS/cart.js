@@ -929,6 +929,16 @@ async function ensureAuthenticatedOrRedirect(step = 2) {
     return true;
   }
 
+  // Evita falso redirecionamento em refresh/rede instavel no mobile:
+  // confirma UNAUTHORIZED com uma segunda leitura antes de mandar para login.
+  await new Promise((resolve) => setTimeout(resolve, 220));
+  const retry = await userStore.fetchMe();
+  if (retry.ok && retry.user) return true;
+  if (String(retry?.code || "") !== "UNAUTHORIZED") {
+    setCheckoutStatus("Nao foi possivel validar sua sessao agora. Tente novamente.", "warning");
+    return true;
+  }
+
   setCheckoutStatus(LOGIN_REQUIRED_MESSAGE, "error");
   redirectToLogin(step);
   return false;

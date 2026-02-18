@@ -430,8 +430,8 @@ async function boot() {
 
   const me = await store.fetchMe();
   if (me.ok && me.user) {
-    activeSessionEmail = normalizeEmail(me.user.email || "");
-    setFeedback(`Voce esta logado como ${me.user.email}. Para trocar de conta, informe outro e-mail.`);
+    redirectAfterAuth();
+    return;
   }
 
   emailCheckForm?.addEventListener("submit", handleEmailCheck);

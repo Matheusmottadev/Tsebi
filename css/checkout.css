@@ -18,6 +18,7 @@
 .checkout-v2 select,
 .checkout-v2 textarea{
   color: #141414;
+  -webkit-text-fill-color: #141414 !important;
 }
 
 .checkout-v2 input,
@@ -42,6 +43,19 @@
   font-family: inherit !important;
   font-weight: inherit !important;
   line-height: inherit !important;
+}
+
+.checkout-v2 .checkout-field span,
+.checkout-v2 .shipping-option span,
+.checkout-v2 .shipping-option strong,
+.checkout-v2 .summary-line span,
+.checkout-v2 .summary-line strong,
+.checkout-v2 .summary-total span,
+.checkout-v2 .summary-total strong,
+.checkout-v2 .summary-estimate,
+.checkout-v2 .cart-simple-actions a,
+.checkout-v2 .cart-simple-logo{
+  color: #141414 !important;
 }
 
 .checkout-v2 input:-webkit-autofill,

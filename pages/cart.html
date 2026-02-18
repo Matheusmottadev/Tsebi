@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8" />
@@ -46,7 +46,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600&family=Montserrat:wght@300;400;500;600&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="css/style.css?v=20260217f" />
-  <link rel="stylesheet" href="css/checkout.css?v=20260218d" />
+  <link rel="stylesheet" href="css/checkout.css?v=20260218e" />
 </head>
 <body class="checkout-v2">
   <header class="cart-simple-header">
@@ -213,21 +213,16 @@
           </header>
 
           <div class="checkout-form">
-            <label class="checkout-field">
-              <span>Nome do titular *</span>
-              <input type="text" id="billingName" name="billingName" autocomplete="cc-name" required />
-              <small class="field-error" id="error-billingName"></small>
-            </label>
 
             <section class="checkout-installments-card is-disabled" id="installmentsField" aria-live="polite">
               <div class="checkout-installments-head">
-                <span class="checkout-installments-title">Parcelamento no cartão</span>
+                <span class="checkout-installments-title">Parcelamento no cartÃ£o</span>
                 <small class="checkout-installments-hint" id="installmentsHint">
-                  Selecione cartão na forma de pagamento para habilitar as parcelas.
+                  Selecione cartÃ£o na forma de pagamento para habilitar as parcelas.
                 </small>
               </div>
               <label class="checkout-field checkout-installments-select" for="installments">
-                <span>Número de parcelas</span>
+                <span>NÃºmero de parcelas</span>
                 <select id="installments" disabled>
                   <option value="1">1x sem juros</option>
                   <option value="2">2x</option>
@@ -238,7 +233,7 @@
                 </select>
               </label>
               <p class="checkout-installments-preview" id="installmentsPreview">
-                Parcelamento disponível apenas para pagamentos com cartão.
+                Parcelamento disponÃ­vel apenas para pagamentos com cartÃ£o.
               </p>
             </section>
 
@@ -246,6 +241,13 @@
               <span>Forma de pagamento</span>
               <div id="payment-element" class="card-element"></div>
             </div>
+
+            <label class="checkout-field">
+              <span>Nome do titular *</span>
+              <input type="text" id="billingName" name="billingName" autocomplete="cc-name" required />
+              <small class="field-error" id="error-billingName"></small>
+            </label>
+
 
             <p id="checkoutStatus" class="checkout-status" aria-live="polite"></p>
           </div>
@@ -301,15 +303,15 @@
       </div>
 
       <section class="search-section">
-        <h3>SUGESTÕES</h3>
+        <h3>SUGESTÃ•ES</h3>
         <div class="chips">
           <button class="chip" type="button">NOVIDADE PARA HOMENS</button>
           <button class="chip" type="button">NOVIDADE PARA MULHERES</button>
           <button class="chip" type="button">BOLSAS FEMININAS</button>
           <button class="chip" type="button">VESTIDOS</button>
-          <button class="chip" type="button">TÊNIS</button>
-          <button class="chip" type="button">ACESSÓRIOS</button>
-          <button class="chip" type="button">ACESSÓRIOS</button>
+          <button class="chip" type="button">TÃŠNIS</button>
+          <button class="chip" type="button">ACESSÃ“RIOS</button>
+          <button class="chip" type="button">ACESSÃ“RIOS</button>
         </div>
       </section>
     </div>
