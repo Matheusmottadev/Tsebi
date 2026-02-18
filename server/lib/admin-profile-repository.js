@@ -1,4 +1,4 @@
-const { query } = require("./db");
+﻿const { query } = require("./db");
 const { normalizeEmail } = require("../user-repository");
 
 const DEFAULT_THEME = "system";
@@ -90,20 +90,8 @@ async function ensureAdminProfile({ userId, email, fallbackName = "" }) {
   return mapAdminRow(result.rows[0] || null);
 }
 
-async function updateAdminProfile(userId, patch = {}, options = {}) {
-  if (!userId) return null;
-
-  let current = await findAdminProfileByUserId(userId);
-  
-  // Se não existe e temos email, criar o perfil
-  if (!current && options.email) {
-    current = await ensureAdminProfile({
-      userId,
-      email: options.email,
-      fallbackName: options.fallbackName || ""
-    });
-  }
-  
+async function updateAdminProfile(userId, patch = {}) {
+  const current = await findAdminProfileByUserId(userId);
   if (!current) return null;
 
   const nickname = patch.nickname == null ? current.nickname : String(patch.nickname || "").trim().slice(0, 80);
@@ -126,36 +114,7 @@ async function updateAdminProfile(userId, patch = {}, options = {}) {
     [userId, nickname, avatarUrl, theme, accent]
   );
 
-  const updated = mapAdminRow(result.rows[0] || null);
-  
-  // Se o UPDATE não afetou nenhuma linha, tentar criar o perfil novamente
-  if (!updated && options.email) {
-    const created = await ensureAdminProfile({
-      userId,
-      email: options.email,
-      fallbackName: options.fallbackName || ""
-    });
-    if (created) {
-      // Tentar atualizar novamente após criar
-      const retryResult = await query(
-        `
-        UPDATE admins
-        SET
-          nickname = $2,
-          avatar_url = NULLIF($3, ''),
-          theme = $4,
-          accent = $5,
-          updated_at = NOW()
-        WHERE user_id = $1
-        RETURNING *
-        `,
-        [userId, nickname, avatarUrl, theme, accent]
-      );
-      return mapAdminRow(retryResult.rows[0] || created);
-    }
-  }
-
-  return updated;
+  return mapAdminRow(result.rows[0] || null);
 }
 
 module.exports = {

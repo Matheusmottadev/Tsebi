@@ -4,10 +4,10 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="format-detection" content="telephone=no, date=no, email=no, address=no" />
-  <link rel="icon" type="image/svg+xml" href="images/favicon-light.svgév=20260217b" media="(prefers-color-scheme: light)" />
-  <link rel="icon" type="image/svg+xml" href="images/favicon-dark.svgév=20260217b" media="(prefers-color-scheme: dark)" />
-  <link rel="icon" type="image/png" href="images/logo-tsebi.pngév=20260217" />
-  <link rel="apple-touch-icon" href="images/logo-tsebi.pngév=20260217" />
+  <link rel="icon" type="image/svg+xml" href="images/favicon-light.svg?v=20260217b" media="(prefers-color-scheme: light)" />
+  <link rel="icon" type="image/svg+xml" href="images/favicon-dark.svg?v=20260217b" media="(prefers-color-scheme: dark)" />
+  <link rel="icon" type="image/png" href="images/logo-tsebi.png?v=20260217" />
+  <link rel="apple-touch-icon" href="images/logo-tsebi.png?v=20260217" />
   <title>Checkout | Tsebi Brasil</title>
   <!-- SEO META START -->
   <meta name="description" content="Checkout da Tsebi para finalizar pedidos." />
@@ -25,7 +25,7 @@
   <meta name="twitter:description" content="Checkout da Tsebi para finalizar pedidos." />
   <meta name="twitter:image" content="https://tsebi.com.br/images/logo-tsebi.png" />
   <!-- SEO META END -->
-  <script async src="https://www.googletagmanager.com/gtag/jséid=G-4GHX4VL6DZ"></script>
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-4GHX4VL6DZ"></script>
   <script>
     window.dataLayer = window.dataLayer || [];
     function gtag(){dataLayer.push(arguments);}
@@ -44,15 +44,15 @@
   </script>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2éfamily=Playfair+Display:wght@400;600&family=Montserrat:wght@300;400;500;600&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="css/style.cssév=20260217f" />
-  <link rel="stylesheet" href="css/checkout.cssév=20260218e" />
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600&family=Montserrat:wght@300;400;500;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/style.css?v=20260217f" />
+  <link rel="stylesheet" href="css/checkout.css?v=20260218e" />
 </head>
 <body class="checkout-v2">
   <header class="cart-simple-header">
     <a class="cart-simple-logo" href="index.html">TSEBI</a>
     <button class="search-box-trigger cart-search-trigger" id="openSearch" type="button" aria-label="Abrir busca">
-      <span class="search-box-label">O que voc&ecirc; est&aacute; buscandoé</span>
+      <span class="search-box-label">O que voc&ecirc; est&aacute; buscando?</span>
       <span class="search-box-icon">&#8985;</span>
     </button>
     <nav class="cart-simple-actions" aria-label="A&ccedil;&otilde;es do cabe&ccedil;alho">
@@ -213,13 +213,13 @@
 
             <section class="checkout-installments-card is-disabled" id="installmentsField" aria-live="polite">
               <div class="checkout-installments-head">
-                <span class="checkout-installments-title">Parcelamento no cartão</span>
+                <span class="checkout-installments-title">Parcelamento no cartÃ£o</span>
                 <small class="checkout-installments-hint" id="installmentsHint">
-                  Selecione cartão na forma de pagamento para habilitar as parcelas.
+                  Selecione cartÃ£o na forma de pagamento para habilitar as parcelas.
                 </small>
               </div>
               <label class="checkout-field checkout-installments-select" for="installments">
-                <span>Número de parcelas</span>
+                <span>NÃºmero de parcelas</span>
                 <select id="installments" disabled>
                   <option value="1">1x sem juros</option>
                   <option value="2">2x</option>
@@ -230,7 +230,7 @@
                 </select>
               </label>
               <p class="checkout-installments-preview" id="installmentsPreview">
-                Parcelamento disponível apenas para pagamentos com cartão.
+                Parcelamento disponÃ­vel apenas para pagamentos com cartÃ£o.
               </p>
             </section>
 
@@ -300,24 +300,24 @@
       </div>
 
       <section class="search-section">
-        <h3>SUGESTà•ES</h3>
+        <h3>SUGESTÃ•ES</h3>
         <div class="chips">
           <button class="chip" type="button">NOVIDADE PARA HOMENS</button>
           <button class="chip" type="button">NOVIDADE PARA MULHERES</button>
           <button class="chip" type="button">BOLSAS FEMININAS</button>
           <button class="chip" type="button">VESTIDOS</button>
-          <button class="chip" type="button">TàŠNIS</button>
-          <button class="chip" type="button">ACESSà“RIOS</button>
-          <button class="chip" type="button">ACESSà“RIOS</button>
+          <button class="chip" type="button">TÃŠNIS</button>
+          <button class="chip" type="button">ACESSÃ“RIOS</button>
+          <button class="chip" type="button">ACESSÃ“RIOS</button>
         </div>
       </section>
     </div>
   </div>
 
   <script src="https://js.stripe.com/v3/"></script>
-  <script src="JS/user-utils.jsév=20260217b"></script>
-  <script src="JS/script.jsév=20260218b"></script>
-  <script src="JS/cart.jsév=20260218f"></script>
+  <script src="JS/user-utils.js?v=20260217b"></script>
+  <script src="JS/script.js?v=20260218b"></script>
+  <script src="JS/cart.js?v=20260218f"></script>
   <script src="JS/cookies.js"></script>
   <script src="JS/language-switcher.js"></script>
 </body>
