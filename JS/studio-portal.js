@@ -430,7 +430,7 @@
       const shipment = getOrderShippingLabel(order);
       const shipmentStatus = String(shipment?.status || "").trim();
       const trackingCode = String(shipment?.trackingCode || "").trim();
-      const buyEnabled = canBuyShippingLabel(order, shipment);
+      const buyButtonState = getShippingBuyButtonState(order, shipment);
       const trackEnabled = canTrackShippingLabel(order, shipment);
       row.innerHTML = `
         <td><small>${escapeHtml(formatDate(order.createdAt))}</small></td>
@@ -457,11 +457,11 @@
         <td>
           <button
             type="button"
-            class="btn"
+            class="${escapeAttr(buyButtonState.className)}"
             data-action="shipping-buy-label"
-            ${buyEnabled ? "" : "disabled"}
+            ${buyButtonState.disabled ? "disabled" : ""}
           >
-            ${escapeHtml(getShippingActionLabel(order, shipment))}
+            ${escapeHtml(buyButtonState.label)}
           </button>
         </td>
         <td>
@@ -515,16 +515,37 @@
     return provider === "melhorenvio" && Boolean(trackingCode);
   }
 
-  function getShippingActionLabel(order, shipment = null) {
-    if (canBuyShippingLabel(order, shipment)) return "Comprar etiqueta";
-    const shipmentStatus = String(shipment?.status || "").trim().toUpperCase();
-    if (shipmentStatus === "ETIQUETA_COMPRADA" || shipmentStatus === "EM_TRANSITO" || shipmentStatus === "ENTREGUE") {
-      return "Etiqueta comprada";
-    }
+  function getShippingBuyButtonState(order, shipment = null) {
+    const status = String(order?.status || "").trim().toLowerCase();
     const provider = String(order?.shippingSelectedProvider || "").trim().toLowerCase();
-    if (provider !== "melhorenvio") return "Sem Melhor Envio";
-    if (String(order?.status || "").trim().toLowerCase() !== "paid") return "Aguardando pagamento";
-    return "Frete incompleto";
+    const hasServiceCode = Boolean(String(order?.shippingSelectedServiceCode || "").trim());
+    const shipmentStatus = String(shipment?.status || "").trim().toUpperCase();
+
+    if (provider !== "melhorenvio") {
+      return { label: "Sem Melhor Envio", className: "btn btn-neutral", disabled: true };
+    }
+    if (status === "canceled" || status === "refunded") {
+      return { label: status === "refunded" ? "Estornado" : "Cancelado", className: "btn btn-neutral", disabled: true };
+    }
+    if (status === "failed") {
+      return { label: "Falhou", className: "btn btn-danger", disabled: true };
+    }
+    if (status === "pending_payment") {
+      return { label: "Pendente", className: "btn btn-warn", disabled: true };
+    }
+    if (status === "processing") {
+      return { label: "Processando", className: "btn btn-warn", disabled: true };
+    }
+    if (!hasServiceCode) {
+      return { label: "Frete incompleto", className: "btn btn-neutral", disabled: true };
+    }
+    if (shipmentStatus === "ETIQUETA_COMPRADA" || shipmentStatus === "EM_TRANSITO" || shipmentStatus === "ENTREGUE") {
+      return { label: "Etiqueta comprada", className: "btn btn-neutral", disabled: true };
+    }
+    if (status === "paid" && canBuyShippingLabel(order, shipment)) {
+      return { label: "Comprar etiqueta", className: "btn", disabled: false };
+    }
+    return { label: "Indisponivel", className: "btn btn-neutral", disabled: true };
   }
 
   function renderProducts() {

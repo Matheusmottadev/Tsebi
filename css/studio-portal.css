@@ -6,7 +6,9 @@
   --muted: #5f5f5f;
   --line: #d9d9d9;
   --ok: #1f8b3a;
+  --warn: #d0a319;
   --danger: #b32626;
+  --neutral: #8a8a8a;
   --tab-active: #111111;
   --tab-active-text: #ffffff;
 }
@@ -20,7 +22,9 @@
     --muted: #c8c8c8;
     --line: #2a2a2a;
     --ok: #27a64a;
+    --warn: #e6b93a;
     --danger: #d03c3c;
+    --neutral: #666666;
     --tab-active: #ffffff;
     --tab-active-text: #111111;
   }
@@ -115,6 +119,11 @@ h1 {
   text-transform: uppercase;
   letter-spacing: 1px;
   cursor: pointer;
+  transition: background 0.2s ease, color 0.2s ease, border-color 0.2s ease, transform 0.2s ease;
+}
+
+.tab:hover {
+  transform: translateY(-1px);
 }
 
 .tab.is-active {
@@ -128,6 +137,11 @@ h1 {
   border: 1px solid var(--line);
   background: var(--card);
   padding: 14px;
+  transition: border-color 0.22s ease, box-shadow 0.22s ease;
+}
+
+.tab-panel.is-active {
+  animation: panel-enter 0.28s ease;
 }
 
 .panel-head {
@@ -165,6 +179,14 @@ select {
   color: var(--text);
   padding: 0 10px;
   min-width: 150px;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+}
+
+input:focus,
+select:focus {
+  outline: none;
+  border-color: var(--ok);
+  box-shadow: 0 0 0 2px rgba(39, 166, 74, 0.2);
 }
 
 .form-grid {
@@ -185,6 +207,24 @@ select {
   font-size: 11px;
   text-transform: uppercase;
   letter-spacing: 0.9px;
+  transition: transform 0.16s ease, filter 0.2s ease, box-shadow 0.2s ease, opacity 0.2s ease;
+}
+
+.btn:hover {
+  transform: translateY(-1px);
+  filter: brightness(1.05);
+}
+
+.btn:active {
+  transform: translateY(0);
+}
+
+.btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.78;
+  transform: none;
+  box-shadow: none;
+  filter: none;
 }
 
 .btn-ghost {
@@ -199,11 +239,27 @@ select {
   color: #ffffff;
 }
 
+.btn-warn {
+  background: var(--warn);
+  border-color: var(--warn);
+  color: #1b1b1b;
+}
+
+.btn-neutral {
+  background: var(--neutral);
+  border-color: var(--neutral);
+  color: #ffffff;
+}
+
 .status {
   margin-top: 10px;
   min-height: 20px;
   font-size: 13px;
   color: var(--muted);
+}
+
+.status:not(:empty) {
+  animation: status-enter 0.22s ease;
 }
 
 .status.error {
@@ -232,6 +288,14 @@ td {
   padding: 8px 6px;
   font-size: 12px;
   vertical-align: top;
+}
+
+tbody tr {
+  animation: row-enter 0.24s ease both;
+}
+
+tbody tr:hover td {
+  background: rgba(31, 139, 58, 0.08);
 }
 
 th {
@@ -403,6 +467,39 @@ tr.row-dirty td {
 
 [hidden] {
   display: none !important;
+}
+
+@keyframes panel-enter {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes row-enter {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes status-enter {
+  from {
+    opacity: 0;
+    transform: translateY(-3px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 @media (max-width: 1080px) {
