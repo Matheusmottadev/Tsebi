@@ -18,7 +18,7 @@
         functionalTitle: "Functional cookies",
         functionalBody: "Customize navigation features and on-site experience.",
         analyticsTitle: "Analytics cookies",
-        analyticsBody: "Audience and performance measurement (Google Analytics).",
+        analyticsBody: "Audience and performance measurement (Google Analytics, PostHog).",
         marketingTitle: "Marketing cookies",
         marketingBody: "Support for promotional content personalization and advertising.",
         save: "Save preferences",
@@ -35,7 +35,7 @@
       functionalTitle: "Cookies preferenciais",
       functionalBody: "Personalizam recursos de navegação e experiência no site.",
       analyticsTitle: "Cookies estatísticos",
-      analyticsBody: "Medição de audiência e desempenho (Google Analytics).",
+      analyticsBody: "Medição de audiência e desempenho (Google Analytics, PostHog).",
       marketingTitle: "Cookies de marketing",
       marketingBody: "Suporte a personalização de conteúdo promocional e publicidade.",
       save: "Salvar preferências",
@@ -92,6 +92,12 @@
     // Extra hard-stop for GA cookies when analytics consent is denied.
     window[`ga-disable-${GA_ID}`] = !prefs.analytics;
   }
+
+  function applyPosthogConsent(prefs) {
+    if (typeof window.tsebiPosthogUpdateConsent !== "function") return;
+    window.tsebiPosthogUpdateConsent(prefs);
+  }
+
 
   function getDefaultPrefs() {
     return {
@@ -217,6 +223,7 @@
 
     writePrefs(prefs);
     applyGaConsent(prefs);
+    applyPosthogConsent(prefs);
     closeModal();
   }
 
@@ -265,7 +272,9 @@
   }
 
   // Apply previously saved preference immediately on page load.
-  applyGaConsent(readPrefs() || getDefaultPrefs());
+  const initialPrefs = readPrefs() || getDefaultPrefs();
+  applyGaConsent(initialPrefs);
+  applyPosthogConsent(initialPrefs);
   bindCookieSettingsLinks();
   bindModalEvents();
 })();

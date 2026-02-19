@@ -41,6 +41,8 @@ const isVercelRuntime =
 const stripeSecretKey = process.env.STRIPE_SECRET_KEY || "";
 const stripePublishableKey = process.env.STRIPE_PUBLISHABLE_KEY || "";
 const stripeWebhookSecret = process.env.STRIPE_WEBHOOK_SECRET || "";
+const posthogPublicKey = process.env.POSTHOG_PUBLIC_KEY || "";
+const posthogHost = process.env.POSTHOG_HOST || "";
 const stripe = stripeSecretKey ? new Stripe(stripeSecretKey) : null;
 let melhorEnvioSyncTimer = null;
 
@@ -748,7 +750,13 @@ app.get("/api/config", (req, res) => {
   res.json({
     stripePublishableKey,
     currency: "brl",
-    maxInstallments: 6
+    maxInstallments: 6,
+    posthog: posthogPublicKey
+      ? {
+          key: posthogPublicKey,
+          host: String(posthogHost || "https://us.i.posthog.com").trim() || "https://us.i.posthog.com"
+        }
+      : null
   });
 });
 
