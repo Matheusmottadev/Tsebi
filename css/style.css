@@ -97,6 +97,7 @@ body {
 header {
   padding: 16px 34px 14px;
   border-bottom: none;
+  box-shadow: none;
   position: sticky;
   top: 0;
   z-index: 1000;
@@ -123,6 +124,7 @@ header {
   width: 100%;
   background: transparent;
   border-bottom: none;
+  box-shadow: none;
   transition: background .22s ease, border-color .22s ease;
 }
 
@@ -131,6 +133,7 @@ header {
 .home-header.is-scrolled{
   background: #fff;
   border-bottom: none;
+  box-shadow: none;
 }
 
 /* Keep homepage header fully transparent until hover or scroll */
@@ -251,6 +254,7 @@ nav a:hover { opacity: 0.6; }
 .home-header {
   background: transparent;
   border-bottom: none;
+  box-shadow: none;
   padding: 14px 34px;
 }
 
@@ -259,6 +263,7 @@ nav a:hover { opacity: 0.6; }
 .home-header.is-scrolled {
   background: #fff;
   border-bottom: none;
+  box-shadow: none;
 }
 
 /* Ensure the new layout keeps transparency before hover/scroll */
