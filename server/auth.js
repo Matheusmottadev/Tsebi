@@ -477,6 +477,14 @@ authRouter.post("/login", authRateLimit, async (req, res) => {
       );
     }
 
+    if (user.passwordResetRequired) {
+      const resetCode = await issueAndSendPasswordResetCode(user);
+      if (!resetCode.ok) return res.status(500).json({ error: "AUTH_CODE_ISSUE_FAILED" });
+      return res.status(200).json(
+        buildEmailCodeResponseBase(user.email, "password_reset_required", resetCode.issued)
+      );
+    }
+
     if (!isLoginEmailVerificationRequired()) {
       req.session.userId = user.id;
       markUserLoggedInNow(user.id).catch(() => {});

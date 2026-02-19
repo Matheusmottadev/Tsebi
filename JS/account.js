@@ -73,6 +73,15 @@ function normalizeEmail(email) {
   return String(email || "").trim().toLowerCase();
 }
 
+function buildResetCodeUrl(email, cooldown = 60) {
+  const params = new URLSearchParams();
+  if (email) params.set("email", normalizeEmail(email));
+  const safeCooldown = Math.max(0, Math.min(300, Number(cooldown) || 0));
+  if (safeCooldown > 0) params.set("cooldown", String(safeCooldown));
+  const query = params.toString();
+  return query ? `recuperar-senha-codigo.html?${query}` : "recuperar-senha-codigo.html";
+}
+
 function formatBirthDateInput(value) {
   const digits = String(value || "").replace(/\D/g, "").slice(0, 8);
   const part1 = digits.slice(0, 2);
@@ -251,13 +260,20 @@ function handleEmailCheck(event) {
   registerFirstNameInput?.focus();
 }
 
-function handleLogin(event) {
+async function handleLogin(event) {
   event.preventDefault();
   if (!store) return;
   const password = String(loginPasswordInput?.value || "");
-  const result = store.login({ email: typedEmail, password });
+  const result = await store.login({ email: typedEmail, password });
   if (!result.ok) {
     setFeedback(result.error || "Não foi possível entrar.", "is-error");
+    return;
+  }
+  if (result.stage === "password_reset_required") {
+    setFeedback(`Senha temporária detectada. Enviamos um código para ${typedEmail}.`, "is-error");
+    window.setTimeout(() => {
+      window.location.href = buildResetCodeUrl(typedEmail, 60);
+    }, 600);
     return;
   }
   setFeedback("Login realizado com sucesso.", "is-success");

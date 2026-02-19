@@ -2,6 +2,24 @@ const crypto = require("node:crypto");
 const bcrypt = require("bcrypt");
 const { query, withTransaction } = require("./lib/db");
 
+let userSecuritySchemaPromise = null;
+
+async function ensureUserSecurityColumns() {
+  if (!userSecuritySchemaPromise) {
+    userSecuritySchemaPromise = (async () => {
+      await query(`
+        ALTER TABLE users
+          ADD COLUMN IF NOT EXISTS password_reset_required BOOLEAN NOT NULL DEFAULT FALSE;
+      `);
+    })().catch((error) => {
+      userSecuritySchemaPromise = null;
+      throw error;
+    });
+  }
+
+  return userSecuritySchemaPromise;
+}
+
 function normalizeEmail(email) {
   return String(email || "").trim().toLowerCase();
 }
@@ -60,6 +78,7 @@ function fromRow(row) {
     adminMfaRecoveryCodes: Array.isArray(row.admin_mfa_recovery_codes) ? row.admin_mfa_recovery_codes : [],
     adminMfaEnabledAt: row.admin_mfa_enabled_at || null,
     adminMfaDisabledAt: row.admin_mfa_disabled_at || null,
+    passwordResetRequired: Boolean(row.password_reset_required),
     createdAt: row.created_at,
     updatedAt: row.updated_at
   };
@@ -241,6 +260,7 @@ async function createUser({ name, email, phone = "", passwordHash, birthDate, cp
 }
 
 async function updateUser(id, patch) {
+  await ensureUserSecurityColumns();
   const current = await findUserById(id);
   if (!current) return null;
 
@@ -251,7 +271,13 @@ async function updateUser(id, patch) {
     cep: patch.cep ?? current.cep,
     addresses: patch.addresses ?? current.addresses,
     defaultAddressId: patch.defaultAddressId ?? current.defaultAddressId,
-    passwordHash: patch.passwordHash ?? current.passwordHash
+    passwordHash: patch.passwordHash ?? current.passwordHash,
+    passwordResetRequired:
+      patch.passwordResetRequired == null
+        ? patch.passwordHash
+          ? false
+          : Boolean(current.passwordResetRequired)
+        : Boolean(patch.passwordResetRequired)
   };
 
   const result = await query(
@@ -265,6 +291,7 @@ async function updateUser(id, patch) {
       addresses = $6::jsonb,
       default_address_id = $7,
       password_hash = $8,
+      password_reset_required = $9,
       updated_at = NOW()
     WHERE id = $1
     RETURNING *
@@ -277,7 +304,8 @@ async function updateUser(id, patch) {
       String(next.cep || "").replace(/\D/g, "").slice(0, 8) || null,
       JSON.stringify(toDbAddresses(next.addresses)),
       String(next.defaultAddressId || ""),
-      next.passwordHash
+      next.passwordHash,
+      Boolean(next.passwordResetRequired)
     ]
   );
 
@@ -333,6 +361,7 @@ async function adminUpdateUser(id, patch = {}) {
 }
 
 async function adminDisableUserLogin(id) {
+  await ensureUserSecurityColumns();
   const current = await findUserById(id);
   if (!current) return null;
 
@@ -342,6 +371,7 @@ async function adminDisableUserLogin(id) {
     SET
       login_disabled = TRUE,
       password_hash = NULL,
+      password_reset_required = FALSE,
       updated_at = NOW()
     WHERE id = $1
     RETURNING *
@@ -353,6 +383,7 @@ async function adminDisableUserLogin(id) {
 }
 
 async function adminSetUserTempPassword(id, passwordHash) {
+  await ensureUserSecurityColumns();
   const current = await findUserById(id);
   if (!current) return null;
 
@@ -365,6 +396,7 @@ async function adminSetUserTempPassword(id, passwordHash) {
     SET
       login_disabled = FALSE,
       password_hash = $2,
+      password_reset_required = TRUE,
       updated_at = NOW()
     WHERE id = $1
     RETURNING *
@@ -376,12 +408,17 @@ async function adminSetUserTempPassword(id, passwordHash) {
 }
 
 async function adminRestoreUserAuthSnapshot(id, snapshot = {}) {
+  await ensureUserSecurityColumns();
   const current = await findUserById(id);
   if (!current) return null;
 
   const passwordHash = snapshot.passwordHash == null ? current.passwordHash : String(snapshot.passwordHash || "").trim();
   const loginDisabled =
     snapshot.loginDisabled == null ? Boolean(current.loginDisabled) : Boolean(snapshot.loginDisabled);
+  const passwordResetRequired =
+    snapshot.passwordResetRequired == null
+      ? Boolean(current.passwordResetRequired)
+      : Boolean(snapshot.passwordResetRequired);
 
   const result = await query(
     `
@@ -389,11 +426,12 @@ async function adminRestoreUserAuthSnapshot(id, snapshot = {}) {
     SET
       login_disabled = $2,
       password_hash = $3,
+      password_reset_required = $4,
       updated_at = NOW()
     WHERE id = $1
     RETURNING *
     `,
-    [id, loginDisabled, passwordHash || null]
+    [id, loginDisabled, passwordHash || null, passwordResetRequired]
   );
 
   return fromRow(result.rows[0] || null);

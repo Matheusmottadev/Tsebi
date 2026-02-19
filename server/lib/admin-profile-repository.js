@@ -4,6 +4,40 @@ const { normalizeEmail } = require("../user-repository");
 const DEFAULT_THEME = "system";
 const DEFAULT_ACCENT = "emerald";
 const DEFAULT_ROLE = "owner";
+let adminSchemaPromise = null;
+
+async function ensureAdminSchema() {
+  if (!adminSchemaPromise) {
+    adminSchemaPromise = (async () => {
+      await query(`
+        CREATE TABLE IF NOT EXISTS admins (
+          id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+          user_id UUID UNIQUE REFERENCES users(id) ON DELETE CASCADE,
+          email TEXT NOT NULL,
+          nickname TEXT,
+          avatar_url TEXT,
+          theme TEXT NOT NULL DEFAULT 'system',
+          accent TEXT NOT NULL DEFAULT 'emerald',
+          role TEXT NOT NULL DEFAULT 'owner',
+          created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+          updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+          CHECK (theme IN ('system', 'light', 'dark')),
+          CHECK (length(role) >= 3)
+        );
+      `);
+
+      await query(`
+        CREATE UNIQUE INDEX IF NOT EXISTS admins_email_unique_idx
+          ON admins ((lower(email)));
+      `);
+    })().catch((error) => {
+      adminSchemaPromise = null;
+      throw error;
+    });
+  }
+
+  return adminSchemaPromise;
+}
 
 function sanitizeTheme(value) {
   const theme = String(value || "").trim().toLowerCase();
@@ -40,6 +74,7 @@ function mapAdminRow(row) {
 }
 
 async function findAdminProfileByUserId(userId) {
+  await ensureAdminSchema();
   if (!userId) return null;
   const result = await query(
     `
@@ -54,6 +89,7 @@ async function findAdminProfileByUserId(userId) {
 }
 
 async function findAdminProfileByEmail(email) {
+  await ensureAdminSchema();
   const normalized = normalizeEmail(email);
   if (!normalized) return null;
   const result = await query(
@@ -69,6 +105,7 @@ async function findAdminProfileByEmail(email) {
 }
 
 async function ensureAdminProfile({ userId, email, fallbackName = "" }) {
+  await ensureAdminSchema();
   const normalizedEmail = normalizeEmail(email);
   if (!normalizedEmail) return null;
 
@@ -91,6 +128,7 @@ async function ensureAdminProfile({ userId, email, fallbackName = "" }) {
 }
 
 async function updateAdminProfile(userId, patch = {}) {
+  await ensureAdminSchema();
   const current = await findAdminProfileByUserId(userId);
   if (!current) return null;
 

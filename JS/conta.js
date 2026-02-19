@@ -104,6 +104,15 @@ function buildForgotPasswordUrl() {
   return query ? `recuperar-senha.html?${query}` : "recuperar-senha.html";
 }
 
+function buildResetCodeUrl(email, cooldown = 60) {
+  const params = new URLSearchParams();
+  if (email) params.set("email", email);
+  const safeCooldown = Math.max(0, Math.min(300, Number(cooldown) || 0));
+  if (safeCooldown > 0) params.set("cooldown", String(safeCooldown));
+  const query = params.toString();
+  return query ? `recuperar-senha-codigo.html?${query}` : "recuperar-senha-codigo.html";
+}
+
 function syncForgotPasswordLink() {
   if (!(forgotPasswordBtn instanceof HTMLAnchorElement)) return;
   forgotPasswordBtn.href = buildForgotPasswordUrl();
@@ -293,6 +302,14 @@ async function handleLogin(event) {
       setLoginStage("account_verify");
       setFeedback(`Confirme seu e-mail para concluir o acesso.${codeHint(result.devCode)}`);
       loginEmailCodeInput?.focus();
+      return;
+    }
+
+    if (result.stage === "password_reset_required") {
+      setFeedback(`Senha temporaria detectada. Enviamos um codigo para ${selectedEmail}.${codeHint(result.devCode)}`);
+      window.setTimeout(() => {
+        window.location.href = buildResetCodeUrl(selectedEmail, 60);
+      }, 600);
       return;
     }
 

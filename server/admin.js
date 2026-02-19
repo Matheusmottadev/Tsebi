@@ -328,6 +328,7 @@ function sanitizeUserForAudit(user) {
     email: user.email,
     phone: String(user.phone || ""),
     loginDisabled: Boolean(user.loginDisabled),
+    passwordResetRequired: Boolean(user.passwordResetRequired),
     birthDate: user.birthDate || "",
     cpf: user.cpf || "",
     cep: user.cep || "",
@@ -353,6 +354,7 @@ function buildUserSnapshotForRestore(user) {
     adminMfaRecoveryCodes: Array.isArray(user.adminMfaRecoveryCodes) ? user.adminMfaRecoveryCodes : [],
     adminMfaEnabledAt: user.adminMfaEnabledAt || null,
     adminMfaDisabledAt: user.adminMfaDisabledAt || null,
+    passwordResetRequired: Boolean(user.passwordResetRequired),
     createdAt: user.createdAt || null,
     updatedAt: user.updatedAt || null
   };
@@ -945,7 +947,8 @@ adminRouter.post("/users/:id/temp-password", sensitiveAdminRateLimit, async (req
           id: before.id,
           snapshot: {
             passwordHash: before.passwordHash || "",
-            loginDisabled: Boolean(before.loginDisabled)
+            loginDisabled: Boolean(before.loginDisabled),
+            passwordResetRequired: Boolean(before.passwordResetRequired)
           }
         }
       }
@@ -1008,7 +1011,8 @@ adminRouter.delete("/users/:id/login", sensitiveAdminRateLimit, async (req, res)
           id: before.id,
           snapshot: {
             passwordHash: before.passwordHash || "",
-            loginDisabled: Boolean(before.loginDisabled)
+            loginDisabled: Boolean(before.loginDisabled),
+            passwordResetRequired: Boolean(before.passwordResetRequired)
           }
         }
       }
