@@ -58,6 +58,10 @@ function getR2Upload() {
   return uploadR2Buffer;
 }
 const { listShipmentsByOrderIds } = require("../src/db/queries/shipping.queries");
+const {
+  INTERNAL_TRACKING_STATES,
+  mapMelhorEnvioStatusToInternal
+} = require("../src/shipping/melhorenvio-status");
 const { getVipDatabaseUrl } = require("./lib/vip-db");
 const { requireAdmin, requireAdminCsrfForMutations } = require("./middlewares/requireAdmin");
 
@@ -475,6 +479,15 @@ function buildVipPatchFromSnapshot(subscriber) {
     cep: subscriber.cep || "",
     accountCreated: Boolean(subscriber.accountCreated)
   };
+}
+
+function normalizeTrackingStatusForOrder(value) {
+  const raw = String(value || "").trim().toUpperCase();
+  if (!raw) return "";
+  if (Object.prototype.hasOwnProperty.call(INTERNAL_TRACKING_STATES, raw)) {
+    return INTERNAL_TRACKING_STATES[raw];
+  }
+  return mapMelhorEnvioStatusToInternal(raw).status || "";
 }
 
 async function recordAuditLog(req, payload) {
@@ -1241,6 +1254,12 @@ adminRouter.patch("/orders/:id", async (req, res) => {
     if (nextPatch.shippingDeadline) {
       const deadline = new Date(String(nextPatch.shippingDeadline || ""));
       nextPatch.shippingDeadline = Number.isNaN(deadline.getTime()) ? null : deadline.toISOString();
+    }
+    if (Object.prototype.hasOwnProperty.call(parsed.data, "trackingStatus")) {
+      const normalizedTracking = normalizeTrackingStatusForOrder(nextPatch.trackingStatus);
+      if (normalizedTracking) {
+        nextPatch.currentStatus = normalizedTracking;
+      }
     }
 
     const beforeStatus = String(before.status || "").trim().toLowerCase();

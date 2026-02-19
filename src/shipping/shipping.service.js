@@ -13,6 +13,10 @@ const {
   markShipmentLabelPurchased,
   updateShipmentTracking
 } = require("../db/queries/shipping.queries");
+const {
+  updateOrderTrackingState,
+  insertTrackingEvents
+} = require("../db/queries/order-tracking.queries");
 
 const SHIPPING_QUOTE_TTL_MS = 30 * 60 * 1000;
 
@@ -262,6 +266,30 @@ async function buyLabelForOrder(order) {
     status: bought?.status || "ETIQUETA_COMPRADA",
     rawPayload: bought?.rawPayload || {}
   });
+
+  const nowIso = new Date().toISOString();
+  const carrierName =
+    String(order?.carrier || order?.shippingSelectedCarrierName || "Melhor Envio").trim() || "Melhor Envio";
+  const isDelivered = String(order?.currentStatus || "").trim().toUpperCase() === "DELIVERED";
+  const effectiveStatus = isDelivered ? "DELIVERED" : "SHIPPED";
+
+  await updateOrderTrackingState(order.id, {
+    currentStatus: effectiveStatus,
+    trackingCode: bought?.trackingCode || order?.trackingCode || null,
+    carrier: carrierName,
+    shippedAt: order?.shippedAt || nowIso,
+    lastTrackingUpdate: nowIso
+  }).catch(() => {});
+
+  await insertTrackingEvents(order.id, [
+    {
+      status: effectiveStatus,
+      rawStatus: "LABEL_PURCHASED",
+      description: "Etiqueta expedida",
+      location: "",
+      occurredAt: nowIso
+    }
+  ]).catch(() => {});
 
   return updated
     ? {

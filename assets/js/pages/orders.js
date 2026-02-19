@@ -103,6 +103,41 @@ function shippingButtonState(order, shipment = null) {
   return { label: "Aguardando pagamento", className: "btn btn-ghost", disabled: true };
 }
 
+function pickShippingErrorMessage(error, fallback = "Falha na requisição.") {
+  const payload = error?.payload || {};
+  const detail = payload?.detail;
+  let message = "";
+
+  if (typeof detail === "string" && detail.trim()) {
+    message = detail.trim();
+  } else if (detail && typeof detail === "object") {
+    message =
+      String(
+        detail?.response?.message ||
+          detail?.response?.error ||
+          detail?.message ||
+          detail?.error ||
+          ""
+      ).trim();
+  }
+
+  const requestId = detail?.response?.request_id || detail?.request_id || "";
+  if (message) {
+    const normalized = message.toLowerCase();
+    if (
+      normalized.includes("saldo") ||
+      normalized.includes("balance") ||
+      normalized.includes("insufficient") ||
+      normalized.includes("credit")
+    ) {
+      return "Sem saldo no Melhor Envio. Adicione saldo e tente novamente.";
+    }
+    return requestId ? `${message} (request_id: ${requestId})` : message;
+  }
+
+  return String(error?.code || error?.message || fallback);
+}
+
 export function createOrdersPage({ mount, drawer, getStatusFilter }) {
   const state = {
     query: "",
@@ -409,7 +444,7 @@ export function createOrdersPage({ mount, drawer, getStatusFilter }) {
         }
       } catch (error) {
         refreshShippingSection(order.shipment);
-        toast(`Falha: ${error?.code || error?.message || "REQUEST_FAILED"}`, { tone: "error" });
+        toast(`Falha: ${pickShippingErrorMessage(error, "REQUEST_FAILED")}`, { tone: "error" });
       }
     });
 
