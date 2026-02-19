@@ -4,5 +4,5 @@
       filter: invert(1) brightness(2.2);
     }
   </style>
-  <image href="logo-tsebi.png" x="0" y="0" width="512" height="512" />
+  <image href="/images/logo-tsebi.png" x="0" y="0" width="512" height="512" />
 </svg>
