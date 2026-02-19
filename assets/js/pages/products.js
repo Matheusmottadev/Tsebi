@@ -76,7 +76,21 @@ export function createProductsPage({ mount, drawer, getStatusFilter, getStockFil
         { label: "SKU", render: (p) => `<div>${escapeHtml(p.sku || p.id || "—")}</div>` },
         { label: "Preço", render: (p) => `<div>${escapeHtml(formatMoneyFromCents(p.unitAmount, p.currency))}</div>` },
         { label: "Estoque", render: (p) => `<div>${escapeHtml(p.stock)}</div>` },
-        { label: "Status", render: (p) => statusPill(Boolean(p.active)) },
+        {
+          label: "Status",
+          render: (p) => {
+            const isActive = Boolean(p.active);
+            return `
+              <label class="switch" data-no-row="1">
+                <input type="checkbox" data-action="toggle-active" data-id="${escapeHtml(p.id)}" ${isActive ? "checked" : ""} />
+                <span class="switch-track">
+                  <span class="switch-thumb"></span>
+                </span>
+                <span class="switch-label">${isActive ? "Ativo" : "Inativo"}</span>
+              </label>
+            `;
+          }
+        },
         { label: "Atualizado", render: (p) => `<div>${escapeHtml(formatDate(p.updatedAt || p.createdAt))}</div>` }
       ],
       rows: state.rows,
@@ -91,6 +105,38 @@ export function createProductsPage({ mount, drawer, getStatusFilter, getStockFil
       onChange: async (nextPage) => {
         state.page = nextPage;
         await reload();
+      }
+    });
+
+    table.addEventListener(
+      "click",
+      (event) => {
+        const stop = event.target instanceof Element ? event.target.closest("[data-no-row]") : null;
+        if (stop) event.stopPropagation();
+      },
+      true
+    );
+
+    table.addEventListener("change", async (event) => {
+      const input = event.target;
+      if (!(input instanceof HTMLInputElement)) return;
+      if (input.dataset.action !== "toggle-active") return;
+      const productId = String(input.dataset.id || "");
+      if (!productId) return;
+      const nextActive = Boolean(input.checked);
+      input.disabled = true;
+      try {
+        await api(`/api/admin/products/${encodeURIComponent(productId)}`, { method: "PATCH", json: { active: nextActive } });
+        const row = state.rows.find((p) => String(p.id) === productId);
+        if (row) row.active = nextActive;
+        const label = input.closest(".switch")?.querySelector(".switch-label");
+        if (label) label.textContent = nextActive ? "Ativo" : "Inativo";
+        toast(`Produto ${nextActive ? "ativado" : "desativado"}.`, { tone: "success" });
+      } catch (error) {
+        input.checked = !nextActive;
+        toast(`Falha ao atualizar status: ${error?.code || error?.message || "REQUEST_FAILED"}`, { tone: "error" });
+      } finally {
+        input.disabled = false;
       }
     });
 
@@ -131,10 +177,13 @@ export function createProductsPage({ mount, drawer, getStatusFilter, getStockFil
           </label>
           <label class="label">
             <span>Status</span>
-            <select class="field" data-key="active">
-              <option value="true" ${original.active ? "selected" : ""}>Ativo</option>
-              <option value="false" ${!original.active ? "selected" : ""}>Inativo</option>
-            </select>
+            <label class="switch switch-inline">
+              <input type="checkbox" data-key="active" ${original.active ? "checked" : ""} />
+              <span class="switch-track">
+                <span class="switch-thumb"></span>
+              </span>
+              <span class="switch-label">${original.active ? "Ativo" : "Inativo"}</span>
+            </label>
           </label>
           <label class="label full">
             <span>Imagem</span>
@@ -163,9 +212,13 @@ export function createProductsPage({ mount, drawer, getStatusFilter, getStockFil
       if (!(el instanceof HTMLInputElement) && !(el instanceof HTMLSelectElement)) return;
       const key = String(el.dataset.key || "");
       if (!key) return;
-      const current = el instanceof HTMLSelectElement ? el.value : el.value;
+      const current = el instanceof HTMLInputElement && el.type === "checkbox" ? String(el.checked) : String(el.value ?? "");
       const before = key === "active" ? String(Boolean(original.active)) : String(original[key] ?? "");
-      el.classList.toggle("dirty", String(current ?? "") !== before);
+      el.classList.toggle("dirty", current !== before);
+      if (el instanceof HTMLInputElement && el.type === "checkbox") {
+        const label = el.closest(".switch")?.querySelector(".switch-label");
+        if (label) label.textContent = el.checked ? "Ativo" : "Inativo";
+      }
     });
 
     return { root, original };
@@ -186,8 +239,8 @@ export function createProductsPage({ mount, drawer, getStatusFilter, getStockFil
       root.querySelectorAll("[data-key]").forEach((el) => {
         const key = String(el.dataset.key || "");
         if (!key) return;
-        let value = el instanceof HTMLSelectElement ? el.value : el.value;
-        if (key === "active") value = value === "true";
+        let value = el instanceof HTMLInputElement && el.type === "checkbox" ? el.checked : el.value;
+        if (key === "active") value = Boolean(value);
         if (String(value ?? "") !== String(key === "active" ? Boolean(original.active) : original[key] ?? "")) {
           patch[key] = value;
         }
@@ -376,4 +429,3 @@ export function createProductsPage({ mount, drawer, getStatusFilter, getStockFil
     }
   };
 }
-
