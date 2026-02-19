@@ -1,6 +1,69 @@
 const { query } = require("./db");
 
 const DEFAULT_RETENTION_DAYS = 30;
+let auditSchemaPromise = null;
+
+async function ensureAdminAuditSchema() {
+  if (!auditSchemaPromise) {
+    auditSchemaPromise = (async () => {
+      await query(`
+        CREATE TABLE IF NOT EXISTS admin_audit_logs (
+          id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+          action TEXT NOT NULL,
+          entity_type TEXT NOT NULL,
+          entity_id TEXT,
+          summary TEXT NOT NULL,
+          actor_admin_id UUID,
+          actor_user_id UUID,
+          actor_email TEXT,
+          request_ip TEXT,
+          user_agent TEXT,
+          changed_fields TEXT[] NOT NULL DEFAULT '{}'::text[],
+          change_before JSONB,
+          change_after JSONB,
+          reverse_payload JSONB,
+          reverse_result JSONB,
+          meta JSONB NOT NULL DEFAULT '{}'::jsonb,
+          reversible_until TIMESTAMPTZ NOT NULL,
+          reversible BOOLEAN NOT NULL DEFAULT TRUE,
+          reversed_at TIMESTAMPTZ,
+          reversed_by_user_id UUID,
+          reversed_by_email TEXT,
+          created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+        );
+      `);
+
+      await query(`
+        ALTER TABLE admin_audit_logs
+          ADD COLUMN IF NOT EXISTS actor_admin_id UUID,
+          ADD COLUMN IF NOT EXISTS changed_fields TEXT[] NOT NULL DEFAULT '{}'::text[],
+          ADD COLUMN IF NOT EXISTS reversible BOOLEAN NOT NULL DEFAULT TRUE;
+      `);
+
+      await query(`
+        CREATE INDEX IF NOT EXISTS admin_audit_logs_created_idx
+          ON admin_audit_logs (created_at DESC);
+      `);
+      await query(`
+        CREATE INDEX IF NOT EXISTS admin_audit_logs_entity_idx
+          ON admin_audit_logs (entity_type, entity_id, created_at DESC);
+      `);
+      await query(`
+        CREATE INDEX IF NOT EXISTS admin_audit_logs_actor_idx
+          ON admin_audit_logs (actor_email, created_at DESC);
+      `);
+      await query(`
+        CREATE INDEX IF NOT EXISTS admin_audit_logs_actor_admin_idx
+          ON admin_audit_logs (actor_admin_id, created_at DESC);
+      `);
+    })().catch((error) => {
+      auditSchemaPromise = null;
+      throw error;
+    });
+  }
+
+  return auditSchemaPromise;
+}
 
 function getAdminAuditRetentionDays() {
   const raw = Number(process.env.ADMIN_AUDIT_RETENTION_DAYS || DEFAULT_RETENTION_DAYS);
@@ -54,6 +117,7 @@ function mapAuditRow(row, includeInternal = false, includeChanges = true) {
 }
 
 async function pruneExpiredAdminAuditLogs() {
+  await ensureAdminAuditSchema();
   const retentionDays = getAdminAuditRetentionDays();
   await query(
     `
@@ -65,6 +129,7 @@ async function pruneExpiredAdminAuditLogs() {
 }
 
 async function insertAdminAuditLog(payload = {}) {
+  await ensureAdminAuditSchema();
   await pruneExpiredAdminAuditLogs();
 
   const retentionDays = getAdminAuditRetentionDays();
@@ -137,6 +202,7 @@ async function insertAdminAuditLog(payload = {}) {
 }
 
 async function listAdminAuditLogs({ limit = 100, offset = 0 } = {}) {
+  await ensureAdminAuditSchema();
   await pruneExpiredAdminAuditLogs();
 
   const safeLimit = Math.max(1, Math.min(200, Number(limit) || 100));
@@ -214,6 +280,7 @@ async function searchAdminAuditLogs({
   page = 1,
   pageSize = 50
 } = {}) {
+  await ensureAdminAuditSchema();
   await pruneExpiredAdminAuditLogs();
 
   const safePage = Math.max(1, Number(page) || 1);
@@ -254,6 +321,7 @@ async function searchAdminAuditLogs({
 }
 
 async function findAdminAuditLogById(id, { includeInternal = false } = {}) {
+  await ensureAdminAuditSchema();
   if (!id) return null;
   const result = await query(
     `
@@ -269,6 +337,7 @@ async function findAdminAuditLogById(id, { includeInternal = false } = {}) {
 }
 
 async function markAdminAuditLogReversed(id, payload = {}) {
+  await ensureAdminAuditSchema();
   if (!id) return null;
 
   const result = await query(
