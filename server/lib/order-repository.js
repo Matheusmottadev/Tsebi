@@ -1,4 +1,4 @@
-const { query } = require("./db");
+const { query, withTransaction } = require("./db");
 
 let orderSchemaPromise = null;
 
@@ -302,6 +302,20 @@ async function findOrderById(orderId) {
   return mapOrderRow(row, itemResult.rows.map(mapOrderItemRow));
 }
 
+async function deleteOrderById(orderId) {
+  const before = await findOrderById(orderId);
+  if (!before) return null;
+
+  await withTransaction(async (client) => {
+    await client.query(`DELETE FROM shipping_quotes WHERE order_id = $1`, [orderId]);
+    await client.query(`DELETE FROM shipments WHERE order_id = $1`, [orderId]);
+    await client.query(`DELETE FROM order_items WHERE order_id = $1`, [orderId]);
+    await client.query(`DELETE FROM orders WHERE id = $1`, [orderId]);
+  });
+
+  return before;
+}
+
 async function findOrderByPaymentIntentId(paymentIntentId) {
   if (!paymentIntentId) return null;
 
@@ -343,6 +357,7 @@ module.exports = {
   createOrder,
   updateOrder,
   findOrderById,
+  deleteOrderById,
   findOrderByPaymentIntentId,
   listOrders,
   listOrdersByUserId

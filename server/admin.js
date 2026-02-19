@@ -1,5 +1,6 @@
 const express = require("express");
 const rateLimit = require("express-rate-limit");
+const Stripe = require("stripe");
 const bcrypt = require("bcrypt");
 const crypto = require("node:crypto");
 const { z } = require("zod");
@@ -17,7 +18,7 @@ const {
   normalizeEmail,
   restoreUserFromSnapshot
 } = require("./user-repository");
-const { listOrders, updateOrder, findOrderById } = require("./lib/order-repository");
+const { listOrders, updateOrder, findOrderById, deleteOrderById } = require("./lib/order-repository");
 const {
   listAdminProducts,
   searchAdminProducts,
@@ -59,6 +60,15 @@ function getR2Upload() {
 const { listShipmentsByOrderIds } = require("../src/db/queries/shipping.queries");
 const { getVipDatabaseUrl } = require("./lib/vip-db");
 const { requireAdmin, requireAdminCsrfForMutations } = require("./middlewares/requireAdmin");
+
+let stripeClient = null;
+function getStripeClient() {
+  if (stripeClient) return stripeClient;
+  const key = String(process.env.STRIPE_SECRET_KEY || "").trim();
+  if (!key) return null;
+  stripeClient = new Stripe(key);
+  return stripeClient;
+}
 
 const adminRouter = express.Router();
 
@@ -1225,9 +1235,35 @@ adminRouter.patch("/orders/:id", async (req, res) => {
       status: parsed.data.orderStatus ?? parsed.data.status
     };
     delete nextPatch.orderStatus;
+    if (nextPatch.status == null || String(nextPatch.status || "").trim() === "") {
+      delete nextPatch.status;
+    }
     if (nextPatch.shippingDeadline) {
       const deadline = new Date(String(nextPatch.shippingDeadline || ""));
       nextPatch.shippingDeadline = Number.isNaN(deadline.getTime()) ? null : deadline.toISOString();
+    }
+
+    const beforeStatus = String(before.status || "").trim().toLowerCase();
+    const requestedStatus = String(nextPatch.status || "").trim().toLowerCase();
+    if (beforeStatus === "refunded" && requestedStatus && requestedStatus !== "refunded") {
+      return res.status(409).json({ error: "ORDER_REFUNDED_LOCKED" });
+    }
+
+    if (requestedStatus === "canceled") {
+      if (!before.stripePaymentIntentId) {
+        return res.status(409).json({ error: "ORDER_NOT_REFUNDABLE" });
+      }
+      const stripe = getStripeClient();
+      if (!stripe) return res.status(500).json({ error: "STRIPE_NOT_CONFIGURED" });
+
+      const refund = await stripe.refunds.create({
+        payment_intent: before.stripePaymentIntentId
+      });
+
+      nextPatch.status = "refunded";
+      nextPatch.refundedAt = new Date().toISOString();
+      nextPatch.stripeRefundId = refund?.id || before.stripeRefundId || null;
+      nextPatch.cancellationReason = nextPatch.cancellationReason || "refunded_by_admin";
     }
 
     const updated = await updateOrder(req.params.id, nextPatch);
@@ -1255,6 +1291,31 @@ adminRouter.patch("/orders/:id", async (req, res) => {
     return res.json({ ok: true, order: updated || before });
   } catch {
     return res.status(500).json({ error: "ADMIN_ORDER_UPDATE_FAILED" });
+  }
+});
+
+adminRouter.delete("/orders/:id", sensitiveAdminRateLimit, async (req, res) => {
+  const id = String(req.params.id || "").trim();
+  if (!id) return res.status(400).json({ error: "INVALID_ID" });
+
+  try {
+    const removed = await deleteOrderById(id);
+    if (!removed) return res.status(404).json({ error: "NOT_FOUND" });
+
+    await recordAuditLog(req, {
+      action: "delete",
+      entityType: "order",
+      entityId: String(removed.id),
+      summary: `Pedido removido: ${removed.id}`,
+      before: sanitizeOrderForAudit(removed),
+      after: null,
+      reversePayload: null,
+      reversible: false
+    });
+
+    return res.json({ ok: true });
+  } catch {
+    return res.status(500).json({ error: "ADMIN_ORDER_DELETE_FAILED" });
   }
 });
 

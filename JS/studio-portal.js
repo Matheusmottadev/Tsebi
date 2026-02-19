@@ -501,39 +501,27 @@
   }
 
   function canBuyShippingLabel(order, shipment = null) {
-    const provider = String(order?.shippingSelectedProvider || order?.shipping?.shippingProvider || "")
-      .trim()
-      .toLowerCase();
     const hasServiceCode = Boolean(
       String(order?.shippingSelectedServiceCode || order?.shipping?.shippingServiceCode || "").trim()
     );
     const isPaid = String(order?.status || "").trim().toLowerCase() === "paid";
     const shipmentStatus = String(shipment?.status || "").trim().toUpperCase();
     const hasBoughtLabel = shipmentStatus === "ETIQUETA_COMPRADA" || shipmentStatus === "EM_TRANSITO" || shipmentStatus === "ENTREGUE";
-    return provider === "melhorenvio" && hasServiceCode && isPaid && !hasBoughtLabel;
+    return hasServiceCode && isPaid && !hasBoughtLabel;
   }
 
   function canTrackShippingLabel(order, shipment) {
-    const provider = String(order?.shippingSelectedProvider || order?.shipping?.shippingProvider || "")
-      .trim()
-      .toLowerCase();
     const trackingCode = String(shipment?.trackingCode || "").trim();
-    return provider === "melhorenvio" && Boolean(trackingCode);
+    return Boolean(trackingCode);
   }
 
   function getShippingBuyButtonState(order, shipment = null) {
     const status = String(order?.status || "").trim().toLowerCase();
-    const provider = String(order?.shippingSelectedProvider || order?.shipping?.shippingProvider || "")
-      .trim()
-      .toLowerCase();
     const hasServiceCode = Boolean(
       String(order?.shippingSelectedServiceCode || order?.shipping?.shippingServiceCode || "").trim()
     );
     const shipmentStatus = String(shipment?.status || "").trim().toUpperCase();
 
-    if (provider !== "melhorenvio") {
-      return { label: "Sem Melhor Envio", className: "btn btn-neutral", disabled: true };
-    }
     if (status === "canceled" || status === "refunded") {
       return { label: status === "refunded" ? "Estornado" : "Cancelado", className: "btn btn-neutral", disabled: true };
     }

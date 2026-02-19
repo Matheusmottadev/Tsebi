@@ -143,6 +143,7 @@ export function createOrdersPage({ mount, drawer, getStatusFilter }) {
       adminNotes: String(order.adminNotes || "")
     };
 
+    const isRefunded = original.orderStatus === "refunded";
     const root = document.createElement("div");
     root.innerHTML = `
       <div class="section">
@@ -159,7 +160,7 @@ export function createOrdersPage({ mount, drawer, getStatusFilter }) {
         <div class="form-grid">
           <label class="label">
             <span>Status do pedido</span>
-            <select class="field" data-key="orderStatus">
+            <select class="field" data-key="orderStatus" ${isRefunded ? "disabled" : ""}>
               ${["pending_payment", "processing", "paid", "failed", "canceled", "refunded"]
                 .map(
                   (s) =>
@@ -167,6 +168,9 @@ export function createOrdersPage({ mount, drawer, getStatusFilter }) {
                 )
                 .join("")}
             </select>
+            <small style="color:var(--muted);font-size:12px;line-height:1.4;">
+              ${isRefunded ? "Pedido reembolsado: status bloqueado para evitar cobrança duplicada." : "Ao selecionar Cancelado, o sistema solicita estorno no Stripe."}
+            </small>
           </label>
           <label class="label">
             <span>Carrier</span>
@@ -192,6 +196,14 @@ export function createOrdersPage({ mount, drawer, getStatusFilter }) {
         <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:12px;">
           <button type="button" class="btn btn-ghost" data-action="cancel">Cancelar</button>
           <button type="button" class="btn" data-action="save">Salvar alterações</button>
+        </div>
+      </div>
+
+      <div class="section" style="border:1px solid rgba(255,255,255,0.08);padding:14px;border-radius:12px;">
+        <h3 style="color:#f87171;">Zona de risco</h3>
+        <p style="color:var(--muted);font-size:12px;line-height:1.4;">Excluir remove o pedido, itens e dados de envio. Essa ação é permanente.</p>
+        <div style="display:flex;justify-content:flex-end;margin-top:12px;">
+          <button type="button" class="btn btn-danger" data-action="delete">Excluir pedido</button>
         </div>
       </div>
     `;
@@ -255,6 +267,19 @@ export function createOrdersPage({ mount, drawer, getStatusFilter }) {
       try {
         if (action === "save") await save();
         if (action === "cancel") drawer.close();
+        if (action === "delete") {
+          const ok = await confirmDiff({
+            title: "Excluir pedido",
+            message: `Pedido ${orderId}`,
+            diffs: [{ field: "Ação", before: "Manter", after: "Excluir permanentemente" }],
+            tone: "danger"
+          });
+          if (!ok) return;
+          await api(`/api/admin/orders/${encodeURIComponent(orderId)}`, { method: "DELETE" });
+          toast("Pedido excluído.", { tone: "success" });
+          drawer.close();
+          await reload();
+        }
       } catch (error) {
         toast(`Falha: ${error?.code || error?.message || "REQUEST_FAILED"}`, { tone: "error" });
       }
@@ -284,4 +309,3 @@ export function createOrdersPage({ mount, drawer, getStatusFilter }) {
     reload
   };
 }
-
