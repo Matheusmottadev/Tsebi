@@ -46,8 +46,7 @@ const TRACKING_STEPS = [
   "SHIPPED",
   "IN_TRANSIT",
   "OUT_FOR_DELIVERY",
-  "DELIVERED",
-  "EXCEPTION"
+  "DELIVERED"
 ];
 
 let myOrders = [];
@@ -87,24 +86,22 @@ function formatOrderStatus(status) {
 
 function formatTrackingStatus(status) {
   const value = String(status || "").toUpperCase();
-  if (value === "ORDER_PLACED") return "Confirmado";
-  if (value === "PROCESSING") return "Em preparação";
-  if (value === "SHIPPED") return "Postado";
+  if (value === "ORDER_PLACED") return "Pedido Recebido";
+  if (value === "PROCESSING") return "Pedido Confirmado";
+  if (value === "SHIPPED") return "Em Preparação";
   if (value === "IN_TRANSIT") return "Em transporte";
-  if (value === "OUT_FOR_DELIVERY") return "Saiu para entrega";
+  if (value === "OUT_FOR_DELIVERY") return "Saiu Pra entregar";
   if (value === "DELIVERED") return "Entregue";
-  if (value === "EXCEPTION") return "Problema";
   return "Em transporte";
 }
 
 function formatTrackingStepName(step) {
-  if (step === "ORDER_PLACED") return "Confirmado";
-  if (step === "PROCESSING") return "Preparação";
-  if (step === "SHIPPED") return "Postado";
-  if (step === "IN_TRANSIT") return "Transporte";
-  if (step === "OUT_FOR_DELIVERY") return "Saiu para entrega";
+  if (step === "ORDER_PLACED") return "Pedido Recebido";
+  if (step === "PROCESSING") return "Pedido Confirmado";
+  if (step === "SHIPPED") return "Em Preparação";
+  if (step === "IN_TRANSIT") return "Em transporte";
+  if (step === "OUT_FOR_DELIVERY") return "Saiu Pra entregar";
   if (step === "DELIVERED") return "Entregue";
-  if (step === "EXCEPTION") return "Problema";
   return step;
 }
 
@@ -247,21 +244,7 @@ function renderTrackingOrder(order) {
 
   const orderNumber = formatOrderDisplayId(order);
   const statusLabel = formatTrackingStatus(order.currentStatus);
-  const events = Array.isArray(order.trackingEvents) ? [...order.trackingEvents] : [];
-  const eventsDesc = events.sort((a, b) => new Date(b.occurredAt || 0).getTime() - new Date(a.occurredAt || 0).getTime());
   const items = Array.isArray(order.items) ? order.items : [];
-
-  const eventsMarkup = eventsDesc.length
-    ? eventsDesc
-        .map((event) => `
-          <article class="tracking-event-item">
-            <p class="tracking-event-date">${escapeHtml(formatTrackingDate(event.occurredAt))}</p>
-            <p class="tracking-event-description">${escapeHtml(event.description || "Atualização de rastreio")}</p>
-            ${event.location ? `<p class="tracking-event-location">${escapeHtml(event.location)}</p>` : ""}
-          </article>
-        `)
-        .join("")
-    : `<p class="tracking-event-description">Sem eventos de rastreio no momento.</p>`;
 
   const itemsMarkup = items.length
     ? items
@@ -314,13 +297,6 @@ function renderTrackingOrder(order) {
       <ol class="tracking-timeline">
         ${buildTimelineMarkup(order.currentStatus)}
       </ol>
-    </section>
-
-    <section class="tracking-events-card">
-      <h3 class="tracking-section-title">Eventos</h3>
-      <div class="tracking-events-list">
-        ${eventsMarkup}
-      </div>
     </section>
 
     <section class="tracking-items-card">

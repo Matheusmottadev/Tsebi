@@ -23,6 +23,15 @@ function formatMoneyFromCents(cents, currency = "BRL") {
   return amount.toLocaleString("pt-BR", { style: "currency", currency: String(currency || "BRL").toUpperCase() });
 }
 
+const TRACKING_STATUS_OPTIONS = [
+  { value: "ORDER_PLACED", label: "Pedido Recebido" },
+  { value: "PROCESSING", label: "Pedido Confirmado" },
+  { value: "SHIPPED", label: "Em Preparação" },
+  { value: "IN_TRANSIT", label: "Em transporte" },
+  { value: "OUT_FOR_DELIVERY", label: "Saiu Pra entregar" },
+  { value: "DELIVERED", label: "Entregue" }
+];
+
 function statusPill(status) {
   const s = String(status || "").toLowerCase();
   if (s === "paid") return `<span class="pill">Pago</span>`;
@@ -56,6 +65,42 @@ function toLocalDatetimeValue(iso) {
   const hh = pad(d.getHours());
   const mi = pad(d.getMinutes());
   return `${yyyy}-${mm}-${dd}T${hh}:${mi}`;
+}
+
+function getShipment(order) {
+  return order?.shipment || null;
+}
+
+function canBuyShippingLabel(order, shipment = null) {
+  const hasServiceCode = Boolean(
+    String(order?.shippingSelectedServiceCode || order?.shipping?.shippingServiceCode || "").trim()
+  );
+  const isPaid = String(order?.status || "").trim().toLowerCase() === "paid";
+  const shipmentStatus = String(shipment?.status || "").trim().toUpperCase();
+  const hasBoughtLabel =
+    shipmentStatus === "ETIQUETA_COMPRADA" ||
+    shipmentStatus === "EM_TRANSITO" ||
+    shipmentStatus === "ENTREGUE";
+  return hasServiceCode && isPaid && !hasBoughtLabel;
+}
+
+function canTrackShippingLabel(_order, shipment) {
+  const trackingCode = String(shipment?.trackingCode || "").trim();
+  return Boolean(trackingCode);
+}
+
+function shippingButtonState(order, shipment = null) {
+  if (!String(order?.shippingSelectedServiceCode || order?.shipping?.shippingServiceCode || "").trim()) {
+    return { label: "Frete incompleto", className: "btn btn-ghost", disabled: true };
+  }
+  const shipmentStatus = String(shipment?.status || "").trim().toUpperCase();
+  if (shipmentStatus === "ETIQUETA_COMPRADA" || shipmentStatus === "EM_TRANSITO" || shipmentStatus === "ENTREGUE") {
+    return { label: "Etiqueta expedida", className: "btn btn-ghost", disabled: true };
+  }
+  if (String(order?.status || "").trim().toLowerCase() === "paid" && canBuyShippingLabel(order, shipment)) {
+    return { label: "Expedir etiqueta", className: "btn", disabled: false };
+  }
+  return { label: "Aguardando pagamento", className: "btn btn-ghost", disabled: true };
 }
 
 export function createOrdersPage({ mount, drawer, getStatusFilter }) {
@@ -144,6 +189,21 @@ export function createOrdersPage({ mount, drawer, getStatusFilter }) {
     };
 
     const isRefunded = original.orderStatus === "refunded";
+    const shipment = getShipment(order);
+    const buyButtonState = shippingButtonState(order, shipment);
+    const canTrack = canTrackShippingLabel(order, shipment);
+    const trackingStatusOptions = (() => {
+      const current = String(original.trackingStatus || "");
+      const known = TRACKING_STATUS_OPTIONS.some((option) => option.value === current);
+      const extra = !known && current
+        ? `<option value="${escapeHtml(current)}" selected>${escapeHtml(current)}</option>`
+        : "";
+      const defaults = TRACKING_STATUS_OPTIONS.map(
+        (option) =>
+          `<option value="${escapeHtml(option.value)}" ${option.value === current ? "selected" : ""}>${escapeHtml(option.label)}</option>`
+      ).join("");
+      return `${extra}${defaults}`;
+    })();
     const root = document.createElement("div");
     root.innerHTML = `
       <div class="section">
@@ -182,7 +242,10 @@ export function createOrdersPage({ mount, drawer, getStatusFilter }) {
           </label>
           <label class="label full">
             <span>Tracking status</span>
-            <input class="field" data-key="trackingStatus" type="text" value="${escapeHtml(original.trackingStatus)}" />
+            <select class="field" data-key="trackingStatus">
+              <option value="">Selecione</option>
+              ${trackingStatusOptions}
+            </select>
           </label>
           <label class="label full">
             <span>Prazo (deadline)</span>
@@ -199,6 +262,26 @@ export function createOrdersPage({ mount, drawer, getStatusFilter }) {
         </div>
       </div>
 
+      <div class="section">
+        <h3>Etiqueta</h3>
+        <div class="form-grid">
+          <label class="label">
+            <span>Status da etiqueta</span>
+            <input class="field" data-shipment-field="status" type="text" value="${escapeHtml(shipment?.status || "—")}" readonly />
+          </label>
+          <label class="label">
+            <span>Código de rastreio</span>
+            <input class="field" data-shipment-field="trackingCode" type="text" value="${escapeHtml(shipment?.trackingCode || "—")}" readonly />
+          </label>
+        </div>
+        <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:12px;">
+          <button type="button" class="btn btn-ghost" data-action="shipping-track-label" ${canTrack ? "" : "disabled"}>Rastrear</button>
+          <button type="button" class="${escapeHtml(buyButtonState.className)}" data-action="shipping-buy-label" ${buyButtonState.disabled ? "disabled" : ""}>
+            ${escapeHtml(buyButtonState.label)}
+          </button>
+        </div>
+      </div>
+
       <div class="section" style="border:1px solid rgba(255,255,255,0.08);padding:14px;border-radius:12px;">
         <h3 style="color:#f87171;">Zona de risco</h3>
         <p style="color:var(--muted);font-size:12px;line-height:1.4;">Excluir remove o pedido, itens e dados de envio. Essa ação é permanente.</p>
@@ -207,6 +290,30 @@ export function createOrdersPage({ mount, drawer, getStatusFilter }) {
         </div>
       </div>
     `;
+
+    function refreshShippingSection(nextShipment = null) {
+      const effectiveShipment = nextShipment || order.shipment || null;
+      const statusInput = root.querySelector('[data-shipment-field="status"]');
+      const trackingInput = root.querySelector('[data-shipment-field="trackingCode"]');
+      if (statusInput instanceof HTMLInputElement) {
+        statusInput.value = String(effectiveShipment?.status || "—");
+      }
+      if (trackingInput instanceof HTMLInputElement) {
+        trackingInput.value = String(effectiveShipment?.trackingCode || "—");
+      }
+
+      const buyState = shippingButtonState(order, effectiveShipment);
+      const buyBtn = root.querySelector('button[data-action="shipping-buy-label"]');
+      if (buyBtn instanceof HTMLButtonElement) {
+        buyBtn.textContent = buyState.label;
+        buyBtn.className = buyState.className;
+        buyBtn.disabled = Boolean(buyState.disabled);
+      }
+      const trackBtn = root.querySelector('button[data-action="shipping-track-label"]');
+      if (trackBtn instanceof HTMLButtonElement) {
+        trackBtn.disabled = !canTrackShippingLabel(order, effectiveShipment);
+      }
+    }
 
     root.addEventListener("input", (event) => {
       const el = event.target;
@@ -267,6 +374,26 @@ export function createOrdersPage({ mount, drawer, getStatusFilter }) {
       try {
         if (action === "save") await save();
         if (action === "cancel") drawer.close();
+        if (action === "shipping-track-label") {
+          btn.disabled = true;
+          btn.textContent = "Rastreando...";
+          const data = await api(`/api/admin/orders/${encodeURIComponent(orderId)}/shipping/track`);
+          if (data?.data?.shipment) {
+            order.shipment = data.data.shipment;
+          }
+          refreshShippingSection(order.shipment);
+          toast("Rastreio atualizado.", { tone: "success" });
+        }
+        if (action === "shipping-buy-label") {
+          btn.disabled = true;
+          btn.textContent = "Expedindo...";
+          const data = await api(`/api/admin/orders/${encodeURIComponent(orderId)}/shipping/buy-label`, { method: "POST" });
+          if (data?.data?.shipment) {
+            order.shipment = data.data.shipment;
+          }
+          refreshShippingSection(order.shipment);
+          toast("Etiqueta expedida com sucesso.", { tone: "success" });
+        }
         if (action === "delete") {
           const ok = await confirmDiff({
             title: "Excluir pedido",
@@ -281,6 +408,7 @@ export function createOrdersPage({ mount, drawer, getStatusFilter }) {
           await reload();
         }
       } catch (error) {
+        refreshShippingSection(order.shipment);
         toast(`Falha: ${error?.code || error?.message || "REQUEST_FAILED"}`, { tone: "error" });
       }
     });
