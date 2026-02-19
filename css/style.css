@@ -122,7 +122,7 @@ header {
   left: 0;
   right: 0;
   width: 100%;
-  background: transparent;
+  background: #ff3b30;
   border-bottom: none;
   box-shadow: none;
   transition: background .22s ease, border-color .22s ease;
@@ -131,7 +131,7 @@ header {
 .home-header:hover,
 .home-header:focus-within,
 .home-header.is-scrolled{
-  background: transparent;
+  background: #ff3b30;
   border-bottom: none;
   box-shadow: none;
 }
@@ -252,7 +252,7 @@ nav a:hover { opacity: 0.6; }
 
 /* ===== HEADER (NOVO LAYOUT) ===== */
 .home-header {
-  background: transparent;
+  background: #ff3b30;
   border-bottom: none;
   box-shadow: none;
   padding: 14px 34px;
@@ -261,7 +261,7 @@ nav a:hover { opacity: 0.6; }
 .home-header:hover,
 .home-header:focus-within,
 .home-header.is-scrolled {
-  background: transparent;
+  background: #ff3b30;
   border-bottom: none;
   box-shadow: none;
 }
