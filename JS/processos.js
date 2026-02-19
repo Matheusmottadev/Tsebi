@@ -1,4 +1,4 @@
-﻿(() => {
+(() => {
   const homeHeader = document.querySelector(".home-header");
   if (homeHeader) {
     setInterval(() => {

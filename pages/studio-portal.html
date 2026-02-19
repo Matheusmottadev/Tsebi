@@ -57,18 +57,19 @@
     </header>
 
     <nav class="tabs" aria-label="Abas do painel">
-      <button type="button" class="tab is-active" data-tab="users">Usu�rios</button>
+      <button type="button" class="tab is-active" data-tab="users">Usuários</button>
       <button type="button" class="tab" data-tab="orders">Pedidos</button>
       <button type="button" class="tab" data-tab="products">Produtos</button>
       <button type="button" class="tab" data-tab="vip">Lista VIP</button>
+      <button type="button" class="tab" data-tab="whatsapp">WhatsApp</button>
       <button type="button" class="tab" data-tab="audit">Auditoria</button>
     </nav>
 
     <section class="panel" id="panelUsers" data-panel="users">
       <div class="panel-head">
         <div class="panel-title">
-          <h2>Usu�rios</h2>
-          <p>Editar dados, senha tempor�ria e a��es cr�ticas com auditoria.</p>
+          <h2>Usuários</h2>
+          <p>Editar dados, senha temporária e ações críticas com auditoria.</p>
         </div>
         <div class="panel-actions">
           <select id="usersStatus">
@@ -107,7 +108,7 @@
       <div class="panel-head">
         <div class="panel-title">
           <h2>Produtos</h2>
-          <p>Editar dados, foto, estoque e status com confirma��o e diff.</p>
+          <p>Editar dados, foto, estoque e status com confirmação e diff.</p>
         </div>
         <div class="panel-actions">
           <select id="productsStatus">
@@ -130,7 +131,7 @@
       <div class="panel-head">
         <div class="panel-title">
           <h2>Lista VIP</h2>
-          <p>Inscritos com busca, edi��o e auditoria.</p>
+          <p>Inscritos com busca, edição e auditoria.</p>
         </div>
         <div class="panel-actions">
           <button id="vipCreateBtn" type="button" class="btn">Cadastrar</button>
@@ -139,15 +140,25 @@
       <div id="vipMount"></div>
     </section>
 
+    <section class="panel" id="panelWhatsApp" data-panel="whatsapp" hidden>
+      <div class="panel-head">
+        <div class="panel-title">
+          <h2>WhatsApp</h2>
+          <p>Atendimento, VIP e envios manuais com controle de custos.</p>
+        </div>
+      </div>
+      <div id="whatsappMount"></div>
+    </section>
+
     <section class="panel" id="panelAudit" data-panel="audit" hidden>
       <div class="panel-head">
         <div class="panel-title">
           <h2>Auditoria</h2>
-          <p>Altera��es e logins admin (revers�o at� 30 dias quando aplic�vel).</p>
+          <p>Alterações e logins admin (reversão até 30 dias quando aplicável).</p>
         </div>
         <div class="panel-actions">
           <select id="auditMode">
-            <option value="changes">Altera��es</option>
+            <option value="changes">Alterações</option>
             <option value="logins">Logins admin</option>
           </select>
         </div>

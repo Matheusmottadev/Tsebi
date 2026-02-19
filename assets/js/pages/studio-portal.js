@@ -7,6 +7,7 @@ import { createOrdersPage } from "./orders.js";
 import { createProductsPage } from "./products.js";
 import { createVipPage } from "./vip.js";
 import { createAuditPage } from "./audit.js";
+import { createWhatsAppPage } from "./whatsapp.js";
 
 const studioFlowKey = "tsebi-studio-entry-ok";
 
@@ -211,6 +212,7 @@ async function main() {
     ordersMount: document.getElementById("ordersMount"),
     productsMount: document.getElementById("productsMount"),
     vipMount: document.getElementById("vipMount"),
+    whatsappMount: document.getElementById("whatsappMount"),
     auditMount: document.getElementById("auditMount")
   };
 
@@ -247,6 +249,7 @@ async function main() {
     getStockFilter: () => els.productsStock?.value || ""
   });
   const vipPage = createVipPage({ mount: els.vipMount, drawer });
+  const whatsappPage = createWhatsAppPage({ mount: els.whatsappMount });
   const auditPage = createAuditPage({
     mount: els.auditMount,
     drawer,
@@ -258,6 +261,7 @@ async function main() {
     orders: ordersPage,
     products: productsPage,
     vip: vipPage,
+    whatsapp: whatsappPage,
     audit: auditPage
   };
 

@@ -1,4 +1,4 @@
-﻿(function initTsebiUserStore() {
+(function initTsebiUserStore() {
   const LEGACY_AUTH_CACHE_KEY = "tsebi-auth-user-cache-v1";
   const FAVORITES_KEY = "tsebi-favorites-v2";
 

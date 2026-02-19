@@ -1,4 +1,4 @@
-﻿const { query } = require("./db");
+const { query } = require("./db");
 const { normalizeEmail } = require("../user-repository");
 
 const DEFAULT_THEME = "system";

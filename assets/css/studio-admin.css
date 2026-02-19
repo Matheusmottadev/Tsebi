@@ -397,6 +397,45 @@ table.table th {
 
 .form-grid .full { grid-column: 1 / -1; }
 
+.whatsapp-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 16px;
+}
+
+.card {
+  border: 1px solid var(--line);
+  background: var(--card);
+  border-radius: var(--radius);
+  padding: 16px;
+  display: grid;
+  gap: 14px;
+}
+
+.card-head h3 {
+  margin: 0 0 6px;
+  font-size: 16px;
+}
+
+.card-head p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.card-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-top: 8px;
+}
+
+.wa-estimate {
+  margin-top: 8px;
+  font-size: 12px;
+  color: var(--muted);
+}
+
 .label {
   display: grid;
   gap: 6px;
@@ -480,4 +519,3 @@ table.table th {
   .topbar { flex-wrap: wrap; }
   .form-grid { grid-template-columns: 1fr; }
 }
-

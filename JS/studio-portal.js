@@ -1,4 +1,4 @@
-﻿(() => {
+(() => {
   const dom = {
     adminApp: document.getElementById("adminApp"),
     adminLocked: document.getElementById("adminLocked"),

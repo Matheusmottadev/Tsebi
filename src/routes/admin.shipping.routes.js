@@ -7,6 +7,7 @@ const {
   notifyOrderShipped,
   notifyShipmentMilestoneTransition
 } = require("../../server/lib/order-notification-service");
+const { sendOrderShippedWhatsApp } = require("../../server/lib/whatsapp-service");
 const { buyLabelForOrder, getLabelForOrder, trackOrderShipment } = require("../shipping/shipping.service");
 const { attachManualShippingToOrder } = require("../shipping/order-tracking.service");
 
@@ -73,6 +74,7 @@ adminShippingRouter.post("/orders/:id/shipping/buy-label", async (req, res) => {
     const currentStatus = String(shipment?.status || "").trim().toUpperCase();
     if (currentStatus === "ETIQUETA_COMPRADA" && previousStatus !== "ETIQUETA_COMPRADA") {
       notifyOrderShipped(order, shipment).catch(() => {});
+      sendOrderShippedWhatsApp(order, shipment).catch(() => {});
     }
     return res.json({
       ok: true,
@@ -133,10 +135,12 @@ adminShippingRouter.post("/orders/:id/shipping", async (req, res) => {
   }
 
   try {
+    const order = await loadOrderOr404(parsedParams.data.id);
     const tracked = await attachManualShippingToOrder(parsedParams.data.id, {
       trackingCode: parsedBody.data.tracking_code,
       carrier: parsedBody.data.carrier
     });
+    sendOrderShippedWhatsApp(order, { trackingCode: parsedBody.data.tracking_code }).catch(() => {});
 
     return res.json({
       ok: true,

@@ -27,9 +27,12 @@ const { checkAvailability, commitStock } = require("./lib/inventory-repository")
 const { withTransaction } = require("./lib/db");
 const { shippingRouter } = require("../src/routes/shipping.routes");
 const { adminShippingRouter } = require("../src/routes/admin.shipping.routes");
+const { adminWhatsAppRouter } = require("../src/routes/admin.whatsapp.routes");
 const { orderTrackingRouter } = require("../src/routes/order-tracking.routes");
+const { whatsappRouter } = require("../src/routes/whatsapp.routes");
 const { resolveQuoteForCheckout, selectShippingForOrder } = require("../src/shipping/shipping.service");
 const { syncMelhorEnvioTrackingJob } = require("../src/shipping/order-tracking.service");
+const { sendOrderConfirmedWhatsApp } = require("./lib/whatsapp-service");
 
 dotenv.config();
 
@@ -552,6 +555,7 @@ async function processWebhookEvent(event) {
       const currentStatus = String(order.status || "").toLowerCase();
       if (notification.type === "payment_confirmed" && (currentStatus === "processing" || currentStatus === "paid")) {
         await notifyOrderConfirmed(order);
+        sendOrderConfirmedWhatsApp(order).catch(() => {});
         continue;
       }
       if (notification.type === "payment_approved" && currentStatus === "paid") {
@@ -661,8 +665,10 @@ app.use("/api/studio-auth", studioAuthRouter);
 app.use("/api/vip", vipRouter);
 app.use("/api", shippingRouter);
 app.use("/api", orderTrackingRouter);
+app.use("/api/whatsapp", whatsappRouter);
 app.use("/api/admin", adminRouter);
 app.use("/api/admin", adminShippingRouter);
+app.use("/api/admin", adminWhatsAppRouter);
 
 app.get("/api/products", async (req, res) => {
   try {

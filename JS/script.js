@@ -1,4 +1,4 @@
-﻿const messages = [
+const messages = [
   "Nova Coleção Gênesis",
   "Você merece vestir algo à sua altura.",
   "Cadastre-se para receber lançamentos",
@@ -1244,7 +1244,7 @@ function initHeaderMenu() {
     notice.style.fontSize = "12px";
     notice.style.letterSpacing = "0.2px";
     notice.innerHTML =
-      '<span>Menu indisponivel por enquanto. As pecas ainda serao lancadas.</span>' +
+      '<span>Menu indisponível por enquanto. As peças ainda serão lançadas.</span>' +
       '<a href="lancamento.html" style="color:#fff;text-decoration:underline;white-space:nowrap;">Ver lancamento</a>';
     document.body.appendChild(notice);
     return notice;
