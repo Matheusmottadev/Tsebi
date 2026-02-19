@@ -205,7 +205,7 @@
   </section>
 
   <!-- CATEGORY SWITCH (estilo Zara/Prada) -->
-  <section class="category-switch" aria-label="Destaques por categoria">
+  <section class="category-switch" data-category-switch="featured" aria-label="Destaques por categoria">
     <div class="category-intro">
       <p>
         Há uma raiz que sustenta tudo o que escolhemos ser.
@@ -283,54 +283,53 @@ Porque estilo não é sobre o que você veste, é sobre quem você é.
     </div>
   </section>
 
-  <!-- NEWS (o que você pediu) -->
-  <section class="news">
-    <div class="news-header">
-      <h2>NEWS</h2>
-      <div class="news-header-right">
-        <a class="news-all" href="#">Ver tudo</a>
-        <div class="news-nav" aria-label="Navegação das notícias">
-          <button class="news-nav-btn" id="newsPrevBtn" type="button" aria-label="Notícia anterior">&#10094;</button>
-          <button class="news-nav-btn" id="newsNextBtn" type="button" aria-label="Próxima notícia">&#10095;</button>
-        </div>
+  <section class="category-switch" data-category-switch="popular" aria-label="Peças mais clicadas">
+    <div class="category-intro">
+      <p>Peças mais clicadas da Tsebi. Seleção dinâmica para inspirar a próxima escolha.</p>
+      <div class="category-tabs" role="tablist" aria-label="Selecionar gênero">
+        <button
+          class="category-tab is-active"
+          type="button"
+          role="tab"
+          aria-selected="true"
+          aria-controls="popularGrid"
+          data-category="feminino"
+        >
+          Feminino
+        </button>
+        <button
+          class="category-tab"
+          type="button"
+          role="tab"
+          aria-selected="false"
+          aria-controls="popularGrid"
+          data-category="masculino"
+        >
+          Masculino
+        </button>
       </div>
     </div>
 
-    <div class="news-grid" id="newsGrid">
-      <!-- Card 1 (sua foto da sócia palestrando) -->
-      <article class="news-card">
-        <a href="#">
-          <img class="news-img" loading="lazy" decoding="async" src="images/news/palestra.jpeg" alt="Sócia palestrando">
+    <div class="category-grid" id="popularGrid">
+      <article class="category-card">
+        <a href="#" class="category-media">
+          <img loading="lazy" decoding="async" src="images/produtos/sug1.jpeg" alt="Peça mais clicada 1">
         </a>
-        <div class="news-body">
-          <p class="news-date">27 AGO</p>
-          <h3 class="news-title">Nossa sócia apresenta a visão da marca</h3>
-          <a class="news-link" href="#">Leia mais</a>
-        </div>
       </article>
-
-      <!-- Card 2 -->
-      <article class="news-card">
-        <a href="#">
-          <img class="news-img" loading="lazy" decoding="async" src="images/produtos/sug2.jpeg" alt="Nova coleção">
+      <article class="category-card">
+        <a href="#" class="category-media">
+          <img loading="lazy" decoding="async" src="images/produtos/sug2.jpeg" alt="Peça mais clicada 2">
         </a>
-        <div class="news-body">
-          <p class="news-date">NOVA</p>
-          <h3 class="news-title">Chegou a coleção Primavera/Verão</h3>
-          <a class="news-link" href="#">Leia mais</a>
-        </div>
       </article>
-
-      <!-- Card 3 -->
-      <article class="news-card">
-        <a href="#">
-          <img class="news-img" loading="lazy" decoding="async" src="images/news/bastidores.jpeg" alt="Bastidores da marca">
+      <article class="category-card">
+        <a href="#" class="category-media">
+          <img loading="lazy" decoding="async" src="images/produtos/sug3.jpeg" alt="Peça mais clicada 3">
         </a>
-        <div class="news-body">
-          <p class="news-date">STUDIO</p>
-          <h3 class="news-title">Bastidores: desenvolvimento e qualidade</h3>
-          <a class="news-link" href="#">Leia mais</a>
-        </div>
+      </article>
+      <article class="category-card">
+        <a href="#" class="category-media">
+          <img loading="lazy" decoding="async" src="images/produtos/sug4.jpeg" alt="Peça mais clicada 4">
+        </a>
       </article>
     </div>
   </section>

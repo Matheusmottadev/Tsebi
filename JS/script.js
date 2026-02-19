@@ -976,130 +976,171 @@ function initSearchOverlay() {
 }
 
 function initCategorySwitch() {
-  const categoryGrid = document.getElementById("categoryGrid");
-  const categoryTabs = Array.from(document.querySelectorAll(".category-tab"));
-  const categoryCards = Array.from(document.querySelectorAll(".category-card"));
+  const sections = Array.from(document.querySelectorAll(".category-switch"));
+  if (sections.length === 0) return;
 
-  if (!categoryGrid || categoryTabs.length === 0 || categoryCards.length === 0) return;
+  const contentEn = {
+    featured: {
+      feminino: [
+        { src: "images/produtos/sug2.jpeg", alt: "Structured cool wool skirt", title: "Structured cool wool skirt", href: "produto.html?id=origem-skirt" },
+        { src: "images/produtos/sug4.jpeg", alt: "Premium tailored trousers", title: "Premium tailored trousers", href: "produto.html?id=genesis-tailored" },
+        { src: "images/produtos/sug2.jpeg", alt: "Patent leather pumps", title: "Patent leather pumps", href: "produto.html?id=atelier-heels" },
+        { src: "images/produtos/sug4.jpeg", alt: "Premium linen blazer", title: "Premium linen blazer", href: "produto.html?id=essence-blazer" }
+      ],
+      masculino: [
+        { src: "images/produtos/sug3.jpeg", alt: "Croatian cotton shirt", title: "Croatian cotton shirt", href: "produto.html?id=origem-shirt" },
+        { src: "images/produtos/sug1.jpeg", alt: "Italian leather bomber jacket", title: "Italian leather bomber jacket", href: "produto.html?id=genesis-bomber" },
+        { src: "images/produtos/sug1.jpeg", alt: "Premium technical sneaker", title: "Premium technical sneaker", href: "produto.html?id=noir-sneaker" },
+        { src: "images/produtos/sug3.jpeg", alt: "Gabardine trench coat", title: "Gabardine trench coat", href: "produto.html?id=flux-trench" }
+      ]
+    },
+    popular: {
+      feminino: [
+        { src: "images/produtos/sug1.jpeg", alt: "Most clicked piece 1", title: "", href: "produto.html?id=origem-skirt" },
+        { src: "images/produtos/sug2.jpeg", alt: "Most clicked piece 2", title: "", href: "produto.html?id=genesis-tailored" },
+        { src: "images/produtos/sug3.jpeg", alt: "Most clicked piece 3", title: "", href: "produto.html?id=atelier-heels" },
+        { src: "images/produtos/sug4.jpeg", alt: "Most clicked piece 4", title: "", href: "produto.html?id=essence-blazer" }
+      ],
+      masculino: [
+        { src: "images/produtos/sug3.jpeg", alt: "Most clicked piece 1", title: "", href: "produto.html?id=origem-shirt" },
+        { src: "images/produtos/sug1.jpeg", alt: "Most clicked piece 2", title: "", href: "produto.html?id=genesis-bomber" },
+        { src: "images/produtos/sug2.jpeg", alt: "Most clicked piece 3", title: "", href: "produto.html?id=noir-sneaker" },
+        { src: "images/produtos/sug4.jpeg", alt: "Most clicked piece 4", title: "", href: "produto.html?id=flux-trench" }
+      ]
+    }
+  };
 
-  const categoryContent = isEnglish
-    ? {
-        feminino: [
-          { src: "images/produtos/sug2.jpeg", alt: "Structured cool wool skirt", title: "Structured cool wool skirt", href: "produto.html?id=origem-skirt" },
-          { src: "images/produtos/sug4.jpeg", alt: "Premium tailored trousers", title: "Premium tailored trousers", href: "produto.html?id=genesis-tailored" },
-          { src: "images/produtos/sug2.jpeg", alt: "Patent leather pumps", title: "Patent leather pumps", href: "produto.html?id=atelier-heels" },
-          { src: "images/produtos/sug4.jpeg", alt: "Premium linen blazer", title: "Premium linen blazer", href: "produto.html?id=essence-blazer" }
-        ],
-        masculino: [
-          { src: "images/produtos/sug3.jpeg", alt: "Croatian cotton shirt", title: "Croatian cotton shirt", href: "produto.html?id=origem-shirt" },
-          { src: "images/produtos/sug1.jpeg", alt: "Italian leather bomber jacket", title: "Italian leather bomber jacket", href: "produto.html?id=genesis-bomber" },
-          { src: "images/produtos/sug1.jpeg", alt: "Premium technical sneaker", title: "Premium technical sneaker", href: "produto.html?id=noir-sneaker" },
-          { src: "images/produtos/sug3.jpeg", alt: "Gabardine trench coat", title: "Gabardine trench coat", href: "produto.html?id=flux-trench" }
-        ]
+  const contentPt = {
+    featured: {
+      feminino: [
+        { src: "images/produtos/sug2.jpeg", alt: "Saia estruturada em lã fria", title: "Saia estruturada em lã fria", href: "produto.html?id=origem-skirt" },
+        { src: "images/produtos/sug4.jpeg", alt: "Calça de alfaiataria em sarja premium", title: "Calça de alfaiataria premium", href: "produto.html?id=genesis-tailored" },
+        { src: "images/produtos/sug2.jpeg", alt: "Scarpin em couro envernizado", title: "Scarpin em couro envernizado", href: "produto.html?id=atelier-heels" },
+        { src: "images/produtos/sug4.jpeg", alt: "Blazer em linho premium", title: "Blazer em linho premium", href: "produto.html?id=essence-blazer" }
+      ],
+      masculino: [
+        { src: "images/produtos/sug3.jpeg", alt: "Camisa em algodão croata", title: "Camisa em algodão croata", href: "produto.html?id=origem-shirt" },
+        { src: "images/produtos/sug1.jpeg", alt: "Jaqueta bomber em couro italiano", title: "Jaqueta bomber em couro italiano", href: "produto.html?id=genesis-bomber" },
+        { src: "images/produtos/sug1.jpeg", alt: "Tênis em nylon técnico e couro", title: "Tênis em nylon técnico premium", href: "produto.html?id=noir-sneaker" },
+        { src: "images/produtos/sug3.jpeg", alt: "Trench coat em gabardine", title: "Trench coat em gabardine", href: "produto.html?id=flux-trench" }
+      ]
+    },
+    popular: {
+      feminino: [
+        { src: "images/produtos/sug1.jpeg", alt: "Peça mais clicada 1", title: "", href: "produto.html?id=origem-skirt" },
+        { src: "images/produtos/sug2.jpeg", alt: "Peça mais clicada 2", title: "", href: "produto.html?id=genesis-tailored" },
+        { src: "images/produtos/sug3.jpeg", alt: "Peça mais clicada 3", title: "", href: "produto.html?id=atelier-heels" },
+        { src: "images/produtos/sug4.jpeg", alt: "Peça mais clicada 4", title: "", href: "produto.html?id=essence-blazer" }
+      ],
+      masculino: [
+        { src: "images/produtos/sug3.jpeg", alt: "Peça mais clicada 1", title: "", href: "produto.html?id=origem-shirt" },
+        { src: "images/produtos/sug1.jpeg", alt: "Peça mais clicada 2", title: "", href: "produto.html?id=genesis-bomber" },
+        { src: "images/produtos/sug2.jpeg", alt: "Peça mais clicada 3", title: "", href: "produto.html?id=noir-sneaker" },
+        { src: "images/produtos/sug4.jpeg", alt: "Peça mais clicada 4", title: "", href: "produto.html?id=flux-trench" }
+      ]
+    }
+  };
+
+  const content = isEnglish ? contentEn : contentPt;
+
+  sections.forEach((section) => {
+    const categoryGrid = section.querySelector(".category-grid");
+    const categoryTabs = Array.from(section.querySelectorAll(".category-tab"));
+    const categoryCards = Array.from(section.querySelectorAll(".category-card"));
+    if (!categoryGrid || categoryTabs.length === 0 || categoryCards.length === 0) return;
+
+    const variant = String(section.dataset.categorySwitch || "featured");
+    const categoryContent = content[variant] || content.featured;
+
+    let currentCategory = "feminino";
+    let switchTimer = null;
+
+    function getCardHref(card) {
+      const mediaLink = card?.querySelector(".category-media");
+      const href = String(mediaLink?.getAttribute("href") || "").trim();
+      return href && href !== "#" ? href : "";
+    }
+
+    function navigateCard(card) {
+      const href = getCardHref(card);
+      if (!href) return;
+      window.location.href = href;
+    }
+
+    categoryCards.forEach((card) => {
+      const title = card.querySelector("h3");
+      if (title instanceof HTMLElement) {
+        title.style.cursor = "pointer";
+        title.setAttribute("role", "link");
+        title.setAttribute("tabindex", "0");
+        title.addEventListener("click", () => navigateCard(card));
+        title.addEventListener("keydown", (event) => {
+          if (event.key !== "Enter" && event.key !== " ") return;
+          event.preventDefault();
+          navigateCard(card);
+        });
       }
-    : {
-        feminino: [
-          { src: "images/produtos/sug2.jpeg", alt: "Saia estruturada em lã fria", title: "Saia estruturada em lã fria", href: "produto.html?id=origem-skirt" },
-          { src: "images/produtos/sug4.jpeg", alt: "Calça de alfaiataria em sarja premium", title: "Calça de alfaiataria premium", href: "produto.html?id=genesis-tailored" },
-          { src: "images/produtos/sug2.jpeg", alt: "Scarpin em couro envernizado", title: "Scarpin em couro envernizado", href: "produto.html?id=atelier-heels" },
-          { src: "images/produtos/sug4.jpeg", alt: "Blazer em linho premium", title: "Blazer em linho premium", href: "produto.html?id=essence-blazer" }
-        ],
-        masculino: [
-          { src: "images/produtos/sug3.jpeg", alt: "Camisa em algodão croata", title: "Camisa em algodão croata", href: "produto.html?id=origem-shirt" },
-          { src: "images/produtos/sug1.jpeg", alt: "Jaqueta bomber em couro italiano", title: "Jaqueta bomber em couro italiano", href: "produto.html?id=genesis-bomber" },
-          { src: "images/produtos/sug1.jpeg", alt: "Tênis em nylon técnico e couro", title: "Tênis em nylon técnico premium", href: "produto.html?id=noir-sneaker" },
-          { src: "images/produtos/sug3.jpeg", alt: "Trench coat em gabardine", title: "Trench coat em gabardine", href: "produto.html?id=flux-trench" }
-        ]
-      };
 
-  let currentCategory = "feminino";
-  let switchTimer = null;
-
-  function getCardHref(card) {
-    const mediaLink = card?.querySelector(".category-media");
-    const href = String(mediaLink?.getAttribute("href") || "").trim();
-    return href && href !== "#" ? href : "";
-  }
-
-  function navigateCard(card) {
-    const href = getCardHref(card);
-    if (!href) return;
-    window.location.href = href;
-  }
-
-  categoryCards.forEach((card) => {
-    const title = card.querySelector("h3");
-    if (title instanceof HTMLElement) {
-      title.style.cursor = "pointer";
-      title.setAttribute("role", "link");
-      title.setAttribute("tabindex", "0");
-      title.addEventListener("click", () => navigateCard(card));
-      title.addEventListener("keydown", (event) => {
-        if (event.key !== "Enter" && event.key !== " ") return;
-        event.preventDefault();
+      card.addEventListener("click", (event) => {
+        const target = event.target;
+        if (!(target instanceof Element)) return;
+        if (target.closest("a, button")) return;
         navigateCard(card);
+      });
+    });
+
+    function applyCategoryContent(category) {
+      const items = categoryContent[category];
+      if (!items) return;
+
+      categoryCards.forEach((card, i) => {
+        const img = card.querySelector("img");
+        const title = card.querySelector("h3");
+        const mediaLink = card.querySelector(".category-media");
+        const item = items[i];
+        if (!img || !item) return;
+
+        img.src = item.src;
+        img.alt = item.alt;
+        if (title) title.textContent = item.title || "";
+        if (mediaLink) mediaLink.href = item.href || "#";
+      });
+
+      categoryTabs.forEach((tab) => {
+        const isCurrent = tab.dataset.category === category;
+        tab.classList.toggle("is-active", isCurrent);
+        tab.setAttribute("aria-selected", isCurrent ? "true" : "false");
       });
     }
 
-    card.addEventListener("click", (event) => {
-      const target = event.target;
-      if (!(target instanceof Element)) return;
-      if (target.closest("a, button")) return;
-      navigateCard(card);
-    });
-  });
+    function renderCategory(category, withAnimation = true) {
+      if (!categoryContent[category]) return;
+      if (category === currentCategory && !switchTimer) return;
 
-  function applyCategoryContent(category) {
-    const items = categoryContent[category];
-    if (!items) return;
+      if (!withAnimation) {
+        applyCategoryContent(category);
+        currentCategory = category;
+        return;
+      }
 
-    categoryCards.forEach((card, i) => {
-      const img = card.querySelector("img");
-      const title = card.querySelector("h3");
-      const mediaLink = card.querySelector(".category-media");
-      const item = items[i];
-      if (!img || !title || !item) return;
+      if (switchTimer) clearTimeout(switchTimer);
 
-      img.src = item.src;
-      img.alt = item.alt;
-      title.textContent = item.title;
-      if (mediaLink) mediaLink.href = item.href || "#";
-    });
+      categoryGrid.classList.add("is-switching");
 
-    categoryTabs.forEach((tab) => {
-      const isCurrent = tab.dataset.category === category;
-      tab.classList.toggle("is-active", isCurrent);
-      tab.setAttribute("aria-selected", isCurrent ? "true" : "false");
-    });
-  }
-
-  function renderCategory(category, withAnimation = true) {
-    if (!categoryContent[category]) return;
-    if (category === currentCategory && !switchTimer) return;
-
-    if (!withAnimation) {
-      applyCategoryContent(category);
-      currentCategory = category;
-      return;
+      switchTimer = setTimeout(() => {
+        applyCategoryContent(category);
+        currentCategory = category;
+        categoryGrid.classList.remove("is-switching");
+        switchTimer = null;
+      }, 180);
     }
 
-    if (switchTimer) clearTimeout(switchTimer);
+    categoryTabs.forEach((tab) => {
+      tab.addEventListener("click", () => renderCategory(tab.dataset.category, true));
+    });
 
-    categoryGrid.classList.add("is-switching");
-
-    switchTimer = setTimeout(() => {
-      applyCategoryContent(category);
-      currentCategory = category;
-      categoryGrid.classList.remove("is-switching");
-      switchTimer = null;
-    }, 180);
-  }
-
-  categoryTabs.forEach((tab) => {
-    tab.addEventListener("click", () => renderCategory(tab.dataset.category, true));
+    applyCategoryContent("feminino");
   });
-
-  applyCategoryContent("feminino");
 }
 
 function initNewsCarousel() {
