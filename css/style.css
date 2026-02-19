@@ -122,7 +122,7 @@ header {
   right: 0;
   width: 100%;
   background: transparent;
-  border-bottom-color: transparent;
+  border-bottom: none;
   transition: background .22s ease, border-color .22s ease;
 }
 
@@ -130,7 +130,7 @@ header {
 .home-header:focus-within,
 .home-header.is-scrolled{
   background: #fff;
-  border-bottom-color: #eee;
+  border-bottom: none;
 }
 
 /* Keep homepage header fully transparent until hover or scroll */
@@ -250,7 +250,7 @@ nav a:hover { opacity: 0.6; }
 /* ===== HEADER (NOVO LAYOUT) ===== */
 .home-header {
   background: transparent;
-  border-bottom: 1px solid transparent;
+  border-bottom: none;
   padding: 14px 34px;
 }
 
@@ -258,7 +258,7 @@ nav a:hover { opacity: 0.6; }
 .home-header:focus-within,
 .home-header.is-scrolled {
   background: #fff;
-  border-bottom-color: #d9d9d9;
+  border-bottom: none;
 }
 
 /* Ensure the new layout keeps transparency before hover/scroll */
