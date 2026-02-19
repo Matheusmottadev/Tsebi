@@ -57,7 +57,11 @@ function getR2Upload() {
   }
   return uploadR2Buffer;
 }
-const { listShipmentsByOrderIds } = require("../src/db/queries/shipping.queries");
+const {
+  listShipmentsByOrderIds,
+  upsertShipmentPending,
+  updateShipmentTracking
+} = require("../src/db/queries/shipping.queries");
 const {
   INTERNAL_TRACKING_STATES,
   mapMelhorEnvioStatusToInternal
@@ -1189,19 +1193,20 @@ adminRouter.get("/orders", async (req, res) => {
     );
     const ordersWithShipping = paged.rows.map((order) => {
       const shipment = shipmentsByOrderId.get(String(order.id)) || null;
+      const fallbackTracking = String(order.trackingCode || order.trackingId || "").trim();
       const safeShipment = shipment
         ? {
             id: shipment.id,
             provider: shipment.provider,
-            trackingCode: shipment.trackingCode || order.trackingCode || "",
+            trackingCode: shipment.trackingCode || fallbackTracking || "",
             status: shipment.status || order.trackingStatus || order.currentStatus || "",
             updatedAt: shipment.updatedAt || null
           }
-        : order.trackingCode
+        : fallbackTracking
           ? {
               id: null,
               provider: order.shippingSelectedProvider || "",
-              trackingCode: order.trackingCode || "",
+              trackingCode: fallbackTracking || "",
               status: order.trackingStatus || order.currentStatus || "",
               updatedAt: order.updatedAt || null
             }
@@ -1309,6 +1314,37 @@ adminRouter.patch("/orders/:id", async (req, res) => {
     const afterState = updated || before;
     const statusChanged = String(before.status || "") !== String(afterState.status || "");
 
+    if (Object.prototype.hasOwnProperty.call(parsed.data, "trackingCode")) {
+      const trackingCode = String(nextPatch.trackingCode || "").trim();
+      if (trackingCode) {
+        const provider =
+          String(afterState.shippingSelectedProvider || afterState.shipping?.shippingProvider || "manual")
+            .trim()
+            .toLowerCase() || "manual";
+        const serviceCode =
+          String(afterState.shippingSelectedServiceCode || afterState.shipping?.shippingServiceCode || "manual")
+            .trim() || "manual";
+        await upsertShipmentPending({
+          orderId: afterState.id,
+          provider,
+          serviceCode,
+          priceCents: Number(afterState.shippingPriceCents || afterState.shippingAmount || 0),
+          deadlineDays: afterState.shippingDeadlineDays,
+          rawPayload: {
+            source: "admin_manual_tracking"
+          }
+        }).catch(() => {});
+        await updateShipmentTracking({
+          orderId: afterState.id,
+          trackingCode,
+          status: "",
+          rawPayload: {
+            source: "admin_manual_tracking"
+          }
+        }).catch(() => {});
+      }
+    }
+
     await recordAuditLog(req, {
       action: statusChanged ? "status_change" : "save",
       entityType: "order",
@@ -1367,19 +1403,20 @@ adminRouter.get("/orders/:id", async (req, res) => {
     if (!order) return res.status(404).json({ error: "NOT_FOUND" });
     const shipmentsByOrderId = await listShipmentsByOrderIds([String(order.id)]);
     const shipment = shipmentsByOrderId.get(String(order.id)) || null;
+    const fallbackTracking = String(order.trackingCode || order.trackingId || "").trim();
     const mergedShipment = shipment
       ? {
           ...shipment,
-          trackingCode: shipment.trackingCode || order.trackingCode || "",
+          trackingCode: shipment.trackingCode || fallbackTracking || "",
           status: shipment.status || order.trackingStatus || order.currentStatus || ""
         }
-      : order.trackingCode
+      : fallbackTracking
         ? {
             id: null,
             provider: order.shippingSelectedProvider || "",
             serviceCode: order.shippingSelectedServiceCode || "",
             labelExternalId: "",
-            trackingCode: order.trackingCode || "",
+            trackingCode: fallbackTracking || "",
             status: order.trackingStatus || order.currentStatus || "",
             priceCents: Number(order.shippingPriceCents || order.shippingAmount || 0),
             deadlineDays: order.shippingDeadlineDays == null ? null : Number(order.shippingDeadlineDays),

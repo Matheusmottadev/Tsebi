@@ -107,14 +107,35 @@ function formatMoneyFromCents(value) {
   }
 }
 
+function normalizeBaseUrl(value) {
+  const raw = String(value || "").trim();
+  if (!raw) return "";
+  const withProtocol = /^https?:\/\//i.test(raw) ? raw : `https://${raw}`;
+  return withProtocol.replace(/\/+$/, "");
+}
+
 function getPublicBaseUrl() {
-  const explicit = String(process.env.APP_BASE_URL || process.env.PUBLIC_APP_URL || process.env.SITE_URL || "").trim();
-  if (explicit) return explicit.replace(/\/+$/, "");
+  const explicit = String(
+    process.env.APP_BASE_URL ||
+      process.env.PUBLIC_APP_URL ||
+      process.env.SITE_URL ||
+      process.env.PUBLIC_SITE_URL ||
+      ""
+  ).trim();
+  if (explicit) return normalizeBaseUrl(explicit);
   const corsOrigin = String(process.env.CORS_ORIGIN || "")
     .split(",")
     .map((item) => item.trim())
     .find(Boolean);
-  return corsOrigin ? corsOrigin.replace(/\/+$/, "") : "";
+  if (corsOrigin) return normalizeBaseUrl(corsOrigin);
+
+  const inferred =
+    process.env.VERCEL_URL ||
+    process.env.RAILWAY_STATIC_URL ||
+    process.env.RAILWAY_PUBLIC_DOMAIN ||
+    process.env.RENDER_EXTERNAL_URL ||
+    "";
+  return normalizeBaseUrl(inferred);
 }
 
 function buildOrderDetails({ order, shipment, statusLabel }) {
