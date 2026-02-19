@@ -1,0 +1,109 @@
+.faq-page-body .home-header {
+  background: #fff;
+  border-bottom-color: #d9d9d9;
+}
+
+.faq-page {
+  padding: calc(var(--top-bar-height) + var(--header-height) + 24px) 24px 64px;
+  max-width: 980px;
+  margin: 0 auto;
+}
+
+.faq-hero {
+  border-bottom: 1px solid #ececec;
+  padding-bottom: 24px;
+}
+
+.faq-kicker {
+  font-size: 12px;
+  letter-spacing: 1.3px;
+  text-transform: uppercase;
+  color: #666;
+  font-family: "Montserrat", sans-serif;
+}
+
+.faq-hero h1 {
+  margin-top: 8px;
+  font-family: "Playfair Display", serif;
+  font-size: clamp(36px, 5vw, 64px);
+}
+
+.faq-subtitle {
+  margin-top: 10px;
+  font-size: 15px;
+  color: #3d3d3d;
+}
+
+.faq-content {
+  margin-top: 28px;
+  display: grid;
+  gap: 26px;
+}
+
+.faq-category h2 {
+  font-size: 18px;
+  font-weight: 600;
+  letter-spacing: 0.6px;
+  text-transform: uppercase;
+  border-bottom: 1px solid #ececec;
+  padding-bottom: 8px;
+  margin-bottom: 14px;
+}
+
+.faq-list {
+  display: grid;
+  gap: 10px;
+}
+
+.faq-item {
+  border: 1px solid #ececec;
+  border-radius: 12px;
+  padding: 12px 14px;
+  background: #fff;
+}
+
+.faq-item summary {
+  cursor: pointer;
+  font-weight: 600;
+  list-style: none;
+}
+
+.faq-item summary::-webkit-details-marker {
+  display: none;
+}
+
+.faq-item p {
+  margin-top: 10px;
+  color: #3d3d3d;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.faq-help {
+  margin-top: 34px;
+  border-top: 1px solid #ececec;
+  padding-top: 24px;
+  display: grid;
+  gap: 10px;
+}
+
+.faq-help h2 {
+  font-size: 22px;
+  margin: 0;
+}
+
+.faq-help-actions {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.faq-btn {
+  text-decoration: none;
+}
+
+@media (max-width: 760px) {
+  .faq-page {
+    padding: calc(var(--top-bar-height) + 74px + 10px) 14px 40px;
+  }
+}
