@@ -59,6 +59,10 @@
       "destination": "/pages/studio-login.html"
     },
     {
+      "source": "/faq.html",
+      "destination": "/pages/faq.html"
+    },
+    {
       "source": "/:page.html",
       "destination": "/pages/:page.html"
     }
