@@ -400,21 +400,21 @@
       }
     }
 
-    /* Header estático na página de lançamento (sem dependência de hover) */
+    /* Header transparente no topo; exibe apenas o nome TSEBI */
     body.launch-header-static .home-header {
-      background: #fff;
-      border-bottom-color: #d9d9d9;
+      background: transparent;
+      border-bottom-color: transparent;
     }
 
     body.launch-header-static .header-left,
     body.launch-header-static .header-right {
-      opacity: 1;
-      transform: translateY(0);
-      pointer-events: auto;
+      opacity: 0;
+      transform: translateY(-6px);
+      pointer-events: none;
     }
 
     body.launch-header-static .home-header:not(.is-scrolled) .logo-center-text {
-      color: #000;
+      color: #fff;
       display: inline-block !important;
       opacity: 1;
     }
@@ -424,17 +424,28 @@
       opacity: 0;
     }
 
-    /* Sem efeito de hover no topo: mantém texto fixo antes do scroll */
-    body.launch-header-static .home-header:not(.is-scrolled):hover .logo-center-text,
-    body.launch-header-static .home-header:not(.is-scrolled):focus-within .logo-center-text {
-      display: inline-block !important;
+    /* Mantém itens ocultos no topo mesmo com hover/focus */
+    body.launch-header-static .home-header:not(.is-scrolled):hover .header-left,
+    body.launch-header-static .home-header:not(.is-scrolled):focus-within .header-left,
+    body.launch-header-static .home-header:not(.is-scrolled):hover .header-right,
+    body.launch-header-static .home-header:not(.is-scrolled):focus-within .header-right {
+      opacity: 0;
+      transform: translateY(-6px);
+      pointer-events: none;
     }
 
-    body.launch-header-static .home-header:not(.is-scrolled):hover .logo-center-image,
-    body.launch-header-static .home-header:not(.is-scrolled):focus-within .logo-center-image {
-      display: none !important;
+    /* Quando o usuário rolar a tela, o header aparece normalmente */
+    body.launch-header-static .home-header.is-scrolled {
+      background: #fff;
+      border-bottom-color: #d9d9d9;
     }
-  </style>
+
+    body.launch-header-static .home-header.is-scrolled .header-left,
+    body.launch-header-static .home-header.is-scrolled .header-right {
+      opacity: 1;
+      transform: translateY(0);
+      pointer-events: auto;
+    }  </style>
 </head>
 <body class="legal-header-image-default launch-header-static">
   <div class="top-bar">
@@ -692,7 +703,7 @@
         <h2>Entrar na Lista VIP</h2>
         <p>
           Ao entrar na lista VIP, você recebe prioridade no lançamento e cria sua conta Tsebi automaticamente.
-          O cadastro é salvo na mesma base da plataforma (Railway/Postgres), pronto para o lançamento oficial.
+          O cadastro é salvo com segurança e fica pronto para o lançamento oficial.
         </p>
 
         <form id="vipRegisterForm" class="vip-form" novalidate>
@@ -1386,6 +1397,7 @@
   <script src="JS/posthog.js"></script>
 </body>
 </html>
+
 
 
 
