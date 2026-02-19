@@ -202,10 +202,29 @@ async function selectShippingForOrder({ orderId, userId, quoteId, destinationZip
 async function ensureShipmentPendingFromOrder(order) {
   if (!order) throw createShippingError("ORDER_NOT_FOUND", 404);
 
-  const provider = String(order.shippingSelectedProvider || "").trim().toLowerCase();
-  const serviceCode = String(order.shippingSelectedServiceCode || "").trim();
+  let provider = String(order.shippingSelectedProvider || "").trim().toLowerCase();
+  let serviceCode = String(order.shippingSelectedServiceCode || "").trim();
+
   if (!provider || !serviceCode) {
-    throw createShippingError("ORDER_SHIPPING_NOT_SELECTED", 409);
+    const fallbackProvider = String(order.shipping?.shippingProvider || "").trim().toLowerCase();
+    const fallbackServiceCode = String(order.shipping?.shippingServiceCode || "").trim();
+    if (!fallbackProvider || !fallbackServiceCode) {
+      throw createShippingError("ORDER_SHIPPING_NOT_SELECTED", 409);
+    }
+
+    await applyShippingSelectionToOrder({
+      orderId: order.id,
+      provider: fallbackProvider,
+      serviceName: String(order.shipping?.shippingServiceName || "").trim(),
+      serviceCode: fallbackServiceCode,
+      carrierName: String(order.shipping?.shippingCarrierName || "").trim(),
+      priceCents: Number(order.shippingPriceCents || order.shippingAmount || 0),
+      deadlineDays: order.shippingDeadlineDays ?? order.shipping?.shippingDeadlineDays ?? null,
+      destinationZip: String(order.shippingDestinationZip || order.shipping?.cep || "").replace(/\D/g, "").slice(0, 8)
+    });
+
+    provider = fallbackProvider;
+    serviceCode = fallbackServiceCode;
   }
 
   return upsertShipmentPending({

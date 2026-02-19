@@ -501,8 +501,12 @@
   }
 
   function canBuyShippingLabel(order, shipment = null) {
-    const provider = String(order?.shippingSelectedProvider || "").trim().toLowerCase();
-    const hasServiceCode = Boolean(String(order?.shippingSelectedServiceCode || "").trim());
+    const provider = String(order?.shippingSelectedProvider || order?.shipping?.shippingProvider || "")
+      .trim()
+      .toLowerCase();
+    const hasServiceCode = Boolean(
+      String(order?.shippingSelectedServiceCode || order?.shipping?.shippingServiceCode || "").trim()
+    );
     const isPaid = String(order?.status || "").trim().toLowerCase() === "paid";
     const shipmentStatus = String(shipment?.status || "").trim().toUpperCase();
     const hasBoughtLabel = shipmentStatus === "ETIQUETA_COMPRADA" || shipmentStatus === "EM_TRANSITO" || shipmentStatus === "ENTREGUE";
@@ -510,15 +514,21 @@
   }
 
   function canTrackShippingLabel(order, shipment) {
-    const provider = String(order?.shippingSelectedProvider || "").trim().toLowerCase();
+    const provider = String(order?.shippingSelectedProvider || order?.shipping?.shippingProvider || "")
+      .trim()
+      .toLowerCase();
     const trackingCode = String(shipment?.trackingCode || "").trim();
     return provider === "melhorenvio" && Boolean(trackingCode);
   }
 
   function getShippingBuyButtonState(order, shipment = null) {
     const status = String(order?.status || "").trim().toLowerCase();
-    const provider = String(order?.shippingSelectedProvider || "").trim().toLowerCase();
-    const hasServiceCode = Boolean(String(order?.shippingSelectedServiceCode || "").trim());
+    const provider = String(order?.shippingSelectedProvider || order?.shipping?.shippingProvider || "")
+      .trim()
+      .toLowerCase();
+    const hasServiceCode = Boolean(
+      String(order?.shippingSelectedServiceCode || order?.shipping?.shippingServiceCode || "").trim()
+    );
     const shipmentStatus = String(shipment?.status || "").trim().toUpperCase();
 
     if (provider !== "melhorenvio") {
@@ -540,10 +550,10 @@
       return { label: "Frete incompleto", className: "btn btn-neutral", disabled: true };
     }
     if (shipmentStatus === "ETIQUETA_COMPRADA" || shipmentStatus === "EM_TRANSITO" || shipmentStatus === "ENTREGUE") {
-      return { label: "Etiqueta comprada", className: "btn btn-neutral", disabled: true };
+      return { label: "Etiqueta expedida", className: "btn btn-neutral", disabled: true };
     }
     if (status === "paid" && canBuyShippingLabel(order, shipment)) {
-      return { label: "Comprar etiqueta", className: "btn", disabled: false };
+      return { label: "Expedir etiqueta", className: "btn", disabled: false };
     }
     return { label: "Indisponivel", className: "btn btn-neutral", disabled: true };
   }
@@ -1055,15 +1065,15 @@
     if (!canBuyShippingLabel(order, currentShipment)) return;
 
     const confirmed = await confirmAction({
-      title: "Comprar etiqueta",
-      message: `Comprar etiqueta do Melhor Envio para o pedido ${orderId}?`,
-      confirmLabel: "Comprar agora",
+      title: "Expedir etiqueta",
+      message: `Expedir etiqueta do Melhor Envio para o pedido ${orderId}?`,
+      confirmLabel: "Expedir agora",
       tone: "ok"
     });
     if (!confirmed) return;
 
     target.disabled = true;
-    target.textContent = "Comprando...";
+    target.textContent = "Expedindo...";
 
     try {
       const data = await api(`/api/admin/orders/${encodeURIComponent(orderId)}/shipping/buy-label`, {
@@ -1078,14 +1088,14 @@
       renderOrders();
       setStatus(
         shipment?.trackingCode
-          ? `Etiqueta comprada com sucesso. Rastreio: ${shipment.trackingCode}`
-          : "Etiqueta comprada com sucesso.",
+          ? `Etiqueta expedida com sucesso. Rastreio: ${shipment.trackingCode}`
+          : "Etiqueta expedida com sucesso.",
         "ok"
       );
     } catch (error) {
       target.disabled = false;
-      target.textContent = "Comprar etiqueta";
-      setStatus(`Falha ao comprar etiqueta: ${pickErrorText(error, "BUY_LABEL_FAILED")}`, "error");
+      target.textContent = "Expedir etiqueta";
+      setStatus(`Falha ao expedir etiqueta: ${pickErrorText(error, "BUY_LABEL_FAILED")}`, "error");
     }
   }
 
