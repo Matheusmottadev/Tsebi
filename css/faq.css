@@ -1,45 +1,6 @@
-.faq-page-body.launch-header-static .home-header {
-  background: transparent;
-  border-bottom-color: transparent;
-}
-
-.faq-page-body.launch-header-static .header-left,
-.faq-page-body.launch-header-static .header-right {
-  opacity: 0;
-  transform: translateY(-6px);
-  pointer-events: none;
-}
-
-.faq-page-body.launch-header-static .home-header:not(.is-scrolled) .logo-center-text {
-  color: #000;
-  display: inline-block !important;
-  opacity: 1;
-}
-
-.faq-page-body.launch-header-static .home-header:not(.is-scrolled) .logo-center-image {
-  display: none !important;
-  opacity: 0;
-}
-
-.faq-page-body.launch-header-static .home-header:not(.is-scrolled):hover .header-left,
-.faq-page-body.launch-header-static .home-header:not(.is-scrolled):focus-within .header-left,
-.faq-page-body.launch-header-static .home-header:not(.is-scrolled):hover .header-right,
-.faq-page-body.launch-header-static .home-header:not(.is-scrolled):focus-within .header-right {
-  opacity: 0;
-  transform: translateY(-6px);
-  pointer-events: none;
-}
-
-.faq-page-body.launch-header-static .home-header.is-scrolled {
+.faq-page-body .home-header {
   background: #fff;
   border-bottom-color: #d9d9d9;
-}
-
-.faq-page-body.launch-header-static .home-header.is-scrolled .header-left,
-.faq-page-body.launch-header-static .home-header.is-scrolled .header-right {
-  opacity: 1;
-  transform: translateY(0);
-  pointer-events: auto;
 }
 
 .faq-page {
