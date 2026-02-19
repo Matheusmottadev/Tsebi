@@ -1,4 +1,41 @@
 const { query } = require("./db");
+let adminLoginEventsSchemaPromise = null;
+
+async function ensureAdminLoginEventsSchema() {
+  if (!adminLoginEventsSchemaPromise) {
+    adminLoginEventsSchemaPromise = (async () => {
+      await query(`
+        CREATE TABLE IF NOT EXISTS admin_login_events (
+          id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+          admin_id UUID REFERENCES admins(id) ON DELETE SET NULL,
+          user_id UUID REFERENCES users(id) ON DELETE SET NULL,
+          success BOOLEAN NOT NULL DEFAULT FALSE,
+          ip TEXT,
+          user_agent TEXT,
+          created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+        );
+      `);
+
+      await query(`
+        CREATE INDEX IF NOT EXISTS admin_login_events_created_idx
+          ON admin_login_events (created_at DESC);
+      `);
+      await query(`
+        CREATE INDEX IF NOT EXISTS admin_login_events_admin_idx
+          ON admin_login_events (admin_id, created_at DESC);
+      `);
+      await query(`
+        CREATE INDEX IF NOT EXISTS admin_login_events_success_idx
+          ON admin_login_events (success, created_at DESC);
+      `);
+    })().catch((error) => {
+      adminLoginEventsSchemaPromise = null;
+      throw error;
+    });
+  }
+
+  return adminLoginEventsSchemaPromise;
+}
 
 function mapLoginEvent(row) {
   if (!row) return null;
@@ -16,6 +53,7 @@ function mapLoginEvent(row) {
 }
 
 async function insertAdminLoginEvent(payload = {}) {
+  await ensureAdminLoginEventsSchema();
   const result = await query(
     `
     INSERT INTO admin_login_events (
@@ -52,6 +90,7 @@ async function listAdminLoginEvents({
   page = 1,
   pageSize = 30
 } = {}) {
+  await ensureAdminLoginEventsSchema();
   const safePage = Math.max(1, Number(page) || 1);
   const safePageSize = Math.max(1, Math.min(200, Number(pageSize) || 30));
   const offset = (safePage - 1) * safePageSize;
