@@ -131,7 +131,7 @@ header {
 .home-header:hover,
 .home-header:focus-within,
 .home-header.is-scrolled{
-  background: #fff;
+  background: transparent;
   border-bottom: none;
   box-shadow: none;
 }
@@ -261,7 +261,7 @@ nav a:hover { opacity: 0.6; }
 .home-header:hover,
 .home-header:focus-within,
 .home-header.is-scrolled {
-  background: #fff;
+  background: transparent;
   border-bottom: none;
   box-shadow: none;
 }
