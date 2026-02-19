@@ -28,7 +28,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600&family=Montserrat:wght@300;400;500;600&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="css/style.css?v=20260217f" />
-  <link rel="stylesheet" href="css/account-auth.css" />
+  <link rel="stylesheet" href="css/account-auth.css?v=20260219b" />
 </head>
 <body class="account-auth-page">
   <header class="cart-simple-header">
@@ -75,30 +75,58 @@
       <section class="account-auth-panel" id="authPanelRegister" hidden>
         <p class="account-auth-flow-note">Criar nova conta para <strong id="detectedEmailRegister"></strong></p>
         <form id="registerForm" class="account-auth-form" novalidate>
-          <label>
-            <span>Nome completo</span>
-            <input type="text" id="registerName" required minlength="2" autocomplete="name" />
-          </label>
-          <label>
-            <span>Data de nascimento</span>
-            <input type="date" id="registerBirthDate" required autocomplete="bday" />
-          </label>
-          <label>
-            <span>CPF</span>
-            <input type="text" id="registerCpf" required inputmode="numeric" maxlength="14" autocomplete="off" />
-          </label>
-          <label>
-            <span>CEP</span>
-            <input type="text" id="registerCep" required inputmode="numeric" maxlength="9" autocomplete="postal-code" />
-          </label>
-          <label>
-            <span>Senha</span>
-            <input type="password" id="registerPassword" required minlength="8" autocomplete="new-password" />
-          </label>
-          <label>
-            <span>Confirmar senha</span>
-            <input type="password" id="registerPasswordConfirm" required minlength="8" autocomplete="new-password" />
-          </label>
+          <div class="account-auth-grid">
+            <label class="account-auth-grid-full">
+              <span>Nome completo</span>
+              <input type="text" id="registerName" required minlength="2" autocomplete="name" />
+            </label>
+            <label>
+              <span>Data de nascimento</span>
+              <input type="date" id="registerBirthDate" required autocomplete="bday" />
+            </label>
+            <label>
+              <span>CPF</span>
+              <input type="text" id="registerCpf" required inputmode="numeric" maxlength="14" autocomplete="off" />
+            </label>
+            <label>
+              <span>CEP</span>
+              <input type="text" id="registerCep" required inputmode="numeric" maxlength="9" autocomplete="postal-code" />
+            </label>
+            <label>
+              <span>Telefone</span>
+              <input type="tel" id="registerPhone" inputmode="numeric" maxlength="16" autocomplete="tel" />
+            </label>
+            <label class="account-auth-grid-full">
+              <span>Senha</span>
+              <input type="password" id="registerPassword" required minlength="8" autocomplete="new-password" />
+            </label>
+            <label class="account-auth-grid-full">
+              <span>Confirmar senha</span>
+              <input type="password" id="registerPasswordConfirm" required minlength="8" autocomplete="new-password" />
+            </label>
+          </div>
+          <div class="account-auth-consent-group" id="registerConsentGroup">
+            <label class="account-auth-consent">
+              <input type="checkbox" id="registerConsentTerms" required />
+              <span>
+                Li e aceito os <a href="aviso-legal.html" target="_blank" rel="noopener noreferrer">Termos de Uso</a> e a
+                <a href="politica-privacidade.html" target="_blank" rel="noopener noreferrer">Política de Privacidade</a> da Tsebi.
+              </span>
+            </label>
+            <label class="account-auth-consent">
+              <input type="checkbox" id="registerConsentLgpd" required />
+              <span>
+                Autorizo o tratamento dos meus dados para criação e gestão da conta, processamento de pedidos, prevenção a fraudes
+                e atendimento, conforme a LGPD.
+              </span>
+            </label>
+            <label class="account-auth-consent">
+              <input type="checkbox" id="registerConsentMarketing" />
+              <span>
+                Quero receber novidades, lançamentos e conteúdos da Tsebi por e-mail e WhatsApp. Consentimento opcional e revogável.
+              </span>
+            </label>
+          </div>
           <label id="registerCodeField" hidden>
             <span>Codigo do e-mail</span>
             <input type="text" id="registerEmailCode" inputmode="numeric" maxlength="6" autocomplete="one-time-code" />
@@ -114,7 +142,7 @@
   </main>
 
   <script src="JS/user-utils.js?v=20260217c"></script>
-  <script src="JS/conta.js?v=20260217n"></script>
+  <script src="JS/conta.js?v=20260219b"></script>
   <script src="JS/posthog.js"></script>
 </body>
 </html>

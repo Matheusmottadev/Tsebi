@@ -13,8 +13,11 @@ function getAppName() {
 
 function getEmailProvider() {
   const explicit = String(process.env.EMAIL_PROVIDER || "").trim().toLowerCase();
+  const hasResendKey = Boolean(String(process.env.RESEND_API_KEY || "").trim());
+  if (explicit === "resend") return "resend";
+  if (explicit === "console" && !hasResendKey) return "console";
+  if (hasResendKey) return "resend";
   if (explicit) return explicit;
-  if (String(process.env.RESEND_API_KEY || "").trim()) return "resend";
   return "console";
 }
 

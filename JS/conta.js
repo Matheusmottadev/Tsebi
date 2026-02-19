@@ -25,6 +25,9 @@ const registerCodeField = document.getElementById("registerCodeField");
 const registerEmailCodeInput = document.getElementById("registerEmailCode");
 const registerPasswordConfirmInput = document.getElementById("registerPasswordConfirm");
 const resendRegisterCodeBtn = document.getElementById("resendRegisterCodeBtn");
+const registerConsentTermsInput = document.getElementById("registerConsentTerms");
+const registerConsentLgpdInput = document.getElementById("registerConsentLgpd");
+const registerConsentMarketingInput = document.getElementById("registerConsentMarketing");
 
 const changeEmailFromLogin = document.getElementById("changeEmailFromLogin");
 const changeEmailFromRegister = document.getElementById("changeEmailFromRegister");
@@ -184,6 +187,11 @@ function setRegisterStage(nextStage) {
     }
 
     input.disabled = inCodeStage;
+    if (input.type === "checkbox") {
+      input.disabled = inCodeStage;
+      return;
+    }
+
     if (inCodeStage) {
       input.removeAttribute("required");
     } else {
@@ -218,12 +226,16 @@ function resetToEmailStep() {
     "registerCep",
     "registerPassword",
     "registerPasswordConfirm",
-    "registerEmailCode"
+    "registerEmailCode",
+    "registerPhone"
   ];
   registerIds.forEach((id) => {
     const input = document.getElementById(id);
     if (input instanceof HTMLInputElement) input.value = "";
   });
+  if (registerConsentTermsInput) registerConsentTermsInput.checked = false;
+  if (registerConsentLgpdInput) registerConsentLgpdInput.checked = false;
+  if (registerConsentMarketingInput) registerConsentMarketingInput.checked = false;
 
   syncForgotPasswordLink();
   showPanel("email");
@@ -351,9 +363,16 @@ async function handleRegister(event) {
     const cep = normalizeDigits(document.getElementById("registerCep")?.value || "", 8);
     const password = String(document.getElementById("registerPassword")?.value || "");
     const passwordConfirm = String(registerPasswordConfirmInput?.value || "");
+    const consentTerms = Boolean(registerConsentTermsInput?.checked);
+    const consentLgpd = Boolean(registerConsentLgpdInput?.checked);
 
     if (!birthDate || cpf.length !== 11 || cep.length !== 8) {
       setFeedback("Preencha data de nascimento, CPF e CEP validos.", true);
+      return;
+    }
+
+    if (!consentTerms || !consentLgpd) {
+      setFeedback("Para criar a conta, confirme os consentimentos obrigatorios.", true);
       return;
     }
 

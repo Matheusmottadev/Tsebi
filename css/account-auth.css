@@ -5,7 +5,7 @@
 
 .account-auth-main,
 .account-main-page{
-  max-width: 1180px;
+  max-width: 760px;
   margin: 0 auto;
   padding: 120px 24px 56px;
 }
@@ -14,7 +14,7 @@
 .account-dashboard-card{
   border: 1px solid #e6e1d8;
   background: #fff;
-  padding: 28px;
+  padding: 24px 24px 22px;
 }
 
 .account-auth-kicker{
@@ -49,6 +49,16 @@
   gap: 12px;
 }
 
+.account-auth-grid{
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.account-auth-grid-full{
+  grid-column: 1 / -1;
+}
+
 .account-auth-form label{
   display: grid;
   gap: 6px;
@@ -62,11 +72,47 @@
 }
 
 .account-auth-form input{
-  min-height: 42px;
+  min-height: 48px;
   border: 1px solid #d8d3c8;
-  padding: 0 10px;
+  padding: 0 12px;
   font-family: "Montserrat", sans-serif;
-  font-size: 13px;
+  font-size: 14px;
+  background: #f9f9f7;
+}
+
+.account-auth-consent-group{
+  display: grid;
+  gap: 12px;
+  margin-top: 2px;
+}
+
+.account-auth-consent{
+  display: grid !important;
+  grid-template-columns: 18px 1fr;
+  gap: 10px !important;
+  align-items: start;
+}
+
+.account-auth-consent input[type="checkbox"]{
+  margin-top: 1px;
+  width: 18px;
+  height: 18px;
+  min-height: 18px;
+  padding: 0;
+  accent-color: #111;
+}
+
+.account-auth-consent span{
+  font-size: 12px;
+  letter-spacing: 0.1px;
+  text-transform: none;
+  line-height: 1.45;
+  color: #2d2a25;
+}
+
+.account-auth-consent a{
+  color: #111;
+  text-decoration: underline;
 }
 
 .account-auth-submit{
@@ -323,6 +369,7 @@
     flex-direction: column;
   }
 
+  .account-auth-grid,
   .account-inline-form,
   .account-track-form,
   .account-sidebar,
