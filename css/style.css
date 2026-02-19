@@ -133,6 +133,13 @@ header {
   border-bottom-color: #eee;
 }
 
+/* Keep homepage header fully transparent until hover or scroll */
+.home-header:not(.is-scrolled):not(:hover):not(:focus-within){
+  background: transparent;
+  border-bottom-color: transparent;
+  box-shadow: none;
+}
+
 .home-header .logo-text{
   display: inline-block;
   color: #fff;
@@ -252,6 +259,13 @@ nav a:hover { opacity: 0.6; }
 .home-header.is-scrolled {
   background: #fff;
   border-bottom-color: #d9d9d9;
+}
+
+/* Ensure the new layout keeps transparency before hover/scroll */
+.home-header:not(.is-scrolled):not(:hover):not(:focus-within){
+  background: transparent;
+  border-bottom-color: transparent;
+  box-shadow: none;
 }
 
 .header-row {
