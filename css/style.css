@@ -126,6 +126,8 @@ header {
   transition: background .22s ease, border-color .22s ease;
 }
 
+.home-header:hover,
+.home-header:focus-within,
 .home-header.is-scrolled{
   background: #fff;
   border-bottom-color: #eee;
@@ -245,6 +247,8 @@ nav a:hover { opacity: 0.6; }
   padding: 14px 34px;
 }
 
+.home-header:hover,
+.home-header:focus-within,
 .home-header.is-scrolled {
   background: #fff;
   border-bottom-color: #d9d9d9;
