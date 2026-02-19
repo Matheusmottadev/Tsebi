@@ -4,10 +4,9 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
-  <link rel="icon" type="image/svg+xml" href="images/favicon-light.svg?v=20260217b" media="(prefers-color-scheme: light)" />
-  <link rel="icon" type="image/svg+xml" href="images/favicon-dark.svg?v=20260217b" media="(prefers-color-scheme: dark)" />
-  <link rel="icon" type="image/png" href="images/logo-tsebi.png?v=20260217" />
-  <link rel="apple-touch-icon" href="images/logo-tsebi.png?v=20260217" />
+  <link rel="icon" type="image/png" href="/images/logo-tsebi.png?v=20260219b" />
+  <link rel="shortcut icon" href="/images/logo-tsebi.png?v=20260219b" />
+  <link rel="apple-touch-icon" href="/images/logo-tsebi.png?v=20260219b" />
   <title>FAQ | Tsebi Brasil</title>
   <meta name="description" content="Perguntas frequentes sobre pedidos, pagamentos, entregas e atendimento da Tsebi." />
   <meta name="robots" content="index,follow" />
@@ -122,20 +121,23 @@
 
     <section class="faq-content" id="faqContent" aria-label="Perguntas frequentes"></section>
 
-    <section class="faq-help">
-      <h2>Ainda precisa de ajuda?</h2>
-      <p>Se não encontrou sua resposta, nossa equipe está disponível para ajudar.</p>
-      <div class="faq-help-actions">
-        <a class="btn faq-btn" href="https://wa.me/5511918596632?text=Ol%C3%A1%21%20Preciso%20de%20ajuda%20com%20meu%20pedido%20ou%20produto%20da%20Tsebi.">Fale no WhatsApp</a>
-        <a class="btn btn-ghost faq-btn" href="mailto:contato@tsebi.com.br">Enviar e-mail</a>
-      </div>
-    </section>
-
     <section class="faq-custom">
       <div class="faq-custom-card">
         <img class="faq-custom-image" src="images/FAQ.jpeg?v=20260219b" alt="Tsebi" />
-        <h3>Escreva sua dúvida personalizável?</h3>
-        <input class="faq-custom-input" type="text" placeholder="Digite sua dúvida aqui" />
+        <div class="faq-custom-help">
+          <h2>Ainda precisa de ajuda?</h2>
+          <p>Se não encontrou sua resposta, nossa equipe está disponível para ajudar.</p>
+        </div>
+        <h3>escreva sua duvida.</h3>
+        <form class="faq-custom-form" id="faqCustomForm">
+          <input class="faq-custom-input" id="faqCustomerName" name="name" type="text" placeholder="Seu nome" required />
+          <input class="faq-custom-input" id="faqCustomerEmail" name="email" type="email" placeholder="Seu e-mail" required />
+          <textarea class="faq-custom-input faq-custom-textarea" id="faqCustomerQuestion" name="question" rows="4" placeholder="Digite sua dúvida" required></textarea>
+          <div class="faq-custom-actions">
+            <button class="btn faq-btn" type="submit">Enviar</button>
+            <a class="btn btn-ghost faq-btn" href="https://wa.me/5511918596632?text=Ol%C3%A1%21%20Preciso%20de%20ajuda%20com%20meu%20pedido%20ou%20produto%20da%20Tsebi.">WhatsApp</a>
+          </div>
+        </form>
       </div>
     </section>
   </main>
@@ -543,9 +545,26 @@
       openFromHash(itemsById);
     }
   </script>
+  <script>
+    const faqCustomForm = document.getElementById("faqCustomForm");
+    faqCustomForm?.addEventListener("submit", (event) => {
+      event.preventDefault();
+      const name = String(document.getElementById("faqCustomerName")?.value || "").trim();
+      const email = String(document.getElementById("faqCustomerEmail")?.value || "").trim();
+      const question = String(document.getElementById("faqCustomerQuestion")?.value || "").trim();
+      if (!name || !email || !question) return;
+      const subject = encodeURIComponent("Dúvida - FAQ Tsebi");
+      const body = encodeURIComponent(
+        `Nome: ${name}\nE-mail: ${email}\n\nDúvida:\n${question}`
+      );
+      window.location.href = `mailto:contato@tsebi.com.br?subject=${subject}&body=${body}`;
+    });
+  </script>
   <script src="JS/script.js"></script>
 </body>
 </html>
+
+
 
 
 
