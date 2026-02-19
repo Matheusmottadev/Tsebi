@@ -166,6 +166,7 @@ const orderPatchSchema = z.object({
   failureReason: z.string().trim().max(240).optional(),
   cancellationReason: z.string().trim().max(240).optional(),
   trackingId: z.string().trim().max(120).optional(),
+  trackingCode: z.string().trim().max(120).optional(),
   trackingStatus: z.string().trim().max(120).optional(),
   carrier: z.string().trim().max(120).optional(),
   shippingDeadline: z.string().trim().max(40).optional(),
@@ -1263,11 +1264,22 @@ adminRouter.patch("/orders/:id", async (req, res) => {
       const deadline = new Date(String(nextPatch.shippingDeadline || ""));
       nextPatch.shippingDeadline = Number.isNaN(deadline.getTime()) ? null : deadline.toISOString();
     }
-    if (Object.prototype.hasOwnProperty.call(parsed.data, "trackingStatus")) {
+    const hasTrackingStatus = Object.prototype.hasOwnProperty.call(parsed.data, "trackingStatus");
+    if (hasTrackingStatus) {
       const normalizedTracking = normalizeTrackingStatusForOrder(nextPatch.trackingStatus);
       if (normalizedTracking) {
         nextPatch.currentStatus = normalizedTracking;
       }
+    }
+
+    if (
+      Object.prototype.hasOwnProperty.call(parsed.data, "trackingCode") &&
+      nextPatch.trackingCode &&
+      !nextPatch.currentStatus &&
+      String(before.currentStatus || "").trim().toUpperCase() !== "DELIVERED"
+    ) {
+      nextPatch.currentStatus = INTERNAL_TRACKING_STATES.SHIPPED;
+      nextPatch.lastTrackingUpdate = new Date().toISOString();
     }
 
     const beforeStatus = String(before.status || "").trim().toLowerCase();

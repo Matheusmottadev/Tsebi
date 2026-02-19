@@ -216,7 +216,7 @@ export function createOrdersPage({ mount, drawer, getStatusFilter }) {
 
     const original = {
       orderStatus: String(order.status || ""),
-      trackingId: String(order.trackingId || order.trackingCode || ""),
+      trackingCode: String(order.trackingCode || order.trackingId || ""),
       trackingStatus: String(order.trackingStatus || ""),
       carrier: String(order.carrier || ""),
       shippingDeadline: String(order.shippingDeadline || ""),
@@ -272,8 +272,8 @@ export function createOrdersPage({ mount, drawer, getStatusFilter }) {
             <input class="field" data-key="carrier" type="text" value="${escapeHtml(original.carrier)}" />
           </label>
           <label class="label full">
-            <span>Tracking ID</span>
-            <input class="field" data-key="trackingId" type="text" value="${escapeHtml(original.trackingId)}" />
+            <span>Código de rastreio</span>
+            <input class="field" data-key="trackingCode" type="text" value="${escapeHtml(original.trackingCode)}" />
           </label>
           <label class="label full">
             <span>Tracking status</span>
@@ -382,7 +382,7 @@ export function createOrdersPage({ mount, drawer, getStatusFilter }) {
 
       const diffs = buildDiff(original, { ...original, ...patch }, {
         orderStatus: "Status do pedido",
-        trackingId: "Tracking ID",
+        trackingCode: "Código de rastreio",
         trackingStatus: "Tracking status",
         carrier: "Carrier",
         shippingDeadline: "Deadline",
