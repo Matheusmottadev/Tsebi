@@ -1314,6 +1314,17 @@ adminRouter.patch("/orders/:id", async (req, res) => {
     const afterState = updated || before;
     const statusChanged = String(before.status || "") !== String(afterState.status || "");
 
+    if (["canceled", "refunded", "failed"].includes(String(afterState.status || "").trim().toLowerCase())) {
+      const cancelStatus = INTERNAL_TRACKING_STATES.CANCELED;
+      await updateOrder(req.params.id, {
+        currentStatus: cancelStatus,
+        trackingStatus: cancelStatus,
+        lastTrackingUpdate: new Date().toISOString()
+      }).catch(() => {});
+      afterState.currentStatus = cancelStatus;
+      afterState.trackingStatus = cancelStatus;
+    }
+
     if (Object.prototype.hasOwnProperty.call(parsed.data, "trackingCode")) {
       const trackingCode = String(nextPatch.trackingCode || "").trim();
       if (trackingCode) {

@@ -671,6 +671,27 @@ app.get("/api/products", async (req, res) => {
   }
 });
 
+function buildSimilarProducts(target, products, limit = 4) {
+  const safeLimit = Math.max(1, Math.min(12, Number(limit || 4)));
+  const pool = (products || []).filter((item) => item && item.id !== target.id);
+  const sameCollection = pool.filter((item) => item.collection === target.collection);
+  const sameCategory = pool.filter((item) => item.category === target.category);
+  const merged = [
+    ...sameCollection,
+    ...sameCategory,
+    ...pool
+  ];
+  const unique = [];
+  const seen = new Set();
+  for (const item of merged) {
+    if (seen.has(item.id)) continue;
+    seen.add(item.id);
+    unique.push(item);
+    if (unique.length >= safeLimit) break;
+  }
+  return unique;
+}
+
 app.get("/api/products/:id", async (req, res) => {
   try {
     const product = await getProductByIdentifier(req.params.id);
@@ -680,6 +701,46 @@ app.get("/api/products/:id", async (req, res) => {
     return res.json(product);
   } catch {
     return res.status(500).json({ error: "Failed to load product." });
+  }
+});
+
+app.get("/api/products/:id/recommendations", async (req, res) => {
+  try {
+    const product = await getProductByIdentifier(req.params.id);
+    if (!product || product.active === false) {
+      return res.status(404).json({ error: "PRODUCT_NOT_FOUND" });
+    }
+    const products = await listProducts();
+    const limit = Number(req.query.limit || 4);
+    const similar = buildSimilarProducts(product, products, limit);
+    return res.json({ base: product, recommendations: similar });
+  } catch {
+    return res.status(500).json({ error: "Failed to load recommendations." });
+  }
+});
+
+app.get("/api/products/recent", async (req, res) => {
+  try {
+    const ids = String(req.query.ids || "")
+      .split(",")
+      .map((id) => String(id || "").trim())
+      .filter(Boolean);
+    if (!ids.length) return res.json({ products: [] });
+
+    const products = await listProducts();
+    const byId = new Map(products.map((item) => [String(item.id), item]));
+    const unique = [];
+    const seen = new Set();
+    ids.forEach((id) => {
+      if (seen.has(id)) return;
+      const item = byId.get(id);
+      if (!item) return;
+      seen.add(id);
+      unique.push(item);
+    });
+    return res.json({ products: unique });
+  } catch {
+    return res.status(500).json({ error: "Failed to load recent products." });
   }
 });
 

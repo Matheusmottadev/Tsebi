@@ -3,6 +3,24 @@
   const DEFAULT_LANG = "pt";
   const SUPPORTED = ["pt", "en"];
 
+  function applyLazyLoading() {
+    const images = Array.from(document.querySelectorAll("img"));
+    images.forEach((img) => {
+      if (img.hasAttribute("data-eager")) return;
+      if (img.getAttribute("loading")) return;
+      img.setAttribute("loading", "lazy");
+      if (!img.getAttribute("decoding")) {
+        img.setAttribute("decoding", "async");
+      }
+    });
+  }
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", applyLazyLoading, { once: true });
+  } else {
+    applyLazyLoading();
+  }
+
   const TEXT_MAP_EN = {
     "Frete Grátis!": "Free shipping!",
     "Nova Coleção Gênesis": "New Genesis Collection",

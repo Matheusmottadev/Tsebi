@@ -44,6 +44,7 @@ const galleryPool = [
 
 const cartKey = "tsebi-cart-v1";
 const returnKey = "tsebi-last-shopping-url";
+const recentKey = "tsebi-recent-products-v1";
 const userStore = window.TsebiUserStore;
 const currentLang = localStorage.getItem("tsebi-site-language") || "pt";
 const isEnglish = currentLang === "en";
@@ -147,6 +148,30 @@ function saveCart(items) {
   try {
     localStorage.setItem(cartKey, JSON.stringify(items));
   } catch {}
+}
+
+function readRecentIds() {
+  try {
+    const raw = localStorage.getItem(recentKey);
+    const parsed = raw ? JSON.parse(raw) : [];
+    return Array.isArray(parsed) ? parsed.filter(Boolean) : [];
+  } catch {
+    return [];
+  }
+}
+
+function saveRecentIds(ids) {
+  try {
+    localStorage.setItem(recentKey, JSON.stringify(ids));
+  } catch {}
+}
+
+function trackRecentProduct(productId) {
+  const id = String(productId || "").trim();
+  if (!id) return;
+  const current = readRecentIds();
+  const next = [id, ...current.filter((item) => item !== id)].slice(0, 12);
+  saveRecentIds(next);
 }
 
 function isFavoriteProduct(productId) {
@@ -572,19 +597,11 @@ if (!product) {
     return score;
   }
 
-  function renderSimilarProducts() {
-    if (!productSimilar || !productSimilarGrid) return;
+  function renderProductCards(grid, items) {
+    if (!grid) return;
+    grid.innerHTML = "";
 
-    const similar = productsCatalog
-      .filter((item) => item.id !== product.id)
-      .map((item) => ({ item, score: scoreSimilarity(product, item) }))
-      .sort((a, b) => b.score - a.score)
-      .slice(0, 4)
-      .map((entry) => entry.item);
-
-    productSimilarGrid.innerHTML = "";
-
-    similar.forEach((item) => {
+    (Array.isArray(items) ? items : []).forEach((item) => {
       const card = document.createElement("a");
       card.className = "product-similar-card";
       card.href = `produto.html?id=${encodeURIComponent(item.id)}`;
@@ -599,10 +616,65 @@ if (!product) {
           <p class="product-similar-price">${item.priceLabel}</p>
         </div>
       `;
-      productSimilarGrid.appendChild(card);
+      grid.appendChild(card);
     });
+  }
 
+  async function fetchSimilarProducts() {
+    try {
+      const response = await fetch(`/api/products/${encodeURIComponent(product.id)}/recommendations?limit=4`);
+      if (!response.ok) return [];
+      const parsed = await response.json();
+      const list = Array.isArray(parsed?.recommendations) ? parsed.recommendations : [];
+      return list.map((item) => ({
+        ...item,
+        stock: Number(item?.stock ?? item?.stock_qty ?? 0)
+      }));
+    } catch {
+      return [];
+    }
+  }
+
+  function computeSimilarFallback() {
+    return productsCatalog
+      .filter((item) => item.id !== product.id)
+      .map((item) => ({ item, score: scoreSimilarity(product, item) }))
+      .sort((a, b) => b.score - a.score)
+      .slice(0, 4)
+      .map((entry) => entry.item);
+  }
+
+  async function renderSimilarProducts() {
+    if (!productSimilar || !productSimilarGrid) return;
+    let similar = await fetchSimilarProducts();
+    if (!similar.length) {
+      similar = computeSimilarFallback();
+    }
+    renderProductCards(productSimilarGrid, similar);
     productSimilar.hidden = similar.length === 0;
+  }
+
+  async function renderRecentProducts() {
+    const productRecent = document.getElementById("productRecent");
+    const productRecentGrid = document.getElementById("productRecentGrid");
+    if (!productRecent || !productRecentGrid) return;
+
+    const ids = readRecentIds().filter((id) => id !== product.id);
+    if (!ids.length) {
+      productRecent.hidden = true;
+      return;
+    }
+
+    try {
+      const response = await fetch(`/api/products/recent?ids=${encodeURIComponent(ids.join(","))}`);
+      if (!response.ok) throw new Error("recent_failed");
+      const parsed = await response.json();
+      const list = Array.isArray(parsed?.products) ? parsed.products : [];
+      renderProductCards(productRecentGrid, list);
+      productRecent.hidden = list.length === 0;
+    } catch {
+      productRecent.hidden = true;
+    }
   }
 
   async function addSelectedVariantToCart() {
@@ -740,7 +812,9 @@ if (!product) {
   if (productDetailsCare) productDetailsCare.textContent = details.care;
 
   syncProductState();
+  trackRecentProduct(product.id);
   renderSimilarProducts();
+  renderRecentProducts();
 
   productCta?.addEventListener("click", () => {
     addSelectedVariantToCart().catch(() => {
@@ -750,6 +824,18 @@ if (!product) {
   closeCartPopup?.addEventListener("click", closePopup);
   cartPopupBackdrop?.addEventListener("click", closePopup);
   productSimilarGrid?.addEventListener("click", (event) => {
+    const target = event.target;
+    if (!(target instanceof Element)) return;
+    const favoriteButton = target.closest(".product-favorite-btn");
+    if (!favoriteButton) return;
+    event.preventDefault();
+    event.stopPropagation();
+    if (!userStore) return;
+    userStore.toggleFavorite(favoriteButton.dataset.productId || "");
+    updateFavoriteButtonUI(favoriteButton);
+  });
+  const productRecentGrid = document.getElementById("productRecentGrid");
+  productRecentGrid?.addEventListener("click", (event) => {
     const target = event.target;
     if (!(target instanceof Element)) return;
     const favoriteButton = target.closest(".product-favorite-btn");

@@ -29,7 +29,8 @@ const TRACKING_STATUS_OPTIONS = [
   { value: "SHIPPED", label: "Em Preparação" },
   { value: "IN_TRANSIT", label: "Em transporte" },
   { value: "OUT_FOR_DELIVERY", label: "Saiu Pra entregar" },
-  { value: "DELIVERED", label: "Entregue" }
+  { value: "DELIVERED", label: "Entregue" },
+  { value: "CANCELED", label: "Cancelado" }
 ];
 
 function statusPill(status) {
