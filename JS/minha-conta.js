@@ -46,7 +46,8 @@ const TRACKING_STEPS = [
   "SHIPPED",
   "IN_TRANSIT",
   "OUT_FOR_DELIVERY",
-  "DELIVERED"
+  "DELIVERED",
+  "CANCELED"
 ];
 
 let myOrders = [];
@@ -92,6 +93,7 @@ function formatTrackingStatus(status) {
   if (value === "IN_TRANSIT") return "Em transporte";
   if (value === "OUT_FOR_DELIVERY") return "Saiu Pra entregar";
   if (value === "DELIVERED") return "Entregue";
+  if (value === "CANCELED") return "Cancelado";
   return "Em transporte";
 }
 
@@ -102,7 +104,16 @@ function formatTrackingStepName(step) {
   if (step === "IN_TRANSIT") return "Em transporte";
   if (step === "OUT_FOR_DELIVERY") return "Saiu Pra entregar";
   if (step === "DELIVERED") return "Entregue";
+  if (step === "CANCELED") return "Cancelado";
   return step;
+}
+
+function resolveTimelineStatus(order) {
+  const orderStatus = String(order?.status || "").trim().toLowerCase();
+  if (orderStatus === "canceled" || orderStatus === "refunded" || orderStatus === "failed") {
+    return "CANCELED";
+  }
+  return String(order?.currentStatus || "").toUpperCase();
 }
 
 function formatOrderDate(dateValue) {
@@ -243,7 +254,8 @@ function renderTrackingOrder(order) {
   }
 
   const orderNumber = formatOrderDisplayId(order);
-  const statusLabel = formatTrackingStatus(order.currentStatus);
+  const timelineStatus = resolveTimelineStatus(order);
+  const statusLabel = formatTrackingStatus(timelineStatus);
   const items = Array.isArray(order.items) ? order.items : [];
 
   const itemsMarkup = items.length
@@ -295,7 +307,7 @@ function renderTrackingOrder(order) {
     <section class="tracking-timeline-card">
       <h3 class="tracking-section-title">Timeline</h3>
       <ol class="tracking-timeline">
-        ${buildTimelineMarkup(order.currentStatus)}
+        ${buildTimelineMarkup(timelineStatus)}
       </ol>
     </section>
 

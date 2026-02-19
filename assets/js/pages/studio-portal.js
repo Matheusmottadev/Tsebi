@@ -58,6 +58,19 @@ function debounce(fn, ms = 250) {
   };
 }
 
+function sendStudioLogoutBeacon() {
+  try {
+    if (navigator.sendBeacon) {
+      navigator.sendBeacon("/api/studio-auth/logout");
+      return;
+    }
+  } catch {}
+
+  try {
+    fetch("/api/studio-auth/logout", { method: "POST", credentials: "include", keepalive: true }).catch(() => {});
+  } catch {}
+}
+
 async function ensureAdminSession() {
   const session = await api("/api/studio-auth/me", { suppressAuthRedirect: false });
   if (!session?.authenticated) {
@@ -171,6 +184,10 @@ function buildThemeDrawer({ currentTheme, currentAccent, onPick }) {
 
 async function main() {
   if (!ensureStudioEntryFlow()) return;
+
+  window.addEventListener("pagehide", () => {
+    sendStudioLogoutBeacon();
+  });
 
   const els = {
     globalSearch: document.getElementById("globalSearch"),
@@ -383,4 +400,3 @@ async function main() {
 main().catch(() => {
   toast("Falha ao inicializar Studio Portal.", { tone: "error" });
 });
-

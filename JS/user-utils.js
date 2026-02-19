@@ -6,6 +6,23 @@
   let authReady = false;
   let authBootPromise = null;
 
+  function sendLogoutBeacon() {
+    try {
+      if (navigator.sendBeacon) {
+        navigator.sendBeacon("/api/auth/logout");
+        return;
+      }
+    } catch {}
+
+    try {
+      fetch("/api/auth/logout", { method: "POST", credentials: "same-origin", keepalive: true }).catch(() => {});
+    } catch {}
+  }
+
+  window.addEventListener("pagehide", () => {
+    sendLogoutBeacon();
+  });
+
   function emitAuthChange() {
     window.dispatchEvent(
       new CustomEvent("tsebi:auth-changed", {

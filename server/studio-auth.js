@@ -524,7 +524,13 @@ studioAuthRouter.post("/mfa/disable", mfaRateLimit, async (req, res) => {
 
 studioAuthRouter.post("/logout", (req, res) => {
   clearAdminAuthSession(req, res);
-  return res.json({ ok: true });
+  if (!req.session) return res.json({ ok: true });
+  if (req.session.userId) {
+    delete req.session.userId;
+  }
+  return req.session.save(() => {
+    res.json({ ok: true });
+  });
 });
 
 module.exports = {
