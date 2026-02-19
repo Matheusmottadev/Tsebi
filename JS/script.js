@@ -1179,7 +1179,10 @@ function initHomeHeaderScrollState() {
   }
 
   function syncHeaderState() {
-    const isScrolled = window.scrollY > 8;
+    const rootStyles = getComputedStyle(document.documentElement);
+    const headerHeight = Number.parseInt(rootStyles.getPropertyValue("--header-height"), 10) || 84;
+    const threshold = Math.max(24, Math.round(headerHeight * 0.75));
+    const isScrolled = window.scrollY > threshold;
     homeHeader.classList.toggle("is-scrolled", isScrolled);
 
     if (isScrolled) {
