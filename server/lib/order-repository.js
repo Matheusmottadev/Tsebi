@@ -1,5 +1,37 @@
 const { query } = require("./db");
 
+let orderSchemaPromise = null;
+
+async function ensureOrderSchema() {
+  if (!orderSchemaPromise) {
+    orderSchemaPromise = (async () => {
+      await query(`
+        ALTER TABLE orders
+          ADD COLUMN IF NOT EXISTS shipping_selected_provider TEXT,
+          ADD COLUMN IF NOT EXISTS shipping_selected_service TEXT,
+          ADD COLUMN IF NOT EXISTS shipping_selected_service_code TEXT,
+          ADD COLUMN IF NOT EXISTS shipping_selected_carrier_name TEXT,
+          ADD COLUMN IF NOT EXISTS shipping_price_cents INTEGER NOT NULL DEFAULT 0 CHECK (shipping_price_cents >= 0),
+          ADD COLUMN IF NOT EXISTS shipping_deadline_days INTEGER,
+          ADD COLUMN IF NOT EXISTS shipping_destination_zip VARCHAR(8),
+          ADD COLUMN IF NOT EXISTS tracking_id TEXT,
+          ADD COLUMN IF NOT EXISTS tracking_status TEXT,
+          ADD COLUMN IF NOT EXISTS shipping_deadline TIMESTAMPTZ,
+          ADD COLUMN IF NOT EXISTS admin_notes TEXT,
+          ADD COLUMN IF NOT EXISTS carrier TEXT,
+          ADD COLUMN IF NOT EXISTS last_tracking_update TIMESTAMPTZ,
+          ADD COLUMN IF NOT EXISTS shipped_at TIMESTAMPTZ,
+          ADD COLUMN IF NOT EXISTS delivered_at TIMESTAMPTZ;
+      `);
+    })().catch((error) => {
+      orderSchemaPromise = null;
+      throw error;
+    });
+  }
+
+  return orderSchemaPromise;
+}
+
 function mapOrderRow(row, items = []) {
   if (!row) return null;
   return {
@@ -211,6 +243,7 @@ const PATCH_TO_COLUMN = {
 };
 
 async function updateOrder(orderId, patch) {
+  await ensureOrderSchema();
   const keys = Object.keys(patch || {}).filter((key) => Object.prototype.hasOwnProperty.call(PATCH_TO_COLUMN, key));
 
   if (keys.length === 0) {
@@ -256,6 +289,7 @@ async function updateOrder(orderId, patch) {
 }
 
 async function findOrderById(orderId) {
+  await ensureOrderSchema();
   const result = await query(`SELECT * FROM orders WHERE id = $1 LIMIT 1`, [orderId]);
   if (result.rowCount === 0) return null;
 
