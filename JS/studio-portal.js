@@ -427,6 +427,7 @@
       const selectOptions = orderStatuses
         .map((status) => `<option value="${status}" ${selectedStatus === status ? "selected" : ""}>${status}</option>`)
         .join("");
+      const isRefunded = String(order.status || "").trim().toLowerCase() === "refunded";
       const shipment = getOrderShippingLabel(order);
       const shipmentStatus = String(shipment?.status || "").trim();
       const trackingCode = String(shipment?.trackingCode || "").trim();
@@ -448,7 +449,7 @@
           </small>
         </td>
         <td>
-          <select data-field="status">${selectOptions}</select>
+          <select data-field="status" ${isRefunded ? "disabled" : ""}>${selectOptions}</select>
         </td>
         <td>
           <div>${escapeHtml(formatShippingService(order))}</div>
@@ -473,6 +474,9 @@
           >
             ${escapeHtml(trackEnabled && trackingCode ? `Rastrear (${trackingCode})` : "Rastrear")}
           </button>
+        </td>
+        <td>
+          <button type="button" class="btn btn-danger" data-action="order-delete">Excluir</button>
         </td>
       `;
       setRowDirty(row, Boolean(state.pendingOrderEdits[String(order.id)]));
@@ -955,6 +959,11 @@
     const id = String(row.getAttribute("data-id") || "");
     const original = state.orders.find((order) => String(order.id) === id);
     if (!original) return;
+    if (String(original.status || "").trim().toLowerCase() === "refunded") {
+      target.value = String(original.status || "");
+      setRowDirty(row, false);
+      return;
+    }
 
     const nextStatus = String(target.value || "");
     const currentStatus = String(original.status || "");
@@ -1010,7 +1019,7 @@
     const target = event.target instanceof Element ? event.target.closest("button[data-action]") : null;
     if (!(target instanceof HTMLButtonElement)) return;
     const action = String(target.getAttribute("data-action") || "");
-    if (!["shipping-buy-label", "shipping-track-label"].includes(action)) return;
+    if (!["shipping-buy-label", "shipping-track-label", "order-delete"].includes(action)) return;
 
     const row = target.closest("tr[data-id]");
     if (!row) return;
@@ -1019,6 +1028,26 @@
 
     const order = state.orders.find((item) => String(item.id) === orderId);
     if (!order) return;
+
+    if (action === "order-delete") {
+      const confirmed = await confirmAction({
+        title: "Excluir pedido",
+        message: `Deseja excluir permanentemente o pedido ${orderId}? Esta ação é irreversível.`,
+        confirmLabel: "Excluir",
+        tone: "danger"
+      });
+      if (!confirmed) return;
+
+      try {
+        await api(`/api/admin/orders/${encodeURIComponent(orderId)}`, { method: "DELETE" });
+        state.orders = state.orders.filter((item) => String(item.id) !== orderId);
+        renderOrders();
+        setStatus("Pedido excluído.", "ok");
+      } catch (error) {
+        setStatus(`Falha ao excluir pedido: ${pickErrorText(error, "ORDER_DELETE_FAILED")}`, "error");
+      }
+      return;
+    }
 
     if (action === "shipping-track-label") {
       const currentShipment = getOrderShippingLabel(order);
