@@ -1192,11 +1192,19 @@ adminRouter.get("/orders", async (req, res) => {
         ? {
             id: shipment.id,
             provider: shipment.provider,
-            trackingCode: shipment.trackingCode || "",
-            status: shipment.status || "",
+            trackingCode: shipment.trackingCode || order.trackingCode || "",
+            status: shipment.status || order.trackingStatus || order.currentStatus || "",
             updatedAt: shipment.updatedAt || null
           }
-        : null;
+        : order.trackingCode
+          ? {
+              id: null,
+              provider: order.shippingSelectedProvider || "",
+              trackingCode: order.trackingCode || "",
+              status: order.trackingStatus || order.currentStatus || "",
+              updatedAt: order.updatedAt || null
+            }
+          : null;
 
       return {
         id: order.id,
@@ -1347,7 +1355,28 @@ adminRouter.get("/orders/:id", async (req, res) => {
     if (!order) return res.status(404).json({ error: "NOT_FOUND" });
     const shipmentsByOrderId = await listShipmentsByOrderIds([String(order.id)]);
     const shipment = shipmentsByOrderId.get(String(order.id)) || null;
-    return res.json({ order: { ...order, shipment } });
+    const mergedShipment = shipment
+      ? {
+          ...shipment,
+          trackingCode: shipment.trackingCode || order.trackingCode || "",
+          status: shipment.status || order.trackingStatus || order.currentStatus || ""
+        }
+      : order.trackingCode
+        ? {
+            id: null,
+            provider: order.shippingSelectedProvider || "",
+            serviceCode: order.shippingSelectedServiceCode || "",
+            labelExternalId: "",
+            trackingCode: order.trackingCode || "",
+            status: order.trackingStatus || order.currentStatus || "",
+            priceCents: Number(order.shippingPriceCents || order.shippingAmount || 0),
+            deadlineDays: order.shippingDeadlineDays == null ? null : Number(order.shippingDeadlineDays),
+            rawPayload: {},
+            createdAt: order.createdAt || null,
+            updatedAt: order.updatedAt || null
+          }
+        : null;
+    return res.json({ order: { ...order, shipment: mergedShipment } });
   } catch {
     return res.status(500).json({ error: "ADMIN_ORDER_FETCH_FAILED" });
   }

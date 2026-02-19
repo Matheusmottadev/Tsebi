@@ -2,6 +2,7 @@ const { findOrderById } = require("../../server/lib/order-repository");
 const { assertShippingProvider } = require("./provider.interface");
 const melhorEnvioProvider = require("./providers/melhorenvio");
 const dummyProvider = require("./providers/dummy");
+const { mapMelhorEnvioStatusToInternal } = require("./melhorenvio-status");
 const {
   normalizeZip,
   saveShippingQuotes,
@@ -290,6 +291,39 @@ async function buyLabelForOrder(order) {
       occurredAt: nowIso
     }
   ]).catch(() => {});
+
+  if (bought?.trackingCode) {
+    try {
+      const tracked = await provider.track({ trackingCode: bought.trackingCode });
+      const mapped = mapMelhorEnvioStatusToInternal(tracked?.status || tracked?.current_status || "");
+      const nextStatus = mapped?.status || effectiveStatus;
+      await updateShipmentTracking({
+        orderId: order.id,
+        trackingCode: bought.trackingCode,
+        status: tracked?.status || nextStatus,
+        rawPayload: tracked?.rawPayload || tracked || {}
+      }).catch(() => {});
+
+      if (nextStatus && nextStatus !== effectiveStatus) {
+        await updateOrderTrackingState(order.id, {
+          currentStatus: nextStatus,
+          lastTrackingUpdate: new Date().toISOString()
+        }).catch(() => {});
+
+        await insertTrackingEvents(order.id, [
+          {
+            status: nextStatus,
+            rawStatus: String(tracked?.status || tracked?.current_status || "TRACKING_SYNC"),
+            description: "Rastreio sincronizado automaticamente",
+            location: "",
+            occurredAt: new Date().toISOString()
+          }
+        ]).catch(() => {});
+      }
+    } catch {
+      // Best-effort: etiqueta comprada já foi registrada.
+    }
+  }
 
   return updated
     ? {
