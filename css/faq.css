@@ -316,8 +316,19 @@
 }
 
 .faq-custom-actions .btn-ghost {
-  background: transparent;
-  color: #111;
+  background: #25d366;
+  color: #fff;
+  border-color: #25d366;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+}
+
+.faq-custom-actions .btn-ghost:hover,
+.faq-custom-actions .btn-ghost:focus-visible {
+  background: #1ebe5d;
+  border-color: #1ebe5d;
 }
 
 @media (max-width: 760px) {
