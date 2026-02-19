@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8" />
@@ -23,6 +23,7 @@
   <meta name="twitter:title" content="FAQ | Tsebi Brasil" />
   <meta name="twitter:description" content="Perguntas frequentes sobre pedidos, pagamentos, entregas e atendimento da Tsebi." />
   <meta name="twitter:image" content="https://tsebi.com.br/images/logo-tsebi.png" />
+  <script type="application/ld+json" id="faqSchema"></script>
 
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -106,6 +107,19 @@
       </p>
     </section>
 
+    <section class="faq-search" aria-label="Buscar perguntas">
+      <label class="faq-search-label" for="faqSearchInput">Busque por palavra-chave</label>
+      <div class="faq-search-field">
+        <input id="faqSearchInput" type="search" placeholder="Ex.: troca, prazo de entrega, pagamento, WhatsApp" autocomplete="off" />
+        <button id="faqSearchClear" type="button" aria-label="Limpar busca">Limpar</button>
+      </div>
+      <div class="faq-search-meta">
+        <span id="faqSearchCount">Todas as perguntas</span>
+        <div class="faq-search-tags" id="faqSearchTags" aria-hidden="true"></div>
+      </div>
+      <div class="faq-search-results" id="faqSearchResults" aria-live="polite"></div>
+    </section>
+
     <section class="faq-content" id="faqContent" aria-label="Perguntas frequentes"></section>
 
     <section class="faq-help">
@@ -114,6 +128,14 @@
       <div class="faq-help-actions">
         <a class="btn faq-btn" href="https://wa.me/5511918596632?text=Ol%C3%A1%21%20Preciso%20de%20ajuda%20com%20meu%20pedido%20ou%20produto%20da%20Tsebi.">Fale no WhatsApp</a>
         <a class="btn btn-ghost faq-btn" href="mailto:contato@tsebi.com.br">Enviar e-mail</a>
+      </div>
+    </section>
+
+    <section class="faq-custom">
+      <div class="faq-custom-card">
+        <img class="faq-custom-image" src="images/logo-tsebi.png" alt="Tsebi" />
+        <h3>Escreva sua dúvida personalizável?</h3>
+        <input class="faq-custom-input" type="text" placeholder="Digite sua dúvida aqui" />
       </div>
     </section>
   </main>
@@ -125,19 +147,19 @@
       "questions": [
         {
           "question": "Como faço um pedido?",
-          "answer": "Escolha seus produtos, selecione o tamanho e finalize no carrinho. O checkout confirma disponibilidade, endereço e método de pagamento antes do envio."
+          "answer": "Escolha as peças, selecione o tamanho e finalize no carrinho. O checkout da Tsebi confirma disponibilidade, endereço e pagamento para garantir uma compra segura."
         },
         {
           "question": "Posso alterar ou cancelar meu pedido?",
-          "answer": "Alterações são possíveis enquanto o pedido não foi processado. Entre em contato o quanto antes para verificarmos a viabilidade da mudança."
+          "answer": "Sim, enquanto o pedido não foi processado. Isso é necessário porque a separação é rápida; fale com a Tsebi o quanto antes para avaliarmos a mudança."
         },
         {
           "question": "Como sei se meu pedido foi confirmado?",
-          "answer": "Você recebe um e-mail de confirmação com o número do pedido. A atualização também aparece na sua conta, na área de pedidos."
+          "answer": "Você recebe um e-mail com o número do pedido e vê o status na sua conta. A Tsebi usa confirmação dupla para garantir o registro correto."
         },
         {
           "question": "Onde acompanho meu pedido?",
-          "answer": "Após o envio, disponibilizamos o código de rastreio. Você pode acompanhar na sua conta ou pelos links de acompanhamento indicados no e-mail."
+          "answer": "Após o envio, você recebe o código de rastreio e o link por e-mail. O status também fica na sua conta, sempre atualizado pela Tsebi."
         }
       ]
     },
@@ -146,15 +168,15 @@
       "questions": [
         {
           "question": "Quais formas de pagamento são aceitas?",
-          "answer": "Aceitamos cartões de crédito e outros métodos exibidos no checkout. As opções disponíveis aparecem de acordo com o seu endereço."
+          "answer": "Aceitamos cartões de crédito e os métodos exibidos no checkout. A Tsebi mostra apenas opções válidas para o seu endereço, evitando falhas."
         },
         {
           "question": "Meu pagamento foi recusado, o que fazer?",
-          "answer": "Verifique os dados do cartão e o limite disponível. Se o problema persistir, tente outro método ou entre em contato com o seu banco."
+          "answer": "Confirme os dados do cartão e o limite disponível. Se persistir, tente outro método ou fale com o banco; a Tsebi segue as validações do emissor."
         },
         {
           "question": "É seguro comprar no site?",
-          "answer": "Sim. Utilizamos criptografia e provedores de pagamento confiáveis para proteger seus dados durante toda a compra."
+          "answer": "Sim. A Tsebi utiliza criptografia e provedores de pagamento confiáveis para proteger seus dados durante toda a compra."
         }
       ]
     },
@@ -163,19 +185,19 @@
       "questions": [
         {
           "question": "Qual o prazo de entrega?",
-          "answer": "O prazo varia conforme o CEP e a modalidade escolhida. Ele é informado no carrinho e confirmado no checkout."
+          "answer": "O prazo varia conforme o CEP e a modalidade escolhida. A Tsebi informa no carrinho e confirma no checkout para garantir transparência."
         },
         {
           "question": "Como calcular o frete?",
-          "answer": "Informe o CEP no carrinho e o sistema exibirá as opções disponíveis, com prazos e valores."
+          "answer": "Informe o CEP no carrinho e o sistema mostrará prazos e valores. A Tsebi exibe todas as opções antes do pagamento."
         },
         {
           "question": "Como acompanhar o envio?",
-          "answer": "Assim que o pedido é enviado, você recebe o código de rastreio. Ele também fica disponível na sua conta."
+          "answer": "Assim que o pedido é enviado, você recebe o código de rastreio. Ele também fica disponível na sua conta, com atualização da Tsebi."
         },
         {
           "question": "O que fazer se meu pedido atrasar?",
-          "answer": "Caso o prazo exceda, entre em contato com nosso suporte. Nós verificamos a ocorrência e orientamos os próximos passos."
+          "answer": "Se o prazo exceder, fale com o suporte. A Tsebi abre a ocorrência com a transportadora e orienta os próximos passos."
         }
       ]
     },
@@ -184,19 +206,19 @@
       "questions": [
         {
           "question": "Qual o prazo para troca ou devolução?",
-          "answer": "Você pode solicitar a troca ou devolução dentro do prazo legal após o recebimento. Consulte as condições no processo de devoluções."
+          "answer": "Você pode solicitar troca ou devolução dentro do prazo legal após o recebimento. A Tsebi segue o Código de Defesa do Consumidor."
         },
         {
           "question": "Como solicitar uma devolução?",
-          "answer": "Acesse sua conta ou fale com nosso suporte informando o número do pedido. Enviaremos as instruções completas."
+          "answer": "Acesse sua conta ou fale com o suporte informando o número do pedido. A Tsebi envia as instruções completas."
         },
         {
           "question": "O produto precisa estar em quais condições?",
-          "answer": "A peça deve estar sem uso, com etiquetas e na embalagem original. Isso garante a aprovação do processo."
+          "answer": "A peça deve estar sem uso, com etiquetas e embalagem original. Isso garante a checagem de qualidade da Tsebi."
         },
         {
           "question": "Quando recebo o reembolso?",
-          "answer": "Após o recebimento e análise do produto, o reembolso é processado conforme o método de pagamento utilizado."
+          "answer": "Após o recebimento e análise do produto, o reembolso é processado conforme o método de pagamento. A Tsebi confirma por e-mail."
         }
       ]
     },
@@ -205,7 +227,7 @@
       "questions": [
         {
           "question": "Como escolher o tamanho correto?",
-          "answer": "Utilize a tabela de medidas disponível na página do produto. Em dúvida, escolha o tamanho com base nas suas medidas principais."
+          "answer": "Use a tabela de medidas na página do produto e compare com suas medidas. A Tsebi padroniza as tabelas para reduzir erro."
         },
         {
           "question": "Os produtos são originais?",
@@ -213,11 +235,11 @@
         },
         {
           "question": "As cores do produto podem variar?",
-          "answer": "Pequenas variações podem ocorrer devido à iluminação e ao monitor. Mantemos a fidelidade das imagens ao máximo."
+          "answer": "Pequenas variações podem ocorrer pela iluminação e pelo monitor. A Tsebi busca máxima fidelidade nas fotos."
         },
         {
           "question": "Como cuidar das peças?",
-          "answer": "Siga as instruções de cuidado presentes na etiqueta e na descrição do produto para preservar a qualidade."
+          "answer": "Siga as instruções da etiqueta e da descrição do produto. Isso preserva o tecido e o acabamento Tsebi."
         }
       ]
     },
@@ -226,15 +248,15 @@
       "questions": [
         {
           "question": "Preciso criar conta para comprar?",
-          "answer": "Não é obrigatório, mas criar uma conta facilita o acompanhamento de pedidos e futuras compras."
+          "answer": "Sim. A criação de conta é obrigatória para vincular pedido, pagamento e rastreio. Isso garante segurança e suporte eficiente da Tsebi."
         },
         {
           "question": "Esqueci minha senha, como recuperar?",
-          "answer": "Use a opção de recuperação de senha na página de login. Enviaremos um link para redefinição."
+          "answer": "Use a opção de recuperação na página de login. Enviamos um link seguro para redefinição."
         },
         {
           "question": "Como alterar meus dados?",
-          "answer": "Acesse sua conta e edite suas informações na área de perfil. As alterações são salvas imediatamente."
+          "answer": "Acesse sua conta e edite as informações no perfil. As alterações são salvas na hora para manter seus pedidos corretos."
         }
       ]
     },
@@ -243,19 +265,19 @@
       "questions": [
         {
           "question": "Como falar com o suporte?",
-          "answer": "Você pode falar conosco pelo WhatsApp ou e-mail. Nosso time responde em horário comercial."
+          "answer": "Fale com a Tsebi pelo <a href=\"https://wa.me/5511918596632\">WhatsApp</a> ou por <a href=\"mailto:contato@tsebi.com.br\">e-mail</a>. Nosso time responde em horário comercial."
         },
         {
           "question": "Qual o horário de atendimento?",
-          "answer": "Atendemos de segunda a sexta, das 9h às 18h (horário de Brasília)."
+          "answer": "Atendemos de segunda a sexta, das 9h às 18h (horário de Brasília). A Tsebi responde dentro desse horário."
         },
         {
           "question": "Vocês atendem por WhatsApp?",
-          "answer": "Sim. O WhatsApp é um canal oficial para dúvidas e suporte, inclusive sobre pedidos."
+          "answer": "Sim. O WhatsApp é um canal oficial da Tsebi para dúvidas e suporte, inclusive sobre pedidos."
         },
         {
           "question": "Como acompanhar um pedido pelo WhatsApp?",
-          "answer": "Envie o número do pedido e o e-mail da compra pelo WhatsApp. Se a janela estiver ativa, retornamos com o status."
+          "answer": "Envie o número do pedido e o e-mail da compra pelo WhatsApp. A Tsebi retorna com o status quando a janela estiver ativa."
         }
       ]
     }
@@ -265,28 +287,268 @@
   <script>
     const dataEl = document.getElementById("faqData");
     const mount = document.getElementById("faqContent");
+    const searchInput = document.getElementById("faqSearchInput");
+    const searchClear = document.getElementById("faqSearchClear");
+    const searchResults = document.getElementById("faqSearchResults");
+    const searchCount = document.getElementById("faqSearchCount");
+    const searchTags = document.getElementById("faqSearchTags");
+    const schemaEl = document.getElementById("faqSchema");
+
+    function slugify(value) {
+      return String(value || "")
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, "-")
+        .replace(/(^-|-$)+/g, "");
+    }
+
+    function normalizeText(value) {
+      return String(value || "")
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, " ")
+        .trim();
+    }
+
+    const stopwords = new Set([
+      "a","o","e","de","da","do","das","dos","para","por","em","no","na","nos","nas","um","uma","uns","umas",
+      "com","sem","que","como","onde","qual","quais","quando","quanto","quanta","quanto","sao","são","se","ao","aos"
+    ]);
+
+    const synonyms = {
+      frete: ["envio", "entrega", "transportadora", "prazo", "prazo de entrega"],
+      envio: ["frete", "entrega", "rastreio", "transportadora"],
+      entrega: ["frete", "envio", "prazo", "prazo de entrega"],
+      rastreio: ["rastreamento", "codigo", "código", "tracking", "rastrear"],
+      troca: ["devolucao", "devolução", "reembolso", "retorno"],
+      devolucao: ["troca", "reembolso", "devolução", "retorno"],
+      reembolso: ["troca", "devolucao", "devolução"],
+      pagamento: ["cartao", "cartão", "pix", "boleto", "parcelamento", "parcelas"],
+      senha: ["login", "acesso", "conta", "recuperacao", "recuperação"],
+      whatsapp: ["suporte", "atendimento", "contato"],
+      atendimento: ["suporte", "whatsapp", "contato"],
+      pedido: ["compra", "pedido", "status", "pedido confirmado", "pedido enviado"],
+      produto: ["peca", "peça", "tamanho", "medidas"],
+      tamanho: ["medidas", "tabela", "provador"],
+      conta: ["cadastro", "login", "senha"]
+    };
+
+    function expandTokens(tokens) {
+      const expanded = new Set(tokens);
+      tokens.forEach((token) => {
+        (synonyms[token] || []).forEach((alt) => expanded.add(normalizeText(alt)));
+      });
+      return Array.from(expanded);
+    }
+
+    function highlight(text, tokens) {
+      if (!tokens.length) return text;
+      let output = text;
+      tokens.forEach((token) => {
+        if (!token) return;
+        const re = new RegExp(`(${token})`, "ig");
+        output = output.replace(re, "<mark>$1</mark>");
+      });
+      return output;
+    }
+
+    function openFromHash(itemsById) {
+      const hash = String(window.location.hash || "").replace("#", "");
+      if (!hash) return;
+      const item = itemsById.get(hash);
+      if (item) {
+        item.element.open = true;
+        item.element.scrollIntoView({ behavior: "smooth", block: "start" });
+      }
+    }
+
     if (dataEl && mount) {
       const data = JSON.parse(dataEl.textContent || "[]");
+      const items = [];
+      const categories = [];
+      const itemsById = new Map();
+
       data.forEach((category) => {
+        const categoryId = `cat-${slugify(category.category)}`;
         const section = document.createElement("section");
         section.className = "faq-category";
+        section.id = categoryId;
         section.innerHTML = `<h2>${category.category}</h2>`;
+
         const list = document.createElement("div");
         list.className = "faq-list";
-        (category.questions || []).forEach((q) => {
+
+        (category.questions || []).forEach((q, index) => {
+          const itemId = `q-${slugify(`${category.category}-${q.question}-${index}`)}`;
           const item = document.createElement("details");
           item.className = "faq-item";
+          item.id = itemId;
           item.innerHTML = `
-            <summary>${q.question}</summary>
-            <p>${q.answer}</p>
+            <summary>
+              <span class="faq-question-text" data-question="${q.question}">${q.question}</span>
+              <a class="faq-anchor" href="#${itemId}" aria-label="Link desta pergunta">Link</a>
+            </summary>
+            <p class="faq-answer-text" data-answer="${q.answer}">${q.answer}</p>
           `;
+
+          const searchText = normalizeText(
+            `${category.category} ${q.question} ${q.answer}`
+          );
+
+          const entry = {
+            id: itemId,
+            category: category.category,
+            question: q.question,
+            answer: q.answer,
+            element: item,
+            section,
+            searchText
+          };
+          items.push(entry);
+          itemsById.set(itemId, entry);
           list.appendChild(item);
         });
+
         section.appendChild(list);
         mount.appendChild(section);
+        categories.push(section);
       });
+
+      if (schemaEl) {
+        const schema = {
+          "@context": "https://schema.org",
+          "@type": "FAQPage",
+          "mainEntity": items.map((item) => ({
+            "@type": "Question",
+            "name": item.question,
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": item.answer
+            }
+          }))
+        };
+        schemaEl.textContent = JSON.stringify(schema);
+      }
+
+      function applySearch(value) {
+        const raw = String(value || "").trim();
+        const normalized = normalizeText(raw);
+        if (!normalized) {
+          items.forEach((entry) => {
+            entry.element.hidden = false;
+            entry.element.open = false;
+            const qEl = entry.element.querySelector(".faq-question-text");
+            const aEl = entry.element.querySelector(".faq-answer-text");
+            if (qEl) qEl.innerHTML = qEl.dataset.question || qEl.textContent || "";
+            if (aEl) aEl.innerHTML = aEl.dataset.answer || aEl.textContent || "";
+          });
+          categories.forEach((section) => {
+            section.hidden = false;
+          });
+          if (searchResults) searchResults.innerHTML = "";
+          if (searchCount) searchCount.textContent = "Todas as perguntas";
+          if (searchTags) {
+            searchTags.innerHTML = "";
+            searchTags.setAttribute("aria-hidden", "true");
+          }
+          return;
+        }
+
+        const tokens = normalized
+          .split(" ")
+          .filter((token) => token.length > 1 && !stopwords.has(token));
+        const expandedTokens = expandTokens(tokens);
+
+        const scored = items
+          .map((entry) => {
+            const score = expandedTokens.reduce((sum, token) => {
+              if (!token) return sum;
+              return entry.searchText.includes(token) ? sum + 1 : sum;
+            }, 0);
+            return { entry, score };
+          })
+          .filter((item) => item.score > 0)
+          .sort((a, b) => b.score - a.score);
+
+        const matchedIds = new Set(scored.map((item) => item.entry.id));
+        items.forEach((entry) => {
+          entry.element.hidden = !matchedIds.has(entry.id);
+          entry.element.open = matchedIds.has(entry.id);
+          const qEl = entry.element.querySelector(".faq-question-text");
+          const aEl = entry.element.querySelector(".faq-answer-text");
+          if (qEl) {
+            const base = qEl.dataset.question || qEl.textContent || "";
+            qEl.innerHTML = matchedIds.has(entry.id) ? highlight(base, expandedTokens) : base;
+          }
+          if (aEl) {
+            const base = aEl.dataset.answer || aEl.textContent || "";
+            aEl.innerHTML = matchedIds.has(entry.id) ? highlight(base, expandedTokens) : base;
+          }
+        });
+
+        categories.forEach((section) => {
+          const hasVisible = section.querySelector("details:not([hidden])");
+          section.hidden = !hasVisible;
+        });
+
+        if (searchCount) {
+          searchCount.textContent = `${scored.length} resultado${scored.length === 1 ? "" : "s"} encontrado${scored.length === 1 ? "" : "s"}`;
+        }
+
+        if (searchTags) {
+          searchTags.innerHTML = expandedTokens
+            .slice(0, 6)
+            .map((token) => `<span class="faq-tag">${token}</span>`)
+            .join("");
+          searchTags.setAttribute("aria-hidden", expandedTokens.length ? "false" : "true");
+        }
+
+        if (searchResults) {
+          if (!scored.length) {
+            searchResults.innerHTML = `<div class="faq-search-empty">Nenhum resultado para "${raw}".</div>`;
+          } else {
+            searchResults.innerHTML = `
+              <ul>
+                ${scored
+                  .slice(0, 12)
+                  .map(({ entry }) => {
+                    return `
+                      <li>
+                        <a href="#${entry.id}">
+                          <span class="result-question">${highlight(entry.question, expandedTokens)}</span>
+                          <span class="result-meta">${entry.category}</span>
+                        </a>
+                      </li>
+                    `;
+                  })
+                  .join("")}
+              </ul>
+            `;
+          }
+        }
+      }
+
+      searchInput?.addEventListener("input", (event) => {
+        applySearch(event.target.value);
+      });
+
+      searchClear?.addEventListener("click", () => {
+        if (searchInput) searchInput.value = "";
+        applySearch("");
+        searchInput?.focus();
+      });
+
+      window.addEventListener("hashchange", () => openFromHash(itemsById));
+      openFromHash(itemsById);
     }
   </script>
   <script src="JS/script.js"></script>
 </body>
 </html>
+
+
+
+
+
