@@ -617,7 +617,7 @@ body.menu-open {
 }
 
 /* On the homepage, keep the hero video behind the fixed header (no white strip). */
-.home-header + .hero {
+.home-header ~ .hero {
   height: 100vh;
   margin-top: 0;
 }
