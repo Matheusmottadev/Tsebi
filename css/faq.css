@@ -55,24 +55,26 @@
 }
 
 .faq-search-field input {
-  border: 1px solid #d9d9d9;
-  border-radius: 999px;
-  padding: 12px 16px;
+  border: 1px solid #e2ded7;
+  border-radius: 14px;
+  padding: 14px 18px;
   font-size: 14px;
   outline: none;
-  background: #fff;
+  background: #fbfaf8;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.6);
 }
 
 .faq-search-field input:focus {
-  border-color: #111;
+  border-color: #1b1b1b;
+  box-shadow: 0 0 0 3px rgba(27, 27, 27, 0.08);
 }
 
 .faq-search-field button {
   border: 1px solid #111;
   background: #111;
   color: #fff;
-  border-radius: 999px;
-  padding: 10px 16px;
+  border-radius: 14px;
+  padding: 12px 16px;
   font-size: 11px;
   letter-spacing: 0.12em;
   text-transform: uppercase;
@@ -116,16 +118,16 @@
   display: flex;
   justify-content: space-between;
   gap: 16px;
-  padding: 10px 14px;
-  border-radius: 12px;
-  border: 1px solid #ececec;
+  padding: 12px 16px;
+  border-radius: 14px;
+  border: 1px solid #ece7df;
   text-decoration: none;
   color: inherit;
-  background: #fff;
+  background: #fcfbf9;
 }
 
 .faq-search-results li a:hover {
-  border-color: #111;
+  border-color: #1b1b1b;
 }
 
 .result-question {
@@ -196,15 +198,7 @@
 }
 
 .faq-anchor {
-  font-size: 11px;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  text-decoration: none;
-  color: #666;
-}
-
-.faq-anchor:hover {
-  color: #111;
+  display: none;
 }
 
 .faq-item mark {
@@ -244,8 +238,8 @@
 .faq-custom-card {
   width: 600px;
   min-height: 300px;
-  background: #f5f2ed;
-  border: 1px solid #e2ddd6;
+  background: #f7f3ee;
+  border: 1px solid #e6dfd7;
   border-radius: 18px;
   padding: 20px 22px 24px;
   display: grid;
@@ -257,10 +251,10 @@
 .faq-custom-image {
   width: 100%;
   height: 160px;
-  object-fit: contain;
+  object-fit: cover;
   border-radius: 14px;
   background: #fff;
-  border: 1px solid #e8e2db;
+  border: 1px solid #e9e3dc;
 }
 
 .faq-custom-card h3 {
@@ -272,18 +266,18 @@
 }
 
 .faq-custom-input {
-  border: 1px solid #d8d2cb;
+  border: 1px solid #dcd5cd;
   background: #fff;
-  border-radius: 999px;
-  padding: 12px 16px;
+  border-radius: 14px;
+  padding: 14px 16px;
   font-size: 14px;
   outline: none;
   transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
 
 .faq-custom-input:focus {
-  border-color: #111;
-  box-shadow: 0 0 0 3px rgba(17, 17, 17, 0.08);
+  border-color: #1b1b1b;
+  box-shadow: 0 0 0 3px rgba(27, 27, 27, 0.08);
 }
 
 @media (max-width: 760px) {
