@@ -23,10 +23,6 @@ function formatDate(value) {
   return date.toLocaleString("pt-BR");
 }
 
-function statusPill(active) {
-  return active ? `<span class="pill">Ativo</span>` : `<span class="pill pill-danger">Inativo</span>`;
-}
-
 function buildDiff(before, after, labels) {
   const diffs = [];
   Object.keys(labels).forEach((key) => {
