@@ -1379,6 +1379,23 @@ function initAlicerceScrollSnap() {
   let lastScrollY = window.scrollY || 0;
   let isSnapping = false;
   let hasSnappedOnCurrentPass = false;
+  let lastSnapAt = 0;
+
+  function snapSection() {
+    isSnapping = true;
+    hasSnappedOnCurrentPass = true;
+    lastSnapAt = Date.now();
+    section.scrollIntoView({ behavior: "smooth", block: "start" });
+
+    // Small follow-up correction to make the snap feel stronger.
+    window.setTimeout(() => {
+      const topOffset = Math.abs(section.getBoundingClientRect().top);
+      if (topOffset > 10) {
+        section.scrollIntoView({ behavior: "auto", block: "start" });
+      }
+      isSnapping = false;
+    }, 420);
+  }
 
   function maybeSnapToSection() {
     if (isSnapping) return;
@@ -1395,17 +1412,12 @@ function initAlicerceScrollSnap() {
     }
 
     if (!isScrollingDown || hasSnappedOnCurrentPass) return;
+    if (Date.now() - lastSnapAt < 900) return;
 
-    const inTriggerZone = rect.top <= viewportH * 0.42 && rect.top >= viewportH * -0.1;
+    const inTriggerZone = rect.top <= viewportH * 0.62 && rect.top >= viewportH * -0.2;
     if (!inTriggerZone) return;
 
-    isSnapping = true;
-    hasSnappedOnCurrentPass = true;
-    section.scrollIntoView({ behavior: "smooth", block: "start" });
-
-    window.setTimeout(() => {
-      isSnapping = false;
-    }, 800);
+    snapSection();
   }
 
   window.addEventListener("scroll", maybeSnapToSection, { passive: true });
