@@ -552,7 +552,7 @@ if (!product) {
     productSizeSelect.onchange = null;
 
     if (productSelectedColorText) {
-      productSelectedColorText.textContent = tColor(selectedColor || "-");
+      productSelectedColorText.textContent = "";
     }
 
     product.colors.forEach((color) => {
