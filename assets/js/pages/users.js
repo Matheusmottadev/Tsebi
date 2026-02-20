@@ -1,4 +1,4 @@
-import { api } from "../api.js";
+﻿import { api } from "../api.js";
 import { toast } from "../ui/toast.js";
 import { confirmDiff } from "../ui/modalConfirmDiff.js";
 import { renderPagination, renderTable } from "../ui/table.js";
@@ -14,7 +14,7 @@ function escapeHtml(value) {
 
 function formatDate(value) {
   const date = new Date(String(value || ""));
-  if (Number.isNaN(date.getTime())) return "—";
+  if (Number.isNaN(date.getTime())) return "â€”";
   return date.toLocaleString("pt-BR");
 }
 
@@ -36,6 +36,36 @@ function buildDiff(before, after, labels) {
     }
   });
   return diffs;
+}
+
+function normalizeTitle(value) {
+  const normalized = String(value || "").trim().toLowerCase();
+  const allowed = new Set(["sr", "sra", "srta", "nao_informar"]);
+  if (!allowed.has(normalized)) return "nao_informar";
+  return normalized;
+}
+
+function titleField({ key = "title", value = "nao_informar" } = {}) {
+  const current = normalizeTitle(value);
+  return `
+    <label class="label">
+      <span>TÃ­tulo</span>
+      <select class="field" data-key="${escapeHtml(key)}">
+        <option value="sr" ${current === "sr" ? "selected" : ""}>Sr.</option>
+        <option value="sra" ${current === "sra" ? "selected" : ""}>Sra.</option>
+        <option value="srta" ${current === "srta" ? "selected" : ""}>Srta.</option>
+        <option value="nao_informar" ${current === "nao_informar" ? "selected" : ""}>Prefiro nÃ£o responder</option>
+      </select>
+    </label>
+  `;
+}
+
+function titlePrefix(value) {
+  const title = normalizeTitle(value);
+  if (title === "sr") return "Sr.";
+  if (title === "sra") return "Sra.";
+  if (title === "srta") return "Srta.";
+  return "";
 }
 
 export function createUsersPage({ mount, drawer, getStatusFilter }) {
@@ -67,20 +97,24 @@ export function createUsersPage({ mount, drawer, getStatusFilter }) {
     const table = renderTable({
       columns: [
         {
-          label: "Usuário",
-          render: (u) =>
-            `<div style="display:flex;align-items:center;gap:10px;">
+          label: "UsuÃ¡rio",
+          render: (u) => {
+            const prefix = titlePrefix(u.title);
+            const safeName = String(u.name || "â€”");
+            const displayName = prefix ? `${prefix} ${safeName}` : safeName;
+            return `<div style="display:flex;align-items:center;gap:10px;">
               <div class="avatar">${escapeHtml(initials(u.name || u.email))}</div>
               <div>
-                <div style="font-weight:600">${escapeHtml(u.name || "—")}</div>
+                <div style="font-weight:600">${escapeHtml(displayName)}</div>
                 <div style="color:var(--muted);font-size:12px">${escapeHtml(u.cpf || u.cpfMasked || "")}</div>
               </div>
-            </div>`
+            </div>`;
+          }
         },
-        { label: "Email", render: (u) => `<div>${escapeHtml(u.email || "—")}</div>` },
-        { label: "Telefone", render: (u) => `<div>${escapeHtml(u.phone || "—")}</div>` },
+        { label: "Email", render: (u) => `<div>${escapeHtml(u.email || "â€”")}</div>` },
+        { label: "Telefone", render: (u) => `<div>${escapeHtml(u.phone || "â€”")}</div>` },
         { label: "Status", render: (u) => statusPill(u.status) },
-        { label: "Último login", render: (u) => `<div>${escapeHtml(formatDate(u.lastLoginAt))}</div>` },
+        { label: "Ãšltimo login", render: (u) => `<div>${escapeHtml(formatDate(u.lastLoginAt))}</div>` },
         { label: "Criado em", render: (u) => `<div>${escapeHtml(formatDate(u.createdAt))}</div>` }
       ],
       rows: state.rows,
@@ -123,26 +157,29 @@ export function createUsersPage({ mount, drawer, getStatusFilter }) {
   }
 
   function bindDirtyTracking(root, original) {
-    root.addEventListener("input", (event) => {
+    function markDirty(event) {
       const el = event.target;
-      if (!(el instanceof HTMLInputElement) && !(el instanceof HTMLTextAreaElement)) return;
+      if (!(el instanceof HTMLInputElement) && !(el instanceof HTMLTextAreaElement) && !(el instanceof HTMLSelectElement)) return;
       const key = String(el.dataset.key || "");
       if (!key) return;
       const current = el.value;
       const before = String(original?.[key] ?? "");
       el.classList.toggle("dirty", String(current ?? "") !== before);
-    });
+    }
+    root.addEventListener("input", markDirty);
+    root.addEventListener("change", markDirty);
   }
 
   async function openDrawer(userId) {
     const data = await api(`/api/admin/users/${encodeURIComponent(userId)}`);
     const user = data?.user || null;
     if (!user) {
-      toast("Usuário não encontrado.", { tone: "error" });
+      toast("UsuÃ¡rio nÃ£o encontrado.", { tone: "error" });
       return;
     }
 
     const original = {
+      title: normalizeTitle(user.title),
       name: String(user.name || ""),
       email: String(user.email || ""),
       phone: String(user.phone || ""),
@@ -157,6 +194,7 @@ export function createUsersPage({ mount, drawer, getStatusFilter }) {
       <div class="section">
         <h3>Dados</h3>
         <div class="form-grid">
+          ${titleField({ key: "title", value: original.title })}
           ${inputField({ label: "Nome", key: "name", value: original.name, full: true })}
           ${inputField({ label: "Email", key: "email", value: original.email, type: "email", full: true })}
           ${inputField({ label: "Telefone", key: "phone", value: original.phone, full: true })}
@@ -166,20 +204,20 @@ export function createUsersPage({ mount, drawer, getStatusFilter }) {
         </div>
         <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:12px;">
           <button type="button" class="btn btn-ghost" data-action="cancel">Cancelar</button>
-          <button type="button" class="btn" data-action="save">Salvar alterações</button>
+          <button type="button" class="btn" data-action="save">Salvar alteraÃ§Ãµes</button>
         </div>
       </div>
 
       <div class="section danger-zone">
         <h3>Danger zone</h3>
         <div style="display:grid;gap:10px;">
-          <button type="button" class="btn btn-ghost" data-action="logout-sessions">Invalidar sessões</button>
-          <button type="button" class="btn btn-ghost" data-action="temp-password">Gerar senha temporária</button>
+          <button type="button" class="btn btn-ghost" data-action="logout-sessions">Invalidar sessÃµes</button>
+          <button type="button" class="btn btn-ghost" data-action="temp-password">Gerar senha temporÃ¡ria</button>
           <button type="button" class="btn btn-danger" data-action="disable-login">Apagar login (desativar)</button>
-          <button type="button" class="btn btn-danger" data-action="delete-user">Excluir usuário</button>
+          <button type="button" class="btn btn-danger" data-action="delete-user">Excluir usuÃ¡rio</button>
         </div>
         <p style="color:var(--muted);font-size:13px;margin:10px 0 0;">
-          Ações críticas exigem confirmação e são auditadas.
+          AÃ§Ãµes crÃ­ticas exigem confirmaÃ§Ã£o e sÃ£o auditadas.
         </p>
       </div>
     `;
@@ -191,18 +229,22 @@ export function createUsersPage({ mount, drawer, getStatusFilter }) {
       root.querySelectorAll("[data-key]").forEach((el) => {
         const key = String(el.dataset.key || "");
         if (!key) return;
-        const value = el instanceof HTMLInputElement || el instanceof HTMLTextAreaElement ? el.value : "";
+        const value =
+          el instanceof HTMLInputElement || el instanceof HTMLTextAreaElement || el instanceof HTMLSelectElement
+            ? el.value
+            : "";
         if (String(value ?? "") !== String(original[key] ?? "")) {
           patch[key] = value;
         }
       });
 
       if (Object.keys(patch).length === 0) {
-        toast("Nenhuma alteração para salvar.", { tone: "info" });
+        toast("Nenhuma alteraÃ§Ã£o para salvar.", { tone: "info" });
         return;
       }
 
       const diffs = buildDiff(original, { ...original, ...patch }, {
+        title: "TÃ­tulo",
         name: "Nome",
         email: "Email",
         phone: "Telefone",
@@ -212,7 +254,7 @@ export function createUsersPage({ mount, drawer, getStatusFilter }) {
       });
 
       const ok = await confirmDiff({
-        title: "Confirmar alterações",
+        title: "Confirmar alteraÃ§Ãµes",
         message: "Revise o antes/depois antes de salvar.",
         diffs,
         tone: "ok"
@@ -220,47 +262,47 @@ export function createUsersPage({ mount, drawer, getStatusFilter }) {
       if (!ok) return;
 
       await api(`/api/admin/users/${encodeURIComponent(userId)}`, { method: "PATCH", json: patch });
-      toast("Usuário atualizado.", { tone: "success" });
+      toast("UsuÃ¡rio atualizado.", { tone: "success" });
       drawer.close();
       await reload();
     }
 
     async function handleLogoutSessions() {
       const ok = await confirmDiff({
-        title: "Invalidar sessões",
-        message: "Isso vai desconectar o usuário em todos os dispositivos.",
-        diffs: [{ field: "Ação", before: "—", after: "Invalidar sessões" }],
+        title: "Invalidar sessÃµes",
+        message: "Isso vai desconectar o usuÃ¡rio em todos os dispositivos.",
+        diffs: [{ field: "AÃ§Ã£o", before: "â€”", after: "Invalidar sessÃµes" }],
         tone: "danger"
       });
       if (!ok) return;
       await api(`/api/admin/users/${encodeURIComponent(userId)}/logout`, { method: "POST", json: {} });
-      toast("Sessões invalidadas.", { tone: "success" });
+      toast("SessÃµes invalidadas.", { tone: "success" });
     }
 
     async function handleTempPassword() {
       const ok = await confirmDiff({
-        title: "Senha temporária",
-        message: "A senha temporária será mostrada apenas uma vez.",
-        diffs: [{ field: "Ação", before: "—", after: "Gerar senha temporária" }],
+        title: "Senha temporÃ¡ria",
+        message: "A senha temporÃ¡ria serÃ¡ mostrada apenas uma vez.",
+        diffs: [{ field: "AÃ§Ã£o", before: "â€”", after: "Gerar senha temporÃ¡ria" }],
         tone: "danger"
       });
       if (!ok) return;
       const result = await api(`/api/admin/users/${encodeURIComponent(userId)}/temp-password`, { method: "POST", json: {} });
       const tempPassword = String(result?.tempPassword || "");
       await confirmDiff({
-        title: "Senha temporária (mostrar uma vez)",
-        message: "Copie e envie ao usuário por um canal seguro.",
-        diffs: [{ field: "Senha", before: "—", after: tempPassword }],
+        title: "Senha temporÃ¡ria (mostrar uma vez)",
+        message: "Copie e envie ao usuÃ¡rio por um canal seguro.",
+        diffs: [{ field: "Senha", before: "â€”", after: tempPassword }],
         tone: "ok"
       });
-      toast("Senha temporária gerada.", { tone: "success" });
+      toast("Senha temporÃ¡ria gerada.", { tone: "success" });
     }
 
     async function handleDisableLogin() {
       const ok = await confirmDiff({
         title: "Apagar login",
         message: "Isso desativa o login e remove as credenciais.",
-        diffs: [{ field: "Ação", before: "—", after: "Desativar login" }],
+        diffs: [{ field: "AÃ§Ã£o", before: "â€”", after: "Desativar login" }],
         tone: "danger"
       });
       if (!ok) return;
@@ -272,14 +314,14 @@ export function createUsersPage({ mount, drawer, getStatusFilter }) {
 
     async function handleDeleteUser() {
       const ok = await confirmDiff({
-        title: "Excluir usuário",
-        message: "Isso remove o usuário do banco. Esta ação pode ser revertida pela auditoria dentro do período permitido.",
-        diffs: [{ field: "Ação", before: "—", after: "Excluir usuário" }],
+        title: "Excluir usuÃ¡rio",
+        message: "Isso remove o usuÃ¡rio do banco. Esta aÃ§Ã£o pode ser revertida pela auditoria dentro do perÃ­odo permitido.",
+        diffs: [{ field: "AÃ§Ã£o", before: "â€”", after: "Excluir usuÃ¡rio" }],
         tone: "danger"
       });
       if (!ok) return;
       await api(`/api/admin/users/${encodeURIComponent(userId)}`, { method: "DELETE" });
-      toast("Usuário excluído.", { tone: "success" });
+      toast("UsuÃ¡rio excluÃ­do.", { tone: "success" });
       drawer.close();
       await reload();
     }
@@ -301,7 +343,7 @@ export function createUsersPage({ mount, drawer, getStatusFilter }) {
     });
 
     drawer.open({
-      titleText: `Usuário • ${user.email || user.id}`,
+      titleText: `UsuÃ¡rio â€¢ ${user.email || user.id}`,
       content: root
     });
   }
@@ -311,8 +353,8 @@ export function createUsersPage({ mount, drawer, getStatusFilter }) {
       await load();
       render();
     } catch (error) {
-      toast(`Falha ao carregar usuários: ${error?.code || error?.message || "REQUEST_FAILED"}`, { tone: "error" });
-      mount.innerHTML = `<div style="padding:14px;color:var(--muted);">Falha ao carregar usuários.</div>`;
+      toast(`Falha ao carregar usuÃ¡rios: ${error?.code || error?.message || "REQUEST_FAILED"}`, { tone: "error" });
+      mount.innerHTML = `<div style="padding:14px;color:var(--muted);">Falha ao carregar usuÃ¡rios.</div>`;
     }
   }
 
@@ -329,12 +371,13 @@ export function createUsersPage({ mount, drawer, getStatusFilter }) {
       const root = document.createElement("div");
       root.innerHTML = `
         <div class="section">
-          <h3>Novo usuário</h3>
+          <h3>Novo usuÃ¡rio</h3>
           <div class="form-grid">
+            ${titleField({ key: "title", value: "nao_informar" })}
             <label class="label full"><span>Nome</span><input class="field" data-key="name" type="text" /></label>
             <label class="label full"><span>Email</span><input class="field" data-key="email" type="email" /></label>
             <label class="label full"><span>Telefone</span><input class="field" data-key="phone" type="text" /></label>
-            <label class="label full"><span>Senha temporária</span><input class="field" data-key="password" type="text" /></label>
+            <label class="label full"><span>Senha temporÃ¡ria</span><input class="field" data-key="password" type="text" /></label>
             <label class="label"><span>Nascimento</span><input class="field" data-key="birthDate" type="date" /></label>
             <label class="label"><span>CPF</span><input class="field" data-key="cpf" type="text" /></label>
             <label class="label"><span>CEP</span><input class="field" data-key="cep" type="text" /></label>
@@ -362,18 +405,19 @@ export function createUsersPage({ mount, drawer, getStatusFilter }) {
           if (!key) return;
           payload[key] = String(el.value || "").trim();
         });
+        payload.title = normalizeTitle(payload.title);
 
         try {
           await api("/api/admin/users", { method: "POST", json: payload });
-          toast("Usuário cadastrado.", { tone: "success" });
+          toast("UsuÃ¡rio cadastrado.", { tone: "success" });
           drawer.close();
           await reload();
         } catch (error) {
-          toast(`Falha ao cadastrar usuário: ${error?.code || error?.message || "REQUEST_FAILED"}`, { tone: "error" });
+          toast(`Falha ao cadastrar usuÃ¡rio: ${error?.code || error?.message || "REQUEST_FAILED"}`, { tone: "error" });
         }
       });
 
-      drawer.open({ titleText: "Usuários • cadastrar", content: root });
+      drawer.open({ titleText: "UsuÃ¡rios â€¢ cadastrar", content: root });
     }
   };
 }

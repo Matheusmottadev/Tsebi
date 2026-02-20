@@ -695,6 +695,7 @@ async function markUserEmailVerified(userId) {
 }
 
 async function restoreUserFromSnapshot(snapshot = {}) {
+  await ensureUserSecurityColumns();
   const id = String(snapshot.id || "").trim();
   const email = normalizeEmail(snapshot.email);
   const passwordHash = String(snapshot.passwordHash || "").trim();
@@ -707,6 +708,7 @@ async function restoreUserFromSnapshot(snapshot = {}) {
       `
       INSERT INTO users (
         id,
+        title,
         name,
         email,
         password_hash,
@@ -727,26 +729,28 @@ async function restoreUserFromSnapshot(snapshot = {}) {
       )
       VALUES (
         $1,
-        $2,
+        NULLIF($2, ''),
         $3,
         $4,
-        NULLIF($5, '')::date,
-        $6,
+        $5,
+        NULLIF($6, '')::date,
         $7,
-        $8::jsonb,
-        $9,
+        $8,
+        $9::jsonb,
         $10,
         $11,
         $12,
         $13,
-        $14::jsonb,
-        $15::timestamptz,
+        $14,
+        $15::jsonb,
         $16::timestamptz,
-        COALESCE($17::timestamptz, NOW()),
-        COALESCE($18::timestamptz, NOW())
+        $17::timestamptz,
+        COALESCE($18::timestamptz, NOW()),
+        COALESCE($19::timestamptz, NOW())
       )
       ON CONFLICT (id) DO UPDATE
       SET
+        title = EXCLUDED.title,
         name = EXCLUDED.name,
         email = EXCLUDED.email,
         password_hash = EXCLUDED.password_hash,
@@ -768,6 +772,7 @@ async function restoreUserFromSnapshot(snapshot = {}) {
       `,
       [
         id,
+        normalizeTitle(snapshot.title),
         String(snapshot.name || "").trim(),
         email,
         passwordHash,

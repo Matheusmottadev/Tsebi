@@ -122,6 +122,7 @@ const statusSchema = z.enum([
 ]);
 
 const userPatchSchema = z.object({
+  title: z.enum(["sr", "sra", "srta", "nao_informar"]).optional(),
   name: z.string().trim().min(2).max(120).optional(),
   email: z.string().trim().email().optional(),
   phone: z.string().trim().max(40).optional(),
@@ -139,6 +140,7 @@ const userPatchSchema = z.object({
 });
 
 const userCreateSchema = z.object({
+  title: z.enum(["sr", "sra", "srta", "nao_informar"]).optional().default("nao_informar"),
   name: z.string().trim().min(2).max(120),
   email: z.string().trim().email(),
   phone: z.string().trim().max(40).optional().default(""),
@@ -276,6 +278,7 @@ function sanitizeUser(user) {
   if (!user) return null;
   return {
     id: user.id,
+    title: String(user.title || ""),
     name: user.name,
     email: user.email,
     phone: String(user.phone || ""),
@@ -298,6 +301,7 @@ function sanitizeUserList(user) {
   if (!full) return null;
   return {
     id: full.id,
+    title: full.title || "",
     name: full.name,
     email: full.email,
     phone: full.phone || "",
@@ -355,6 +359,7 @@ function sanitizeUserForAudit(user) {
   if (!user) return null;
   return {
     id: user.id,
+    title: String(user.title || ""),
     name: user.name,
     email: user.email,
     phone: String(user.phone || ""),
@@ -372,6 +377,7 @@ function buildUserSnapshotForRestore(user) {
   if (!user) return null;
   return {
     id: user.id,
+    title: String(user.title || ""),
     name: user.name,
     email: user.email,
     birthDate: user.birthDate || "",
@@ -394,6 +400,7 @@ function buildUserSnapshotForRestore(user) {
 function buildUserPatchFromSnapshot(user) {
   if (!user) return {};
   return {
+    title: String(user.title || ""),
     name: user.name || "",
     email: normalizeEmail(user.email || ""),
     birthDate: user.birthDate || "",
@@ -1085,6 +1092,7 @@ adminRouter.post("/users", async (req, res) => {
   try {
     const payload = parsed.data;
     const created = await createUser({
+      title: payload.title,
       name: payload.name,
       email: normalizeEmail(payload.email),
       phone: String(payload.phone || "").trim().slice(0, 40),
