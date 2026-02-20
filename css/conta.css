@@ -3,6 +3,23 @@ body {
   color: #111111;
 }
 
+body.conta-page > .cart-simple-header {
+  display: flex !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+  position: sticky;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 72px;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 24px;
+  border-bottom: 1px solid #ececec;
+  z-index: 6000;
+  background: #ffffff;
+}
+
 .cart-simple-header {
   position: sticky;
   top: 0;
@@ -277,6 +294,11 @@ body {
 }
 
 @media (max-width: 760px) {
+  body.conta-page > .cart-simple-header {
+    height: 64px;
+    padding: 0 14px;
+  }
+
   .conta-wrap {
     padding: 24px 16px;
   }
