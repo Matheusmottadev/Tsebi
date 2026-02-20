@@ -732,16 +732,14 @@ body.menu-open {
   --category-card-ratio: 259 / 356;
   grid-template-columns: repeat(4, minmax(0, var(--category-card-width)));
   justify-content: center;
-  max-width: calc(var(--category-card-width) * 4);
+  column-gap: 22px;
+  row-gap: 28px;
+  max-width: calc((var(--category-card-width) * 4) + (22px * 3));
   margin: 0 auto;
 }
 
 .category-card{
   width: 100%;
-  border-right: 1px solid #ececec;
-}
-
-.category-card:last-child{
   border-right: none;
 }
 
@@ -777,8 +775,8 @@ body.menu-open {
   text-align: center;
   font-size: 15px;
   font-weight: 600;
-  padding: 10px 16px;
-  border-top: 1px solid #ececec;
+  padding: 12px 16px 0;
+  border-top: none;
   transition: opacity .22s ease, transform .22s ease;
 }
 
