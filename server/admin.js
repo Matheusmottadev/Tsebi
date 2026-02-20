@@ -184,6 +184,12 @@ const adminProfilePatchSchema = z.object({
   accent: z.enum(["emerald", "blue", "violet", "amber", "rose", "slate"]).optional()
 });
 
+const productOptionListSchema = z.array(z.string().trim().min(1).max(40)).max(40);
+const productVariantStockSchema = z.record(
+  z.string().trim().min(3).max(120),
+  z.coerce.number().int().min(0).max(999_999)
+);
+
 const productCreateSchema = z.object({
   sku: z.string().trim().min(2).max(80),
   name: z.string().trim().min(2).max(160),
@@ -191,7 +197,10 @@ const productCreateSchema = z.object({
   stockQty: z.coerce.number().int().min(0).max(999_999),
   currency: z.string().trim().min(3).max(3).optional().default("brl"),
   imageUrl: z.string().trim().max(600).optional().default(""),
-  active: z.boolean().optional().default(true)
+  active: z.boolean().optional().default(true),
+  sizes: productOptionListSchema.optional().default([]),
+  colors: productOptionListSchema.optional().default([]),
+  variantStock: productVariantStockSchema.optional().default({})
 });
 
 const productPatchSchema = z.object({
@@ -200,7 +209,10 @@ const productPatchSchema = z.object({
   stockQty: z.coerce.number().int().min(0).max(999_999).optional(),
   currency: z.string().trim().min(3).max(3).optional(),
   imageUrl: z.string().trim().max(600).optional(),
-  active: z.boolean().optional()
+  active: z.boolean().optional(),
+  sizes: productOptionListSchema.optional(),
+  colors: productOptionListSchema.optional(),
+  variantStock: productVariantStockSchema.optional()
 });
 
 const vipUpsertSchema = z.object({
@@ -437,6 +449,12 @@ function sanitizeProductForAudit(product) {
     name: product.name || "",
     priceCents: Number(product.unitAmount || 0),
     stockQty: Number(product.stock || 0),
+    sizes: Array.isArray(product.sizes) ? product.sizes.map((v) => String(v)) : [],
+    colors: Array.isArray(product.colors) ? product.colors.map((v) => String(v)) : [],
+    variantStock:
+      product.variantStock && typeof product.variantStock === "object" && !Array.isArray(product.variantStock)
+        ? product.variantStock
+        : {},
     currency: product.currency || "brl",
     imageUrl: String(product.image || ""),
     active: Boolean(product.active),
@@ -451,6 +469,12 @@ function buildProductPatchFromSnapshot(product) {
     name: product.name || "",
     priceCents: Number(product.unitAmount || 0),
     stockQty: Number(product.stock || 0),
+    sizes: Array.isArray(product.sizes) ? product.sizes.map((v) => String(v)) : [],
+    colors: Array.isArray(product.colors) ? product.colors.map((v) => String(v)) : [],
+    variantStock:
+      product.variantStock && typeof product.variantStock === "object" && !Array.isArray(product.variantStock)
+        ? product.variantStock
+        : {},
     currency: product.currency || "brl",
     imageUrl: String(product.image || ""),
     active: Boolean(product.active)

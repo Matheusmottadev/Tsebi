@@ -125,6 +125,59 @@ const PRODUCT_METADATA = {
   }
 };
 
+function normalizeTextList(value, fallback = []) {
+  const list = Array.isArray(value) ? value : [];
+  const cleaned = [];
+  const seen = new Set();
+
+  list.forEach((entry) => {
+    const item = String(entry || "").trim();
+    if (!item) return;
+    const key = item.toLowerCase();
+    if (seen.has(key)) return;
+    seen.add(key);
+    cleaned.push(item);
+  });
+
+  if (cleaned.length > 0) return cleaned;
+  return Array.isArray(fallback) && fallback.length > 0 ? normalizeTextList(fallback, []) : [];
+}
+
+function sanitizeVariantStockMap(value, validColors = [], validSizes = []) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return {};
+  const allowedPairs = new Set();
+  validColors.forEach((color) => {
+    validSizes.forEach((size) => {
+      allowedPairs.add(`${color}__${size}`);
+    });
+  });
+
+  const normalized = {};
+  Object.entries(value).forEach(([rawKey, rawQty]) => {
+    const key = String(rawKey || "").trim();
+    if (!key || !allowedPairs.has(key)) return;
+    const qty = Math.max(0, Math.floor(Number(rawQty || 0)));
+    normalized[key] = qty;
+  });
+
+  return normalized;
+}
+
+function normalizeProductMetadata(value, fallback = {}) {
+  const raw = value && typeof value === "object" && !Array.isArray(value) ? value : {};
+  const fallbackSizes = normalizeTextList(fallback.sizes, ["Único"]);
+  const fallbackColors = normalizeTextList(fallback.colors, ["Único"]);
+  const sizes = normalizeTextList(raw.sizes, fallbackSizes.length ? fallbackSizes : ["Único"]);
+  const colors = normalizeTextList(raw.colors, fallbackColors.length ? fallbackColors : ["Único"]);
+  const variantStock = sanitizeVariantStockMap(raw.variantStock || raw.variant_stock, colors, sizes);
+
+  return {
+    sizes: sizes.length ? sizes : ["Único"],
+    colors: colors.length ? colors : ["Único"],
+    variantStock
+  };
+}
+
 function formatPriceLabelFromCents(priceCents) {
   const value = Math.max(0, Math.round(Number(priceCents || 0) / 100));
   return value.toLocaleString("pt-BR", {
@@ -137,7 +190,8 @@ function formatPriceLabelFromCents(priceCents) {
 
 function mapProduct(row) {
   const sku = String(row?.sku || "").trim();
-  const metadata = PRODUCT_METADATA[sku] || {};
+  const staticMetadata = PRODUCT_METADATA[sku] || {};
+  const metadata = normalizeProductMetadata(row?.metadata, staticMetadata);
   const priceValue = Math.max(0, Math.round(Number(row?.price_cents || 0) / 100));
 
   return {
@@ -145,20 +199,21 @@ function mapProduct(row) {
     sku,
     dbId: row.id,
     name: String(row?.name || sku),
-    nameEn: String(metadata.nameEn || row?.name || sku),
-    collection: String(metadata.collection || "Alicerce"),
-    category: String(metadata.category || "Coleção"),
-    material: String(metadata.material || "Material premium"),
-    sizes: Array.isArray(metadata.sizes) && metadata.sizes.length > 0 ? metadata.sizes : ["Único"],
-    colors: Array.isArray(metadata.colors) && metadata.colors.length > 0 ? metadata.colors : ["Único"],
-    gender: String(metadata.gender || "Unissex"),
+    nameEn: String(staticMetadata.nameEn || row?.name || sku),
+    collection: String(staticMetadata.collection || "Alicerce"),
+    category: String(staticMetadata.category || "Coleção"),
+    material: String(staticMetadata.material || "Material premium"),
+    sizes: metadata.sizes,
+    colors: metadata.colors,
+    variantStock: metadata.variantStock,
+    gender: String(staticMetadata.gender || "Unissex"),
     priceLabel: formatPriceLabelFromCents(row?.price_cents),
     priceValue,
     unitAmount: Math.max(0, Number(row?.price_cents || 0)),
     currency: String(row?.currency || "brl").toLowerCase(),
     stock: Math.max(0, Number(row?.stock_qty || 0)),
     active: Boolean(row?.active),
-    image: String(row?.image_url || metadata.image || DEFAULT_IMAGE),
+    image: String(row?.image_url || staticMetadata.image || DEFAULT_IMAGE),
     createdAt: row?.created_at || null,
     updatedAt: row?.updated_at || null,
     href: `produto.html?id=${encodeURIComponent(sku)}`
@@ -168,7 +223,7 @@ function mapProduct(row) {
 async function listProducts() {
   const result = await query(
     `
-    SELECT id, sku, name, price_cents, stock_qty, currency, active, image_url, created_at, updated_at
+    SELECT id, sku, name, price_cents, stock_qty, currency, active, image_url, metadata, created_at, updated_at
     FROM products
     WHERE active = true
     ORDER BY created_at DESC
@@ -196,7 +251,7 @@ async function listAdminProducts({ limit = 200, offset = 0, search = "", include
   const whereSql = conditions.length ? `WHERE ${conditions.join(" AND ")}` : "";
   const result = await query(
     `
-    SELECT id, sku, name, price_cents, stock_qty, currency, active, image_url, created_at, updated_at
+    SELECT id, sku, name, price_cents, stock_qty, currency, active, image_url, metadata, created_at, updated_at
     FROM products
     ${whereSql}
     ORDER BY created_at DESC
@@ -244,7 +299,7 @@ async function searchAdminProducts({
 
   const listResult = await query(
     `
-    SELECT id, sku, name, price_cents, stock_qty, currency, active, image_url, created_at, updated_at
+    SELECT id, sku, name, price_cents, stock_qty, currency, active, image_url, metadata, created_at, updated_at
     FROM products
     ${whereSql}
     ORDER BY updated_at DESC, created_at DESC
@@ -276,7 +331,7 @@ async function getProductByIdentifier(identifier) {
 
   const result = await query(
     `
-    SELECT id, sku, name, price_cents, stock_qty, currency, active, image_url, created_at, updated_at
+    SELECT id, sku, name, price_cents, stock_qty, currency, active, image_url, metadata, created_at, updated_at
     FROM products
     WHERE lower(sku) = lower($1)
        OR id::text = $1
@@ -297,19 +352,34 @@ function normalizeSku(value) {
     .replace(/[^a-z0-9-_]/g, "");
 }
 
+function buildPersistedMetadata(sku, input = {}) {
+  const base = PRODUCT_METADATA[String(sku || "").trim()] || {};
+  const normalized = normalizeProductMetadata(input, base);
+  return {
+    sizes: normalized.sizes,
+    colors: normalized.colors,
+    variantStock: normalized.variantStock
+  };
+}
+
 async function createProduct(payload = {}) {
   const sku = normalizeSku(payload.sku);
   if (!sku) return { error: "INVALID_SKU" };
+  const metadata = buildPersistedMetadata(sku, {
+    sizes: payload.sizes,
+    colors: payload.colors,
+    variantStock: payload.variantStock
+  });
 
   try {
     const result = await query(
       `
       INSERT INTO products (
-        sku, name, price_cents, stock_qty, currency, active, image_url
+        sku, name, price_cents, stock_qty, currency, active, image_url, metadata
       ) VALUES (
-        $1, $2, $3, $4, $5, $6, $7
+        $1, $2, $3, $4, $5, $6, $7, $8::jsonb
       )
-      RETURNING id, sku, name, price_cents, stock_qty, currency, active, image_url, created_at, updated_at
+      RETURNING id, sku, name, price_cents, stock_qty, currency, active, image_url, metadata, created_at, updated_at
       `,
       [
         sku,
@@ -318,7 +388,8 @@ async function createProduct(payload = {}) {
         Math.max(0, Math.floor(Number(payload.stockQty || 0))),
         String(payload.currency || "brl").trim().toLowerCase() || "brl",
         Boolean(payload.active !== false),
-        String(payload.imageUrl || "").trim() || null
+        String(payload.imageUrl || "").trim() || null,
+        JSON.stringify(metadata)
       ]
     );
 
@@ -337,6 +408,11 @@ async function updateProductByIdentifier(identifier, patch = {}) {
 
   const current = await getProductByIdentifier(normalized);
   if (!current) return null;
+  const metadata = buildPersistedMetadata(current.sku, {
+    sizes: patch.sizes ?? current.sizes,
+    colors: patch.colors ?? current.colors,
+    variantStock: patch.variantStock ?? current.variantStock
+  });
 
   const result = await query(
     `
@@ -348,10 +424,11 @@ async function updateProductByIdentifier(identifier, patch = {}) {
       currency = $5,
       active = $6,
       image_url = $7,
+      metadata = $8::jsonb,
       updated_at = NOW()
     WHERE id::text = $1
        OR lower(sku) = lower($1)
-    RETURNING id, sku, name, price_cents, stock_qty, currency, active, image_url, created_at, updated_at
+    RETURNING id, sku, name, price_cents, stock_qty, currency, active, image_url, metadata, created_at, updated_at
     `,
     [
       normalized,
@@ -360,7 +437,8 @@ async function updateProductByIdentifier(identifier, patch = {}) {
       Math.max(0, Math.floor(Number(patch.stockQty ?? current.stock ?? 0))),
       String(patch.currency ?? current.currency ?? "brl").trim().toLowerCase() || "brl",
       Boolean(patch.active ?? current.active),
-      String(patch.imageUrl ?? current.image ?? "").trim() || null
+      String(patch.imageUrl ?? current.image ?? "").trim() || null,
+      JSON.stringify(metadata)
     ]
   );
 
@@ -377,7 +455,7 @@ async function archiveProductByIdentifier(identifier) {
         updated_at = NOW()
     WHERE id::text = $1
        OR lower(sku) = lower($1)
-    RETURNING id, sku, name, price_cents, stock_qty, currency, active, image_url, created_at, updated_at
+    RETURNING id, sku, name, price_cents, stock_qty, currency, active, image_url, metadata, created_at, updated_at
     `,
     [normalized]
   );
@@ -394,7 +472,7 @@ async function deleteProductByIdentifier(identifier) {
       DELETE FROM products
       WHERE id::text = $1
          OR lower(sku) = lower($1)
-      RETURNING id, sku, name, price_cents, stock_qty, currency, active, image_url, created_at, updated_at
+      RETURNING id, sku, name, price_cents, stock_qty, currency, active, image_url, metadata, created_at, updated_at
       `,
       [normalized]
     );
@@ -410,14 +488,19 @@ async function deleteProductByIdentifier(identifier) {
 async function restoreProductFromSnapshot(snapshot = {}) {
   const sku = normalizeSku(snapshot.sku || snapshot.id || "");
   if (!sku) return { error: "INVALID_SNAPSHOT" };
+  const metadata = buildPersistedMetadata(sku, {
+    sizes: snapshot.sizes,
+    colors: snapshot.colors,
+    variantStock: snapshot.variantStock
+  });
 
   try {
     const result = await query(
       `
       INSERT INTO products (
-        sku, name, price_cents, stock_qty, currency, active, image_url, created_at, updated_at
+        sku, name, price_cents, stock_qty, currency, active, image_url, metadata, created_at, updated_at
       ) VALUES (
-        $1, $2, $3, $4, $5, $6, $7, COALESCE($8::timestamptz, NOW()), COALESCE($9::timestamptz, NOW())
+        $1, $2, $3, $4, $5, $6, $7, $8::jsonb, COALESCE($9::timestamptz, NOW()), COALESCE($10::timestamptz, NOW())
       )
       ON CONFLICT (sku) DO UPDATE
       SET
@@ -427,8 +510,9 @@ async function restoreProductFromSnapshot(snapshot = {}) {
         currency = EXCLUDED.currency,
         active = EXCLUDED.active,
         image_url = EXCLUDED.image_url,
+        metadata = EXCLUDED.metadata,
         updated_at = COALESCE(EXCLUDED.updated_at, NOW())
-      RETURNING id, sku, name, price_cents, stock_qty, currency, active, image_url, created_at, updated_at
+      RETURNING id, sku, name, price_cents, stock_qty, currency, active, image_url, metadata, created_at, updated_at
       `,
       [
         sku,
@@ -438,6 +522,7 @@ async function restoreProductFromSnapshot(snapshot = {}) {
         String(snapshot.currency || "brl").trim().toLowerCase() || "brl",
         Boolean(snapshot.active !== false),
         String(snapshot.image || snapshot.imageUrl || "").trim() || null,
+        JSON.stringify(metadata),
         snapshot.createdAt || null,
         snapshot.updatedAt || null
       ]

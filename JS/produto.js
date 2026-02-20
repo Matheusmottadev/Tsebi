@@ -311,8 +311,28 @@ function buildVariantStock(product) {
     });
   });
 
-  if (combinations.length === 0 || totalStock <= 0) {
-    return stockMap;
+  if (combinations.length === 0) {
+    return { stockMap, totalStock: 0 };
+  }
+
+  const persistedVariantStock =
+    product?.variantStock && typeof product.variantStock === "object" && !Array.isArray(product.variantStock)
+      ? product.variantStock
+      : {};
+
+  const persistedEntries = Object.entries(persistedVariantStock);
+  if (persistedEntries.length > 0) {
+    persistedEntries.forEach(([key, qty]) => {
+      const normalizedKey = String(key || "").trim();
+      if (!Object.prototype.hasOwnProperty.call(stockMap, normalizedKey)) return;
+      stockMap[normalizedKey] = Math.max(0, Math.floor(Number(qty || 0)));
+    });
+    const explicitTotal = Object.values(stockMap).reduce((sum, qty) => sum + Math.max(0, Number(qty || 0)), 0);
+    return { stockMap, totalStock: explicitTotal };
+  }
+
+  if (totalStock <= 0) {
+    return { stockMap, totalStock: 0 };
   }
 
   let remaining = totalStock;
@@ -324,7 +344,7 @@ function buildVariantStock(product) {
     index += 1;
   }
 
-  return stockMap;
+  return { stockMap, totalStock };
 }
 
 function createOptionButton(label, isSelected, isDisabled) {
@@ -432,8 +452,9 @@ if (!product) {
   const cartPopupSubtotal = document.getElementById("cartPopupSubtotal");
 
   const colorGalleries = buildProductGalleryByColor(product);
-  const stockMap = buildVariantStock(product);
-  let totalProductStock = Math.max(0, Number(product?.stock ?? product?.stock_qty ?? 0));
+  const variantStockState = buildVariantStock(product);
+  const stockMap = variantStockState.stockMap;
+  let totalProductStock = Math.max(0, Number(variantStockState.totalStock || 0));
 
   let selectedColor = product.colors[0] || "";
   let selectedSize = product.sizes[0] || "";

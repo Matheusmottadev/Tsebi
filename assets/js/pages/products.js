@@ -35,6 +35,64 @@ function buildDiff(before, after, labels) {
   return diffs;
 }
 
+function parseOptionsInput(value) {
+  return Array.from(
+    new Set(
+      String(value || "")
+        .split(/[\n,;]+/)
+        .map((entry) => String(entry || "").trim())
+        .filter(Boolean)
+    )
+  );
+}
+
+function formatOptionsInput(values) {
+  return Array.isArray(values) ? values.map((entry) => String(entry || "").trim()).filter(Boolean).join(", ") : "";
+}
+
+function parseVariantStockInput(value) {
+  const result = {};
+  const lines = String(value || "")
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter(Boolean);
+
+  lines.forEach((line) => {
+    const equalIdx = line.indexOf("=");
+    if (equalIdx <= 0) return;
+    const pair = line.slice(0, equalIdx).trim();
+    const qtyRaw = line.slice(equalIdx + 1).trim();
+    const qty = Math.max(0, Math.floor(Number(qtyRaw || 0)));
+    if (!pair) return;
+
+    const parts = pair.includes("|") ? pair.split("|") : pair.split("__");
+    if (parts.length !== 2) return;
+    const color = String(parts[0] || "").trim();
+    const size = String(parts[1] || "").trim();
+    if (!color || !size) return;
+
+    result[`${color}__${size}`] = qty;
+  });
+
+  return result;
+}
+
+function formatVariantStockInput(variantStock) {
+  const entries =
+    variantStock && typeof variantStock === "object" && !Array.isArray(variantStock)
+      ? Object.entries(variantStock)
+      : [];
+
+  return entries
+    .map(([key, qty]) => {
+      const parts = String(key || "").split("__");
+      if (parts.length !== 2) return "";
+      return `${parts[0]}|${parts[1]}=${Math.max(0, Math.floor(Number(qty || 0)))}`;
+    })
+    .filter(Boolean)
+    .join("\n");
+}
+
 export function createProductsPage({ mount, drawer, getStatusFilter, getStockFilter }) {
   const state = {
     query: "",
@@ -145,6 +203,9 @@ export function createProductsPage({ mount, drawer, getStatusFilter, getStockFil
       name: String(product.name || ""),
       priceCents: String(Number(product.unitAmount || 0)),
       stockQty: String(Number(product.stock || 0)),
+      sizesInput: formatOptionsInput(product.sizes || []),
+      colorsInput: formatOptionsInput(product.colors || []),
+      variantStockInput: formatVariantStockInput(product.variantStock || {}),
       currency: String(product.currency || "brl"),
       imageUrl: String(product.image || ""),
       active: Boolean(product.active)
@@ -166,6 +227,18 @@ export function createProductsPage({ mount, drawer, getStatusFilter, getStockFil
           <label class="label">
             <span>Estoque</span>
             <input class="field" data-key="stockQty" type="number" min="0" step="1" value="${escapeHtml(original.stockQty)}" />
+          </label>
+          <label class="label full">
+            <span>Cores (separadas por vírgula)</span>
+            <input class="field" data-key="colorsInput" type="text" value="${escapeHtml(original.colorsInput)}" placeholder="Preto, Branco, Marfim" />
+          </label>
+          <label class="label full">
+            <span>Tamanhos (separados por vírgula)</span>
+            <input class="field" data-key="sizesInput" type="text" value="${escapeHtml(original.sizesInput)}" placeholder="P, M, G, GG" />
+          </label>
+          <label class="label full">
+            <span>Estoque por variação (Cor|Tamanho=Qtd)</span>
+            <textarea class="field" data-key="variantStockInput" rows="4" placeholder="Preto|M=5&#10;Preto|G=2">${escapeHtml(original.variantStockInput)}</textarea>
           </label>
           <label class="label">
             <span>Moeda</span>
@@ -205,7 +278,7 @@ export function createProductsPage({ mount, drawer, getStatusFilter, getStockFil
 
     root.addEventListener("input", (event) => {
       const el = event.target;
-      if (!(el instanceof HTMLInputElement) && !(el instanceof HTMLSelectElement)) return;
+      if (!(el instanceof HTMLInputElement) && !(el instanceof HTMLSelectElement) && !(el instanceof HTMLTextAreaElement)) return;
       const key = String(el.dataset.key || "");
       if (!key) return;
       const current = el instanceof HTMLInputElement && el.type === "checkbox" ? String(el.checked) : String(el.value ?? "");
@@ -237,8 +310,13 @@ export function createProductsPage({ mount, drawer, getStatusFilter, getStockFil
         if (!key) return;
         let value = el instanceof HTMLInputElement && el.type === "checkbox" ? el.checked : el.value;
         if (key === "active") value = Boolean(value);
+        if (key === "sizesInput") value = parseOptionsInput(value);
+        if (key === "colorsInput") value = parseOptionsInput(value);
+        if (key === "variantStockInput") value = parseVariantStockInput(value);
         if (String(value ?? "") !== String(key === "active" ? Boolean(original.active) : original[key] ?? "")) {
-          patch[key] = value;
+          const targetKey =
+            key === "sizesInput" ? "sizes" : key === "colorsInput" ? "colors" : key === "variantStockInput" ? "variantStock" : key;
+          patch[targetKey] = value;
         }
       });
 
@@ -247,7 +325,19 @@ export function createProductsPage({ mount, drawer, getStatusFilter, getStockFil
         return;
       }
 
-      const preview = { ...original, ...patch };
+      const preview = {
+        ...original,
+        ...patch,
+        sizesInput: Object.prototype.hasOwnProperty.call(patch, "sizes")
+          ? formatOptionsInput(patch.sizes)
+          : original.sizesInput,
+        colorsInput: Object.prototype.hasOwnProperty.call(patch, "colors")
+          ? formatOptionsInput(patch.colors)
+          : original.colorsInput,
+        variantStockInput: Object.prototype.hasOwnProperty.call(patch, "variantStock")
+          ? formatVariantStockInput(patch.variantStock)
+          : original.variantStockInput
+      };
       const diffs = buildDiff(
         original,
         preview,
@@ -255,6 +345,9 @@ export function createProductsPage({ mount, drawer, getStatusFilter, getStockFil
           name: "Nome",
           priceCents: "Preço (centavos)",
           stockQty: "Estoque",
+          sizesInput: "Tamanhos",
+          colorsInput: "Cores",
+          variantStockInput: "Estoque por variação",
           currency: "Moeda",
           imageUrl: "Imagem (URL)",
           active: "Status ativo"
@@ -375,6 +468,9 @@ export function createProductsPage({ mount, drawer, getStatusFilter, getStockFil
             <label class="label full"><span>Nome</span><input class="field" data-key="name" type="text" /></label>
             <label class="label"><span>Preço (centavos)</span><input class="field" data-key="priceCents" type="number" min="0" step="1" /></label>
             <label class="label"><span>Estoque</span><input class="field" data-key="stockQty" type="number" min="0" step="1" /></label>
+            <label class="label full"><span>Cores (separadas por vírgula)</span><input class="field" data-key="colorsInput" type="text" placeholder="Preto, Branco, Marfim" /></label>
+            <label class="label full"><span>Tamanhos (separados por vírgula)</span><input class="field" data-key="sizesInput" type="text" placeholder="P, M, G, GG" /></label>
+            <label class="label full"><span>Estoque por variação (Cor|Tamanho=Qtd)</span><textarea class="field" data-key="variantStockInput" rows="4" placeholder="Preto|M=5&#10;Preto|G=2"></textarea></label>
             <label class="label"><span>Moeda</span><input class="field" data-key="currency" type="text" value="brl" /></label>
             <label class="label"><span>Status</span>
               <select class="field" data-key="active">
@@ -408,7 +504,12 @@ export function createProductsPage({ mount, drawer, getStatusFilter, getStockFil
           let value = el.value;
           if (key === "active") value = value === "true";
           if (key === "priceCents" || key === "stockQty") value = Number(value || 0);
-          payload[key] = value;
+          if (key === "sizesInput") value = parseOptionsInput(value);
+          if (key === "colorsInput") value = parseOptionsInput(value);
+          if (key === "variantStockInput") value = parseVariantStockInput(value);
+          const targetKey =
+            key === "sizesInput" ? "sizes" : key === "colorsInput" ? "colors" : key === "variantStockInput" ? "variantStock" : key;
+          payload[targetKey] = value;
         });
 
         try {
