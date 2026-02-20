@@ -79,6 +79,37 @@ const colorMapEn = {
   "Off white": "Off-white"
 };
 
+const colorSwatchMap = {
+  branco: "#f7f7f2",
+  white: "#f7f7f2",
+  azul: "#355f9a",
+  blue: "#355f9a",
+  preto: "#121212",
+  black: "#121212",
+  grafite: "#4d4f53",
+  graphite: "#4d4f53",
+  marfim: "#f4ecdf",
+  ivory: "#f4ecdf",
+  caramelo: "#a4693f",
+  caramel: "#a4693f",
+  vinho: "#6f1f36",
+  wine: "#6f1f36",
+  areia: "#d6c3a2",
+  sand: "#d6c3a2",
+  vermelho: "#b2282f",
+  red: "#b2282f",
+  oliva: "#667247",
+  olive: "#667247",
+  cinza: "#8d8f95",
+  gray: "#8d8f95",
+  grey: "#8d8f95",
+  "off white": "#f5f2ea",
+  "off-white": "#f5f2ea",
+  unico: "#d3d3d3",
+  "único": "#d3d3d3",
+  unique: "#d3d3d3"
+};
+
 const collectionMapEn = {
   "Gênesis": "Genesis",
   "Alicerce": "Alicerce"
@@ -96,6 +127,11 @@ function tProductName(itemOrId, fallback) {
 function tColor(color) {
   if (!isEnglish) return color || "";
   return colorMapEn[color] || color || "";
+}
+
+function getColorSwatchHex(color) {
+  const key = String(color || "").trim().toLowerCase();
+  return colorSwatchMap[key] || "#b5b5b5";
 }
 
 function tCollection(collection) {
@@ -776,7 +812,10 @@ if (!product) {
           <img class="cart-popup-image" src="${item.image}" alt="${item.name}" />
           <div class="cart-popup-info">
             <h3>${tProductName(item.id, item.name)}</h3>
-            <p>${isEnglish ? "Color" : "Cor"}: ${tColor(item.color || "-")}</p>
+            <p class="cart-popup-variant">
+              <span class="cart-popup-color-dot" style="background-color:${getColorSwatchHex(item.color)}"></span>
+              <span>${isEnglish ? "Color" : "Cor"}</span>
+            </p>
             <p>${isEnglish ? "Size" : "Tamanho"}: ${tSize(item.size || "-")}</p>
             <p>${isEnglish ? "Qty" : "Qtd"}: ${qty}</p>
             <strong>${item.priceLabel}</strong>

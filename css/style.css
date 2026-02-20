@@ -3376,6 +3376,20 @@ body.newsletter-popup-open{
   margin-bottom: 4px;
 }
 
+.cart-popup-variant{
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.cart-popup-color-dot{
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  border: 1px solid #cacaca;
+  flex: 0 0 12px;
+}
+
 .cart-popup-info strong{
   display: block;
   margin-top: 10px;

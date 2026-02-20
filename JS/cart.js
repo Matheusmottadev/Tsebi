@@ -255,6 +255,28 @@ function formatCurrency(value) {
   return Number(value || 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 }
 
+const COLOR_SWATCH_MAP = {
+  branco: "#f7f7f2",
+  azul: "#355f9a",
+  preto: "#121212",
+  grafite: "#4d4f53",
+  marfim: "#f4ecdf",
+  caramelo: "#a4693f",
+  vinho: "#6f1f36",
+  areia: "#d6c3a2",
+  vermelho: "#b2282f",
+  oliva: "#667247",
+  cinza: "#8d8f95",
+  "off white": "#f5f2ea",
+  unico: "#d3d3d3",
+  "único": "#d3d3d3"
+};
+
+function resolveColorSwatch(colorName) {
+  const key = String(colorName || "").trim().toLowerCase();
+  return COLOR_SWATCH_MAP[key] || "#b5b5b5";
+}
+
 function getInstallmentsTotal() {
   return Math.max(0, Number(getSummaryTotal() || 0));
 }
@@ -637,7 +659,17 @@ function renderCartItems() {
     price.textContent = safePriceLabel;
 
     const variant = document.createElement("p");
-    variant.textContent = `${safeColor} / ${safeSize}`;
+    variant.className = "cart-item-variant";
+
+    const dot = document.createElement("span");
+    dot.className = "cart-color-dot";
+    dot.style.backgroundColor = resolveColorSwatch(safeColor);
+    dot.setAttribute("aria-hidden", "true");
+
+    const size = document.createElement("span");
+    size.textContent = safeSize;
+
+    variant.append(dot, size);
 
     const controls = document.createElement("div");
     controls.className = "cart-item-controls";
