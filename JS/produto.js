@@ -155,7 +155,10 @@ function getColorSwatchHex(color) {
     .toLowerCase()
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "");
-  return colorSwatchMap[key] || "#b5b5b5";
+  if (colorSwatchMap[key]) return colorSwatchMap[key];
+
+  const match = Object.keys(colorSwatchMap).find((name) => key.includes(name));
+  return match ? colorSwatchMap[match] : "#b5b5b5";
 }
 
 function tCollection(collection) {
@@ -344,15 +347,34 @@ function buildVariantStock(product) {
       ? product.variantStock
       : {};
 
-  const persistedEntries = Object.entries(persistedVariantStock);
+  const persistedEntries = Object.entries(persistedVariantStock).filter(([key]) =>
+    Object.prototype.hasOwnProperty.call(stockMap, String(key || "").trim())
+  );
   if (persistedEntries.length > 0) {
+    const providedKeys = new Set();
     persistedEntries.forEach(([key, qty]) => {
       const normalizedKey = String(key || "").trim();
       if (!Object.prototype.hasOwnProperty.call(stockMap, normalizedKey)) return;
+      providedKeys.add(normalizedKey);
       stockMap[normalizedKey] = Math.max(0, Math.floor(Number(qty || 0)));
     });
-    const explicitTotal = Object.values(stockMap).reduce((sum, qty) => sum + Math.max(0, Number(qty || 0)), 0);
-    return { stockMap, totalStock: explicitTotal };
+    let explicitTotal = Object.values(stockMap).reduce((sum, qty) => sum + Math.max(0, Number(qty || 0)), 0);
+
+    // If user filled only part of the grid, distribute remaining stock across missing variants.
+    if (totalStock > explicitTotal) {
+      const missingKeys = combinations.filter((key) => !providedKeys.has(key));
+      let remaining = totalStock - explicitTotal;
+      let index = 0;
+      while (remaining > 0 && missingKeys.length > 0) {
+        const key = missingKeys[index % missingKeys.length];
+        stockMap[key] += 1;
+        remaining -= 1;
+        index += 1;
+      }
+      explicitTotal = Object.values(stockMap).reduce((sum, qty) => sum + Math.max(0, Number(qty || 0)), 0);
+    }
+
+    return { stockMap, totalStock: Math.max(explicitTotal, totalStock) };
   }
 
   if (totalStock <= 0) {

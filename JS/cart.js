@@ -289,7 +289,9 @@ function resolveColorSwatch(colorName) {
     .toLowerCase()
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "");
-  return COLOR_SWATCH_MAP[key] || "#b5b5b5";
+  if (COLOR_SWATCH_MAP[key]) return COLOR_SWATCH_MAP[key];
+  const match = Object.keys(COLOR_SWATCH_MAP).find((name) => key.includes(name));
+  return match ? COLOR_SWATCH_MAP[match] : "#b5b5b5";
 }
 
 function getInstallmentsTotal() {
