@@ -93,6 +93,14 @@ function formatVariantStockInput(variantStock) {
     .join("\n");
 }
 
+function sumVariantStock(variantStock) {
+  const entries =
+    variantStock && typeof variantStock === "object" && !Array.isArray(variantStock)
+      ? Object.values(variantStock)
+      : [];
+  return entries.reduce((sum, qty) => sum + Math.max(0, Math.floor(Number(qty || 0))), 0);
+}
+
 export function createProductsPage({ mount, drawer, getStatusFilter, getStockFilter }) {
   const state = {
     query: "",
@@ -325,6 +333,10 @@ export function createProductsPage({ mount, drawer, getStatusFilter, getStockFil
         return;
       }
 
+      if (Object.prototype.hasOwnProperty.call(patch, "variantStock")) {
+        patch.stockQty = sumVariantStock(patch.variantStock);
+      }
+
       const preview = {
         ...original,
         ...patch,
@@ -511,6 +523,10 @@ export function createProductsPage({ mount, drawer, getStatusFilter, getStockFil
             key === "sizesInput" ? "sizes" : key === "colorsInput" ? "colors" : key === "variantStockInput" ? "variantStock" : key;
           payload[targetKey] = value;
         });
+
+        if (Object.prototype.hasOwnProperty.call(payload, "variantStock")) {
+          payload.stockQty = sumVariantStock(payload.variantStock);
+        }
 
         try {
           await api("/api/admin/products", { method: "POST", json: payload });
