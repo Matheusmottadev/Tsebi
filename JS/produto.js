@@ -342,6 +342,28 @@ function createOptionButton(label, isSelected, isDisabled) {
   return button;
 }
 
+function createColorOptionButton(color, isSelected, isDisabled) {
+  const button = document.createElement("button");
+  button.type = "button";
+  button.className = "product-variant-option product-color-option";
+  button.setAttribute("aria-label", tColor(color));
+  button.title = tColor(color);
+
+  const dot = document.createElement("span");
+  dot.className = "product-color-dot";
+  dot.style.backgroundColor = getColorSwatchHex(color);
+  dot.setAttribute("aria-hidden", "true");
+  button.appendChild(dot);
+
+  if (isSelected) button.classList.add("is-selected");
+  if (isDisabled) {
+    button.classList.add("is-disabled");
+    button.disabled = true;
+  }
+
+  return button;
+}
+
 const params = new URLSearchParams(window.location.search);
 const productId = params.get("id");
 const returnTo = params.get("returnTo");
@@ -535,8 +557,7 @@ if (!product) {
 
     product.colors.forEach((color) => {
       const disabled = !isColorAvailable(color, selectedSize);
-      const button = createOptionButton(tColor(color), selectedColor === color, disabled);
-      button.classList.add("product-color-option");
+      const button = createColorOptionButton(color, selectedColor === color, disabled);
       button.addEventListener("click", () => {
         selectedColor = color;
         if (!isSizeAvailable(selectedSize, selectedColor)) {
