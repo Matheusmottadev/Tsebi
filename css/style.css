@@ -4464,3 +4464,33 @@ body.home-page .home-header:not(.is-scrolled):focus-within .logo-center-image {
   display: none !important;
   opacity: 0;
 }
+
+/* Non-home pages: header always visible on screen */
+body:not(.home-page) .home-header {
+  position: fixed;
+  top: 38px;
+  left: 0;
+  right: 0;
+  width: 100%;
+  background: #fff !important;
+  border-bottom: 1px solid #ececec !important;
+  box-shadow: none;
+}
+
+body:not(.home-page) .home-header .header-left,
+body:not(.home-page) .home-header .header-right {
+  opacity: 1 !important;
+  transform: translateY(0) !important;
+  pointer-events: auto !important;
+}
+
+body:not(.home-page) .home-header .logo-center-text {
+  display: inline-block !important;
+  color: #111 !important;
+  opacity: 1 !important;
+}
+
+body:not(.home-page) .home-header .logo-center-image {
+  display: none !important;
+  opacity: 0 !important;
+}
