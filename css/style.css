@@ -4422,30 +4422,39 @@ body.newsletter-popup-open{
   pointer-events: auto;
 }
 
-/* Transparent only on homepage before scroll */
-body.home-page .home-header:not(.is-scrolled) {
+/* Transparent only on homepage before scroll and without hover/focus */
+body.home-page .home-header:not(.is-scrolled):not(:hover):not(:focus-within) {
   background: transparent;
   border-bottom-color: transparent;
 }
 
-body.home-page .home-header:not(.is-scrolled) .logo-center-text {
+body.home-page .home-header:not(.is-scrolled):not(:hover):not(:focus-within) .logo-center-text {
   display: inline-block !important;
   color: #fff;
   opacity: 1;
 }
 
-body.home-page .home-header:not(.is-scrolled) .logo-center-image {
+body.home-page .home-header:not(.is-scrolled):not(:hover):not(:focus-within) .logo-center-image {
   display: none !important;
   opacity: 0;
 }
 
-body.home-page .home-header:not(.is-scrolled) .header-left,
-body.home-page .home-header:not(.is-scrolled) .header-right,
-body.home-page .home-header:not(.is-scrolled):hover .header-left,
-body.home-page .home-header:not(.is-scrolled):hover .header-right,
-body.home-page .home-header:not(.is-scrolled):focus-within .header-left,
-body.home-page .home-header:not(.is-scrolled):focus-within .header-right {
+body.home-page .home-header:not(.is-scrolled):not(:hover):not(:focus-within) .header-left,
+body.home-page .home-header:not(.is-scrolled):not(:hover):not(:focus-within) .header-right {
   opacity: 0;
   transform: translateY(-12px);
   pointer-events: none;
+}
+
+body.home-page .home-header:not(.is-scrolled):hover .logo-center-text,
+body.home-page .home-header:not(.is-scrolled):focus-within .logo-center-text {
+  display: inline-block !important;
+  color: #111;
+  opacity: 1;
+}
+
+body.home-page .home-header:not(.is-scrolled):hover .logo-center-image,
+body.home-page .home-header:not(.is-scrolled):focus-within .logo-center-image {
+  display: none !important;
+  opacity: 0;
 }
