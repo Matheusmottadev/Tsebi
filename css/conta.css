@@ -74,9 +74,9 @@ body.conta-page > .cart-simple-header {
 
 .conta-hero-banner {
   position: relative;
-  width: 100vw;
-  margin-left: calc(50% - 50vw);
-  margin-right: calc(50% - 50vw);
+  width: calc(100vw + 48px);
+  margin-left: calc(50% - 50vw - 24px);
+  margin-right: calc(50% - 50vw - 24px);
   height: 220px;
   background-size: cover;
   background-position: center;
@@ -92,9 +92,10 @@ body.conta-page > .cart-simple-header {
 
 .conta-avatar {
   position: absolute;
-  top: 0;
+  top: auto;
+  bottom: 0;
   left: 50%;
-  transform: translate(-50%, -50%);
+  transform: translate(-50%, 50%);
   z-index: 2;
   width: 80px;
   height: 80px;
@@ -111,7 +112,7 @@ body.conta-page > .cart-simple-header {
 }
 
 .conta-client-title {
-  margin-top: 44px;
+  margin-top: 56px;
   font-size: 12px;
   text-transform: uppercase;
   letter-spacing: 1px;
@@ -319,6 +320,9 @@ body.conta-page > .cart-simple-header {
   }
 
   .conta-hero-banner {
+    width: calc(100vw + 20px);
+    margin-left: calc(50% - 50vw - 10px);
+    margin-right: calc(50% - 50vw - 10px);
     height: 160px;
     border-radius: 0;
   }
@@ -326,8 +330,14 @@ body.conta-page > .cart-simple-header {
   .conta-avatar {
     width: 60px;
     height: 60px;
-    transform: translate(-50%, -50%);
+    top: auto;
+    bottom: 0;
+    transform: translate(-50%, 50%);
     font-size: 18px;
+  }
+
+  .conta-client-title {
+    margin-top: 44px;
   }
 
   .conta-client-name {
