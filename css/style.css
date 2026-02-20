@@ -266,11 +266,6 @@ nav a:hover { opacity: 0.6; }
   box-shadow: none;
 }
 
-/* Temporary: hide header on home page */
-body > header.home-header {
-  display: none;
-}
-
 /* Ensure the new layout keeps transparency before hover/scroll */
 .home-header:not(.is-scrolled):not(:hover):not(:focus-within){
   background: transparent;
