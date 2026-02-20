@@ -536,6 +536,17 @@ if (!product) {
     return product.colors.find((color) => getStock(color, size) > 0) || "";
   }
 
+  function getFirstAvailableVariant() {
+    for (const color of product.colors) {
+      for (const size of product.sizes) {
+        if (getStock(color, size) > 0) {
+          return { color, size };
+        }
+      }
+    }
+    return { color: "", size: "" };
+  }
+
   function renderGallery(images) {
     if (!productMediaTrack || !productMediaDots) return;
 
@@ -692,6 +703,12 @@ if (!product) {
   }
 
   function syncProductState() {
+    if (!isColorAvailable(selectedColor, selectedSize) || !isSizeAvailable(selectedSize, selectedColor)) {
+      const fallback = getFirstAvailableVariant();
+      selectedColor = fallback.color || selectedColor;
+      selectedSize = fallback.size || selectedSize;
+    }
+
     const gallery = colorGalleries[selectedColor] || [product.image];
     renderGallery(gallery);
     renderVariantOptions();
