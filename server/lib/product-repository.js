@@ -155,9 +155,17 @@ function sanitizeVariantStockMap(value, validColors = [], validSizes = []) {
   const normalized = {};
   Object.entries(value).forEach(([rawKey, rawQty]) => {
     const key = String(rawKey || "").trim();
-    if (!key || !allowedPairs.has(key)) return;
+    if (!key) return;
+
+    const splitByPipe = key.includes("|") ? key.split("|") : [];
+    const canonicalKey =
+      splitByPipe.length === 2
+        ? `${String(splitByPipe[0] || "").trim()}__${String(splitByPipe[1] || "").trim()}`
+        : key;
+
+    if (!canonicalKey || !allowedPairs.has(canonicalKey)) return;
     const qty = Math.max(0, Math.floor(Number(rawQty || 0)));
-    normalized[key] = qty;
+    normalized[canonicalKey] = qty;
   });
 
   return normalized;
@@ -167,8 +175,30 @@ function normalizeProductMetadata(value, fallback = {}) {
   const raw = value && typeof value === "object" && !Array.isArray(value) ? value : {};
   const fallbackSizes = normalizeTextList(fallback.sizes, ["Único"]);
   const fallbackColors = normalizeTextList(fallback.colors, ["Único"]);
-  let sizes = normalizeTextList(raw.sizes, fallbackSizes.length ? fallbackSizes : ["Único"]);
-  let colors = normalizeTextList(raw.colors, fallbackColors.length ? fallbackColors : ["Único"]);
+  const rawVariantStock =
+    raw.variantStock && typeof raw.variantStock === "object" && !Array.isArray(raw.variantStock) ? raw.variantStock : {};
+
+  const extractedColors = [];
+  const extractedSizes = [];
+  Object.keys(rawVariantStock).forEach((rawKey) => {
+    const key = String(rawKey || "").trim();
+    if (!key) return;
+    const parts = key.includes("__") ? key.split("__") : key.includes("|") ? key.split("|") : [];
+    if (parts.length !== 2) return;
+    const color = String(parts[0] || "").trim();
+    const size = String(parts[1] || "").trim();
+    if (color) extractedColors.push(color);
+    if (size) extractedSizes.push(size);
+  });
+
+  let sizes = normalizeTextList(
+    [...normalizeTextList(raw.sizes, []), ...normalizeTextList(extractedSizes, [])],
+    fallbackSizes.length ? fallbackSizes : ["Único"]
+  );
+  let colors = normalizeTextList(
+    [...normalizeTextList(raw.colors, []), ...normalizeTextList(extractedColors, [])],
+    fallbackColors.length ? fallbackColors : ["Único"]
+  );
   let variantStock = sanitizeVariantStockMap(raw.variantStock || raw.variant_stock, colors, sizes);
 
   const looksLikeLegacyBlackOnly =
@@ -441,6 +471,14 @@ function buildPersistedMetadata(sku, input = {}) {
   };
 }
 
+function sumVariantStock(metadata) {
+  const map =
+    metadata?.variantStock && typeof metadata.variantStock === "object" && !Array.isArray(metadata.variantStock)
+      ? metadata.variantStock
+      : {};
+  return Object.values(map).reduce((sum, qty) => sum + Math.max(0, Math.floor(Number(qty || 0))), 0);
+}
+
 async function createProduct(payload = {}) {
   const sku = normalizeSku(payload.sku);
   if (!sku) return { error: "INVALID_SKU" };
@@ -449,12 +487,17 @@ async function createProduct(payload = {}) {
     colors: payload.colors,
     variantStock: payload.variantStock
   });
+  const variantStockTotal = sumVariantStock(metadata);
+  const resolvedStockQty =
+    Object.prototype.hasOwnProperty.call(payload, "stockQty") && payload.stockQty != null
+      ? Math.max(0, Math.floor(Number(payload.stockQty || 0)))
+      : variantStockTotal;
 
   const paramsWithMetadata = [
     sku,
     String(payload.name || sku).trim(),
     Math.max(0, Math.round(Number(payload.priceCents || 0))),
-    Math.max(0, Math.floor(Number(payload.stockQty || 0))),
+    resolvedStockQty,
     String(payload.currency || "brl").trim().toLowerCase() || "brl",
     Boolean(payload.active !== false),
     String(payload.imageUrl || "").trim() || null,
@@ -504,12 +547,19 @@ async function updateProductByIdentifier(identifier, patch = {}) {
     colors: patch.colors ?? current.colors,
     variantStock: patch.variantStock ?? current.variantStock
   });
+  const variantStockTotal = sumVariantStock(metadata);
+  const resolvedStockQty =
+    Object.prototype.hasOwnProperty.call(patch, "stockQty") && patch.stockQty != null
+      ? Math.max(0, Math.floor(Number(patch.stockQty || 0)))
+      : variantStockTotal > 0
+        ? variantStockTotal
+        : Math.max(0, Math.floor(Number(current.stock ?? 0)));
 
   const paramsWithMetadata = [
     normalized,
     String(patch.name ?? current.name ?? current.sku).trim(),
     Math.max(0, Math.round(Number(patch.priceCents ?? current.unitAmount ?? 0))),
-    Math.max(0, Math.floor(Number(patch.stockQty ?? current.stock ?? 0))),
+    resolvedStockQty,
     String(patch.currency ?? current.currency ?? "brl").trim().toLowerCase() || "brl",
     Boolean(patch.active ?? current.active),
     String(patch.imageUrl ?? current.image ?? "").trim() || null,
