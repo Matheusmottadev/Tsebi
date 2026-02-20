@@ -1387,12 +1387,11 @@ function initAlicerceScrollSnap() {
     lastSnapAt = Date.now();
     section.scrollIntoView({ behavior: "smooth", block: "start" });
 
-    // Small follow-up correction to make the snap feel stronger.
+    // Fine-tune down so the section lands in the visual sweet spot.
     window.setTimeout(() => {
-      const topOffset = Math.abs(section.getBoundingClientRect().top);
-      if (topOffset > 10) {
-        section.scrollIntoView({ behavior: "auto", block: "start" });
-      }
+      const viewportH = window.innerHeight || 0;
+      const fineTuneDown = Math.round(Math.min(120, Math.max(56, viewportH * 0.1)));
+      window.scrollBy({ top: fineTuneDown, behavior: "auto" });
       isSnapping = false;
     }, 420);
   }
