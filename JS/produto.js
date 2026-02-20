@@ -90,19 +90,37 @@ const colorSwatchMap = {
   graphite: "#4d4f53",
   marfim: "#f4ecdf",
   ivory: "#f4ecdf",
+  bege: "#d9c3a4",
+  beige: "#d9c3a4",
   caramelo: "#a4693f",
   caramel: "#a4693f",
+  marrom: "#6f4e37",
+  brown: "#6f4e37",
   vinho: "#6f1f36",
   wine: "#6f1f36",
   areia: "#d6c3a2",
   sand: "#d6c3a2",
   vermelho: "#b2282f",
   red: "#b2282f",
+  amarelo: "#d4af37",
+  yellow: "#d4af37",
+  verde: "#2f6b3f",
+  green: "#2f6b3f",
   oliva: "#667247",
   olive: "#667247",
   cinza: "#8d8f95",
   gray: "#8d8f95",
   grey: "#8d8f95",
+  rosa: "#d47fa6",
+  pink: "#d47fa6",
+  laranja: "#d67a2e",
+  orange: "#d67a2e",
+  roxo: "#6e4c8f",
+  purple: "#6e4c8f",
+  dourado: "#b08a2e",
+  gold: "#b08a2e",
+  prata: "#b1b3b8",
+  silver: "#b1b3b8",
   "off white": "#f5f2ea",
   "off-white": "#f5f2ea",
   unico: "#d3d3d3",
@@ -130,7 +148,13 @@ function tColor(color) {
 }
 
 function getColorSwatchHex(color) {
-  const key = String(color || "").trim().toLowerCase();
+  const raw = String(color || "").trim();
+  if (/^#([0-9a-f]{3}|[0-9a-f]{6})$/i.test(raw)) return raw;
+  if (/^(rgb|rgba|hsl|hsla)\(/i.test(raw)) return raw;
+  const key = raw
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "");
   return colorSwatchMap[key] || "#b5b5b5";
 }
 

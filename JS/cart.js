@@ -261,19 +261,34 @@ const COLOR_SWATCH_MAP = {
   preto: "#121212",
   grafite: "#4d4f53",
   marfim: "#f4ecdf",
+  bege: "#d9c3a4",
   caramelo: "#a4693f",
+  marrom: "#6f4e37",
   vinho: "#6f1f36",
   areia: "#d6c3a2",
   vermelho: "#b2282f",
+  amarelo: "#d4af37",
+  verde: "#2f6b3f",
   oliva: "#667247",
   cinza: "#8d8f95",
+  rosa: "#d47fa6",
+  laranja: "#d67a2e",
+  roxo: "#6e4c8f",
+  dourado: "#b08a2e",
+  prata: "#b1b3b8",
   "off white": "#f5f2ea",
   unico: "#d3d3d3",
   "único": "#d3d3d3"
 };
 
 function resolveColorSwatch(colorName) {
-  const key = String(colorName || "").trim().toLowerCase();
+  const raw = String(colorName || "").trim();
+  if (/^#([0-9a-f]{3}|[0-9a-f]{6})$/i.test(raw)) return raw;
+  if (/^(rgb|rgba|hsl|hsla)\(/i.test(raw)) return raw;
+  const key = raw
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "");
   return COLOR_SWATCH_MAP[key] || "#b5b5b5";
 }
 
