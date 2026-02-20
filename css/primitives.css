@@ -74,6 +74,11 @@ h6 {
   grid-template-columns: 1fr;
 }
 
+.t-grid--4 {
+  column-gap: var(--t-space-6);
+  row-gap: var(--t-space-7);
+}
+
 @media (min-width: 640px) {
   .t-grid--4,
   .t-grid--2 {
