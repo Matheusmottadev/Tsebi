@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8" />
@@ -9,160 +9,401 @@
   <link rel="icon" type="image/png" href="/images/logo-tsebi.png?v=20260219c" />
   <link rel="shortcut icon" href="/images/logo-tsebi.png?v=20260219c" />
   <link rel="apple-touch-icon" href="/images/logo-tsebi.png?v=20260219c" />
-  <title>Entrar | Tsebi Brasil</title>
-  <!-- SEO META START -->
-  <meta name="description" content="Acesso a conta do cliente Tsebi." />
+  <title>Minha Conta | Tsebi Brasil</title>
+  <meta name="description" content="Área exclusiva da conta Tsebi." />
   <meta name="robots" content="noindex,nofollow" />
   <link rel="canonical" href="https://tsebi.com.br/conta.html" />
   <meta property="og:locale" content="pt_BR" />
   <meta property="og:type" content="website" />
-  <meta property="og:title" content="Entrar | Tsebi Brasil" />
-  <meta property="og:description" content="Acesso a conta do cliente Tsebi." />
+  <meta property="og:title" content="Minha Conta | Tsebi Brasil" />
+  <meta property="og:description" content="Área exclusiva da conta Tsebi." />
   <meta property="og:url" content="https://tsebi.com.br/conta.html" />
   <meta property="og:site_name" content="Tsebi Brasil" />
   <meta property="og:image" content="https://tsebi.com.br/images/logo-tsebi.png" />
   <meta name="twitter:card" content="summary_large_image" />
-  <meta name="twitter:title" content="Entrar | Tsebi Brasil" />
-  <meta name="twitter:description" content="Acesso a conta do cliente Tsebi." />
+  <meta name="twitter:title" content="Minha Conta | Tsebi Brasil" />
+  <meta name="twitter:description" content="Área exclusiva da conta Tsebi." />
   <meta name="twitter:image" content="https://tsebi.com.br/images/logo-tsebi.png" />
-  <!-- SEO META END -->
+
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600&family=Montserrat:wght@300;400;500;600&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="css/style.css?v=20260217f" />
-  <link rel="stylesheet" href="css/account-auth.css?v=20260220a" />
+  <link rel="stylesheet" href="css/style.css?v=20260220d" />
+  <link rel="stylesheet" href="css/conta.css?v=20260220a" />
 </head>
-<body class="account-auth-page">
+<body>
   <header class="cart-simple-header">
     <a class="cart-simple-logo" href="index.html">TSEBI</a>
     <nav class="cart-simple-actions">
-      <a href="index.html">Voltar a loja</a>
+      <a href="index.html">Voltar à loja</a>
       <a href="cart.html">Carrinho</a>
     </nav>
   </header>
 
-  <main class="account-auth-main">
-    <section class="account-auth-card">
-      <p class="account-auth-kicker">Conta Tsebi</p>
-      <h1>Acesse sua conta</h1>
+  <nav class="conta-subnav" aria-label="Navegação da conta">
+    <a href="#" class="is-active">Visão Geral</a>
+    <a href="#card-profile">Meu Perfil</a>
+    <a href="#card-orders">Meus Pedidos</a>
+    <a href="#card-private">Atendimentos Privados</a>
+    <a href="#card-recommendations">Recomendações</a>
+    <a href="#card-wishlist">Lista de Desejos</a>
+    <a href="#card-repairs">Serviço de Reparos</a>
+  </nav>
 
-      <section class="account-auth-panel is-active" id="authPanelEmail">
-        <form id="emailCheckForm" class="account-auth-form" novalidate>
-          <label>
-            <span>E-mail</span>
-            <input type="email" id="emailCheckInput" required autocomplete="email" />
-          </label>
-          <button type="submit" class="account-auth-submit">Continuar</button>
-        </form>
-      </section>
+  <main class="conta-wrap">
+    <section class="conta-hero">
+      <div class="conta-hero-banner" style="background-image:url('images/popup.jpg')">
+        <div class="conta-hero-overlay"></div>
+      </div>
 
-      <section class="account-auth-panel" id="authPanelLogin" hidden>
-        <p class="account-auth-flow-note">Conta encontrada para <strong id="detectedEmailLogin"></strong></p>
-        <form id="loginForm" class="account-auth-form" novalidate>
-          <label>
-            <span>Senha</span>
-            <input type="password" id="loginPassword" required minlength="8" autocomplete="current-password" />
-          </label>
-          <label id="loginCodeField" hidden>
-            <span>Codigo do e-mail</span>
-            <input type="text" id="loginEmailCode" inputmode="numeric" maxlength="6" autocomplete="one-time-code" />
-          </label>
-          <button type="submit" class="account-auth-submit">Entrar</button>
-        </form>
-        <button type="button" id="resendLoginCodeBtn" class="account-auth-link" hidden>Reenviar codigo</button>
-        <a id="forgotPasswordBtn" class="account-auth-link" href="recuperar-senha.html">Esqueci minha senha</a>
-        <button type="button" id="changeEmailFromLogin" class="account-auth-link">Usar outro e-mail</button>
-      </section>
-
-      <section class="account-auth-panel" id="authPanelRegister" hidden>
-        <p class="account-auth-flow-note">Criar nova conta para <strong id="detectedEmailRegister"></strong></p>
-        <form id="registerForm" class="account-auth-form" novalidate>
-          <div class="account-auth-grid">
-            <label>
-              <span>Título</span>
-              <select id="registerTitle" required autocomplete="honorific-prefix">
-                <option value="sr">Sr.</option>
-                <option value="sra">Sra.</option>
-                <option value="srta">Srta.</option>
-                <option value="nao_informar">Prefiro não responder</option>
-              </select>
-            </label>
-            <label class="account-auth-grid-full">
-              <span>Nome completo</span>
-              <input type="text" id="registerName" required minlength="2" autocomplete="name" />
-            </label>
-            <label>
-              <span>Data de nascimento</span>
-              <input type="date" id="registerBirthDate" required autocomplete="bday" />
-            </label>
-            <label>
-              <span>CPF</span>
-              <input type="text" id="registerCpf" required inputmode="numeric" maxlength="14" autocomplete="off" />
-            </label>
-            <label>
-              <span>CEP</span>
-              <input type="text" id="registerCep" required inputmode="numeric" maxlength="9" autocomplete="postal-code" />
-            </label>
-            <label>
-              <span>Telefone</span>
-              <input type="tel" id="registerPhone" inputmode="numeric" maxlength="16" autocomplete="tel" />
-            </label>
-            <label class="account-auth-grid-full">
-              <span>Senha</span>
-              <input type="password" id="registerPassword" required minlength="8" autocomplete="new-password" />
-            </label>
-            <label class="account-auth-grid-full">
-              <span>Confirmar senha</span>
-              <input type="password" id="registerPasswordConfirm" required minlength="8" autocomplete="new-password" />
-            </label>
-          </div>
-          <div class="account-auth-consent-group" id="registerConsentGroup">
-            <label class="account-auth-consent">
-              <input type="checkbox" id="registerConsentTerms" required />
-              <span>
-                Li e aceito os <a href="aviso-legal.html" target="_blank" rel="noopener noreferrer">Termos de Uso</a> e a
-                <a href="politica-privacidade.html" target="_blank" rel="noopener noreferrer">Política de Privacidade</a> da Tsebi.
-              </span>
-            </label>
-            <label class="account-auth-consent">
-              <input type="checkbox" id="registerConsentLgpd" required />
-              <span>
-                Autorizo o tratamento dos meus dados para criação e gestão da conta, processamento de pedidos, prevenção a fraudes
-                e atendimento, conforme a LGPD.
-              </span>
-            </label>
-            <label class="account-auth-consent">
-              <input type="checkbox" id="registerConsentMarketing" />
-              <span>
-                Quero receber novidades, lançamentos e conteúdos da Tsebi por e-mail e WhatsApp. Consentimento opcional e revogável.
-              </span>
-            </label>
-          </div>
-          <label id="registerCodeField" hidden>
-            <span>Codigo do e-mail</span>
-            <input type="text" id="registerEmailCode" inputmode="numeric" maxlength="6" autocomplete="one-time-code" />
-          </label>
-          <button type="submit" class="account-auth-submit">Criar conta</button>
-        </form>
-        <button type="button" id="resendRegisterCodeBtn" class="account-auth-link" hidden>Reenviar codigo</button>
-        <button type="button" id="changeEmailFromRegister" class="account-auth-link">Usar outro e-mail</button>
-      </section>
-
-      <p class="account-auth-feedback" id="authFeedback" aria-live="polite"></p>
+      <div class="conta-avatar" id="contaAvatar">CL</div>
+      <p class="conta-client-title" id="contaClientTitle">CLIENTE</p>
+      <h1 class="conta-client-name" id="contaClientName">Cliente Tsebi</h1>
     </section>
+
+    <section class="conta-grid">
+      <article class="conta-card" id="card-profile" data-card="profile">
+        <h2>Meu Perfil</h2>
+        <p>Email: <strong id="profileEmail">-</strong></p>
+        <div class="conta-card-actions">
+          <a class="btn-primary" href="minha-conta.html?panel=profile">Editar perfil</a>
+          <button type="button" class="conta-toggle" data-toggle="profile">Ver detalhes</button>
+        </div>
+        <div class="conta-details" id="details-profile"></div>
+      </article>
+
+      <article class="conta-card" id="card-orders" data-card="orders">
+        <h2>Meus Pedidos</h2>
+        <p id="ordersSummary">Não há compras em aberto.</p>
+        <div class="conta-card-actions">
+          <a class="btn-primary" href="minha-conta.html?panel=history">Ver pedidos</a>
+          <button type="button" class="conta-toggle" data-toggle="orders">Ver detalhes</button>
+        </div>
+        <div class="conta-details" id="details-orders"></div>
+      </article>
+
+      <article class="conta-card" id="card-private" data-card="private">
+        <h2>Atendimentos Privados</h2>
+        <p>Você não tem nenhum Atendimento Privado em breve.</p>
+        <div class="conta-card-actions">
+          <a class="btn-primary" href="https://wa.me/5511918596632?text=Ol%C3%A1%2C%20quero%20agendar%20um%20atendimento%20privado." target="_blank" rel="noopener noreferrer">Agendar atendimento privado</a>
+          <button type="button" class="conta-toggle" data-toggle="private">Ver detalhes</button>
+        </div>
+        <div class="conta-details" id="details-private"></div>
+      </article>
+
+      <article class="conta-card" id="card-wishlist" data-card="wishlist">
+        <h2>Lista de Desejos</h2>
+        <p id="wishlistSummary">Sua Lista de Desejos está vazia.</p>
+        <div class="conta-card-actions">
+          <a class="btn-outline" href="minha-conta.html?panel=favorites">Ver lista</a>
+          <button type="button" class="conta-toggle" data-toggle="wishlist">Ver detalhes</button>
+        </div>
+        <div class="conta-details" id="details-wishlist"></div>
+      </article>
+
+      <article class="conta-card" id="card-recommendations" data-card="recommendations">
+        <h2>Recomendações</h2>
+        <p id="recommendSummary">Não há nenhuma recomendação.</p>
+        <div class="conta-card-actions">
+          <a class="btn-outline" href="index.html">Explorar coleção</a>
+          <button type="button" class="conta-toggle" data-toggle="recommendations">Ver detalhes</button>
+        </div>
+        <div class="conta-details" id="details-recommendations"></div>
+      </article>
+
+      <article class="conta-card" id="card-repairs" data-card="repairs">
+        <h2>Serviço de Reparos</h2>
+        <p>Nenhum produto sendo reparado neste momento.</p>
+        <div class="conta-card-actions">
+          <a class="btn-outline" href="https://wa.me/5511918596632?text=Ol%C3%A1%2C%20quero%20falar%20sobre%20reparo%20de%20produto." target="_blank" rel="noopener noreferrer">Contate o atendimento</a>
+          <button type="button" class="conta-toggle" data-toggle="repairs">Ver detalhes</button>
+        </div>
+        <div class="conta-details" id="details-repairs"></div>
+      </article>
+    </section>
+
+    <footer class="conta-footer">
+      <a href="aviso-legal.html">Termos e condições</a>
+      <button type="button" class="btn-outline" id="contaLogoutBtn">Sair</button>
+    </footer>
   </main>
 
   <script src="JS/user-utils.js?v=20260220a"></script>
-  <script src="JS/conta.js?v=20260220a"></script>
+  <script>
+    (() => {
+      const store = window.TsebiUserStore;
+      const avatarEl = document.getElementById("contaAvatar");
+      const titleEl = document.getElementById("contaClientTitle");
+      const nameEl = document.getElementById("contaClientName");
+      const emailEl = document.getElementById("profileEmail");
+      const ordersSummaryEl = document.getElementById("ordersSummary");
+      const wishlistSummaryEl = document.getElementById("wishlistSummary");
+      const recommendSummaryEl = document.getElementById("recommendSummary");
+      const logoutBtn = document.getElementById("contaLogoutBtn");
+      const detailBlocks = new Map(Array.from(document.querySelectorAll(".conta-details")).map((el) => [el.id.replace("details-", ""), el]));
+      const cardCache = {};
+      let productsCatalog = [];
+      let myOrders = [];
+      let favoriteIds = [];
+      let user = null;
+
+      function normalizeTitle(value) {
+        const normalized = String(value || "").trim().toLowerCase();
+        const allowed = new Set(["sr", "sra", "srta", "nao_informar"]);
+        if (!allowed.has(normalized)) return "nao_informar";
+        return normalized;
+      }
+
+      function titleLabel(value) {
+        const key = normalizeTitle(value);
+        if (key === "sr") return "SR.";
+        if (key === "sra") return "SRA.";
+        if (key === "srta") return "SRTA.";
+        return "CLIENTE";
+      }
+
+      function titlePrefix(value) {
+        const key = normalizeTitle(value);
+        if (key === "sr") return "Sr.";
+        if (key === "sra") return "Sra.";
+        if (key === "srta") return "Srta.";
+        return "";
+      }
+
+      function initials(name) {
+        const parts = String(name || "").trim().split(/\s+/).filter(Boolean);
+        if (!parts.length) return "CL";
+        if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+        return `${parts[0][0] || ""}${parts[1][0] || ""}`.toUpperCase();
+      }
+
+      function money(value, currency = "brl") {
+        return (Number(value || 0) / 100).toLocaleString("pt-BR", {
+          style: "currency",
+          currency: String(currency || "brl").toUpperCase()
+        });
+      }
+
+      function orderStatus(status) {
+        const s = String(status || "").toLowerCase();
+        if (s === "paid") return "Pago";
+        if (s === "processing") return "Processando";
+        if (s === "pending_payment") return "Aguardando pagamento";
+        if (s === "canceled") return "Cancelado";
+        if (s === "failed") return "Falhou";
+        if (s === "refunded") return "Reembolsado";
+        return "Em análise";
+      }
+
+      function escapeHtml(value) {
+        return String(value || "")
+          .replace(/&/g, "&amp;")
+          .replace(/</g, "&lt;")
+          .replace(/>/g, "&gt;")
+          .replace(/"/g, "&quot;")
+          .replace(/'/g, "&#39;");
+      }
+
+      async function loadProductsCatalog() {
+        try {
+          const response = await fetch("/api/products", { credentials: "same-origin" });
+          if (!response.ok) return [];
+          const parsed = await response.json();
+          const list = Array.isArray(parsed) ? parsed : Array.isArray(parsed.products) ? parsed.products : [];
+          return list.filter(Boolean);
+        } catch {
+          return [];
+        }
+      }
+
+      function renderUserHeader() {
+        const safeName = String(user?.name || "Cliente Tsebi").trim() || "Cliente Tsebi";
+        const prefix = titlePrefix(user?.title);
+        if (avatarEl) avatarEl.textContent = initials(safeName);
+        if (titleEl) titleEl.textContent = titleLabel(user?.title);
+        if (nameEl) nameEl.textContent = prefix ? `${prefix} ${safeName}` : safeName;
+        if (emailEl) emailEl.textContent = String(user?.email || "-");
+      }
+
+      function renderSummaries() {
+        if (ordersSummaryEl) {
+          if (!myOrders.length) {
+            ordersSummaryEl.textContent = "Não há compras em aberto.";
+          } else {
+            const last = myOrders[0];
+            ordersSummaryEl.textContent = `Último pedido: ${orderStatus(last.status)} • ${money(last.amount, last.currency)}`;
+          }
+        }
+
+        if (wishlistSummaryEl) {
+          wishlistSummaryEl.textContent = favoriteIds.length
+            ? `${favoriteIds.length} item(ns) salvos na sua lista.`
+            : "Sua Lista de Desejos está vazia.";
+        }
+
+        if (recommendSummaryEl) {
+          const recs = productsCatalog.filter((p) => !favoriteIds.includes(String(p.id || p.sku || ""))).slice(0, 4);
+          recommendSummaryEl.textContent = recs.length ? `${recs.length} recomendações disponíveis para você.` : "Não há nenhuma recomendação.";
+        }
+      }
+
+      function cardProducts(items) {
+        if (!items.length) return '<p class="conta-muted">Nenhum item para mostrar no momento.</p>';
+        return `
+          <div class="conta-mini-grid">
+            ${items
+              .map((item) => {
+                const id = String(item.id || item.sku || "").trim();
+                const image = String(item.imageUrl || item.image_url || "images/produtos/sug1.jpeg").trim();
+                const href = id ? `produto.html?id=${encodeURIComponent(id)}` : "#";
+                return `
+                  <a class="conta-mini-item" href="${escapeHtml(href)}">
+                    <img src="${escapeHtml(image)}" alt="${escapeHtml(item.name || "Produto")}" loading="lazy" decoding="async" onerror="this.onerror=null;this.src='images/produtos/sug1.jpeg';" />
+                    <strong>${escapeHtml(item.name || "Produto")}</strong>
+                  </a>
+                `;
+              })
+              .join("")}
+          </div>
+        `;
+      }
+
+      function renderDetails(kind) {
+        if (cardCache[kind]) return cardCache[kind];
+
+        if (kind === "profile") {
+          const firstAddress = Array.isArray(user?.addresses) ? user.addresses[0] : null;
+          const addressText = firstAddress
+            ? `${firstAddress.street || ""}, ${firstAddress.number || ""} - ${firstAddress.city || ""}/${firstAddress.state || ""}`
+            : "Não informado";
+          cardCache[kind] = `
+            <div class="conta-detail-row"><span>Telefone</span><strong>${escapeHtml(user?.phone || "Não informado")}</strong></div>
+            <div class="conta-detail-row"><span>Endereço</span><strong>${escapeHtml(addressText)}</strong></div>
+            <div class="conta-detail-row"><span>Data de cadastro</span><strong>${escapeHtml(String(user?.createdAt || "-"))}</strong></div>
+            <a class="btn-outline" href="minha-conta.html?panel=profile">Ver detalhes</a>
+          `;
+          return cardCache[kind];
+        }
+
+        if (kind === "orders") {
+          if (!myOrders.length) {
+            cardCache[kind] = `
+              <p class="conta-muted">Não há compras em aberto.</p>
+              <a class="btn-outline" href="minha-conta.html?panel=history">Ver todos</a>
+            `;
+            return cardCache[kind];
+          }
+          const latestFive = myOrders.slice(0, 5).map((order) => `
+            <div class="conta-detail-row">
+              <span>Pedido #${escapeHtml(String(order.orderNumber || order.id || "").slice(0, 12))}</span>
+              <strong>${escapeHtml(orderStatus(order.status))} • ${escapeHtml(money(order.amount, order.currency))}</strong>
+            </div>
+          `).join("");
+          cardCache[kind] = `${latestFive}<a class="btn-outline" href="minha-conta.html?panel=history">Ver todos</a>`;
+          return cardCache[kind];
+        }
+
+        if (kind === "private") {
+          cardCache[kind] = `
+            <p class="conta-muted">Histórico: nenhum atendimento privado registrado.</p>
+            <a class="btn-outline" href="https://wa.me/5511918596632?text=Ol%C3%A1%2C%20preciso%20de%20atendimento%20privado." target="_blank" rel="noopener noreferrer">Contato via WhatsApp</a>
+          `;
+          return cardCache[kind];
+        }
+
+        if (kind === "wishlist") {
+          const items = productsCatalog.filter((p) => favoriteIds.includes(String(p.id || p.sku || "")));
+          cardCache[kind] = cardProducts(items);
+          return cardCache[kind];
+        }
+
+        if (kind === "recommendations") {
+          const recs = productsCatalog.filter((p) => !favoriteIds.includes(String(p.id || p.sku || ""))).slice(0, 4);
+          cardCache[kind] = cardProducts(recs);
+          return cardCache[kind];
+        }
+
+        if (kind === "repairs") {
+          cardCache[kind] = `
+            <p class="conta-muted">Histórico de solicitações: vazio.</p>
+            <a class="btn-outline" href="https://wa.me/5511918596632?text=Ol%C3%A1%2C%20preciso%20de%20suporte%20sobre%20reparos." target="_blank" rel="noopener noreferrer">Contatar suporte</a>
+          `;
+          return cardCache[kind];
+        }
+
+        return '<p class="conta-muted">Sem dados.</p>';
+      }
+
+      function closeAllDetails(exceptKey) {
+        detailBlocks.forEach((block, key) => {
+          if (!block) return;
+          if (key !== exceptKey) {
+            block.classList.remove("is-open");
+            block.innerHTML = "";
+          }
+        });
+      }
+
+      function bindAccordion() {
+        document.querySelectorAll(".conta-toggle").forEach((btn) => {
+          btn.addEventListener("click", () => {
+            const key = String(btn.getAttribute("data-toggle") || "");
+            const block = detailBlocks.get(key);
+            if (!block) return;
+
+            const isOpen = block.classList.contains("is-open");
+            closeAllDetails(key);
+
+            if (isOpen) {
+              block.classList.remove("is-open");
+              block.innerHTML = "";
+              return;
+            }
+
+            block.innerHTML = renderDetails(key);
+            block.classList.add("is-open");
+          });
+        });
+      }
+
+      async function boot() {
+        if (!store) {
+          window.location.href = "index.html";
+          return;
+        }
+
+        const me = await store.fetchMe();
+        if (!me.ok || !me.user) {
+          window.location.href = "minha-conta.html";
+          return;
+        }
+
+        user = me.user;
+        const [ordersResult, products, favIds] = await Promise.all([
+          store.fetchMyOrders(),
+          loadProductsCatalog(),
+          Promise.resolve(store.getFavoriteIds())
+        ]);
+
+        myOrders = ordersResult.ok ? (ordersResult.orders || []) : [];
+        productsCatalog = Array.isArray(products) ? products : [];
+        favoriteIds = Array.isArray(favIds) ? favIds.map((id) => String(id || "")) : [];
+
+        renderUserHeader();
+        renderSummaries();
+        bindAccordion();
+      }
+
+      logoutBtn?.addEventListener("click", async () => {
+        if (!store) return;
+        await store.logout();
+        window.location.href = "index.html";
+      });
+
+      boot();
+    })();
+  </script>
   <script src="JS/posthog.js"></script>
 </body>
 </html>
-
-
-
-
-
-
-
-
-

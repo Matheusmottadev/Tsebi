@@ -1,0 +1,297 @@
+body {
+  background: #ffffff;
+  color: #111111;
+}
+
+.conta-subnav {
+  height: 60px;
+  border-bottom: 1px solid #eaeaea;
+  background: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  overflow-x: auto;
+  padding: 0 24px;
+  gap: 4px;
+}
+
+.conta-subnav a {
+  font-size: 14px;
+  color: #111111;
+  padding: 0 20px;
+  height: 60px;
+  display: inline-flex;
+  align-items: center;
+  white-space: nowrap;
+  text-decoration: none;
+  border-bottom: 2px solid transparent;
+}
+
+.conta-subnav a.is-active {
+  border-bottom-color: #111111;
+  font-weight: 500;
+}
+
+.conta-wrap {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 40px 24px;
+  background: #ffffff;
+}
+
+.conta-hero {
+  text-align: center;
+}
+
+.conta-hero-banner {
+  position: relative;
+  height: 220px;
+  background-size: cover;
+  background-position: center;
+  border-radius: 14px;
+  overflow: hidden;
+}
+
+.conta-hero-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.12);
+}
+
+.conta-avatar {
+  width: 80px;
+  height: 80px;
+  margin: -40px auto 0;
+  border-radius: 50%;
+  background: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: "Montserrat", sans-serif;
+  font-size: 22px;
+  font-weight: 600;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.08);
+}
+
+.conta-client-title {
+  margin-top: 14px;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: #777777;
+  font-family: "Montserrat", sans-serif;
+}
+
+.conta-client-name {
+  margin-top: 4px;
+  font-size: 22px;
+  font-weight: 600;
+  color: #111111;
+  font-family: "Playfair Display", serif;
+}
+
+.conta-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+  margin-top: 40px;
+}
+
+.conta-card {
+  background: #f7f7f7;
+  border-radius: 12px;
+  padding: 24px;
+  min-height: 140px;
+  display: grid;
+  gap: 12px;
+}
+
+.conta-card h2 {
+  font-size: 18px;
+  font-weight: 500;
+  margin: 0;
+  font-family: "Playfair Display", serif;
+}
+
+.conta-card p {
+  margin: 0;
+  font-size: 14px;
+  color: #666666;
+  font-family: "Montserrat", sans-serif;
+}
+
+.conta-card-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.btn-primary {
+  background: #000000;
+  color: #ffffff;
+  border-radius: 999px;
+  padding: 12px 24px;
+  font-size: 14px;
+  border: none;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-family: "Montserrat", sans-serif;
+}
+
+.btn-primary:hover {
+  opacity: 0.85;
+}
+
+.btn-outline {
+  background: transparent;
+  border: 1px solid #111111;
+  color: #111111;
+  border-radius: 999px;
+  padding: 10px 22px;
+  font-size: 14px;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-family: "Montserrat", sans-serif;
+  cursor: pointer;
+}
+
+.btn-outline:hover {
+  opacity: 0.85;
+}
+
+.conta-toggle {
+  border: none;
+  background: transparent;
+  color: #111111;
+  padding: 10px 4px;
+  text-decoration: underline;
+  font-family: "Montserrat", sans-serif;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.conta-details {
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 200ms ease, opacity 200ms ease, margin-top 200ms ease;
+  opacity: 0;
+  margin-top: 0;
+  display: grid;
+  gap: 10px;
+}
+
+.conta-details.is-open {
+  max-height: 520px;
+  opacity: 1;
+  margin-top: 4px;
+}
+
+.conta-detail-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  border-bottom: 1px solid #e8e8e8;
+  padding-bottom: 8px;
+}
+
+.conta-detail-row span {
+  color: #666666;
+  font-size: 13px;
+  font-family: "Montserrat", sans-serif;
+}
+
+.conta-detail-row strong {
+  color: #111111;
+  font-size: 13px;
+  font-family: "Montserrat", sans-serif;
+  text-align: right;
+}
+
+.conta-muted {
+  color: #666666;
+  font-size: 14px;
+  font-family: "Montserrat", sans-serif;
+}
+
+.conta-mini-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.conta-mini-item {
+  text-decoration: none;
+  color: #111111;
+  display: grid;
+  gap: 8px;
+}
+
+.conta-mini-item img {
+  width: 100%;
+  aspect-ratio: 4 / 5;
+  object-fit: cover;
+  border-radius: 10px;
+  background: #eeeeee;
+}
+
+.conta-mini-item strong {
+  font-size: 12px;
+  font-weight: 500;
+  font-family: "Montserrat", sans-serif;
+}
+
+.conta-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 36px;
+  padding-top: 20px;
+  border-top: 1px solid #eaeaea;
+}
+
+.conta-footer a {
+  color: #666666;
+  font-size: 13px;
+  text-decoration: none;
+  font-family: "Montserrat", sans-serif;
+}
+
+@media (max-width: 980px) {
+  .conta-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 760px) {
+  .conta-wrap {
+    padding: 24px 16px;
+  }
+
+  .conta-subnav {
+    padding: 0 8px;
+  }
+
+  .conta-hero-banner {
+    height: 160px;
+    border-radius: 10px;
+  }
+
+  .conta-avatar {
+    width: 60px;
+    height: 60px;
+    margin-top: -30px;
+    font-size: 18px;
+  }
+
+  .conta-client-name {
+    font-size: 20px;
+  }
+
+  .conta-mini-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+}
