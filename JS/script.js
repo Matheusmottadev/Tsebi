@@ -1387,10 +1387,10 @@ function initAlicerceScrollSnap() {
     lastSnapAt = Date.now();
     section.scrollIntoView({ behavior: "smooth", block: "start" });
 
-    // Fine-tune down so the section lands in the visual sweet spot.
+    // Fine-tune down so the section lands deeper in-frame.
     window.setTimeout(() => {
       const viewportH = window.innerHeight || 0;
-      const fineTuneDown = Math.round(Math.min(120, Math.max(56, viewportH * 0.1)));
+      const fineTuneDown = Math.round(Math.min(220, Math.max(120, viewportH * 0.18)));
       window.scrollBy({ top: fineTuneDown, behavior: "auto" });
       isSnapping = false;
     }, 420);
@@ -1413,7 +1413,8 @@ function initAlicerceScrollSnap() {
     if (!isScrollingDown || hasSnappedOnCurrentPass) return;
     if (Date.now() - lastSnapAt < 900) return;
 
-    const inTriggerZone = rect.top <= viewportH * 0.62 && rect.top >= viewportH * -0.2;
+    // Trigger later: only when user has already scrolled deeper into the section.
+    const inTriggerZone = rect.top <= viewportH * 0.22 && rect.top >= viewportH * -0.45;
     if (!inTriggerZone) return;
 
     snapSection();
