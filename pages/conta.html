@@ -29,7 +29,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600&family=Montserrat:wght@300;400;500;600&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="css/style.css?v=20260220h" />
-  <link rel="stylesheet" href="css/conta.css?v=20260220e" />
+  <link rel="stylesheet" href="css/conta.css?v=20260220f" />
 </head>
 <body class="conta-page">
   <header class="cart-simple-header">
@@ -51,6 +51,20 @@
   </nav>
 
   <main class="conta-wrap">
+    <section class="conta-auth-gate" id="contaAuthGate" hidden>
+      <h1>Entrar na conta</h1>
+      <p>Faca login para acessar seu perfil, pedidos e dados da conta.</p>
+      <form id="contaAuthForm" class="conta-auth-form" novalidate>
+        <label for="contaAuthEmail">E-mail</label>
+        <input id="contaAuthEmail" type="email" autocomplete="email" required />
+        <label for="contaAuthPassword">Senha</label>
+        <input id="contaAuthPassword" type="password" autocomplete="current-password" required />
+        <button type="submit" class="btn-primary" id="contaAuthSubmit">Entrar</button>
+        <p class="conta-auth-feedback" id="contaAuthFeedback"></p>
+      </form>
+    </section>
+
+    <div id="contaDashboard" hidden>
     <section class="conta-hero">
       <div class="conta-hero-banner" style="background-image:url('images/popup.jpg')">
         <div class="conta-hero-overlay"></div>
@@ -127,6 +141,7 @@
       <a href="aviso-legal.html">Termos e condições</a>
       <button type="button" class="btn-outline" id="contaLogoutBtn">Sair</button>
     </footer>
+    </div>
   </main>
 
   <script src="JS/user-utils.js?v=20260220a"></script>
@@ -141,12 +156,44 @@
       const wishlistSummaryEl = document.getElementById("wishlistSummary");
       const recommendSummaryEl = document.getElementById("recommendSummary");
       const logoutBtn = document.getElementById("contaLogoutBtn");
+      const subnavEl = document.querySelector(".conta-subnav");
+      const authGateEl = document.getElementById("contaAuthGate");
+      const dashboardEl = document.getElementById("contaDashboard");
+      const authFormEl = document.getElementById("contaAuthForm");
+      const authEmailEl = document.getElementById("contaAuthEmail");
+      const authPasswordEl = document.getElementById("contaAuthPassword");
+      const authSubmitEl = document.getElementById("contaAuthSubmit");
+      const authFeedbackEl = document.getElementById("contaAuthFeedback");
       const detailBlocks = new Map(Array.from(document.querySelectorAll(".conta-details")).map((el) => [el.id.replace("details-", ""), el]));
       const cardCache = {};
       let productsCatalog = [];
       let myOrders = [];
       let favoriteIds = [];
       let user = null;
+      const returnUrl = (() => {
+        const params = new URLSearchParams(window.location.search);
+        const raw = String(params.get("returnUrl") || "").trim();
+        if (!raw || !raw.startsWith("/") || raw.startsWith("//")) return "";
+        return raw;
+      })();
+
+      function setAuthFeedback(message, isError = false) {
+        if (!authFeedbackEl) return;
+        authFeedbackEl.textContent = String(message || "");
+        authFeedbackEl.style.color = isError ? "#991b1b" : "#1d6a2d";
+      }
+
+      function showAuthGate() {
+        if (dashboardEl) dashboardEl.hidden = true;
+        if (authGateEl) authGateEl.hidden = false;
+        if (subnavEl) subnavEl.hidden = true;
+      }
+
+      function showDashboard() {
+        if (authGateEl) authGateEl.hidden = true;
+        if (dashboardEl) dashboardEl.hidden = false;
+        if (subnavEl) subnavEl.hidden = false;
+      }
 
       function normalizeTitle(value) {
         const normalized = String(value || "").trim().toLowerCase();
@@ -367,25 +414,7 @@
         });
       }
 
-      async function boot() {
-        if (!store) {
-          window.location.href = "index.html";
-          return;
-        }
-
-        const me = await store.fetchMe();
-        if (!me.ok || !me.user) {
-          user = null;
-          myOrders = [];
-          productsCatalog = await loadProductsCatalog();
-          favoriteIds = [];
-          renderUserHeader();
-          renderSummaries();
-          bindAccordion();
-          return;
-        }
-
-        user = me.user;
+      async function bootAuthenticated() {
         const [ordersResult, products, favIds] = await Promise.all([
           store.fetchMyOrders(),
           loadProductsCatalog(),
@@ -399,12 +428,63 @@
         renderUserHeader();
         renderSummaries();
         bindAccordion();
+        showDashboard();
+      }
+
+      async function boot() {
+        if (!store) {
+          window.location.href = "index.html";
+          return;
+        }
+
+        const me = await store.fetchMe();
+        if (!me.ok || !me.user) {
+          showAuthGate();
+          return;
+        }
+
+        user = me.user;
+        await bootAuthenticated();
       }
 
       logoutBtn?.addEventListener("click", async () => {
         if (!store) return;
         await store.logout();
-        window.location.href = "index.html";
+        user = null;
+        myOrders = [];
+        favoriteIds = [];
+        if (authPasswordEl) authPasswordEl.value = "";
+        showAuthGate();
+      });
+
+      authFormEl?.addEventListener("submit", async (event) => {
+        event.preventDefault();
+        if (!store) return;
+        const email = String(authEmailEl?.value || "").trim().toLowerCase();
+        const password = String(authPasswordEl?.value || "");
+
+        if (!email || !password) {
+          setAuthFeedback("Preencha e-mail e senha.", true);
+          return;
+        }
+
+        if (authSubmitEl) authSubmitEl.disabled = true;
+        setAuthFeedback("");
+        const result = await store.login({ email, password });
+        if (authSubmitEl) authSubmitEl.disabled = false;
+
+        if (!result?.ok || !result?.user) {
+          setAuthFeedback(result?.error || "Nao foi possivel entrar.", true);
+          return;
+        }
+
+        user = result.user;
+        if (authPasswordEl) authPasswordEl.value = "";
+        if (returnUrl) {
+          window.location.href = returnUrl;
+          return;
+        }
+        await bootAuthenticated();
       });
 
       boot();
