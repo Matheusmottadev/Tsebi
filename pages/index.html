@@ -55,6 +55,8 @@
   </script>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="stylesheet" href="css/design-tokens.css?v=20260220a" />
+  <link rel="stylesheet" href="css/primitives.css?v=20260220a" />
   <link rel="stylesheet" href="css/style.css?v=20260220b" />
 
   <!-- Fontes luxo -->
@@ -330,67 +332,68 @@ Porque estilo não é sobre o que você veste, é sobre quem você é.
     <img src="images/logo-tsebi.png" alt="WhatsApp">
   </a>
 
-  <section class="tsebi-category-section" aria-label="Explore as categorias">
-    <div class="tsebi-container">
-      <header class="tsebi-section-header">
-        <h2>Explore as Categorias</h2>
+  <section class="t-section" aria-label="Categorias">
+    <div class="t-container">
+      <header style="text-align:center; margin-bottom: var(--t-space-6);">
+        <h2 class="t-h2">Explore as Categorias</h2>
+        <p class="t-subtitle" style="margin-top: var(--t-space-2);">Seleção por estilo e essenciais</p>
       </header>
 
-      <div class="tsebi-category-grid">
-        <a class="tsebi-category-card" href="/categoria/feminino">
-          <div class="tsebi-category-image">
-            <img src="/images/categories/feminino.jpg" alt="Categoria Feminino" loading="lazy" decoding="async" onerror="this.onerror=null;this.src='images/produtos/sug1.jpeg';" />
+      <div class="t-grid t-grid--4">
+        <a class="t-card-link" href="/categoria/feminino">
+          <div class="t-media t-media--cat">
+            <img src="/images/categories/feminino.jpg" alt="Categoria Feminino" loading="lazy" decoding="async" onerror="this.onerror=null;this.src='/images/produtos/sug1.jpeg';" />
           </div>
-          <span class="tsebi-category-label">Feminino</span>
+          <span class="t-card-label">Feminino</span>
         </a>
 
-        <a class="tsebi-category-card" href="/categoria/masculino">
-          <div class="tsebi-category-image">
-            <img src="/images/categories/masculino.jpg" alt="Categoria Masculino" loading="lazy" decoding="async" onerror="this.onerror=null;this.src='images/produtos/sug2.jpeg';" />
+        <a class="t-card-link" href="/categoria/masculino">
+          <div class="t-media t-media--cat">
+            <img src="/images/categories/masculino.jpg" alt="Categoria Masculino" loading="lazy" decoding="async" onerror="this.onerror=null;this.src='/images/produtos/sug2.jpeg';" />
           </div>
-          <span class="tsebi-category-label">Masculino</span>
+          <span class="t-card-label">Masculino</span>
         </a>
 
-        <a class="tsebi-category-card" href="/categoria/carteiras-masculinas">
-          <div class="tsebi-category-image">
-            <img src="/images/categories/carteiras-masculinas.jpg" alt="Categoria Carteiras Masculinas" loading="lazy" decoding="async" onerror="this.onerror=null;this.src='images/produtos/sug3.jpeg';" />
+        <a class="t-card-link" href="/categoria/carteiras-masculinas">
+          <div class="t-media t-media--cat">
+            <img src="/images/categories/carteiras-masculinas.jpg" alt="Categoria Carteiras Masculinas" loading="lazy" decoding="async" onerror="this.onerror=null;this.src='/images/produtos/sug3.jpeg';" />
           </div>
-          <span class="tsebi-category-label">Carteiras Masculinas</span>
+          <span class="t-card-label">Carteiras Masculinas</span>
         </a>
 
-        <a class="tsebi-category-card" href="/categoria/vestidos">
-          <div class="tsebi-category-image">
-            <img src="/images/categories/vestidos.jpg" alt="Categoria Vestidos" loading="lazy" decoding="async" onerror="this.onerror=null;this.src='images/produtos/sug4.jpeg';" />
+        <a class="t-card-link" href="/categoria/vestidos">
+          <div class="t-media t-media--cat">
+            <img src="/images/categories/vestidos.jpg" alt="Categoria Vestidos" loading="lazy" decoding="async" onerror="this.onerror=null;this.src='/images/produtos/sug4.jpeg';" />
           </div>
-          <span class="tsebi-category-label">Vestidos</span>
+          <span class="t-card-label">Vestidos</span>
         </a>
 
-        <a class="tsebi-category-card" href="/categoria/calcas">
-          <div class="tsebi-category-image">
-            <img src="/images/categories/calcas.jpg" alt="Categoria Calças" loading="lazy" decoding="async" onerror="this.onerror=null;this.src='images/produtos/sug1.jpeg';" />
+        <a class="t-card-link" href="/categoria/calcas">
+          <div class="t-media t-media--cat">
+            <img src="/images/categories/calcas.jpg" alt="Categoria Calças" loading="lazy" decoding="async" onerror="this.onerror=null;this.src='/images/produtos/sug1.jpeg';" />
           </div>
-          <span class="tsebi-category-label">Calças</span>
+          <span class="t-card-label">Calças</span>
         </a>
 
-        <a class="tsebi-category-card" href="/categoria/carteiras-femininas">
-          <div class="tsebi-category-image">
-            <img src="/images/categories/carteiras-femininas.jpg" alt="Categoria Carteiras Femininas" loading="lazy" decoding="async" onerror="this.onerror=null;this.src='images/produtos/sug2.jpeg';" />
+        <a class="t-card-link" href="/categoria/carteiras-femininas">
+          <div class="t-media t-media--cat">
+            <img src="/images/categories/carteiras-femininas.jpg" alt="Categoria Carteiras Femininas" loading="lazy" decoding="async" onerror="this.onerror=null;this.src='/images/produtos/sug2.jpeg';" />
           </div>
-          <span class="tsebi-category-label">Carteiras Femininas</span>
+          <span class="t-card-label">Carteiras Femininas</span>
         </a>
 
-        <a class="tsebi-category-card" href="/categoria/jaquetas">
-          <div class="tsebi-category-image">
-            <img src="/images/categories/jaquetas.jpg" alt="Categoria Jaquetas" loading="lazy" decoding="async" onerror="this.onerror=null;this.src='images/produtos/sug3.jpeg';" />
+        <a class="t-card-link" href="/categoria/jaquetas">
+          <div class="t-media t-media--cat">
+            <img src="/images/categories/jaquetas.jpg" alt="Categoria Jaquetas" loading="lazy" decoding="async" onerror="this.onerror=null;this.src='/images/produtos/sug3.jpeg';" />
           </div>
-          <span class="tsebi-category-label">Jaquetas</span>
+          <span class="t-card-label">Jaquetas</span>
         </a>
 
-        <a class="tsebi-category-card" href="/categoria/acessorios">
-          <div class="tsebi-category-image">
-            <img src="/images/categories/acessorios.jpg" alt="Categoria Acessorios" loading="lazy" decoding="async" onerror="this.onerror=null;this.src='images/produtos/sug4.jpeg';" />
+        <a class="t-card-link" href="/categoria/acessorios">
+          <div class="t-media t-media--cat">
+            <img src="/images/categories/acessorios.jpg" alt="Categoria Acessórios" loading="lazy" decoding="async" onerror="this.onerror=null;this.src='/images/produtos/sug4.jpeg';" />
           </div>
-          <span class="tsebi-category-label">Acessorios</span>
+          <span class="t-card-label">Acessorios</span>
         </a>
       </div>
     </div>

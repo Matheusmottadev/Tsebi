@@ -1,0 +1,159 @@
+/* Base */
+body {
+  font-family: var(--t-font-sans);
+  color: var(--t-text);
+  background: var(--t-bg);
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  font-family: var(--t-font-serif);
+  letter-spacing: var(--t-tracking-tight);
+  line-height: var(--t-lh-tight);
+}
+
+/* Container */
+.t-container {
+  width: 100%;
+  max-width: var(--t-container);
+  margin: 0 auto;
+  padding-inline: var(--t-gutter);
+}
+
+.t-container--wide {
+  max-width: var(--t-container-wide);
+}
+
+@media (min-width: 1024px) {
+  .t-container {
+    padding-inline: var(--t-gutter-lg);
+  }
+}
+
+/* Section */
+.t-section {
+  padding-block: var(--t-space-8);
+}
+
+.t-section--tight {
+  padding-block: var(--t-space-7);
+}
+
+.t-section--loose {
+  padding-block: var(--t-space-9);
+}
+
+/* Typography utilities */
+.t-h2 {
+  font-family: var(--t-font-serif);
+  font-size: clamp(22px, 2vw, 32px);
+  line-height: var(--t-lh-tight);
+  letter-spacing: var(--t-tracking-tight);
+  font-weight: var(--t-weight-medium);
+}
+
+.t-subtitle {
+  color: var(--t-text-muted);
+  font-size: var(--t-text-md);
+  line-height: var(--t-lh-normal);
+  font-family: var(--t-font-sans);
+}
+
+/* Grid */
+.t-grid {
+  display: grid;
+  gap: var(--t-space-5);
+}
+
+.t-grid--4,
+.t-grid--2 {
+  grid-template-columns: 1fr;
+}
+
+@media (min-width: 640px) {
+  .t-grid--4,
+  .t-grid--2 {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 1024px) {
+  .t-grid--4 {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+/* Card */
+.t-card-link {
+  display: block;
+  text-decoration: none;
+  color: inherit;
+}
+
+.t-card-label {
+  display: block;
+  text-align: center;
+  margin-top: var(--t-space-3);
+  font-size: var(--t-text-md);
+  letter-spacing: var(--t-tracking-normal);
+  font-family: var(--t-font-sans);
+}
+
+/* Media wrappers */
+.t-media {
+  width: 100%;
+  overflow: hidden;
+  background: var(--t-ghost);
+  border-radius: var(--t-radius-md);
+}
+
+.t-media img {
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-position: center;
+  transform: scale(1);
+  transition: transform var(--t-dur-med) var(--t-ease);
+  object-fit: cover;
+}
+
+.t-card-link:hover .t-media img {
+  transform: scale(1.03);
+}
+
+.t-card-link:focus-visible {
+  outline: 2px solid #111;
+  outline-offset: 4px;
+}
+
+.t-media--prod {
+  aspect-ratio: 4 / 5;
+}
+
+.t-media--cat {
+  aspect-ratio: 259 / 356;
+}
+
+.t-media--pdp {
+  aspect-ratio: 4 / 5;
+}
+
+.t-media--contain img {
+  object-fit: contain;
+}
+
+.t-media--prod img {
+  object-fit: cover;
+}
+
+.t-media--cat img {
+  object-fit: cover;
+}
+
+.t-media--pdp img {
+  object-fit: contain;
+}
