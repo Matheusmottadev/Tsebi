@@ -224,12 +224,12 @@ function isMissingMetadataColumnError(error) {
   return String(error?.code || "") === "42703" && /metadata/i.test(String(error?.message || ""));
 }
 
-async function queryWithOptionalMetadata(sqlWithMetadata, sqlWithoutMetadata, params = []) {
+async function queryWithOptionalMetadata(sqlWithMetadata, sqlWithoutMetadata, params = [], fallbackParams = null) {
   try {
     return await query(sqlWithMetadata, params);
   } catch (error) {
     if (!isMissingMetadataColumnError(error) || !sqlWithoutMetadata) throw error;
-    return query(sqlWithoutMetadata, params);
+    return query(sqlWithoutMetadata, Array.isArray(fallbackParams) ? fallbackParams : params);
   }
 }
 
@@ -411,6 +411,18 @@ async function createProduct(payload = {}) {
     variantStock: payload.variantStock
   });
 
+  const paramsWithMetadata = [
+    sku,
+    String(payload.name || sku).trim(),
+    Math.max(0, Math.round(Number(payload.priceCents || 0))),
+    Math.max(0, Math.floor(Number(payload.stockQty || 0))),
+    String(payload.currency || "brl").trim().toLowerCase() || "brl",
+    Boolean(payload.active !== false),
+    String(payload.imageUrl || "").trim() || null,
+    JSON.stringify(metadata)
+  ];
+  const paramsWithoutMetadata = paramsWithMetadata.slice(0, 7);
+
   try {
     const result = await queryWithOptionalMetadata(
       `
@@ -429,16 +441,8 @@ async function createProduct(payload = {}) {
       )
       RETURNING id, sku, name, price_cents, stock_qty, currency, active, image_url, created_at, updated_at
       `,
-      [
-        sku,
-        String(payload.name || sku).trim(),
-        Math.max(0, Math.round(Number(payload.priceCents || 0))),
-        Math.max(0, Math.floor(Number(payload.stockQty || 0))),
-        String(payload.currency || "brl").trim().toLowerCase() || "brl",
-        Boolean(payload.active !== false),
-        String(payload.imageUrl || "").trim() || null,
-        JSON.stringify(metadata)
-      ]
+      paramsWithMetadata,
+      paramsWithoutMetadata
     );
 
     return mapProduct(result.rows[0] || null);
@@ -461,6 +465,18 @@ async function updateProductByIdentifier(identifier, patch = {}) {
     colors: patch.colors ?? current.colors,
     variantStock: patch.variantStock ?? current.variantStock
   });
+
+  const paramsWithMetadata = [
+    normalized,
+    String(patch.name ?? current.name ?? current.sku).trim(),
+    Math.max(0, Math.round(Number(patch.priceCents ?? current.unitAmount ?? 0))),
+    Math.max(0, Math.floor(Number(patch.stockQty ?? current.stock ?? 0))),
+    String(patch.currency ?? current.currency ?? "brl").trim().toLowerCase() || "brl",
+    Boolean(patch.active ?? current.active),
+    String(patch.imageUrl ?? current.image ?? "").trim() || null,
+    JSON.stringify(metadata)
+  ];
+  const paramsWithoutMetadata = paramsWithMetadata.slice(0, 7);
 
   const result = await queryWithOptionalMetadata(
     `
@@ -492,16 +508,8 @@ async function updateProductByIdentifier(identifier, patch = {}) {
        OR lower(sku) = lower($1)
     RETURNING id, sku, name, price_cents, stock_qty, currency, active, image_url, created_at, updated_at
     `,
-    [
-      normalized,
-      String(patch.name ?? current.name ?? current.sku).trim(),
-      Math.max(0, Math.round(Number(patch.priceCents ?? current.unitAmount ?? 0))),
-      Math.max(0, Math.floor(Number(patch.stockQty ?? current.stock ?? 0))),
-      String(patch.currency ?? current.currency ?? "brl").trim().toLowerCase() || "brl",
-      Boolean(patch.active ?? current.active),
-      String(patch.imageUrl ?? current.image ?? "").trim() || null,
-      JSON.stringify(metadata)
-    ]
+    paramsWithMetadata,
+    paramsWithoutMetadata
   );
 
   return mapProduct(result.rows[0] || null);
