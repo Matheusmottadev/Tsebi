@@ -3,6 +3,13 @@ body {
   color: #111111;
 }
 
+.cart-simple-header {
+  position: sticky;
+  top: 0;
+  z-index: 2200;
+  background: #ffffff;
+}
+
 .conta-subnav {
   height: 60px;
   border-bottom: 1px solid #eaeaea;
@@ -13,6 +20,9 @@ body {
   overflow-x: auto;
   padding: 0 24px;
   gap: 4px;
+  position: sticky;
+  top: 72px;
+  z-index: 2100;
 }
 
 .conta-subnav a {
@@ -273,6 +283,7 @@ body {
 
   .conta-subnav {
     padding: 0 8px;
+    top: 64px;
   }
 
   .conta-hero-banner {
