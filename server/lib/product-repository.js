@@ -236,12 +236,39 @@ function isMissingMetadataColumnError(error) {
   return String(error?.code || "") === "42703" && /metadata/i.test(String(error?.message || ""));
 }
 
+let ensureMetadataColumnPromise = null;
+
+async function ensureProductsMetadataColumn() {
+  if (!ensureMetadataColumnPromise) {
+    ensureMetadataColumnPromise = query(
+      `
+      ALTER TABLE products
+      ADD COLUMN IF NOT EXISTS metadata JSONB NOT NULL DEFAULT '{}'::jsonb
+      `
+    )
+      .catch(() => {})
+      .finally(() => {
+        ensureMetadataColumnPromise = null;
+      });
+  }
+
+  return ensureMetadataColumnPromise;
+}
+
 async function queryWithOptionalMetadata(sqlWithMetadata, sqlWithoutMetadata, params = [], fallbackParams = null) {
   try {
     return await query(sqlWithMetadata, params);
   } catch (error) {
     if (!isMissingMetadataColumnError(error) || !sqlWithoutMetadata) throw error;
-    return query(sqlWithoutMetadata, Array.isArray(fallbackParams) ? fallbackParams : params);
+
+    await ensureProductsMetadataColumn();
+
+    try {
+      return await query(sqlWithMetadata, params);
+    } catch (retryError) {
+      if (!isMissingMetadataColumnError(retryError)) throw retryError;
+      return query(sqlWithoutMetadata, Array.isArray(fallbackParams) ? fallbackParams : params);
+    }
   }
 }
 
