@@ -66,7 +66,7 @@
         <h2>Meu Perfil</h2>
         <p>Email: <strong id="profileEmail">-</strong></p>
         <div class="conta-card-actions">
-          <a class="btn-primary" href="minha-conta.html?panel=profile">Editar perfil</a>
+          <a class="btn-primary" href="conta.html#card-profile">Editar perfil</a>
           <button type="button" class="conta-toggle" data-toggle="profile">Ver detalhes</button>
         </div>
         <div class="conta-details" id="details-profile"></div>
@@ -76,7 +76,7 @@
         <h2>Meus Pedidos</h2>
         <p id="ordersSummary">Não há compras em aberto.</p>
         <div class="conta-card-actions">
-          <a class="btn-primary" href="minha-conta.html?panel=history">Ver pedidos</a>
+          <a class="btn-primary" href="conta.html#card-orders">Ver pedidos</a>
           <button type="button" class="conta-toggle" data-toggle="orders">Ver detalhes</button>
         </div>
         <div class="conta-details" id="details-orders"></div>
@@ -96,7 +96,7 @@
         <h2>Lista de Desejos</h2>
         <p id="wishlistSummary">Sua Lista de Desejos está vazia.</p>
         <div class="conta-card-actions">
-          <a class="btn-outline" href="minha-conta.html?panel=favorites">Ver lista</a>
+          <a class="btn-outline" href="conta.html#card-wishlist">Ver lista</a>
           <button type="button" class="conta-toggle" data-toggle="wishlist">Ver detalhes</button>
         </div>
         <div class="conta-details" id="details-wishlist"></div>
@@ -281,7 +281,7 @@
             <div class="conta-detail-row"><span>Telefone</span><strong>${escapeHtml(user?.phone || "Não informado")}</strong></div>
             <div class="conta-detail-row"><span>Endereço</span><strong>${escapeHtml(addressText)}</strong></div>
             <div class="conta-detail-row"><span>Data de cadastro</span><strong>${escapeHtml(String(user?.createdAt || "-"))}</strong></div>
-            <a class="btn-outline" href="minha-conta.html?panel=profile">Ver detalhes</a>
+            <a class="btn-outline" href="conta.html#card-profile">Ver detalhes</a>
           `;
           return cardCache[kind];
         }
@@ -290,7 +290,7 @@
           if (!myOrders.length) {
             cardCache[kind] = `
               <p class="conta-muted">Não há compras em aberto.</p>
-              <a class="btn-outline" href="minha-conta.html?panel=history">Ver todos</a>
+              <a class="btn-outline" href="conta.html#card-orders">Ver todos</a>
             `;
             return cardCache[kind];
           }
@@ -300,7 +300,7 @@
               <strong>${escapeHtml(orderStatus(order.status))} • ${escapeHtml(money(order.amount, order.currency))}</strong>
             </div>
           `).join("");
-          cardCache[kind] = `${latestFive}<a class="btn-outline" href="minha-conta.html?panel=history">Ver todos</a>`;
+          cardCache[kind] = `${latestFive}<a class="btn-outline" href="conta.html#card-orders">Ver todos</a>`;
           return cardCache[kind];
         }
 
@@ -375,7 +375,13 @@
 
         const me = await store.fetchMe();
         if (!me.ok || !me.user) {
-          window.location.href = "minha-conta.html";
+          user = null;
+          myOrders = [];
+          productsCatalog = await loadProductsCatalog();
+          favoriteIds = [];
+          renderUserHeader();
+          renderSummaries();
+          bindAccordion();
           return;
         }
 
@@ -407,6 +413,7 @@
   <script src="JS/posthog.js"></script>
 </body>
 </html>
+
 
 
 

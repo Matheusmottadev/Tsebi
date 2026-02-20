@@ -1469,7 +1469,7 @@ function initAccountEntryPoints() {
 }
 
 function initTrackOrderEntryPoints() {
-  const trackPanelPath = "minha-conta.html?panel=track";
+  const trackPanelPath = "conta.html#card-orders";
   const trackLinks = Array.from(document.querySelectorAll('a[data-link-key="track-order"]'));
 
   if (!trackLinks.length) {
