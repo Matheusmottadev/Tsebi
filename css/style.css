@@ -4395,3 +4395,57 @@ body.newsletter-popup-open{
     font-size: 14px;
   }
 }
+
+/* ===== HEADER BEHAVIOR LOCK (GLOBAL + HOME TOP TRANSPARENCY) ===== */
+.home-header {
+  background: #fff;
+  border-bottom: 1px solid #ececec;
+  box-shadow: none;
+}
+
+.home-header:hover,
+.home-header:focus-within,
+.home-header.is-scrolled {
+  background: #fff;
+  border-bottom: 1px solid #ececec;
+  box-shadow: none;
+}
+
+.home-header .logo-center-text {
+  color: #111;
+}
+
+.home-header .header-left,
+.home-header .header-right {
+  opacity: 1;
+  transform: translateY(0);
+  pointer-events: auto;
+}
+
+/* Transparent only on homepage before scroll */
+body.home-page .home-header:not(.is-scrolled) {
+  background: transparent;
+  border-bottom-color: transparent;
+}
+
+body.home-page .home-header:not(.is-scrolled) .logo-center-text {
+  display: inline-block !important;
+  color: #fff;
+  opacity: 1;
+}
+
+body.home-page .home-header:not(.is-scrolled) .logo-center-image {
+  display: none !important;
+  opacity: 0;
+}
+
+body.home-page .home-header:not(.is-scrolled) .header-left,
+body.home-page .home-header:not(.is-scrolled) .header-right,
+body.home-page .home-header:not(.is-scrolled):hover .header-left,
+body.home-page .home-header:not(.is-scrolled):hover .header-right,
+body.home-page .home-header:not(.is-scrolled):focus-within .header-left,
+body.home-page .home-header:not(.is-scrolled):focus-within .header-right {
+  opacity: 0;
+  transform: translateY(-12px);
+  pointer-events: none;
+}
