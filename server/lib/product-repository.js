@@ -167,9 +167,21 @@ function normalizeProductMetadata(value, fallback = {}) {
   const raw = value && typeof value === "object" && !Array.isArray(value) ? value : {};
   const fallbackSizes = normalizeTextList(fallback.sizes, ["Único"]);
   const fallbackColors = normalizeTextList(fallback.colors, ["Único"]);
-  const sizes = normalizeTextList(raw.sizes, fallbackSizes.length ? fallbackSizes : ["Único"]);
-  const colors = normalizeTextList(raw.colors, fallbackColors.length ? fallbackColors : ["Único"]);
-  const variantStock = sanitizeVariantStockMap(raw.variantStock || raw.variant_stock, colors, sizes);
+  let sizes = normalizeTextList(raw.sizes, fallbackSizes.length ? fallbackSizes : ["Único"]);
+  let colors = normalizeTextList(raw.colors, fallbackColors.length ? fallbackColors : ["Único"]);
+  let variantStock = sanitizeVariantStockMap(raw.variantStock || raw.variant_stock, colors, sizes);
+
+  const looksLikeLegacyBlackOnly =
+    colors.length === 1 &&
+    String(colors[0] || "").trim().toLowerCase() === "preto" &&
+    fallbackColors.length > 1 &&
+    Object.keys(variantStock).length === 0;
+
+  if (looksLikeLegacyBlackOnly) {
+    colors = fallbackColors;
+    sizes = fallbackSizes.length ? fallbackSizes : sizes;
+    variantStock = sanitizeVariantStockMap(raw.variantStock || raw.variant_stock, colors, sizes);
+  }
 
   return {
     sizes: sizes.length ? sizes : ["Único"],
