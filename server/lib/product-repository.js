@@ -220,10 +220,29 @@ function mapProduct(row) {
   };
 }
 
+function isMissingMetadataColumnError(error) {
+  return String(error?.code || "") === "42703" && /metadata/i.test(String(error?.message || ""));
+}
+
+async function queryWithOptionalMetadata(sqlWithMetadata, sqlWithoutMetadata, params = []) {
+  try {
+    return await query(sqlWithMetadata, params);
+  } catch (error) {
+    if (!isMissingMetadataColumnError(error) || !sqlWithoutMetadata) throw error;
+    return query(sqlWithoutMetadata, params);
+  }
+}
+
 async function listProducts() {
-  const result = await query(
+  const result = await queryWithOptionalMetadata(
     `
     SELECT id, sku, name, price_cents, stock_qty, currency, active, image_url, metadata, created_at, updated_at
+    FROM products
+    WHERE active = true
+    ORDER BY created_at DESC
+    `,
+    `
+    SELECT id, sku, name, price_cents, stock_qty, currency, active, image_url, created_at, updated_at
     FROM products
     WHERE active = true
     ORDER BY created_at DESC
@@ -249,9 +268,16 @@ async function listAdminProducts({ limit = 200, offset = 0, search = "", include
   }
 
   const whereSql = conditions.length ? `WHERE ${conditions.join(" AND ")}` : "";
-  const result = await query(
+  const result = await queryWithOptionalMetadata(
     `
     SELECT id, sku, name, price_cents, stock_qty, currency, active, image_url, metadata, created_at, updated_at
+    FROM products
+    ${whereSql}
+    ORDER BY created_at DESC
+    LIMIT $1 OFFSET $2
+    `,
+    `
+    SELECT id, sku, name, price_cents, stock_qty, currency, active, image_url, created_at, updated_at
     FROM products
     ${whereSql}
     ORDER BY created_at DESC
@@ -297,9 +323,16 @@ async function searchAdminProducts({
   const limitIdx = values.length - 1;
   const offsetIdx = values.length;
 
-  const listResult = await query(
+  const listResult = await queryWithOptionalMetadata(
     `
     SELECT id, sku, name, price_cents, stock_qty, currency, active, image_url, metadata, created_at, updated_at
+    FROM products
+    ${whereSql}
+    ORDER BY updated_at DESC, created_at DESC
+    LIMIT $${limitIdx} OFFSET $${offsetIdx}
+    `,
+    `
+    SELECT id, sku, name, price_cents, stock_qty, currency, active, image_url, created_at, updated_at
     FROM products
     ${whereSql}
     ORDER BY updated_at DESC, created_at DESC
@@ -329,9 +362,16 @@ async function getProductByIdentifier(identifier) {
   const normalized = String(identifier || "").trim();
   if (!normalized) return null;
 
-  const result = await query(
+  const result = await queryWithOptionalMetadata(
     `
     SELECT id, sku, name, price_cents, stock_qty, currency, active, image_url, metadata, created_at, updated_at
+    FROM products
+    WHERE lower(sku) = lower($1)
+       OR id::text = $1
+    LIMIT 1
+    `,
+    `
+    SELECT id, sku, name, price_cents, stock_qty, currency, active, image_url, created_at, updated_at
     FROM products
     WHERE lower(sku) = lower($1)
        OR id::text = $1
@@ -372,7 +412,7 @@ async function createProduct(payload = {}) {
   });
 
   try {
-    const result = await query(
+    const result = await queryWithOptionalMetadata(
       `
       INSERT INTO products (
         sku, name, price_cents, stock_qty, currency, active, image_url, metadata
@@ -380,6 +420,14 @@ async function createProduct(payload = {}) {
         $1, $2, $3, $4, $5, $6, $7, $8::jsonb
       )
       RETURNING id, sku, name, price_cents, stock_qty, currency, active, image_url, metadata, created_at, updated_at
+      `,
+      `
+      INSERT INTO products (
+        sku, name, price_cents, stock_qty, currency, active, image_url
+      ) VALUES (
+        $1, $2, $3, $4, $5, $6, $7
+      )
+      RETURNING id, sku, name, price_cents, stock_qty, currency, active, image_url, created_at, updated_at
       `,
       [
         sku,
@@ -414,7 +462,7 @@ async function updateProductByIdentifier(identifier, patch = {}) {
     variantStock: patch.variantStock ?? current.variantStock
   });
 
-  const result = await query(
+  const result = await queryWithOptionalMetadata(
     `
     UPDATE products
     SET
@@ -429,6 +477,20 @@ async function updateProductByIdentifier(identifier, patch = {}) {
     WHERE id::text = $1
        OR lower(sku) = lower($1)
     RETURNING id, sku, name, price_cents, stock_qty, currency, active, image_url, metadata, created_at, updated_at
+    `,
+    `
+    UPDATE products
+    SET
+      name = $2,
+      price_cents = $3,
+      stock_qty = $4,
+      currency = $5,
+      active = $6,
+      image_url = $7,
+      updated_at = NOW()
+    WHERE id::text = $1
+       OR lower(sku) = lower($1)
+    RETURNING id, sku, name, price_cents, stock_qty, currency, active, image_url, created_at, updated_at
     `,
     [
       normalized,
@@ -448,7 +510,7 @@ async function updateProductByIdentifier(identifier, patch = {}) {
 async function archiveProductByIdentifier(identifier) {
   const normalized = String(identifier || "").trim();
   if (!normalized) return null;
-  const result = await query(
+  const result = await queryWithOptionalMetadata(
     `
     UPDATE products
     SET active = false,
@@ -456,6 +518,14 @@ async function archiveProductByIdentifier(identifier) {
     WHERE id::text = $1
        OR lower(sku) = lower($1)
     RETURNING id, sku, name, price_cents, stock_qty, currency, active, image_url, metadata, created_at, updated_at
+    `,
+    `
+    UPDATE products
+    SET active = false,
+        updated_at = NOW()
+    WHERE id::text = $1
+       OR lower(sku) = lower($1)
+    RETURNING id, sku, name, price_cents, stock_qty, currency, active, image_url, created_at, updated_at
     `,
     [normalized]
   );
@@ -467,12 +537,18 @@ async function deleteProductByIdentifier(identifier) {
   if (!normalized) return null;
 
   try {
-    const result = await query(
+    const result = await queryWithOptionalMetadata(
       `
       DELETE FROM products
       WHERE id::text = $1
          OR lower(sku) = lower($1)
       RETURNING id, sku, name, price_cents, stock_qty, currency, active, image_url, metadata, created_at, updated_at
+      `,
+      `
+      DELETE FROM products
+      WHERE id::text = $1
+         OR lower(sku) = lower($1)
+      RETURNING id, sku, name, price_cents, stock_qty, currency, active, image_url, created_at, updated_at
       `,
       [normalized]
     );
@@ -495,7 +571,7 @@ async function restoreProductFromSnapshot(snapshot = {}) {
   });
 
   try {
-    const result = await query(
+    const result = await queryWithOptionalMetadata(
       `
       INSERT INTO products (
         sku, name, price_cents, stock_qty, currency, active, image_url, metadata, created_at, updated_at
@@ -513,6 +589,23 @@ async function restoreProductFromSnapshot(snapshot = {}) {
         metadata = EXCLUDED.metadata,
         updated_at = COALESCE(EXCLUDED.updated_at, NOW())
       RETURNING id, sku, name, price_cents, stock_qty, currency, active, image_url, metadata, created_at, updated_at
+      `,
+      `
+      INSERT INTO products (
+        sku, name, price_cents, stock_qty, currency, active, image_url, created_at, updated_at
+      ) VALUES (
+        $1, $2, $3, $4, $5, $6, $7, COALESCE($9::timestamptz, NOW()), COALESCE($10::timestamptz, NOW())
+      )
+      ON CONFLICT (sku) DO UPDATE
+      SET
+        name = EXCLUDED.name,
+        price_cents = EXCLUDED.price_cents,
+        stock_qty = EXCLUDED.stock_qty,
+        currency = EXCLUDED.currency,
+        active = EXCLUDED.active,
+        image_url = EXCLUDED.image_url,
+        updated_at = COALESCE(EXCLUDED.updated_at, NOW())
+      RETURNING id, sku, name, price_cents, stock_qty, currency, active, image_url, created_at, updated_at
       `,
       [
         sku,
