@@ -1372,66 +1372,43 @@ function initHeroVideoLoop() {
 
 function initAlicerceScrollSnap() {
   const section = document.querySelector(".new-drop");
-  if (!section || !("IntersectionObserver" in window)) return;
+  if (!section) return;
 
-  const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-  if (prefersReducedMotion) return;
-
-  // Keep interaction natural on touch-first devices.
-  const coarsePointer = window.matchMedia("(pointer: coarse)").matches;
-  if (coarsePointer) return;
+  if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
 
   let lastScrollY = window.scrollY || 0;
-  let isScrollingDown = false;
   let isSnapping = false;
-  let hasSnappedThisPass = false;
+  let hasSnappedOnCurrentPass = false;
 
-  window.addEventListener(
-    "scroll",
-    () => {
-      const currentY = window.scrollY || 0;
-      isScrollingDown = currentY > lastScrollY;
-      lastScrollY = currentY;
-    },
-    { passive: true }
-  );
+  function maybeSnapToSection() {
+    if (isSnapping) return;
 
-  const observer = new IntersectionObserver(
-    (entries) => {
-      const entry = entries[0];
-      if (!entry) return;
+    const currentY = window.scrollY || 0;
+    const isScrollingDown = currentY > lastScrollY;
+    lastScrollY = currentY;
 
-      if (!entry.isIntersecting) {
-        // Allow snapping again after user goes back above this section.
-        if (entry.boundingClientRect.top > window.innerHeight * 0.9) {
-          hasSnappedThisPass = false;
-        }
-        return;
-      }
+    const rect = section.getBoundingClientRect();
+    const viewportH = window.innerHeight || 0;
 
-      if (isSnapping || hasSnappedThisPass) return;
-
-      if (!isScrollingDown) return;
-
-      const rect = section.getBoundingClientRect();
-      const viewport = window.innerHeight || 0;
-      const enteredSnapZone = rect.top <= viewport * 0.34 && rect.bottom >= viewport * 0.55;
-      if (!enteredSnapZone) return;
-
-      isSnapping = true;
-      hasSnappedThisPass = true;
-      section.scrollIntoView({ behavior: "smooth", block: "start" });
-
-      window.setTimeout(() => {
-        isSnapping = false;
-      }, 700);
-    },
-    {
-      threshold: [0.2, 0.35, 0.5, 0.7]
+    if (rect.top > viewportH * 0.85) {
+      hasSnappedOnCurrentPass = false;
     }
-  );
 
-  observer.observe(section);
+    if (!isScrollingDown || hasSnappedOnCurrentPass) return;
+
+    const inTriggerZone = rect.top <= viewportH * 0.42 && rect.top >= viewportH * -0.1;
+    if (!inTriggerZone) return;
+
+    isSnapping = true;
+    hasSnappedOnCurrentPass = true;
+    section.scrollIntoView({ behavior: "smooth", block: "start" });
+
+    window.setTimeout(() => {
+      isSnapping = false;
+    }, 800);
+  }
+
+  window.addEventListener("scroll", maybeSnapToSection, { passive: true });
 }
 
 function initCartEntryPoints() {
