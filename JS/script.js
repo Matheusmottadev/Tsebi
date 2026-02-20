@@ -1458,7 +1458,7 @@ function initAccountEntryPoints() {
     const user = userStore?.getCurrentUser?.() || null;
     const label = userStore?.getDisplayName?.() || "Entrar / Criar conta";
     accountLinks.forEach((link) => {
-      link.href = user ? "minha-conta.html" : loginUrl;
+      link.href = user ? "conta.html" : loginUrl;
       if (link.classList.contains("quick-action")) return;
       link.textContent = label;
     });

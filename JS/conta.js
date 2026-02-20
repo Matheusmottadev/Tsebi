@@ -54,7 +54,7 @@ function redirectAfterAuth() {
     window.location.href = returnUrl;
     return;
   }
-  window.location.href = "minha-conta.html";
+  window.location.href = "conta.html";
 }
 
 function setFeedback(message, isError = false) {
