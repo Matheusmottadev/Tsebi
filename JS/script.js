@@ -300,6 +300,7 @@ async function bootstrap() {
   initHomeHeaderScrollState();
   initHeaderMenu();
   initHeroVideoLoop();
+  initAlicerceScrollSnap();
   initCartEntryPoints();
   initAccountEntryPoints();
   initTrackOrderEntryPoints();
@@ -1367,6 +1368,70 @@ function initHeroVideoLoop() {
       heroVideo.play().catch(() => {});
     }
   });
+}
+
+function initAlicerceScrollSnap() {
+  const section = document.querySelector(".new-drop");
+  if (!section || !("IntersectionObserver" in window)) return;
+
+  const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  if (prefersReducedMotion) return;
+
+  // Keep interaction natural on touch-first devices.
+  const coarsePointer = window.matchMedia("(pointer: coarse)").matches;
+  if (coarsePointer) return;
+
+  let lastScrollY = window.scrollY || 0;
+  let isScrollingDown = false;
+  let isSnapping = false;
+  let hasSnappedThisPass = false;
+
+  window.addEventListener(
+    "scroll",
+    () => {
+      const currentY = window.scrollY || 0;
+      isScrollingDown = currentY > lastScrollY;
+      lastScrollY = currentY;
+    },
+    { passive: true }
+  );
+
+  const observer = new IntersectionObserver(
+    (entries) => {
+      const entry = entries[0];
+      if (!entry) return;
+
+      if (!entry.isIntersecting) {
+        // Allow snapping again after user goes back above this section.
+        if (entry.boundingClientRect.top > window.innerHeight * 0.9) {
+          hasSnappedThisPass = false;
+        }
+        return;
+      }
+
+      if (isSnapping || hasSnappedThisPass) return;
+
+      if (!isScrollingDown) return;
+
+      const rect = section.getBoundingClientRect();
+      const viewport = window.innerHeight || 0;
+      const enteredSnapZone = rect.top <= viewport * 0.34 && rect.bottom >= viewport * 0.55;
+      if (!enteredSnapZone) return;
+
+      isSnapping = true;
+      hasSnappedThisPass = true;
+      section.scrollIntoView({ behavior: "smooth", block: "start" });
+
+      window.setTimeout(() => {
+        isSnapping = false;
+      }, 700);
+    },
+    {
+      threshold: [0.2, 0.35, 0.5, 0.7]
+    }
+  );
+
+  observer.observe(section);
 }
 
 function initCartEntryPoints() {

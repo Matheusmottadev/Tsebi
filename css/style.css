@@ -1704,6 +1704,7 @@ html.no-scroll{
 .new-drop{
   margin-top: 56px;
   padding: 0;
+  scroll-margin-top: calc(var(--header-height, 72px) + 34px);
 }
 
 .new-drop-inner{
