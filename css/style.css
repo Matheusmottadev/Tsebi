@@ -4428,6 +4428,12 @@ body.home-page .home-header:not(.is-scrolled):not(:hover):not(:focus-within) {
   border-bottom-color: transparent;
 }
 
+body.home-page .home-header:not(.is-scrolled):hover,
+body.home-page .home-header:not(.is-scrolled):focus-within {
+  background: #fff !important;
+  border-bottom-color: #ececec !important;
+}
+
 body.home-page .home-header:not(.is-scrolled):not(:hover):not(:focus-within) .logo-center-text {
   display: inline-block !important;
   color: #fff;
