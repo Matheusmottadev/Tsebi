@@ -9,7 +9,8 @@ async function ensureUserSecurityColumns() {
     userSecuritySchemaPromise = (async () => {
       await query(`
         ALTER TABLE users
-          ADD COLUMN IF NOT EXISTS password_reset_required BOOLEAN NOT NULL DEFAULT FALSE;
+          ADD COLUMN IF NOT EXISTS password_reset_required BOOLEAN NOT NULL DEFAULT FALSE,
+          ADD COLUMN IF NOT EXISTS title TEXT;
       `);
     })().catch((error) => {
       userSecuritySchemaPromise = null;
@@ -22,6 +23,13 @@ async function ensureUserSecurityColumns() {
 
 function normalizeEmail(email) {
   return String(email || "").trim().toLowerCase();
+}
+
+function normalizeTitle(value) {
+  const normalized = String(value || "").trim().toLowerCase();
+  const allowed = new Set(["sr", "sra", "srta", "nao_informar"]);
+  if (!allowed.has(normalized)) return "";
+  return normalized;
 }
 
 function formatBirthDate(value) {
@@ -60,6 +68,7 @@ function fromRow(row) {
   if (!row) return null;
   return {
     id: row.id,
+    title: normalizeTitle(row.title),
     name: row.name,
     email: normalizeEmail(row.email),
     phone: String(row.phone || "").trim(),
@@ -87,6 +96,7 @@ function fromRow(row) {
 function publicUser(user) {
   return {
     id: user.id,
+    title: user.title || "",
     name: user.name,
     email: user.email,
     emailVerified: Boolean(user.emailVerified),
@@ -226,19 +236,21 @@ async function searchUsersAdmin({
   };
 }
 
-async function createUser({ name, email, phone = "", passwordHash, birthDate, cpf, cep, emailVerified = false }) {
+async function createUser({ title = "", name, email, phone = "", passwordHash, birthDate, cpf, cep, emailVerified = false }) {
+  await ensureUserSecurityColumns();
   const normalizedEmail = normalizeEmail(email);
   try {
     const result = await query(
       `
         INSERT INTO users (
-          name, email, phone, password_hash, birth_date, cpf, cep, addresses, default_address_id, email_verified, email_verified_at
+          title, name, email, phone, password_hash, birth_date, cpf, cep, addresses, default_address_id, email_verified, email_verified_at
         ) VALUES (
-          $1, $2, NULLIF($3, ''), $4, NULLIF($5, '')::date, $6, $7, '[]'::jsonb, '', $8, CASE WHEN $8 THEN NOW() ELSE NULL END
+          NULLIF($1, ''), $2, $3, NULLIF($4, ''), $5, NULLIF($6, '')::date, $7, $8, '[]'::jsonb, '', $9, CASE WHEN $9 THEN NOW() ELSE NULL END
         )
         RETURNING *
         `,
         [
+          normalizeTitle(title),
           String(name || "").trim(),
           normalizedEmail,
           String(phone || "").trim().slice(0, 40),
@@ -265,6 +277,7 @@ async function updateUser(id, patch) {
   if (!current) return null;
 
   const next = {
+    title: patch.title ?? current.title,
     name: patch.name ?? current.name,
     birthDate: patch.birthDate ?? current.birthDate,
     cpf: patch.cpf ?? current.cpf,
@@ -285,13 +298,14 @@ async function updateUser(id, patch) {
     UPDATE users
     SET
       name = $2,
-      birth_date = NULLIF($3, '')::date,
-      cpf = $4,
-      cep = $5,
-      addresses = $6::jsonb,
-      default_address_id = $7,
-      password_hash = $8,
-      password_reset_required = $9,
+      title = NULLIF($3, ''),
+      birth_date = NULLIF($4, '')::date,
+      cpf = $5,
+      cep = $6,
+      addresses = $7::jsonb,
+      default_address_id = $8,
+      password_hash = $9,
+      password_reset_required = $10,
       updated_at = NOW()
     WHERE id = $1
     RETURNING *
@@ -299,6 +313,7 @@ async function updateUser(id, patch) {
     [
       id,
       String(next.name || "").trim(),
+      normalizeTitle(next.title),
       String(next.birthDate || ""),
       String(next.cpf || "").replace(/\D/g, "").slice(0, 11) || null,
       String(next.cep || "").replace(/\D/g, "").slice(0, 8) || null,
@@ -313,10 +328,12 @@ async function updateUser(id, patch) {
 }
 
 async function adminUpdateUser(id, patch = {}) {
+  await ensureUserSecurityColumns();
   const current = await findUserById(id);
   if (!current) return null;
 
   const next = {
+    title: patch.title ?? current.title,
     name: patch.name ?? current.name,
     email: patch.email ?? current.email,
     phone: patch.phone ?? current.phone,
@@ -331,11 +348,12 @@ async function adminUpdateUser(id, patch = {}) {
       UPDATE users
       SET
         name = $2,
-        email = $3,
-        phone = NULLIF($4, ''),
-        birth_date = NULLIF($5, '')::date,
-        cpf = $6,
-        cep = $7,
+        title = NULLIF($3, ''),
+        email = $4,
+        phone = NULLIF($5, ''),
+        birth_date = NULLIF($6, '')::date,
+        cpf = $7,
+        cep = $8,
         updated_at = NOW()
       WHERE id = $1
       RETURNING *
@@ -343,6 +361,7 @@ async function adminUpdateUser(id, patch = {}) {
       [
         id,
         String(next.name || "").trim(),
+        normalizeTitle(next.title),
         normalizeEmail(next.email),
         String(next.phone || "").trim().slice(0, 40),
         String(next.birthDate || ""),

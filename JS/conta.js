@@ -24,6 +24,7 @@ const forgotPasswordBtn = document.getElementById("forgotPasswordBtn");
 const registerCodeField = document.getElementById("registerCodeField");
 const registerEmailCodeInput = document.getElementById("registerEmailCode");
 const registerPasswordConfirmInput = document.getElementById("registerPasswordConfirm");
+const registerTitleInput = document.getElementById("registerTitle");
 const resendRegisterCodeBtn = document.getElementById("resendRegisterCodeBtn");
 const registerConsentTermsInput = document.getElementById("registerConsentTerms");
 const registerConsentLgpdInput = document.getElementById("registerConsentLgpd");
@@ -177,6 +178,7 @@ function setRegisterStage(nextStage) {
   if (resendRegisterCodeBtn) resendRegisterCodeBtn.hidden = !inCodeStage;
 
   const inputs = Array.from(registerForm?.querySelectorAll("input") || []);
+  const selects = Array.from(registerForm?.querySelectorAll("select") || []);
   inputs.forEach((input) => {
     const id = String(input.id || "");
     if (id === "registerEmailCode") {
@@ -205,6 +207,16 @@ function setRegisterStage(nextStage) {
     }
   });
 
+  selects.forEach((select) => {
+    const id = String(select.id || "");
+    select.disabled = inCodeStage;
+    if (inCodeStage) {
+      select.removeAttribute("required");
+    } else if (id === "registerTitle") {
+      select.setAttribute("required", "required");
+    }
+  });
+
   if (submit) {
     submit.textContent = inCodeStage ? "Verificar e-mail e entrar" : "Criar conta";
   }
@@ -220,6 +232,7 @@ function resetToEmailStep() {
   if (loginEmailCodeInput) loginEmailCodeInput.value = "";
 
   const registerIds = [
+    "registerTitle",
     "registerName",
     "registerBirthDate",
     "registerCpf",
@@ -230,8 +243,14 @@ function resetToEmailStep() {
     "registerPhone"
   ];
   registerIds.forEach((id) => {
-    const input = document.getElementById(id);
-    if (input instanceof HTMLInputElement) input.value = "";
+    const field = document.getElementById(id);
+    if (field instanceof HTMLInputElement) {
+      field.value = "";
+      return;
+    }
+    if (field instanceof HTMLSelectElement) {
+      field.value = "sr";
+    }
   });
   if (registerConsentTermsInput) registerConsentTermsInput.checked = false;
   if (registerConsentLgpdInput) registerConsentLgpdInput.checked = false;
@@ -357,6 +376,7 @@ async function handleRegister(event) {
   if (!selectedEmail) return showPanel("email");
 
   if (registerStage === "form") {
+    const title = String(registerTitleInput?.value || "").trim();
     const name = String(document.getElementById("registerName")?.value || "").trim();
     const birthDate = String(document.getElementById("registerBirthDate")?.value || "").trim();
     const cpf = normalizeDigits(document.getElementById("registerCpf")?.value || "", 11);
@@ -382,7 +402,7 @@ async function handleRegister(event) {
     }
 
     setFormLoading(registerForm, true);
-    const result = await store.register({ name, email: selectedEmail, password, birthDate, cpf, cep });
+    const result = await store.register({ title, name, email: selectedEmail, password, birthDate, cpf, cep });
     setFormLoading(registerForm, false);
 
     if (!result.ok) {

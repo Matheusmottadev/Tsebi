@@ -30,7 +30,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600&family=Montserrat:wght@300;400;500;600&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="css/style.css?v=20260217f" />
-  <link rel="stylesheet" href="css/account-auth.css?v=20260219b" />
+  <link rel="stylesheet" href="css/account-auth.css?v=20260220a" />
 </head>
 <body class="account-auth-page">
   <header class="cart-simple-header">
@@ -78,6 +78,15 @@
         <p class="account-auth-flow-note">Criar nova conta para <strong id="detectedEmailRegister"></strong></p>
         <form id="registerForm" class="account-auth-form" novalidate>
           <div class="account-auth-grid">
+            <label>
+              <span>Título</span>
+              <select id="registerTitle" required autocomplete="honorific-prefix">
+                <option value="sr">Sr.</option>
+                <option value="sra">Sra.</option>
+                <option value="srta">Srta.</option>
+                <option value="nao_informar">Prefiro não responder</option>
+              </select>
+            </label>
             <label class="account-auth-grid-full">
               <span>Nome completo</span>
               <input type="text" id="registerName" required minlength="2" autocomplete="name" />
@@ -143,11 +152,12 @@
     </section>
   </main>
 
-  <script src="JS/user-utils.js?v=20260217c"></script>
-  <script src="JS/conta.js?v=20260219b"></script>
+  <script src="JS/user-utils.js?v=20260220a"></script>
+  <script src="JS/conta.js?v=20260220a"></script>
   <script src="JS/posthog.js"></script>
 </body>
 </html>
+
 
 
 

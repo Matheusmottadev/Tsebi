@@ -71,7 +71,8 @@
   text-transform: uppercase;
 }
 
-.account-auth-form input{
+.account-auth-form input,
+.account-auth-form select{
   min-height: 48px;
   border: 1px solid #d8d3c8;
   padding: 0 12px;

@@ -30,7 +30,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600&family=Montserrat:wght@300;400;500;600&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="css/style.css?v=20260217f" />
-  <link rel="stylesheet" href="css/account-auth.css" />
+  <link rel="stylesheet" href="css/account-auth.css?v=20260220a" />
   <link rel="stylesheet" href="css/order-tracking.css?v=20260218a" />
 </head>
 <body class="account-auth-page">
@@ -110,6 +110,15 @@
           <section class="account-panel" id="panel-profile" data-panel="profile" hidden>
             <h2>Meus dados</h2>
             <form id="profileForm" class="account-auth-form account-inline-form" novalidate>
+              <label>
+                <span>Título</span>
+                <select id="profileTitle" autocomplete="honorific-prefix">
+                  <option value="sr">Sr.</option>
+                  <option value="sra">Sra.</option>
+                  <option value="srta">Srta.</option>
+                  <option value="nao_informar">Prefiro não responder</option>
+                </select>
+              </label>
               <label>
                 <span>Nome</span>
                 <input type="text" id="profileName" minlength="2" required />
@@ -192,11 +201,12 @@
     </section>
   </main>
 
-  <script src="JS/user-utils.js?v=20260218a"></script>
-  <script src="JS/minha-conta.js?v=20260218a"></script>
+  <script src="JS/user-utils.js?v=20260220a"></script>
+  <script src="JS/minha-conta.js?v=20260220a"></script>
   <script src="JS/posthog.js"></script>
 </body>
 </html>
+
 
 
 

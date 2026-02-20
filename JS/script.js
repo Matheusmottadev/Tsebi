@@ -300,7 +300,6 @@ async function bootstrap() {
   initHomeHeaderScrollState();
   initHeaderMenu();
   initHeroVideoLoop();
-  initAlicerceScrollSnap();
   initCartEntryPoints();
   initAccountEntryPoints();
   initTrackOrderEntryPoints();
@@ -1368,59 +1367,6 @@ function initHeroVideoLoop() {
       heroVideo.play().catch(() => {});
     }
   });
-}
-
-function initAlicerceScrollSnap() {
-  const section = document.querySelector(".new-drop");
-  if (!section) return;
-
-  if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
-
-  let lastScrollY = window.scrollY || 0;
-  let isSnapping = false;
-  let hasSnappedOnCurrentPass = false;
-  let lastSnapAt = 0;
-
-  function snapSection() {
-    isSnapping = true;
-    hasSnappedOnCurrentPass = true;
-    lastSnapAt = Date.now();
-    section.scrollIntoView({ behavior: "smooth", block: "start" });
-
-    // Fine-tune down so the section lands deeper in-frame.
-    window.setTimeout(() => {
-      const viewportH = window.innerHeight || 0;
-      const fineTuneDown = Math.round(Math.min(220, Math.max(120, viewportH * 0.18)));
-      window.scrollBy({ top: fineTuneDown, behavior: "auto" });
-      isSnapping = false;
-    }, 420);
-  }
-
-  function maybeSnapToSection() {
-    if (isSnapping) return;
-
-    const currentY = window.scrollY || 0;
-    const isScrollingDown = currentY > lastScrollY;
-    lastScrollY = currentY;
-
-    const rect = section.getBoundingClientRect();
-    const viewportH = window.innerHeight || 0;
-
-    if (rect.top > viewportH * 0.85) {
-      hasSnappedOnCurrentPass = false;
-    }
-
-    if (!isScrollingDown || hasSnappedOnCurrentPass) return;
-    if (Date.now() - lastSnapAt < 900) return;
-
-    // Trigger later: only when user has already scrolled deeper into the section.
-    const inTriggerZone = rect.top <= viewportH * 0.22 && rect.top >= viewportH * -0.45;
-    if (!inTriggerZone) return;
-
-    snapSection();
-  }
-
-  window.addEventListener("scroll", maybeSnapToSection, { passive: true });
 }
 
 function initCartEntryPoints() {

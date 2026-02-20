@@ -84,8 +84,10 @@ const passwordSchema = z
   .refine((value) => /[A-Za-z]/.test(value) && /\d/.test(value), {
     message: "INVALID_PASSWORD"
   });
+const titleSchema = z.enum(["sr", "sra", "srta", "nao_informar"]);
 
 const registerSchema = z.object({
+  title: titleSchema.optional().default("nao_informar"),
   name: z.string().trim().min(2).max(120),
   email: emailSchema,
   password: passwordSchema,
@@ -127,6 +129,7 @@ const resetPasswordSchema = z.object({
 });
 
 const profileSchema = z.object({
+  title: titleSchema.optional(),
   name: z.string().trim().min(2).max(120),
   birthDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
   cpf: z.string().transform((value) => String(value || "").replace(/\D/g, "")).refine((value) => /^\d{11}$/.test(value)),
@@ -364,6 +367,7 @@ authRouter.post("/register", authRateLimit, async (req, res) => {
   }
 
   const created = await createUser({
+    title: payload.title,
     name: payload.name,
     email: normalizedEmail,
     passwordHash: await bcrypt.hash(payload.password, 12),
@@ -724,6 +728,7 @@ myRouter.put("/profile", requireAuth, async (req, res) => {
   }
 
   const updated = await updateUser(req.session.userId, {
+    title: parsed.data.title,
     name: parsed.data.name,
     birthDate: parsed.data.birthDate,
     cpf: parsed.data.cpf,

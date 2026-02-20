@@ -58,6 +58,7 @@
     return JSON.stringify({
       id: user?.id || "",
       email: normalizeEmail(user?.email || ""),
+      title: normalizeTitle(user?.title || ""),
       name: String(user?.name || ""),
       emailVerified: Boolean(user?.emailVerified),
       emailVerifiedAt: String(user?.emailVerifiedAt || ""),
@@ -101,6 +102,21 @@
 
   function normalizeEmail(email) {
     return String(email || "").trim().toLowerCase();
+  }
+
+  function normalizeTitle(value) {
+    const normalized = String(value || "").trim().toLowerCase();
+    const allowed = new Set(["sr", "sra", "srta", "nao_informar"]);
+    if (!allowed.has(normalized)) return "";
+    return normalized;
+  }
+
+  function formatTitlePrefix(value) {
+    const title = normalizeTitle(value);
+    if (title === "sr") return "Sr.";
+    if (title === "sra") return "Sra.";
+    if (title === "srta") return "Srta.";
+    return "";
   }
 
   function mapAuthError(errorMessage) {
@@ -171,12 +187,13 @@
     return !has;
   }
 
-  async function register({ name, email, password, birthDate, cpf, cep }) {
+  async function register({ title, name, email, password, birthDate, cpf, cep }) {
     try {
       const data = await apiRequest("/api/auth/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          title: normalizeTitle(title) || "nao_informar",
           name: String(name || "").trim(),
           email: normalizeEmail(email),
           password: String(password || ""),
@@ -423,17 +440,21 @@
     }
   }
 
-  async function updateMyProfile({ name, birthDate, cpf, cep }) {
+  async function updateMyProfile({ title, name, birthDate, cpf, cep }) {
     try {
+      const payload = {
+        name: String(name || "").trim(),
+        birthDate: String(birthDate || "").trim(),
+        cpf: String(cpf || "").replace(/\D/g, "").slice(0, 11),
+        cep: String(cep || "").replace(/\D/g, "").slice(0, 8)
+      };
+      const normalizedTitle = normalizeTitle(title);
+      if (normalizedTitle) payload.title = normalizedTitle;
+
       const data = await apiRequest("/api/my/profile", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          name: String(name || "").trim(),
-          birthDate: String(birthDate || "").trim(),
-          cpf: String(cpf || "").replace(/\D/g, "").slice(0, 11),
-          cep: String(cep || "").replace(/\D/g, "").slice(0, 8)
-        })
+        body: JSON.stringify(payload)
       });
       setCachedUser(data.user || null);
       return { ok: true, user: data.user || null };
@@ -559,7 +580,8 @@
   function getDisplayName() {
     if (!currentUser) return "Entrar / Criar conta";
     const firstName = String(currentUser.name || "").trim().split(/\s+/)[0] || "Cliente";
-    return `Olá, ${firstName}`;
+    const prefix = formatTitlePrefix(currentUser.title);
+    return prefix ? `Olá, ${prefix} ${firstName}` : `Olá, ${firstName}`;
   }
 
   function ensureAuthBoot() {
