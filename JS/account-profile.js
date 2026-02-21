@@ -1,6 +1,5 @@
-(function initAccountProfilePage() {
+window.initProfileSection = function initProfileSection(options = {}) {
   const store = window.TsebiUserStore;
-  const profileWrap = document.getElementById("accountProfileWrap");
   const profileForm = document.getElementById("profileForm");
   const profileTitle = document.getElementById("profileTitle");
   const profileFirstName = document.getElementById("profileFirstName");
@@ -44,10 +43,15 @@
   let currentUser = null;
   let currentAddresses = [];
   const storageKey = "tsebi_user_profile";
-  const previewMode = (() => {
-    const params = new URLSearchParams(window.location.search);
-    return String(params.get("preview") || "") === "1";
-  })();
+  const previewMode =
+    typeof options.previewMode === "boolean"
+      ? options.previewMode
+      : (() => {
+          const params = new URLSearchParams(window.location.search);
+          return String(params.get("preview") || "") === "1";
+        })();
+
+  if (!profileForm) return;
 
   function showToast(message) {
     if (!toastEl) return;
@@ -88,6 +92,10 @@
   }
 
   function ensureAuthRedirect() {
+    if (typeof options.onAuthRequired === "function") {
+      options.onAuthRequired();
+      return;
+    }
     const returnUrl = `${window.location.pathname}${window.location.search}${window.location.hash}`;
     window.location.href = `conta.html?returnUrl=${encodeURIComponent(returnUrl)}`;
   }
@@ -370,7 +378,6 @@
 
       renderUserProfile(currentUser);
       renderAddresses(currentAddresses);
-      if (profileWrap) profileWrap.hidden = false;
       return;
     }
 
@@ -391,11 +398,9 @@
 
     renderUserProfile(currentUser);
     renderAddresses(currentAddresses);
-
-    if (profileWrap) profileWrap.hidden = false;
   }
 
   buildBirthOptions();
   bindEvents();
   loadUserProfile();
-})();
+};

@@ -29,9 +29,9 @@ body.account-profile-page > .home-header .header-row {
 }
 
 .account-subnav {
-  position: sticky;
-  top: calc(var(--account-topbar-h) + var(--account-header-h));
-  z-index: 5000;
+  position: relative;
+  top: auto !important;
+  z-index: 5000 !important;
   height: var(--account-subnav-h);
   display: flex;
   align-items: center;
@@ -40,6 +40,33 @@ body.account-profile-page > .home-header .header-row {
   padding: 0 16px;
   border-bottom: 1px solid #eaeaea;
   background: #fff;
+}
+
+.account-subnav.is-sticky-js {
+  position: fixed !important;
+  top: var(--sticky-top, calc(var(--account-topbar-h) + var(--account-header-h))) !important;
+  left: 0;
+  right: 0;
+  border-bottom: 1px solid #eaeaea;
+  background: #fff;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.04);
+  z-index: 10050 !important;
+  animation: accountSubnavIn 160ms ease forwards;
+}
+
+.subnav-sticky-spacer {
+  height: 0;
+}
+
+@keyframes accountSubnavIn {
+  from {
+    transform: translateY(-6px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
 }
 
 .account-subnav::-webkit-scrollbar {
