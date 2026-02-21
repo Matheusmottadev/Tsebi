@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <link rel="icon" type="image/svg+xml" href="/images/favicon-dark.svg?v=20260219c" media="(prefers-color-scheme: dark)" />
+  <link rel="icon" type="image/svg+xml" href="/images/favicon-light.svg?v=20260219c" media="(prefers-color-scheme: light)" />
+  <link rel="icon" type="image/png" href="/images/logo-tsebi.png?v=20260219c" />
+  <link rel="shortcut icon" href="/images/logo-tsebi.png?v=20260219c" />
+  <link rel="apple-touch-icon" href="/images/logo-tsebi.png?v=20260219c" />
+
+  <title>Meu Perfil | Tsebi Brasil</title>
+  <meta name="description" content="Meu Perfil da conta Tsebi." />
+  <meta name="robots" content="noindex,nofollow" />
+  <link rel="canonical" href="https://tsebi.com.br/meu-perfil.html" />
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600&family=Montserrat:wght@300;400;500;600&display=swap" rel="stylesheet" />
+
+  <link rel="stylesheet" href="css/style.css?v=20260220h" />
+  <link rel="stylesheet" href="css/account.css?v=20260220j" />
+</head>
+<body class="account-profile-page">
+  <div class="top-bar">
+    <div class="top-wrapper">
+      <button class="arrow left" type="button">&#10094;</button>
+      <div class="top-message" id="topMessage">Frete Grátis!</div>
+      <button class="arrow right" type="button">&#10095;</button>
+    </div>
+  </div>
+
+  <header class="home-header is-scrolled">
+    <div class="header-row">
+      <div class="header-left">
+        <button class="menu-toggle" id="openHeaderMenu" type="button" aria-label="Abrir menu">
+          <span></span><span></span><span></span>
+        </button>
+        <button class="search-box-trigger" id="openSearch" type="button" aria-label="Abrir busca">
+          <span class="search-box-label">O que você está buscando?</span>
+          <span class="search-box-icon">&#8985;</span>
+        </button>
+      </div>
+
+      <h1 class="logo">
+        <a class="logo-center-link" href="index.html">
+          <span class="logo-center-text">TSEBI</span>
+          <img class="logo-center-image" src="images/logo-tsebi.png" alt="Logo TSEBI" />
+        </a>
+      </h1>
+
+      <div class="header-right">
+        <a class="quick-action" href="conta.html" aria-label="Conta">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M20 21a8 8 0 0 0-16 0"></path>
+            <circle cx="12" cy="8" r="4"></circle>
+          </svg>
+        </a>
+        <a class="quick-action" href="#" aria-label="Carrinho">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M7 7h10l1 12H6L7 7z"></path>
+            <path d="M9 7V6a3 3 0 1 1 6 0v1"></path>
+          </svg>
+        </a>
+      </div>
+    </div>
+  </header>
+
+  <aside class="header-menu" id="headerMenu" aria-hidden="true">
+    <button class="header-menu-close" id="closeHeaderMenu" type="button" aria-label="Fechar menu">&times;</button>
+    <nav class="header-menu-nav">
+      <div class="menu-group"><a class="menu-group-title" href="lancamento.html">Coleção Gênesis</a></div>
+      <div class="menu-group"><a class="menu-group-title" href="nossa-historia.html">Origem</a></div>
+      <div class="menu-group"><a class="menu-group-title" href="processos.html">Processos</a></div>
+      <div class="menu-group"><a class="menu-group-title" href="faq.html">FAQ</a></div>
+    </nav>
+  </aside>
+
+  <nav class="account-subnav" aria-label="Navegação da conta">
+    <a href="conta.html" data-section="overview" data-target="conta.html">Visão Geral</a>
+    <a href="meu-perfil.html" data-section="profile" data-target="meu-perfil.html" class="is-active">Meu Perfil</a>
+    <a href="conta.html#card-orders" data-section="orders" data-target="conta.html#card-orders">Meus Pedidos</a>
+    <a href="conta.html#card-private" data-section="private" data-target="conta.html#card-private">Atendimentos Privados</a>
+    <a href="conta.html#card-recommendations" data-section="recommendations" data-target="conta.html#card-recommendations">Recomendações</a>
+    <a href="conta.html#card-wishlist" data-section="wishlist" data-target="conta.html#card-wishlist">Lista de Desejos</a>
+    <a href="conta.html#card-repairs" data-section="repairs" data-target="conta.html#card-repairs">Serviço de Reparos</a>
+  </nav>
+
+  <main class="account-profile-wrap" id="accountProfileWrap" hidden>
+    <section class="account-content" id="accountContent">
+      <div class="section-loader" id="sectionLoader" aria-hidden="true">
+        <div class="section-loader__inner">
+          <img src="images/logo-tsebi.png" alt="Carregando" class="section-loader__logo" />
+          <span class="section-loader__text">Carregando</span>
+        </div>
+      </div>
+      <div id="accountSectionMount">
+    <h1 class="account-title">Meu Perfil</h1>
+
+    <section class="account-grid">
+      <div class="account-panel">
+        <h2>Informação Pessoal</h2>
+
+        <form id="profileForm" novalidate>
+          <div class="field">
+            <label for="profileTitle">Título <span>*</span></label>
+            <select id="profileTitle" required>
+              <option value="">Selecione</option>
+              <option value="sr">Sr.</option>
+              <option value="sra">Sra.</option>
+              <option value="srta">Srta.</option>
+              <option value="nao_informar">Outro</option>
+            </select>
+            <small class="field-error" data-error-for="profileTitle"></small>
+          </div>
+
+          <div class="field-grid-2">
+            <div class="field">
+              <label for="profileFirstName">Nome <span>*</span></label>
+              <input id="profileFirstName" type="text" required />
+              <small class="field-error" data-error-for="profileFirstName"></small>
+            </div>
+            <div class="field">
+              <label for="profileLastName">Sobrenome <span>*</span></label>
+              <input id="profileLastName" type="text" required />
+              <small class="field-error" data-error-for="profileLastName"></small>
+            </div>
+          </div>
+
+          <div class="field">
+            <label for="profileCountry">País/Região <span>*</span></label>
+            <select id="profileCountry" required>
+              <option value="Brasil">Brasil</option>
+              <option value="Portugal">Portugal</option>
+              <option value="Estados Unidos">Estados Unidos</option>
+              <option value="Outro">Outro</option>
+            </select>
+            <small class="field-error" data-error-for="profileCountry"></small>
+          </div>
+
+          <div class="check-list">
+            <label><input id="contactByEmail" type="checkbox" /> Desejo Ser Contatado por E-mail</label>
+            <label><input id="contactByPhone" type="checkbox" /> Desejo Ser Contatado por Telefone</label>
+            <label><input id="contactBySms" type="checkbox" /> Desejo Ser Contatado por SMS</label>
+          </div>
+
+          <div class="field">
+            <label>Data de Nascimento</label>
+            <div class="birth-grid">
+              <select id="birthDay"><option value="">Dia</option></select>
+              <select id="birthMonth"><option value="">Mês</option></select>
+              <select id="birthYear"><option value="">Ano</option></select>
+            </div>
+          </div>
+
+          <button type="submit" class="btn-primary btn-full">Salve as suas informações</button>
+        </form>
+      </div>
+
+      <div class="account-right-col">
+        <section class="account-panel">
+          <h2>Minhas Preferências</h2>
+          <p class="panel-note">Selecione os canais em que você deseja receber notícias e lançamentos!</p>
+          <a class="policy-link" href="politica-privacidade.html">Política de Privacidade</a>
+
+          <div class="switch-list">
+            <label class="switch-row">E-mail <input type="checkbox" id="prefEmail" /><span class="switch-ui"></span></label>
+            <label class="switch-row">Telefone <input type="checkbox" id="prefPhone" /><span class="switch-ui"></span></label>
+            <label class="switch-row">Mensagem de texto <input type="checkbox" id="prefSms" /><span class="switch-ui"></span></label>
+            <label class="switch-row">Postal <input type="checkbox" id="prefPostal" /><span class="switch-ui"></span></label>
+          </div>
+        </section>
+
+        <section class="account-panel">
+          <h2>Informações para Login</h2>
+          <div class="field">
+            <label>Email</label>
+            <input id="loginEmail" type="email" readonly />
+          </div>
+          <div class="login-password-row">
+            <span>Senha</span>
+            <button class="btn-primary btn-small" type="button" id="openPasswordModal">Alterar</button>
+          </div>
+        </section>
+
+        <section class="account-panel">
+          <h2>Meus Endereços</h2>
+          <div id="addressesEmpty" class="empty-copy">Você não possui nenhum endereço salvo</div>
+          <div id="addressesList" class="address-list"></div>
+          <button type="button" class="btn-outline" id="addAddressBtn">Adicionar novo endereço</button>
+        </section>
+      </div>
+    </section>
+      </div>
+    </section>
+  </main>
+
+  <div class="toast" id="profileToast" role="status" aria-live="polite"></div>
+
+  <div class="modal-backdrop" id="passwordModal" hidden>
+    <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="passwordModalTitle">
+      <h3 id="passwordModalTitle">Alterar senha</h3>
+      <form id="passwordForm" class="modal-form">
+        <label for="currentPassword">Senha atual</label>
+        <input id="currentPassword" type="password" required />
+        <label for="newPassword">Nova senha</label>
+        <input id="newPassword" type="password" required />
+        <label for="confirmPassword">Confirmar senha</label>
+        <input id="confirmPassword" type="password" required />
+        <div class="modal-actions">
+          <button type="button" class="btn-outline" id="closePasswordModal">Cancelar</button>
+          <button type="submit" class="btn-primary">Salvar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script src="JS/user-utils.js?v=20260220a"></script>
+  <script src="JS/script.js?v=20260220i"></script>
+  <script src="JS/account-loader.js?v=20260220a"></script>
+  <script src="JS/account-profile.js?v=20260220b"></script>
+  <script src="JS/posthog.js"></script>
+</body>
+</html>

@@ -29,25 +29,83 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600&family=Montserrat:wght@300;400;500;600&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="css/style.css?v=20260220h" />
-  <link rel="stylesheet" href="css/conta.css?v=20260220f" />
+  <link rel="stylesheet" href="css/conta.css?v=20260220s" />
 </head>
 <body class="conta-page">
-  <header class="cart-simple-header">
-    <a class="cart-simple-logo" href="index.html">TSEBI</a>
-    <nav class="cart-simple-actions">
-      <a href="index.html">Voltar à loja</a>
-      <a href="cart.html">Carrinho</a>
-    </nav>
-  </header>
+  <div class="top-bar">
+    <div class="top-wrapper">
+      <button class="arrow left" type="button">&#10094;</button>
+      <div class="top-message" id="topMessage">Frete Grátis!</div>
+      <button class="arrow right" type="button">&#10095;</button>
+    </div>
+  </div>
+
+  <header class="home-header is-scrolled">
+  <div class="header-row">
+    <div class="header-left">
+      <button class="menu-toggle" id="openHeaderMenu" type="button" aria-label="Abrir menu">
+        <span></span><span></span><span></span>
+      </button>
+      <button class="search-box-trigger" id="openSearch" type="button" aria-label="Abrir busca">
+        <span class="search-box-label">O que você está buscando?</span>
+        <span class="search-box-icon">&#8985;</span>
+      </button>
+    </div>
+
+    <h1 class="logo">
+      <a class="logo-center-link" href="index.html">
+        <span class="logo-center-text">TSEBI</span>
+        <img class="logo-center-image" src="images/logo-tsebi.png" alt="Logo TSEBI" />
+      </a>
+    </h1>
+
+    <div class="header-right">
+      <a class="quick-action" href="conta.html" aria-label="Conta">
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M20 21a8 8 0 0 0-16 0"></path>
+          <circle cx="12" cy="8" r="4"></circle>
+        </svg>
+      </a>
+      <a class="quick-action" href="#" aria-label="Carrinho">
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M7 7h10l1 12H6L7 7z"></path>
+          <path d="M9 7V6a3 3 0 1 1 6 0v1"></path>
+        </svg>
+      </a>
+    </div>
+  </div>
+</header>
+
+<aside class="header-menu" id="headerMenu" aria-hidden="true">
+  <button class="header-menu-close" id="closeHeaderMenu" type="button" aria-label="Fechar menu">&times;</button>
+  <nav class="header-menu-nav">
+    <div class="menu-group">
+      <a class="menu-group-title" href="lancamento.html">Coleção Gênesis</a>
+    </div>
+    <div class="menu-group">
+      <a class="menu-group-title" href="#">Presentes</a>
+      <a href="#">Presente para ele</a>
+      <a href="#">Presentes para ela</a>
+      <a href="#">Fragrâncias para ele</a>
+      <a href="#">Fragrâncias para ela</a>
+    </div>
+    <div class="menu-group">
+      <a class="menu-group-title" href="nossa-historia.html">Origem</a>
+    </div>
+    <div class="menu-group">
+      <a class="menu-group-title" href="processos.html">Processos</a>
+    </div>
+  </nav>
+</aside>
 
   <nav class="conta-subnav" aria-label="Navegação da conta">
-    <a href="#" class="is-active">Visão Geral</a>
-    <a href="#card-profile">Meu Perfil</a>
-    <a href="#card-orders">Meus Pedidos</a>
-    <a href="#card-private">Atendimentos Privados</a>
-    <a href="#card-recommendations">Recomendações</a>
-    <a href="#card-wishlist">Lista de Desejos</a>
-    <a href="#card-repairs">Serviço de Reparos</a>
+    <a href="conta.html" data-section="overview" data-target="conta.html" class="is-active">Visão Geral</a>
+    <a href="meu-perfil.html" data-section="profile" data-target="meu-perfil.html">Meu Perfil</a>
+    <a href="#card-orders" data-section="orders" data-target="#card-orders">Meus Pedidos</a>
+    <a href="#card-private" data-section="private" data-target="#card-private">Atendimentos Privados</a>
+    <a href="#card-recommendations" data-section="recommendations" data-target="#card-recommendations">Recomendações</a>
+    <a href="#card-wishlist" data-section="wishlist" data-target="#card-wishlist">Lista de Desejos</a>
+    <a href="#card-repairs" data-section="repairs" data-target="#card-repairs">Serviço de Reparos</a>
   </nav>
 
   <main class="conta-wrap">
@@ -65,6 +123,14 @@
     </section>
 
     <div id="contaDashboard" hidden>
+    <section class="account-content" id="accountContent">
+      <div class="section-loader" id="sectionLoader" aria-hidden="true">
+        <div class="section-loader__inner">
+          <img src="images/logo-tsebi.png" alt="Carregando" class="section-loader__logo" />
+          <span class="section-loader__text">Carregando</span>
+        </div>
+      </div>
+      <div id="accountSectionMount">
     <section class="conta-hero">
       <div class="conta-hero-banner" style="background-image:url('images/popup.jpg')">
         <div class="conta-hero-overlay"></div>
@@ -136,6 +202,8 @@
         <div class="conta-details" id="details-repairs"></div>
       </article>
     </section>
+      </div>
+    </section>
 
     <footer class="conta-footer">
       <a href="aviso-legal.html">Termos e condições</a>
@@ -145,6 +213,9 @@
   </main>
 
   <script src="JS/user-utils.js?v=20260220a"></script>
+  <script src="JS/script.js?v=20260220i"></script>
+  <script src="JS/account-loader.js?v=20260220a"></script>
+  
   <script>
     (() => {
       const store = window.TsebiUserStore;
@@ -170,6 +241,10 @@
       let myOrders = [];
       let favoriteIds = [];
       let user = null;
+      const previewMode = (() => {
+        const params = new URLSearchParams(window.location.search);
+        return String(params.get("preview") || "") === "1";
+      })();
       const returnUrl = (() => {
         const params = new URLSearchParams(window.location.search);
         const raw = String(params.get("returnUrl") || "").trim();
@@ -344,7 +419,7 @@
           const latestFive = myOrders.slice(0, 5).map((order) => `
             <div class="conta-detail-row">
               <span>Pedido #${escapeHtml(String(order.orderNumber || order.id || "").slice(0, 12))}</span>
-              <strong>${escapeHtml(orderStatus(order.status))} • ${escapeHtml(money(order.amount, order.currency))}</strong>
+              <strong>${escapeHtml(orderStatus(order.status))} â€¢ ${escapeHtml(money(order.amount, order.currency))}</strong>
             </div>
           `).join("");
           cardCache[kind] = `${latestFive}<a class="btn-outline" href="conta.html#card-orders">Ver todos</a>`;
@@ -437,6 +512,23 @@
           return;
         }
 
+        if (previewMode) {
+          user = {
+            name: "Cliente Tsebi",
+            email: "cliente@tsebi.com",
+            title: "nao_informar",
+            phone: ""
+          };
+          myOrders = [];
+          favoriteIds = [];
+          productsCatalog = await loadProductsCatalog();
+          renderUserHeader();
+          renderSummaries();
+          bindAccordion();
+          showDashboard();
+          return;
+        }
+
         const me = await store.fetchMe();
         if (!me.ok || !me.user) {
           showAuthGate();
@@ -493,6 +585,9 @@
   <script src="JS/posthog.js"></script>
 </body>
 </html>
+
+
+
 
 
 

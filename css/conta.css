@@ -3,50 +3,60 @@ body {
   color: #111111;
 }
 
-body.conta-page > .cart-simple-header {
-  display: flex !important;
+body.conta-page {
+  --conta-topbar-height: 38px;
+  --conta-header-height: 68px;
+  --conta-subnav-height: 54px;
+  padding-top: 0;
+}
+
+body.conta-page > .home-header {
+  display: block !important;
   visibility: visible !important;
   opacity: 1 !important;
   position: sticky;
-  top: 0;
+  top: var(--conta-topbar-height);
   left: 0;
   width: 100%;
-  height: 72px;
-  align-items: center;
-  justify-content: space-between;
-  padding: 0 24px;
+  min-height: var(--conta-header-height);
+  padding: 8px 24px;
   border-bottom: 1px solid #ececec;
-  z-index: 6000;
+  z-index: 5600;
   background: #ffffff;
+  box-shadow: none;
 }
 
-.cart-simple-header {
-  position: sticky;
-  top: 0;
-  z-index: 2200;
-  background: #ffffff;
+body.conta-page > .home-header .search-box-trigger {
+  height: 44px;
+}
+
+body.conta-page > .home-header .header-row {
+  width: 100%;
 }
 
 .conta-subnav {
-  height: 60px;
+  height: var(--conta-subnav-height);
   border-bottom: 1px solid #eaeaea;
   background: #ffffff;
   display: flex;
   align-items: center;
-  justify-content: flex-start;
-  overflow-x: auto;
-  padding: 0 24px;
-  gap: 4px;
+  justify-content: center;
+  padding: 0 16px;
+  gap: 2px;
   position: sticky;
-  top: 72px;
-  z-index: 2100;
+  top: calc(var(--conta-topbar-height) + var(--conta-header-height));
+  z-index: 5000;
+}
+
+.conta-subnav::-webkit-scrollbar {
+  display: none;
 }
 
 .conta-subnav a {
-  font-size: 14px;
+  font-size: 13px;
   color: #111111;
-  padding: 0 20px;
-  height: 60px;
+  padding: 0 14px;
+  height: var(--conta-subnav-height);
   display: inline-flex;
   align-items: center;
   white-space: nowrap;
@@ -54,15 +64,78 @@ body.conta-page > .cart-simple-header {
   border-bottom: 2px solid transparent;
 }
 
+.conta-subnav a + a {
+  border-left: 1px solid #e6e6e6;
+}
+
 .conta-subnav a.is-active {
   border-bottom-color: #111111;
   font-weight: 500;
 }
 
+.account-content {
+  position: relative;
+  min-height: 300px;
+}
+
+.section-loader {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(2px);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s ease;
+  z-index: 10;
+}
+
+.section-loader.is-active {
+  opacity: 1;
+  pointer-events: all;
+}
+
+.section-loader__inner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+
+.section-loader__logo {
+  width: 64px;
+  height: 64px;
+  animation: tsebiLoader 1.4s ease-in-out infinite;
+}
+
+.section-loader__text {
+  font-size: 12px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: #666;
+}
+
+@keyframes tsebiLoader {
+  0% {
+    transform: rotate(0deg) scale(1);
+    opacity: 0.85;
+  }
+  50% {
+    transform: rotate(10deg) scale(1.05);
+    opacity: 1;
+  }
+  100% {
+    transform: rotate(0deg) scale(1);
+    opacity: 0.85;
+  }
+}
+
 .conta-wrap {
   max-width: 1200px;
   margin: 0 auto;
-  padding: 40px 24px;
+  padding: 0 24px 40px;
   background: #ffffff;
   overflow: visible;
 }
@@ -129,9 +202,10 @@ body.conta-page > .cart-simple-header {
   width: calc(100vw + 48px);
   margin-left: calc(50% - 50vw - 24px);
   margin-right: calc(50% - 50vw - 24px);
-  height: 220px;
-  background-size: cover;
-  background-position: center;
+  height: 420px;
+  background-size: 100% auto;
+  background-repeat: no-repeat;
+  background-position: center bottom;
   border-radius: 0;
   overflow: hidden;
 }
@@ -145,7 +219,7 @@ body.conta-page > .cart-simple-header {
 .conta-avatar {
   position: absolute;
   top: auto;
-  bottom: 0;
+  bottom: 100px;
   left: 50%;
   transform: translate(-50%, 50%);
   z-index: 2;
@@ -357,18 +431,18 @@ body.conta-page > .cart-simple-header {
 }
 
 @media (max-width: 760px) {
-  body.conta-page > .cart-simple-header {
-    height: 64px;
-    padding: 0 14px;
+  body.conta-page {
+    --conta-header-height: 64px;
   }
 
   .conta-wrap {
-    padding: 24px 16px;
+    padding: 0 16px 24px;
   }
 
   .conta-subnav {
+    justify-content: flex-start;
     padding: 0 8px;
-    top: 64px;
+    overflow-x: auto;
   }
 
   .conta-hero-banner {

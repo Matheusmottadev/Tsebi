@@ -1,0 +1,491 @@
+body.account-profile-page {
+  --account-topbar-h: 38px;
+  --account-header-h: 68px;
+  --account-subnav-h: 54px;
+  background: #fffafa;
+  color: #111;
+  padding-top: 0;
+}
+
+body.account-profile-page > .home-header {
+  position: sticky;
+  top: var(--account-topbar-h);
+  left: 0;
+  right: 0;
+  width: 100%;
+  min-height: var(--account-header-h);
+  padding: 8px 24px;
+  background: #fff !important;
+  border-bottom: 1px solid #ececec !important;
+  z-index: 5600;
+}
+
+body.account-profile-page > .home-header .search-box-trigger {
+  height: 44px;
+}
+
+body.account-profile-page > .home-header .header-row {
+  width: 100%;
+}
+
+.account-subnav {
+  position: sticky;
+  top: calc(var(--account-topbar-h) + var(--account-header-h));
+  z-index: 5000;
+  height: var(--account-subnav-h);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  padding: 0 16px;
+  border-bottom: 1px solid #eaeaea;
+  background: #fff;
+}
+
+.account-subnav::-webkit-scrollbar {
+  display: none;
+}
+
+.account-subnav a {
+  height: var(--account-subnav-h);
+  display: inline-flex;
+  align-items: center;
+  padding: 0 14px;
+  border-bottom: 2px solid transparent;
+  text-decoration: none;
+  color: #111111;
+  font-family: "Montserrat", sans-serif;
+  font-size: 13px;
+  white-space: nowrap;
+}
+
+.account-subnav a + a {
+  border-left: 1px solid #e6e6e6;
+}
+
+.account-subnav a.is-active {
+  border-bottom-color: #111;
+  font-weight: 500;
+}
+
+.account-content {
+  position: relative;
+  min-height: 300px;
+}
+
+.section-loader {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(2px);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s ease;
+  z-index: 10;
+}
+
+.section-loader.is-active {
+  opacity: 1;
+  pointer-events: all;
+}
+
+.section-loader__inner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+
+.section-loader__logo {
+  width: 64px;
+  height: 64px;
+  animation: tsebiLoader 1.4s ease-in-out infinite;
+}
+
+.section-loader__text {
+  font-size: 12px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: #666;
+}
+
+@keyframes tsebiLoader {
+  0% {
+    transform: rotate(0deg) scale(1);
+    opacity: 0.85;
+  }
+  50% {
+    transform: rotate(10deg) scale(1.05);
+    opacity: 1;
+  }
+  100% {
+    transform: rotate(0deg) scale(1);
+    opacity: 0.85;
+  }
+}
+
+.account-profile-wrap {
+  max-width: 1200px;
+  width: 100%;
+  margin: 50px auto 0;
+  padding: 0 24px 40px;
+  transform: none;
+}
+
+.account-title {
+  margin: 20px 0 8px;
+  font-family: "Playfair Display", serif;
+  font-size: 28px;
+  font-weight: 500;
+}
+
+.account-grid {
+  display: grid;
+  grid-template-columns: 1.15fr 0.85fr;
+  gap: 40px;
+  margin-top: 20px;
+}
+
+.account-panel {
+  background: #fff;
+  border: 1px solid #eee;
+  border-radius: 10px;
+  padding: 12px;
+}
+
+.account-panel h2 {
+  margin: 0 0 18px;
+  font-family: "Playfair Display", serif;
+  font-size: 20px;
+  font-weight: 500;
+}
+
+.field,
+.field-grid-2,
+.birth-grid,
+.check-list,
+.switch-list,
+.address-list {
+  margin-top: 16px;
+}
+
+.field-grid-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+.field label {
+  display: block;
+  margin-bottom: 6px;
+  font-family: "Montserrat", sans-serif;
+  font-size: 12px;
+  color: #111;
+}
+
+.field label span {
+  color: #111;
+}
+
+.field input,
+.field select,
+.birth-grid select {
+  width: 100%;
+  height: 44px;
+  border: 1px solid #e6e6e6;
+  border-radius: 8px;
+  padding: 0 12px;
+  background: #fff;
+  font-family: "Montserrat", sans-serif;
+  font-size: 14px;
+  color: #111;
+}
+
+.field input:focus,
+.field select:focus,
+.birth-grid select:focus {
+  outline: 2px solid #111;
+  outline-offset: 1px;
+}
+
+.field-error {
+  display: block;
+  min-height: 16px;
+  margin-top: 5px;
+  color: #9f1f1f;
+  font-size: 12px;
+  font-family: "Montserrat", sans-serif;
+}
+
+.check-list {
+  display: grid;
+  gap: 10px;
+  padding-top: 10px;
+  border-top: 1px solid #eee;
+}
+
+.check-list label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-family: "Montserrat", sans-serif;
+  font-size: 14px;
+}
+
+.birth-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 12px;
+}
+
+.btn-primary,
+.btn-outline {
+  height: 46px;
+  border-radius: 999px;
+  padding: 0 22px;
+  font-size: 14px;
+  font-family: "Montserrat", sans-serif;
+  cursor: pointer;
+}
+
+.btn-primary {
+  background: #000;
+  border: 1px solid #000;
+  color: #fff;
+}
+
+.btn-primary:hover {
+  opacity: 0.88;
+}
+
+.btn-outline {
+  background: transparent;
+  border: 1px solid #111;
+  color: #111;
+}
+
+.btn-full {
+  width: 100%;
+  margin-top: 20px;
+}
+
+.btn-small {
+  height: 40px;
+  padding: 0 18px;
+}
+
+.panel-note {
+  margin: 0;
+  color: #666;
+  font-family: "Montserrat", sans-serif;
+  font-size: 14px;
+}
+
+.policy-link {
+  display: inline-block;
+  margin-top: 8px;
+  color: #111;
+  font-family: "Montserrat", sans-serif;
+  font-size: 13px;
+}
+
+.switch-list {
+  display: grid;
+  gap: 12px;
+  padding-top: 14px;
+  border-top: 1px solid #eee;
+}
+
+.switch-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  font-family: "Montserrat", sans-serif;
+  font-size: 14px;
+}
+
+.switch-row input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.switch-ui {
+  width: 48px;
+  height: 28px;
+  border-radius: 999px;
+  background: #d9d9d9;
+  position: relative;
+  transition: background 180ms ease;
+  flex-shrink: 0;
+}
+
+.switch-ui::after {
+  content: "";
+  position: absolute;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: #fff;
+  top: 3px;
+  left: 3px;
+  transition: transform 180ms ease;
+}
+
+.switch-row input:checked + .switch-ui {
+  background: #111;
+}
+
+.switch-row input:checked + .switch-ui::after {
+  transform: translateX(20px);
+}
+
+.login-password-row {
+  margin-top: 18px;
+  padding-top: 14px;
+  border-top: 1px solid #eee;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-family: "Montserrat", sans-serif;
+  font-size: 14px;
+}
+
+.empty-copy {
+  font-family: "Montserrat", sans-serif;
+  font-size: 14px;
+  color: #666;
+}
+
+.address-list {
+  display: grid;
+  gap: 10px;
+}
+
+.address-card {
+  border: 1px solid #ececec;
+  border-radius: 10px;
+  padding: 12px;
+}
+
+.address-card strong {
+  display: block;
+  margin-bottom: 5px;
+  font-family: "Montserrat", sans-serif;
+  font-size: 13px;
+}
+
+.address-card p {
+  margin: 0;
+  font-family: "Montserrat", sans-serif;
+  font-size: 13px;
+  color: #666;
+  line-height: 1.4;
+}
+
+.address-card button {
+  margin-top: 10px;
+}
+
+.toast {
+  position: fixed;
+  right: 18px;
+  bottom: 18px;
+  background: #111;
+  color: #fff;
+  font-family: "Montserrat", sans-serif;
+  font-size: 13px;
+  padding: 10px 14px;
+  border-radius: 8px;
+  opacity: 0;
+  transform: translateY(8px);
+  transition: opacity 180ms ease, transform 180ms ease;
+  pointer-events: none;
+  z-index: 9000;
+}
+
+.toast.is-visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.35);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  z-index: 8000;
+}
+
+.modal-card {
+  width: min(460px, 100%);
+  background: #fff;
+  border-radius: 12px;
+  padding: 22px;
+}
+
+.modal-card h3 {
+  margin: 0 0 12px;
+  font-family: "Playfair Display", serif;
+  font-size: 24px;
+  font-weight: 500;
+}
+
+.modal-form {
+  display: grid;
+  gap: 10px;
+}
+
+.modal-form label {
+  font-family: "Montserrat", sans-serif;
+  font-size: 12px;
+}
+
+.modal-form input {
+  height: 44px;
+  border: 1px solid #e6e6e6;
+  border-radius: 8px;
+  padding: 0 12px;
+  font-family: "Montserrat", sans-serif;
+}
+
+.modal-actions {
+  margin-top: 8px;
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+@media (max-width: 980px) {
+  .account-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 760px) {
+  body.account-profile-page {
+    --account-header-h: 64px;
+  }
+
+  .account-subnav {
+    justify-content: flex-start;
+    overflow-x: auto;
+    padding: 0 8px;
+  }
+
+  .account-profile-wrap {
+    margin-top: 8px;
+    padding: 0 16px 24px;
+  }
+
+  .field-grid-2 {
+    grid-template-columns: 1fr;
+  }
+}
