@@ -4494,3 +4494,22 @@ body:not(.home-page) .home-header .logo-center-image {
   display: none !important;
   opacity: 0 !important;
 }
+
+/* Header vertical centering lock */
+.home-header {
+  display: flex;
+  align-items: center;
+}
+
+.home-header .header-row {
+  width: 100%;
+  min-height: calc(var(--header-height) - 2px);
+  align-items: center;
+}
+
+.home-header .header-left,
+.home-header .logo,
+.home-header .header-right,
+.home-header .logo-center-link {
+  align-self: center;
+}

@@ -15,6 +15,7 @@ body.conta-page > .home-header {
   display: block !important;
   visibility: visible !important;
   opacity: 1 !important;
+  align-items: center;
   position: fixed;
   top: var(--conta-topbar-height);
   left: 0;

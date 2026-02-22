@@ -9,6 +9,7 @@ body.account-profile-page {
 }
 
 body.account-profile-page > .home-header {
+  display: block !important;
   position: fixed;
   top: var(--account-topbar-h);
   left: 0;
