@@ -382,12 +382,13 @@
     }
 
     const me = await store.fetchMe();
-    if (!me.ok || !me.user) {
+    const fallbackUser = typeof store.getCurrentUser === "function" ? store.getCurrentUser() : null;
+    if ((!me.ok || !me.user) && !fallbackUser) {
       showAuthGate();
       window.dispatchEvent(new Event("account:layout-change"));
       return;
     }
-    state.user = me.user;
+    state.user = me.user || fallbackUser;
     await bootAuthenticated();
   }
 

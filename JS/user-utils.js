@@ -1,8 +1,9 @@
 (function initTsebiUserStore() {
   const LEGACY_AUTH_CACHE_KEY = "tsebi-auth-user-cache-v1";
+  const AUTH_CACHE_KEY = "tsebi-auth-user-cache-v2";
   const FAVORITES_KEY = "tsebi-favorites-v2";
 
-  let currentUser = null;
+  let currentUser = readJson(AUTH_CACHE_KEY, null);
   let authReady = false;
   let authBootPromise = null;
 
@@ -37,6 +38,16 @@
     } catch {}
   }
 
+  function writeAuthCache(user) {
+    try {
+      if (user) {
+        localStorage.setItem(AUTH_CACHE_KEY, JSON.stringify(user));
+      } else {
+        localStorage.removeItem(AUTH_CACHE_KEY);
+      }
+    } catch {}
+  }
+
   function snapshotUser(user) {
     return JSON.stringify({
       id: user?.id || "",
@@ -62,6 +73,7 @@
   function setCachedUser(user) {
     const prevSnapshot = snapshotUser(currentUser);
     currentUser = user || null;
+    writeAuthCache(currentUser);
     const nextSnapshot = snapshotUser(currentUser);
     const hasChanged = prevSnapshot !== nextSnapshot;
 
@@ -352,7 +364,7 @@
       if (code === "UNAUTHORIZED") {
         setCachedUser(null);
       }
-      return { ok: false, error: mapAuthError(code), code };
+      return { ok: false, error: mapAuthError(code), code, user: currentUser || null };
     }
   }
 
@@ -577,7 +589,8 @@
         const data = await apiRequest("/api/auth/me", { method: "GET" });
         setCachedUser(data.user || null);
       } catch {
-        setCachedUser(null);
+        // Keep local cached user on transient failures to avoid forced relogin loops.
+        if (!currentUser) setCachedUser(null);
       } finally {
         authReady = true;
         emitAuthChange();

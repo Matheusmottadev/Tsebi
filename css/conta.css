@@ -22,7 +22,7 @@ body.conta-page > .home-header {
   right: 0;
   width: 100%;
   min-height: var(--conta-header-height);
-  padding: 8px 24px;
+  padding: 8px 16px;
   border-bottom: 1px solid #ececec;
   z-index: 5600;
   background: #ffffff;
@@ -35,6 +35,8 @@ body.conta-page > .home-header .search-box-trigger {
 
 body.conta-page > .home-header .header-row {
   width: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
   min-height: calc(var(--conta-header-height) - 16px);
   align-items: center;
 }
