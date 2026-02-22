@@ -17,7 +17,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600&family=Montserrat:wght@300;400;500;600&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="css/style.css?v=20260220h" />
-  <link rel="stylesheet" href="css/account.css?v=20260222d" />
+  <link rel="stylesheet" href="css/account.css?v=20260222f" />
 </head>
 <body class="login-page">
   <div class="top-bar">
@@ -76,55 +76,69 @@
 
   <main class="t-login-main">
     <div class="t-login-container">
-      <section class="t-login-card" aria-labelledby="loginTitle">
+      <section class="auth-card" aria-labelledby="loginTitle">
         <h1 id="loginTitle">Entrar</h1>
-        <p class="t-login-subtitle">Acesse sua conta Tsebi para acompanhar pedidos e preferências.</p>
+        <p class="auth-sub">Acesse sua conta Tsebi para acompanhar pedidos e preferências.</p>
 
-        <p class="t-login-feedback" id="loginFeedback" role="alert" aria-live="polite" hidden></p>
+        <div id="authError" class="auth-error" role="alert" hidden></div>
 
-        <form id="loginFormPremium" novalidate>
-          <div class="t-login-field">
-            <label for="loginEmailPremium">Email</label>
-            <input id="loginEmailPremium" type="email" autocomplete="email" placeholder="seu@email.com" required />
-            <small class="t-login-error" id="loginEmailError"></small>
+        <section id="stateEmail" class="auth-state">
+          <label for="emailInput">Email</label>
+          <input id="emailInput" class="auth-input" type="email" autocomplete="email" placeholder="seu@email.com" />
+          <button id="sendCodeBtn" class="btn-primary auth-btn" type="button">Enviar código</button>
+          <div class="auth-micro">Enviaremos um código para seu e-mail.</div>
+        </section>
+
+        <section id="stateCode" class="auth-state" hidden>
+          <div class="auth-inline">
+            <span id="emailPreview"></span>
+            <button id="changeEmailBtn" type="button" class="auth-link auth-link-btn">Alterar e-mail</button>
           </div>
 
-          <div class="t-login-field">
-            <label for="loginPasswordPremium">Senha</label>
-            <div class="t-login-password-wrap">
-              <input id="loginPasswordPremium" type="password" autocomplete="current-password" placeholder="Digite sua senha" required />
-              <button type="button" class="t-login-toggle-pass" id="togglePasswordBtn" aria-label="Mostrar senha">Mostrar</button>
-            </div>
-            <small class="t-login-error" id="loginPasswordError"></small>
+          <label for="codeInput">Código</label>
+          <input id="codeInput" class="auth-input" inputmode="numeric" maxlength="6" autocomplete="one-time-code" placeholder="000000" />
+          <button id="verifyCodeBtn" class="btn-primary auth-btn" type="button">Confirmar</button>
+
+          <div class="auth-row">
+            <button id="resendBtn" type="button" class="auth-link auth-link-btn" disabled>Reenviar código (30s)</button>
+            <button id="showPasswordBtn" type="button" class="auth-link auth-link-btn">Entrar com senha</button>
+          </div>
+        </section>
+
+        <section id="statePassword" class="auth-state" hidden>
+          <label for="emailInput2">Email</label>
+          <input id="emailInput2" class="auth-input" type="email" autocomplete="email" placeholder="seu@email.com" />
+
+          <label for="passwordInput">Senha</label>
+          <div class="auth-password-wrap">
+            <input id="passwordInput" class="auth-input" type="password" autocomplete="current-password" placeholder="Digite sua senha" />
+            <button type="button" id="togglePasswordBtn" class="auth-link-btn auth-toggle-pass">Mostrar</button>
           </div>
 
-          <div class="t-login-helper-row">
-            <label class="t-login-remember">
-              <input id="rememberMePremium" type="checkbox" />
-              <span>Lembrar de mim</span>
-            </label>
-            <a href="recuperar-senha.html" class="t-login-link">Esqueci minha senha</a>
+          <button id="loginPasswordBtn" class="btn-primary auth-btn" type="button">Entrar</button>
+
+          <div class="auth-row">
+            <a class="auth-link" href="recuperar-senha.html">Esqueci minha senha</a>
+            <button id="backToCodeBtn" type="button" class="auth-link auth-link-btn">Voltar para código por e-mail</button>
           </div>
+        </section>
 
-          <button type="submit" class="t-login-submit" id="loginSubmitBtn">
-            <span class="t-login-submit-text">Entrar</span>
-            <span class="t-login-submit-loader" aria-hidden="true"></span>
-          </button>
-        </form>
+        <div class="auth-divider"><span>ou</span></div>
 
-        <div class="t-login-divider" aria-hidden="true"><span>ou</span></div>
+        <div class="auth-social-stack">
+          <button id="googleBtn" class="btn-outline auth-btn" type="button">Continuar com Google</button>
+          <button id="appleBtn" class="btn-outline auth-btn" type="button">Continuar com Apple</button>
+          <button class="btn-outline auth-btn is-disabled" type="button" disabled title="Em breve">Entrar com Passkey (em breve)</button>
+        </div>
 
-        <button type="button" class="t-login-google">Continuar com Google</button>
-
-        <p class="t-login-footnote">Ainda não tem conta? <a href="conta.html" class="t-login-link">Criar conta</a></p>
+        <p class="auth-footer">Ainda não tem conta? <a class="auth-link" href="conta.html">Criar conta</a></p>
       </section>
     </div>
   </main>
 
   <script src="JS/user-utils.js?v=20260222a"></script>
   <script src="JS/script.js?v=20260222k"></script>
-  <script src="JS/auth-login.js?v=20260222c"></script>
+  <script src="JS/auth-login.js?v=20260222d"></script>
   <script src="JS/posthog.js"></script>
 </body>
 </html>
-

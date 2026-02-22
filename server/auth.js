@@ -104,6 +104,13 @@ const googleLoginSchema = z.object({
   idToken: z.string().trim().min(20),
   nonce: z.string().trim().optional().default("")
 });
+const emailCodeStartSchema = z.object({
+  email: emailSchema
+});
+const emailCodeVerifySchema = z.object({
+  email: emailSchema,
+  code: z.string().trim().regex(/^\d{6}$/)
+});
 
 const checkEmailSchema = z.object({
   email: emailSchema
@@ -299,6 +306,14 @@ function getGoogleClientIds() {
     .filter(Boolean);
 }
 
+function getAppleConfig() {
+  return {
+    clientId: String(process.env.APPLE_CLIENT_ID || "").trim(),
+    redirectUri: String(process.env.APPLE_REDIRECT_URI || "").trim(),
+    scope: String(process.env.APPLE_SCOPE || "name email").trim() || "name email"
+  };
+}
+
 async function verifyGoogleIdToken(idToken) {
   const response = await fetch(`https://oauth2.googleapis.com/tokeninfo?id_token=${encodeURIComponent(idToken)}`);
   if (!response.ok) {
@@ -341,6 +356,41 @@ authRouter.get("/google/config", (req, res) => {
     enabled: Boolean(clientId),
     clientId
   });
+});
+
+authRouter.get("/apple/config", (req, res) => {
+  const config = getAppleConfig();
+  return res.json({
+    ok: true,
+    enabled: Boolean(config.clientId && config.redirectUri)
+  });
+});
+
+authRouter.get("/apple", (req, res) => {
+  const config = getAppleConfig();
+  const returnUrl = String(req.query.returnUrl || "conta.html").trim() || "conta.html";
+  if (!config.clientId || !config.redirectUri) {
+    return res.redirect(`/login.html?apple=unavailable&returnUrl=${encodeURIComponent(returnUrl)}`);
+  }
+
+  // Placeholder route for Apple OAuth kickoff. Callback handling should be enabled with APPLE private key flow.
+  const state = crypto.randomBytes(16).toString("hex");
+  const nonce = crypto.randomBytes(16).toString("hex");
+  const authorizeUrl = new URL("https://appleid.apple.com/auth/authorize");
+  authorizeUrl.searchParams.set("response_type", "code");
+  authorizeUrl.searchParams.set("response_mode", "form_post");
+  authorizeUrl.searchParams.set("client_id", config.clientId);
+  authorizeUrl.searchParams.set("redirect_uri", config.redirectUri);
+  authorizeUrl.searchParams.set("scope", config.scope);
+  authorizeUrl.searchParams.set("state", state);
+  authorizeUrl.searchParams.set("nonce", nonce);
+
+  return res.redirect(authorizeUrl.toString());
+});
+
+authRouter.all("/apple/callback", (req, res) => {
+  const returnUrl = String(req.query.returnUrl || req.body?.returnUrl || "conta.html").trim() || "conta.html";
+  return res.redirect(`/login.html?apple=unavailable&returnUrl=${encodeURIComponent(returnUrl)}`);
 });
 
 async function issueAndSendAccountVerifyCode(user) {
@@ -495,6 +545,64 @@ authRouter.post("/email/resend-account-code", resetRateLimit, async (req, res) =
   } catch {
     return res.status(500).json({ error: "EMAIL_DELIVERY_FAILED" });
   }
+});
+
+authRouter.post("/email/start", authRateLimit, async (req, res) => {
+  const parsed = emailCodeStartSchema.safeParse(req.body || {});
+  if (!parsed.success) return res.status(400).json({ error: "INVALID_INPUT" });
+
+  const email = normalizeEmail(parsed.data.email);
+  const user = await findUserByEmail(email);
+  if (!user) return res.status(404).json({ error: "EMAIL_NOT_FOUND" });
+
+  try {
+    if (!user.emailVerified) {
+      const accountCode = await issueAndSendAccountVerifyCode(user);
+      if (!accountCode.ok) return res.status(500).json({ error: "AUTH_CODE_ISSUE_FAILED" });
+      return res.json(buildEmailCodeResponseBase(user.email, "account_verification_required", accountCode.issued));
+    }
+
+    const loginCode = await issueAndSendLoginVerifyCode(user);
+    if (!loginCode.ok) return res.status(500).json({ error: "AUTH_CODE_ISSUE_FAILED" });
+    return res.json(buildEmailCodeResponseBase(user.email, "login_code_required", loginCode.issued));
+  } catch {
+    return res.status(500).json({ error: "EMAIL_DELIVERY_FAILED" });
+  }
+});
+
+authRouter.post("/email/verify", authRateLimit, async (req, res) => {
+  const parsed = emailCodeVerifySchema.safeParse(req.body || {});
+  if (!parsed.success) return res.status(400).json({ error: "INVALID_INPUT" });
+
+  const email = normalizeEmail(parsed.data.email);
+  let user = await findUserByEmail(email);
+  if (!user) return res.status(401).json({ error: "INVALID_CREDENTIALS" });
+
+  let consumed = await consumeAuthEmailCode({
+    email,
+    purpose: "login_verify",
+    code: parsed.data.code
+  });
+
+  if ((!consumed.ok || consumed.userId !== user.id) && !user.emailVerified) {
+    consumed = await consumeAuthEmailCode({
+      email,
+      purpose: "account_verify",
+      code: parsed.data.code
+    });
+    if (consumed.ok && consumed.userId === user.id) {
+      const verified = await markUserEmailVerified(user.id);
+      if (verified) user = verified;
+    }
+  }
+
+  if (!consumed.ok || consumed.userId !== user.id) {
+    return res.status(400).json({ error: "INVALID_OR_EXPIRED_CODE" });
+  }
+
+  req.session.userId = user.id;
+  markUserLoggedInNow(user.id).catch(() => {});
+  return res.json({ ok: true, user: publicUser(user), stage: "authenticated" });
 });
 
 authRouter.post("/login", authRateLimit, async (req, res) => {

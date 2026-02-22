@@ -1,18 +1,35 @@
-(function initPremiumLogin() {
-  const form = document.getElementById("loginFormPremium");
-  const emailInput = document.getElementById("loginEmailPremium");
-  const passwordInput = document.getElementById("loginPasswordPremium");
-  const rememberMeInput = document.getElementById("rememberMePremium");
-  const submitBtn = document.getElementById("loginSubmitBtn");
-  const togglePasswordBtn = document.getElementById("togglePasswordBtn");
-  const googleBtn = document.querySelector(".t-login-google");
-  const feedback = document.getElementById("loginFeedback");
-  const emailError = document.getElementById("loginEmailError");
-  const passwordError = document.getElementById("loginPasswordError");
+(function initAuthLogin() {
+  const stateEmail = document.getElementById("stateEmail");
+  const stateCode = document.getElementById("stateCode");
+  const statePassword = document.getElementById("statePassword");
+  const authError = document.getElementById("authError");
 
-  const REMEMBER_EMAIL_KEY = "tsebi-login-remember-email";
+  const emailInput = document.getElementById("emailInput");
+  const sendCodeBtn = document.getElementById("sendCodeBtn");
+
+  const emailPreview = document.getElementById("emailPreview");
+  const codeInput = document.getElementById("codeInput");
+  const verifyCodeBtn = document.getElementById("verifyCodeBtn");
+  const resendBtn = document.getElementById("resendBtn");
+  const changeEmailBtn = document.getElementById("changeEmailBtn");
+  const showPasswordBtn = document.getElementById("showPasswordBtn");
+
+  const emailInput2 = document.getElementById("emailInput2");
+  const passwordInput = document.getElementById("passwordInput");
+  const togglePasswordBtn = document.getElementById("togglePasswordBtn");
+  const loginPasswordBtn = document.getElementById("loginPasswordBtn");
+  const backToCodeBtn = document.getElementById("backToCodeBtn");
+
+  const googleBtn = document.getElementById("googleBtn");
+  const appleBtn = document.getElementById("appleBtn");
+
   const GOOGLE_STATE_KEY = "tsebi-google-oauth-state";
   const GOOGLE_NONCE_KEY = "tsebi-google-oauth-nonce";
+
+  let currentState = "email";
+  let activeEmail = "";
+  let resendTimerId = null;
+  let resendRemaining = 0;
 
   function getReturnUrl() {
     const params = new URLSearchParams(window.location.search);
@@ -24,7 +41,10 @@
       if (!normalized || normalized.toLowerCase() === "login.html") return "conta.html";
       return normalized;
     }
-    if (!raw.includes("://")) return raw;
+    if (!raw.includes("://")) {
+      if (raw.toLowerCase() === "login.html") return "conta.html";
+      return raw;
+    }
     try {
       const parsed = new URL(raw, window.location.origin);
       if (parsed.origin !== window.location.origin) return "conta.html";
@@ -36,33 +56,230 @@
     }
   }
 
-  function showFeedback(message) {
-    if (!feedback) return;
-    const safe = String(message || "").trim();
-    feedback.textContent = safe;
-    feedback.hidden = !safe;
-  }
-
-  function clearErrors() {
-    if (emailError) emailError.textContent = "";
-    if (passwordError) passwordError.textContent = "";
-    showFeedback("");
+  function normalizeEmail(value) {
+    return String(value || "").trim().toLowerCase();
   }
 
   function isValidEmail(value) {
-    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(value || "").trim());
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizeEmail(value));
   }
 
-  function setSubmitting(loading) {
-    if (!submitBtn) return;
-    submitBtn.disabled = Boolean(loading);
-    submitBtn.classList.toggle("is-loading", Boolean(loading));
+  function showError(message) {
+    if (!authError) return;
+    const text = String(message || "").trim();
+    authError.textContent = text;
+    authError.hidden = !text;
   }
 
-  function setGoogleSubmitting(loading) {
-    if (!googleBtn) return;
-    googleBtn.disabled = Boolean(loading);
-    googleBtn.textContent = loading ? "Conectando..." : "Continuar com Google";
+  function clearError() {
+    showError("");
+  }
+
+  function setButtonLoading(button, loading, loadingText) {
+    if (!button) return;
+    if (!button.dataset.originalText) {
+      button.dataset.originalText = button.textContent || "";
+    }
+    button.disabled = Boolean(loading);
+    button.textContent = loading ? loadingText : button.dataset.originalText;
+  }
+
+  function setState(nextState) {
+    currentState = nextState;
+    stateEmail.hidden = nextState !== "email";
+    stateCode.hidden = nextState !== "code";
+    statePassword.hidden = nextState !== "password";
+
+    if (nextState === "email") {
+      window.setTimeout(() => emailInput?.focus(), 30);
+    }
+
+    if (nextState === "code") {
+      const email = activeEmail || normalizeEmail(emailInput?.value || "");
+      activeEmail = email;
+      if (emailPreview) emailPreview.textContent = email;
+      window.setTimeout(() => codeInput?.focus(), 30);
+    }
+
+    if (nextState === "password") {
+      const email = activeEmail || normalizeEmail(emailInput?.value || "");
+      activeEmail = email;
+      if (emailInput2) emailInput2.value = email;
+      window.setTimeout(() => passwordInput?.focus(), 30);
+    }
+  }
+
+  function startResendTimer(seconds) {
+    if (resendTimerId) {
+      window.clearInterval(resendTimerId);
+      resendTimerId = null;
+    }
+
+    resendRemaining = Number(seconds) || 0;
+    if (!resendBtn) return;
+
+    resendBtn.disabled = resendRemaining > 0;
+    resendBtn.textContent = resendRemaining > 0 ? `Reenviar código (${resendRemaining}s)` : "Reenviar código";
+
+    if (resendRemaining <= 0) return;
+
+    resendTimerId = window.setInterval(() => {
+      resendRemaining -= 1;
+      if (resendRemaining <= 0) {
+        window.clearInterval(resendTimerId);
+        resendTimerId = null;
+        resendBtn.disabled = false;
+        resendBtn.textContent = "Reenviar código";
+        return;
+      }
+      resendBtn.textContent = `Reenviar código (${resendRemaining}s)`;
+    }, 1000);
+  }
+
+  function mapAuthError(code) {
+    const value = String(code || "").trim();
+    if (!value) return "Não foi possível concluir a operação.";
+    if (value === "INVALID_INPUT") return "Preencha os campos corretamente.";
+    if (value === "INVALID_CREDENTIALS") return "Email, senha ou código inválidos.";
+    if (value === "INVALID_OR_EXPIRED_CODE") return "Código inválido ou expirado.";
+    if (value === "EMAIL_NOT_FOUND") return "Não encontramos conta com este e-mail.";
+    if (value === "EMAIL_NOT_VERIFIED") return "Verifique seu e-mail para continuar.";
+    if (value === "AUTH_CODE_ISSUE_FAILED") return "Não foi possível gerar o código agora.";
+    if (value === "EMAIL_DELIVERY_FAILED") return "Não foi possível enviar o código. Tente novamente.";
+    if (value === "TOO_MANY_ATTEMPTS") return "Muitas tentativas. Aguarde alguns minutos.";
+    return value;
+  }
+
+  async function postJson(url, payload) {
+    const response = await fetch(url, {
+      method: "POST",
+      credentials: "same-origin",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload || {})
+    });
+    const data = await response.json().catch(() => ({}));
+    return { ok: response.ok, status: response.status, data };
+  }
+
+  async function sendCode() {
+    clearError();
+    const email = normalizeEmail(emailInput?.value || "");
+    if (!isValidEmail(email)) {
+      showError("Informe um e-mail válido.");
+      return;
+    }
+
+    setButtonLoading(sendCodeBtn, true, "Enviando...");
+    const result = await postJson("/api/auth/email/start", { email });
+    setButtonLoading(sendCodeBtn, false, "Enviando...");
+
+    if (!result.ok) {
+      showError(mapAuthError(result.data?.error || "EMAIL_DELIVERY_FAILED"));
+      return;
+    }
+
+    activeEmail = email;
+    if (emailInput2) emailInput2.value = email;
+    setState("code");
+    startResendTimer(30);
+  }
+
+  async function verifyCode() {
+    clearError();
+    const email = activeEmail || normalizeEmail(emailInput?.value || emailInput2?.value || "");
+    const code = String(codeInput?.value || "").replace(/\D/g, "").slice(0, 6);
+
+    if (!isValidEmail(email)) {
+      showError("Informe um e-mail válido.");
+      setState("email");
+      return;
+    }
+    if (code.length !== 6) {
+      showError("Digite o código de 6 dígitos.");
+      return;
+    }
+
+    setButtonLoading(verifyCodeBtn, true, "Confirmando...");
+    const result = await postJson("/api/auth/email/verify", { email, code });
+    setButtonLoading(verifyCodeBtn, false, "Confirmando...");
+
+    if (!result.ok || !result.data?.ok) {
+      showError(mapAuthError(result.data?.error || "INVALID_OR_EXPIRED_CODE"));
+      return;
+    }
+
+    window.location.href = getReturnUrl();
+  }
+
+  async function resendCode() {
+    if (resendRemaining > 0) return;
+    clearError();
+    const email = activeEmail || normalizeEmail(emailInput?.value || "");
+    if (!isValidEmail(email)) {
+      showError("Informe um e-mail válido.");
+      setState("email");
+      return;
+    }
+
+    setButtonLoading(resendBtn, true, "Reenviando...");
+    const result = await postJson("/api/auth/email/start", { email });
+    setButtonLoading(resendBtn, false, "Reenviando...");
+
+    if (!result.ok) {
+      showError(mapAuthError(result.data?.error || "EMAIL_DELIVERY_FAILED"));
+      return;
+    }
+
+    startResendTimer(30);
+  }
+
+  async function loginWithPassword() {
+    clearError();
+    const email = normalizeEmail(emailInput2?.value || activeEmail || "");
+    const password = String(passwordInput?.value || "");
+
+    if (!isValidEmail(email)) {
+      showError("Informe um e-mail válido.");
+      return;
+    }
+    if (!password) {
+      showError("Informe sua senha.");
+      return;
+    }
+
+    setButtonLoading(loginPasswordBtn, true, "Entrando...");
+    const store = window.TsebiUserStore;
+    let result = null;
+    if (store && typeof store.login === "function") {
+      result = await store.login({ email, password });
+    } else {
+      await new Promise((resolve) => window.setTimeout(resolve, 450));
+      result = { ok: false, error: "Integração de login pendente." };
+    }
+    setButtonLoading(loginPasswordBtn, false, "Entrando...");
+
+    if (result?.ok && result?.user) {
+      window.location.href = getReturnUrl();
+      return;
+    }
+
+    if (result?.stage === "login_code_required" || result?.stage === "account_verification_required") {
+      activeEmail = result?.email ? normalizeEmail(result.email) : email;
+      if (emailInput) emailInput.value = activeEmail;
+      if (emailInput2) emailInput2.value = activeEmail;
+      setState("code");
+      startResendTimer(30);
+      return;
+    }
+
+    showError(mapAuthError(result?.error || "INVALID_CREDENTIALS"));
+  }
+
+  function handleTogglePassword() {
+    if (!passwordInput || !togglePasswordBtn) return;
+    const show = passwordInput.type === "password";
+    passwordInput.type = show ? "text" : "password";
+    togglePasswordBtn.textContent = show ? "Ocultar" : "Mostrar";
   }
 
   function randomToken(size = 20) {
@@ -86,13 +303,13 @@
   }
 
   async function beginGoogleLogin() {
-    clearErrors();
-    setGoogleSubmitting(true);
+    clearError();
+    setButtonLoading(googleBtn, true, "Conectando...");
     const config = await fetchGoogleConfig();
-    setGoogleSubmitting(false);
+    setButtonLoading(googleBtn, false, "Conectando...");
 
     if (!config) {
-      showFeedback("Login com Google indisponível no momento.");
+      showError("Login com Google indisponível no momento.");
       return;
     }
 
@@ -129,7 +346,7 @@
   async function completeGoogleLoginFromHash() {
     const hashParams = parseHashParams();
     const idToken = String(hashParams.get("id_token") || "").trim();
-    if (!idToken) return false;
+    if (!idToken) return;
 
     const stateFromHash = String(hashParams.get("state") || "").trim();
     let expectedState = "";
@@ -141,106 +358,81 @@
       sessionStorage.removeItem(GOOGLE_NONCE_KEY);
     } catch {}
 
+    history.replaceState({}, "", `${window.location.pathname}${window.location.search}`);
+
     if (!stateFromHash || !expectedState || stateFromHash !== expectedState) {
-      showFeedback("Falha ao validar login Google.");
-      history.replaceState({}, "", `${window.location.pathname}${window.location.search}`);
-      return true;
+      showError("Falha ao validar login Google.");
+      return;
     }
 
-    setGoogleSubmitting(true);
+    setButtonLoading(googleBtn, true, "Conectando...");
     const response = await fetch("/api/auth/google", {
       method: "POST",
       credentials: "same-origin",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        idToken,
-        nonce: expectedNonce
-      })
+      body: JSON.stringify({ idToken, nonce: expectedNonce })
     });
-    setGoogleSubmitting(false);
-
-    history.replaceState({}, "", `${window.location.pathname}${window.location.search}`);
+    setButtonLoading(googleBtn, false, "Conectando...");
 
     const data = await response.json().catch(() => null);
     if (!response.ok || !data?.ok) {
-      showFeedback("Não foi possível concluir o login com Google.");
-      return true;
-    }
-
-    window.location.href = getReturnUrl();
-    return true;
-  }
-
-  function hydrateRememberedEmail() {
-    try {
-      const saved = String(localStorage.getItem(REMEMBER_EMAIL_KEY) || "").trim();
-      if (!saved || !emailInput) return;
-      emailInput.value = saved;
-      if (rememberMeInput) rememberMeInput.checked = true;
-    } catch {}
-  }
-
-  async function submitWithStore(email, password) {
-    const store = window.TsebiUserStore;
-    if (!store || typeof store.login !== "function") {
-      await new Promise((resolve) => window.setTimeout(resolve, 650));
-      console.log("Integração de login pendente", { email, passwordLength: password.length });
-      return { ok: false, error: "Integração de login pendente." };
-    }
-    return store.login({ email, password });
-  }
-
-  async function handleSubmit(event) {
-    event.preventDefault();
-    clearErrors();
-
-    const email = String(emailInput?.value || "").trim().toLowerCase();
-    const password = String(passwordInput?.value || "");
-
-    let hasError = false;
-    if (!isValidEmail(email)) {
-      if (emailError) emailError.textContent = "Informe um e-mail válido.";
-      hasError = true;
-    }
-    if (!password) {
-      if (passwordError) passwordError.textContent = "Informe sua senha.";
-      hasError = true;
-    }
-    if (hasError) return;
-
-    setSubmitting(true);
-    const result = await submitWithStore(email, password);
-    setSubmitting(false);
-
-    if (!result?.ok || !result?.user) {
-      showFeedback(result?.error || "Email ou senha inválidos.");
+      showError("Não foi possível concluir o login com Google.");
       return;
     }
 
-    if (rememberMeInput?.checked) {
-      try {
-        localStorage.setItem(REMEMBER_EMAIL_KEY, email);
-      } catch {}
-    } else {
-      try {
-        localStorage.removeItem(REMEMBER_EMAIL_KEY);
-      } catch {}
-    }
-
     window.location.href = getReturnUrl();
   }
 
-  function handleTogglePassword() {
-    if (!passwordInput || !togglePasswordBtn) return;
-    const show = passwordInput.type === "password";
-    passwordInput.type = show ? "text" : "password";
-    togglePasswordBtn.textContent = show ? "Ocultar" : "Mostrar";
-    togglePasswordBtn.setAttribute("aria-label", show ? "Ocultar senha" : "Mostrar senha");
+  function beginAppleLogin() {
+    clearError();
+    const returnUrl = getReturnUrl();
+    window.location.href = `/api/auth/apple?returnUrl=${encodeURIComponent(returnUrl)}`;
   }
 
+  function handleExternalFeedback() {
+    const params = new URLSearchParams(window.location.search);
+    const apple = String(params.get("apple") || "").trim();
+    if (apple === "unavailable") {
+      showError("Login com Apple indisponível no momento.");
+    }
+  }
+
+  sendCodeBtn?.addEventListener("click", sendCode);
+  verifyCodeBtn?.addEventListener("click", verifyCode);
+  resendBtn?.addEventListener("click", resendCode);
+  changeEmailBtn?.addEventListener("click", () => setState("email"));
+  showPasswordBtn?.addEventListener("click", () => setState("password"));
+  backToCodeBtn?.addEventListener("click", () => setState("code"));
+  loginPasswordBtn?.addEventListener("click", loginWithPassword);
   togglePasswordBtn?.addEventListener("click", handleTogglePassword);
+
+  emailInput?.addEventListener("keydown", (event) => {
+    if (event.key === "Enter") {
+      event.preventDefault();
+      sendCode();
+    }
+  });
+  codeInput?.addEventListener("input", () => {
+    const normalized = String(codeInput.value || "").replace(/\D/g, "").slice(0, 6);
+    codeInput.value = normalized;
+  });
+  codeInput?.addEventListener("keydown", (event) => {
+    if (event.key === "Enter") {
+      event.preventDefault();
+      verifyCode();
+    }
+  });
+  passwordInput?.addEventListener("keydown", (event) => {
+    if (event.key === "Enter") {
+      event.preventDefault();
+      loginWithPassword();
+    }
+  });
+
   googleBtn?.addEventListener("click", beginGoogleLogin);
-  form?.addEventListener("submit", handleSubmit);
-  hydrateRememberedEmail();
+  appleBtn?.addEventListener("click", beginAppleLogin);
+
+  handleExternalFeedback();
   completeGoogleLoginFromHash();
+  setState("email");
 })();
