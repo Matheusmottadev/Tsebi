@@ -5,11 +5,14 @@
   const rememberMeInput = document.getElementById("rememberMePremium");
   const submitBtn = document.getElementById("loginSubmitBtn");
   const togglePasswordBtn = document.getElementById("togglePasswordBtn");
+  const googleBtn = document.querySelector(".t-login-google");
   const feedback = document.getElementById("loginFeedback");
   const emailError = document.getElementById("loginEmailError");
   const passwordError = document.getElementById("loginPasswordError");
 
   const REMEMBER_EMAIL_KEY = "tsebi-login-remember-email";
+  const GOOGLE_STATE_KEY = "tsebi-google-oauth-state";
+  const GOOGLE_NONCE_KEY = "tsebi-google-oauth-nonce";
 
   function getReturnUrl() {
     const params = new URLSearchParams(window.location.search);
@@ -54,6 +57,118 @@
     if (!submitBtn) return;
     submitBtn.disabled = Boolean(loading);
     submitBtn.classList.toggle("is-loading", Boolean(loading));
+  }
+
+  function setGoogleSubmitting(loading) {
+    if (!googleBtn) return;
+    googleBtn.disabled = Boolean(loading);
+    googleBtn.textContent = loading ? "Conectando..." : "Continuar com Google";
+  }
+
+  function randomToken(size = 20) {
+    const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+    let value = "";
+    for (let i = 0; i < size; i += 1) {
+      value += alphabet[Math.floor(Math.random() * alphabet.length)];
+    }
+    return value;
+  }
+
+  async function fetchGoogleConfig() {
+    const response = await fetch("/api/auth/google/config", {
+      method: "GET",
+      credentials: "same-origin"
+    });
+    if (!response.ok) return null;
+    const data = await response.json().catch(() => null);
+    if (!data || !data.enabled || !data.clientId) return null;
+    return data;
+  }
+
+  async function beginGoogleLogin() {
+    clearErrors();
+    setGoogleSubmitting(true);
+    const config = await fetchGoogleConfig();
+    setGoogleSubmitting(false);
+
+    if (!config) {
+      showFeedback("Login com Google indisponível no momento.");
+      return;
+    }
+
+    const state = randomToken(24);
+    const nonce = randomToken(24);
+    try {
+      sessionStorage.setItem(GOOGLE_STATE_KEY, state);
+      sessionStorage.setItem(GOOGLE_NONCE_KEY, nonce);
+    } catch {}
+
+    const returnUrl = getReturnUrl();
+    const callbackUrl = new URL(window.location.origin + window.location.pathname);
+    callbackUrl.searchParams.set("google", "1");
+    callbackUrl.searchParams.set("returnUrl", returnUrl);
+
+    const oauthUrl = new URL("https://accounts.google.com/o/oauth2/v2/auth");
+    oauthUrl.searchParams.set("client_id", config.clientId);
+    oauthUrl.searchParams.set("redirect_uri", callbackUrl.toString());
+    oauthUrl.searchParams.set("response_type", "id_token");
+    oauthUrl.searchParams.set("scope", "openid email profile");
+    oauthUrl.searchParams.set("prompt", "select_account");
+    oauthUrl.searchParams.set("state", state);
+    oauthUrl.searchParams.set("nonce", nonce);
+
+    window.location.href = oauthUrl.toString();
+  }
+
+  function parseHashParams() {
+    const hash = String(window.location.hash || "").replace(/^#/, "");
+    if (!hash) return new URLSearchParams();
+    return new URLSearchParams(hash);
+  }
+
+  async function completeGoogleLoginFromHash() {
+    const hashParams = parseHashParams();
+    const idToken = String(hashParams.get("id_token") || "").trim();
+    if (!idToken) return false;
+
+    const stateFromHash = String(hashParams.get("state") || "").trim();
+    let expectedState = "";
+    let expectedNonce = "";
+    try {
+      expectedState = String(sessionStorage.getItem(GOOGLE_STATE_KEY) || "");
+      expectedNonce = String(sessionStorage.getItem(GOOGLE_NONCE_KEY) || "");
+      sessionStorage.removeItem(GOOGLE_STATE_KEY);
+      sessionStorage.removeItem(GOOGLE_NONCE_KEY);
+    } catch {}
+
+    if (!stateFromHash || !expectedState || stateFromHash !== expectedState) {
+      showFeedback("Falha ao validar login Google.");
+      history.replaceState({}, "", `${window.location.pathname}${window.location.search}`);
+      return true;
+    }
+
+    setGoogleSubmitting(true);
+    const response = await fetch("/api/auth/google", {
+      method: "POST",
+      credentials: "same-origin",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        idToken,
+        nonce: expectedNonce
+      })
+    });
+    setGoogleSubmitting(false);
+
+    history.replaceState({}, "", `${window.location.pathname}${window.location.search}`);
+
+    const data = await response.json().catch(() => null);
+    if (!response.ok || !data?.ok) {
+      showFeedback("Não foi possível concluir o login com Google.");
+      return true;
+    }
+
+    window.location.href = getReturnUrl();
+    return true;
   }
 
   function hydrateRememberedEmail() {
@@ -124,6 +239,8 @@
   }
 
   togglePasswordBtn?.addEventListener("click", handleTogglePassword);
+  googleBtn?.addEventListener("click", beginGoogleLogin);
   form?.addEventListener("submit", handleSubmit);
   hydrateRememberedEmail();
+  completeGoogleLoginFromHash();
 })();

@@ -100,6 +100,10 @@ const loginSchema = z.object({
   email: emailSchema,
   password: z.string().min(1).max(128)
 });
+const googleLoginSchema = z.object({
+  idToken: z.string().trim().min(20),
+  nonce: z.string().trim().optional().default("")
+});
 
 const checkEmailSchema = z.object({
   email: emailSchema
@@ -287,6 +291,57 @@ function buildEmailCodeResponseBase(email, stage, issued) {
 
   return response;
 }
+
+function getGoogleClientIds() {
+  return String(process.env.GOOGLE_CLIENT_ID || "")
+    .split(",")
+    .map((value) => value.trim())
+    .filter(Boolean);
+}
+
+async function verifyGoogleIdToken(idToken) {
+  const response = await fetch(`https://oauth2.googleapis.com/tokeninfo?id_token=${encodeURIComponent(idToken)}`);
+  if (!response.ok) {
+    return { ok: false, error: "GOOGLE_TOKEN_INVALID" };
+  }
+
+  const data = await response.json().catch(() => null);
+  if (!data || typeof data !== "object") {
+    return { ok: false, error: "GOOGLE_TOKEN_INVALID" };
+  }
+
+  const clientIds = getGoogleClientIds();
+  const aud = String(data.aud || "").trim();
+  if (!aud || (clientIds.length && !clientIds.includes(aud))) {
+    return { ok: false, error: "GOOGLE_AUDIENCE_MISMATCH" };
+  }
+
+  const email = normalizeEmail(data.email || "");
+  if (!email || String(data.email_verified || "").toLowerCase() !== "true") {
+    return { ok: false, error: "GOOGLE_EMAIL_NOT_VERIFIED" };
+  }
+
+  return {
+    ok: true,
+    payload: {
+      email,
+      nonce: String(data.nonce || "").trim(),
+      name: String(data.name || "").trim(),
+      givenName: String(data.given_name || "").trim(),
+      familyName: String(data.family_name || "").trim()
+    }
+  };
+}
+
+authRouter.get("/google/config", (req, res) => {
+  const clientIds = getGoogleClientIds();
+  const clientId = clientIds[0] || "";
+  return res.json({
+    ok: true,
+    enabled: Boolean(clientId),
+    clientId
+  });
+});
 
 async function issueAndSendAccountVerifyCode(user) {
   const issued = await issueAuthEmailCode({
@@ -501,6 +556,56 @@ authRouter.post("/login", authRateLimit, async (req, res) => {
   } catch {
     return res.status(500).json({ error: "EMAIL_DELIVERY_FAILED" });
   }
+});
+
+authRouter.post("/google", authRateLimit, async (req, res) => {
+  const parsed = googleLoginSchema.safeParse(req.body || {});
+  if (!parsed.success) {
+    return res.status(400).json({ error: "INVALID_INPUT" });
+  }
+
+  const verify = await verifyGoogleIdToken(parsed.data.idToken);
+  if (!verify.ok) {
+    return res.status(401).json({ error: "INVALID_CREDENTIALS" });
+  }
+
+  const payload = verify.payload;
+  if (parsed.data.nonce && payload.nonce && parsed.data.nonce !== payload.nonce) {
+    return res.status(401).json({ error: "INVALID_CREDENTIALS" });
+  }
+
+  let user = await findUserByEmail(payload.email);
+  if (!user) {
+    const fallbackName =
+      payload.name ||
+      [payload.givenName, payload.familyName].filter(Boolean).join(" ").trim() ||
+      "Cliente Tsebi";
+    const randomPasswordHash = await bcrypt.hash(crypto.randomBytes(24).toString("hex"), 12);
+    const created = await createUser({
+      title: "nao_informar",
+      name: fallbackName,
+      email: payload.email,
+      passwordHash: randomPasswordHash,
+      birthDate: "",
+      cpf: "",
+      cep: "",
+      emailVerified: true
+    });
+    if (!created.ok || !created.user) {
+      return res.status(500).json({ error: "REQUEST_FAILED" });
+    }
+    user = created.user;
+  } else if (!user.emailVerified) {
+    user = await markUserEmailVerified(user.id);
+  }
+
+  if (!user || user.loginDisabled) {
+    return res.status(403).json({ error: "FORBIDDEN" });
+  }
+
+  req.session.userId = user.id;
+  markUserLoggedInNow(user.id).catch(() => {});
+  return res.json({ ok: true, user: publicUser(user), stage: "authenticated" });
 });
 
 authRouter.post("/login/verify-code", authRateLimit, async (req, res) => {
