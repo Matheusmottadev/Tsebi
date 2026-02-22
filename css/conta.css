@@ -46,8 +46,12 @@ body.conta-page > .home-header .header-row {
   gap: 2px;
   position: relative;
   top: 0 !important;
-  margin-top: 0 !important;
+  margin: 0 !important;
   z-index: 20;
+}
+
+nav.conta-subnav {
+  margin: 0 !important;
 }
 
 .conta-subnav::-webkit-scrollbar {
