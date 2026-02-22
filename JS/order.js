@@ -151,7 +151,7 @@ async function boot() {
 
   const me = await store.fetchMe();
   if (!me.ok || !me.user) {
-    window.location.href = `conta.html?returnUrl=${encodeURIComponent(window.location.pathname + window.location.search + window.location.hash)}`;
+    window.location.href = `login.html?returnUrl=${encodeURIComponent(window.location.pathname + window.location.search + window.location.hash)}`;
     return;
   }
 

@@ -280,7 +280,7 @@ async function refreshOrderStatus({ keepLoader = false } = {}) {
   } catch (error) {
     if (error.status === 401) {
       const returnUrl = `${window.location.pathname}${window.location.search}${window.location.hash}`;
-      window.location.href = `conta.html?returnUrl=${encodeURIComponent(returnUrl)}`;
+      window.location.href = `login.html?returnUrl=${encodeURIComponent(returnUrl)}`;
       return;
     }
     showContent();

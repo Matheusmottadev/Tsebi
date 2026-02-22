@@ -922,7 +922,7 @@ function getLoginUrlForStep(step = 2) {
   const safeStep = Math.max(2, Math.min(3, Number(step) || 2));
   const hash = `#step=${safeStep}`;
   const returnUrl = `${window.location.pathname}${window.location.search}${hash}`;
-  return `conta.html?returnUrl=${encodeURIComponent(returnUrl)}`;
+  return `login.html?returnUrl=${encodeURIComponent(returnUrl)}`;
 }
 
 function redirectToLogin(step = 2) {

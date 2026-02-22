@@ -97,7 +97,7 @@ window.initProfileSection = function initProfileSection(options = {}) {
       return;
     }
     const returnUrl = `${window.location.pathname}${window.location.search}${window.location.hash}`;
-    window.location.href = `conta.html?returnUrl=${encodeURIComponent(returnUrl)}`;
+    window.location.href = `login.html?returnUrl=${encodeURIComponent(returnUrl)}`;
   }
 
   function buildBirthOptions() {
