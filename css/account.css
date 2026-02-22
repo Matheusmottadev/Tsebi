@@ -1,6 +1,6 @@
 body.account-profile-page {
   --account-topbar-h: 38px;
-  --account-header-h: 68px;
+  --account-header-h: 84px;
   --account-subnav-h: 54px;
   background: #fffafa;
   color: #111;
@@ -476,7 +476,7 @@ nav.account-subnav {
 
 @media (max-width: 760px) {
   body.account-profile-page {
-    --account-header-h: 64px;
+    --account-header-h: 72px;
   }
 
   .account-subnav {

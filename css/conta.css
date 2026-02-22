@@ -5,7 +5,7 @@ body {
 
 body.conta-page {
   --conta-topbar-height: 38px;
-  --conta-header-height: 68px;
+  --conta-header-height: 84px;
   --conta-subnav-height: 54px;
   padding-top: calc(var(--conta-topbar-height) + var(--conta-header-height));
 }
@@ -448,7 +448,7 @@ nav.conta-subnav {
 
 @media (max-width: 760px) {
   body.conta-page {
-    --conta-header-height: 64px;
+    --conta-header-height: 72px;
   }
 
   .conta-wrap {
