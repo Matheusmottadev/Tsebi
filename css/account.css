@@ -2,9 +2,10 @@ body.account-profile-page {
   --account-topbar-h: 38px;
   --account-header-h: 84px;
   --account-subnav-h: 54px;
+  --account-fixed-stack: calc(var(--account-topbar-h) + var(--account-header-h));
   background: #fffafa;
   color: #111;
-  padding-top: calc(var(--account-topbar-h) + var(--account-header-h));
+  padding-top: var(--account-fixed-stack);
 }
 
 body.account-profile-page > .home-header {

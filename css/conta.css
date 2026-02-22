@@ -7,7 +7,8 @@ body.conta-page {
   --conta-topbar-height: 38px;
   --conta-header-height: 84px;
   --conta-subnav-height: 54px;
-  padding-top: calc(var(--conta-topbar-height) + var(--conta-header-height));
+  --conta-fixed-stack: calc(var(--conta-topbar-height) + var(--conta-header-height));
+  padding-top: var(--conta-fixed-stack);
 }
 
 body.conta-page > .home-header {
