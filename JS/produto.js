@@ -256,8 +256,11 @@ function initProductAccountEntry() {
   const accountLinks = Array.from(document.querySelectorAll('a[aria-label="Conta"]'));
   if (!accountLinks.length) return;
   const label = userStore?.getDisplayName?.() || "Conta";
+  const user = userStore?.getCurrentUser?.() || null;
+  const returnTo = `${window.location.pathname}${window.location.search}${window.location.hash}`;
+  const loginUrl = `login.html?returnUrl=${encodeURIComponent(returnTo)}`;
   accountLinks.forEach((link) => {
-    link.href = "conta.html";
+    link.href = user ? "conta.html" : loginUrl;
     link.textContent = label;
   });
 }

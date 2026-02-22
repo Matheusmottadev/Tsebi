@@ -1452,7 +1452,7 @@ function initAccountEntryPoints() {
   const accountLinks = Array.from(document.querySelectorAll('a[aria-label="Conta"]'));
   if (!accountLinks.length) return;
   const currentRelativeUrl = `${window.location.pathname}${window.location.search}${window.location.hash}`;
-  const loginUrl = `conta.html?returnUrl=${encodeURIComponent(currentRelativeUrl)}`;
+  const loginUrl = `login.html?returnUrl=${encodeURIComponent(currentRelativeUrl)}`;
 
   function render() {
     const user = userStore?.getCurrentUser?.() || null;
