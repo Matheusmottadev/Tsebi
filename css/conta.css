@@ -594,6 +594,214 @@ nav.conta-subnav {
   text-align: right;
 }
 
+.account-section-grid {
+  margin-top: 20px;
+}
+
+.account-panel-stack {
+  display: grid;
+  gap: 20px;
+}
+
+.account-form-grid {
+  display: grid;
+  gap: 16px;
+}
+
+.account-form-grid textarea {
+  width: 100%;
+  border: 1px solid #e6e6e6;
+  border-radius: 8px;
+  padding: 10px 12px;
+  resize: vertical;
+  min-height: 96px;
+  font-family: "Montserrat", sans-serif;
+  font-size: 14px;
+  color: #111;
+  background: #fff;
+}
+
+.account-form-grid textarea:focus {
+  outline: 2px solid #111;
+  outline-offset: 1px;
+}
+
+.section-feedback {
+  min-height: 16px;
+  margin: 0;
+  color: #1d6a2d;
+  font-family: "Montserrat", sans-serif;
+  font-size: 12px;
+}
+
+.history-item {
+  background: #f7f7f7;
+  border-radius: 12px;
+  padding: 16px;
+  display: grid;
+  gap: 10px;
+}
+
+.history-item + .history-item {
+  margin-top: 12px;
+}
+
+.history-item-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+}
+
+.status-chip {
+  border-radius: 999px;
+  padding: 4px 10px;
+  font-family: "Montserrat", sans-serif;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  background: #ececec;
+  color: #444;
+}
+
+.status-chip.ok {
+  background: #e7f6eb;
+  color: #1d6a2d;
+}
+
+.status-chip.bad {
+  background: #fdebec;
+  color: #991b1b;
+}
+
+.history-item-detail {
+  border-top: 1px solid #e3e3e3;
+  padding-top: 8px;
+  display: grid;
+  gap: 6px;
+}
+
+.tiny-badge {
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid #d9d9d9;
+  border-radius: 999px;
+  padding: 4px 10px;
+  font-family: "Montserrat", sans-serif;
+  font-size: 11px;
+  color: #444;
+}
+
+.wishlist-grid {
+  margin-top: 14px;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.wishlist-item-card {
+  background: #fff;
+  border: 1px solid #ececec;
+  border-radius: 12px;
+  padding: 12px;
+  display: grid;
+  gap: 8px;
+}
+
+.wishlist-item-card img {
+  width: 100%;
+  aspect-ratio: 4 / 5;
+  object-fit: cover;
+  border-radius: 10px;
+  background: #efefef;
+}
+
+.wishlist-item-card h3 {
+  margin: 0;
+  font-family: "Playfair Display", serif;
+  font-size: 18px;
+  font-weight: 500;
+  color: #111;
+}
+
+.wishlist-item-card p {
+  margin: 0;
+  font-family: "Montserrat", sans-serif;
+  font-size: 14px;
+  color: #666;
+}
+
+.wishlist-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+.link-btn {
+  border: none;
+  background: transparent;
+  color: #555;
+  text-decoration: underline;
+  font-family: "Montserrat", sans-serif;
+  font-size: 13px;
+  cursor: pointer;
+  padding: 0;
+}
+
+.chip-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.chip {
+  border: 1px solid #dedede;
+  border-radius: 999px;
+  padding: 5px 10px;
+  font-family: "Montserrat", sans-serif;
+  font-size: 12px;
+  color: #444;
+}
+
+.wishlist-toolbar {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  align-items: flex-end;
+}
+
+.wishlist-toolbar h2 {
+  margin: 0;
+}
+
+.wishlist-sort {
+  display: grid;
+  gap: 4px;
+  font-family: "Montserrat", sans-serif;
+  font-size: 12px;
+  color: #555;
+}
+
+.wishlist-sort select {
+  min-width: 180px;
+  height: 40px;
+  border: 1px solid #e6e6e6;
+  border-radius: 8px;
+  padding: 0 10px;
+  font-family: "Montserrat", sans-serif;
+}
+
+.simple-steps {
+  margin: 0;
+  padding-left: 18px;
+  display: grid;
+  gap: 8px;
+  color: #666;
+  font-family: "Montserrat", sans-serif;
+  font-size: 14px;
+}
+
 @media (max-width: 980px) {
   .conta-grid {
     grid-template-columns: 1fr;
@@ -642,5 +850,19 @@ nav.conta-subnav {
 
   .conta-mini-grid {
     grid-template-columns: 1fr 1fr;
+  }
+
+  .wishlist-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .wishlist-toolbar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .wishlist-sort select {
+    min-width: 0;
+    width: 100%;
   }
 }

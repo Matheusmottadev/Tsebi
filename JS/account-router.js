@@ -261,7 +261,8 @@
 
   function normalizeSection(raw) {
     const section = String(raw || "overview").replace(/^#/, "").trim().toLowerCase();
-    if (["profile", "overview", "orders", "private", "recommendations", "wishlist", "repairs"].includes(section)) return section;
+    if (section === "private") return "private-care";
+    if (["profile", "overview", "orders", "private-care", "recommendations", "wishlist", "repairs"].includes(section)) return section;
     return "overview";
   }
 
@@ -290,12 +291,52 @@
           products: state.products || []
         });
       }
+    } else if (next === "private-care") {
+      renderTemplate("tpl-private-care");
+      setActiveSubnav("private-care");
+      if (typeof window.initPrivateCareSection === "function") {
+        window.initPrivateCareSection({
+          user: state.user || null
+        });
+      }
+    } else if (next === "recommendations") {
+      renderTemplate("tpl-recommendations");
+      setActiveSubnav("recommendations");
+      if (typeof window.initRecommendationsSection === "function") {
+        window.initRecommendationsSection({
+          favorites: state.favorites || [],
+          products: state.products || []
+        });
+      }
+    } else if (next === "wishlist") {
+      renderTemplate("tpl-wishlist");
+      setActiveSubnav("wishlist");
+      if (typeof window.initWishlistSection === "function") {
+        window.initWishlistSection({
+          store,
+          favorites: state.favorites || [],
+          products: state.products || [],
+          onFavoritesChanged: async () => {
+            state.favorites = Array.isArray(store?.getFavoriteIds?.()) ? store.getFavoriteIds().map((id) => String(id || "")) : [];
+          }
+        });
+      }
+    } else if (next === "repairs") {
+      renderTemplate("tpl-repairs");
+      setActiveSubnav("repairs");
+      if (typeof window.initRepairsSection === "function") {
+        window.initRepairsSection({
+          user: state.user || null,
+          orders: state.orders || []
+        });
+      }
     } else {
       renderTemplate("tpl-overview");
       setActiveSubnav(next);
       initOverviewSection();
       if (next !== "overview") {
-        const target = document.getElementById(`card-${next}`);
+        const targetKey = next === "private-care" ? "private" : next;
+        const target = document.getElementById(`card-${targetKey}`);
         if (target) target.scrollIntoView({ behavior: "smooth", block: "start" });
       }
     }
