@@ -15,12 +15,19 @@
     const params = new URLSearchParams(window.location.search);
     const raw = String(params.get("returnUrl") || "").trim();
     if (!raw) return "conta.html";
-    if (raw.startsWith("/") && !raw.startsWith("//")) return raw.slice(1);
+    if (raw === "/") return "conta.html";
+    if (raw.startsWith("/") && !raw.startsWith("//")) {
+      const normalized = raw.slice(1);
+      if (!normalized || normalized.toLowerCase() === "login.html") return "conta.html";
+      return normalized;
+    }
     if (!raw.includes("://")) return raw;
     try {
       const parsed = new URL(raw, window.location.origin);
       if (parsed.origin !== window.location.origin) return "conta.html";
-      return `${parsed.pathname.replace(/^\//, "")}${parsed.search}${parsed.hash}`;
+      const path = parsed.pathname.replace(/^\//, "");
+      if (!path || path.toLowerCase() === "login.html") return "conta.html";
+      return `${path}${parsed.search}${parsed.hash}`;
     } catch {
       return "conta.html";
     }
@@ -90,7 +97,7 @@
     const result = await submitWithStore(email, password);
     setSubmitting(false);
 
-    if (!result?.ok) {
+    if (!result?.ok || !result?.user) {
       showFeedback(result?.error || "Email ou senha inválidos.");
       return;
     }
