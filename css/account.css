@@ -4,11 +4,11 @@ body.account-profile-page {
   --account-subnav-h: 54px;
   background: #fffafa;
   color: #111;
-  padding-top: 0;
+  padding-top: calc(var(--account-topbar-h) + var(--account-header-h));
 }
 
 body.account-profile-page > .home-header {
-  position: sticky;
+  position: fixed;
   top: var(--account-topbar-h);
   left: 0;
   right: 0;
@@ -30,7 +30,8 @@ body.account-profile-page > .home-header .header-row {
 
 .account-subnav {
   position: relative;
-  top: auto !important;
+  top: 0 !important;
+  margin-top: 0 !important;
   z-index: 20;
   height: var(--account-subnav-h);
   display: flex;

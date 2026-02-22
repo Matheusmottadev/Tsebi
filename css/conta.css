@@ -7,16 +7,17 @@ body.conta-page {
   --conta-topbar-height: 38px;
   --conta-header-height: 68px;
   --conta-subnav-height: 54px;
-  padding-top: 0;
+  padding-top: calc(var(--conta-topbar-height) + var(--conta-header-height));
 }
 
 body.conta-page > .home-header {
   display: block !important;
   visibility: visible !important;
   opacity: 1 !important;
-  position: sticky;
+  position: fixed;
   top: var(--conta-topbar-height);
   left: 0;
+  right: 0;
   width: 100%;
   min-height: var(--conta-header-height);
   padding: 8px 24px;
@@ -44,7 +45,8 @@ body.conta-page > .home-header .header-row {
   padding: 0 16px;
   gap: 2px;
   position: relative;
-  top: auto !important;
+  top: 0 !important;
+  margin-top: 0 !important;
   z-index: 20;
 }
 
