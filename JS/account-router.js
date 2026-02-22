@@ -296,6 +296,7 @@
       history.pushState({}, "", `#${next}`);
     }
     hideLoader();
+    window.dispatchEvent(new Event("account:layout-change"));
   }
 
   async function bootAuthenticated() {
@@ -311,6 +312,7 @@
     showDashboard();
     renderHeaderUser();
     await navigate(normalizeSection(window.location.hash || "overview"), { skipHash: true });
+    window.dispatchEvent(new Event("account:layout-change"));
   }
 
   async function boot() {
@@ -333,6 +335,7 @@
     const me = await store.fetchMe();
     if (!me.ok || !me.user) {
       showAuthGate();
+      window.dispatchEvent(new Event("account:layout-change"));
       return;
     }
     state.user = me.user;

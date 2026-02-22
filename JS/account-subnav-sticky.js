@@ -24,7 +24,7 @@
     return style.display !== 'none' && style.visibility !== 'hidden';
   }
 
-  function getFixedLikeHeight(el) {
+  function fixedLikeHeight(el) {
     if (!isVisible(el)) return 0;
     const style = window.getComputedStyle(el);
     const pos = style.position;
@@ -35,7 +35,7 @@
   function computeStickyTop() {
     const topBar = document.querySelector('.top-bar');
     const header = document.querySelector('.home-header');
-    const stickyTop = getFixedLikeHeight(topBar) + getFixedLikeHeight(header);
+    const stickyTop = fixedLikeHeight(topBar) + fixedLikeHeight(header);
     root.style.setProperty('--sticky-top', `${stickyTop}px`);
     return stickyTop;
   }
@@ -56,11 +56,11 @@
     if (on) {
       subnav.classList.add('is-sticky-js');
       spacer.style.height = `${subnav.offsetHeight}px`;
-      return;
+    } else {
+      subnav.classList.remove('is-sticky-js');
+      spacer.style.height = '0px';
+      anchorY = null;
     }
-
-    subnav.classList.remove('is-sticky-js');
-    spacer.style.height = '0px';
   }
 
   function updateSticky() {
@@ -71,7 +71,7 @@
 
     const stickyTop = computeStickyTop();
 
-    if (anchorY === null || !isSticky) {
+    if (!isSticky || anchorY === null) {
       measureAnchor();
     }
 
@@ -80,7 +80,7 @@
       return;
     }
 
-    const shouldStick = window.scrollY >= (anchorY - stickyTop);
+    const shouldStick = (window.scrollY + stickyTop) >= anchorY;
     setSticky(shouldStick);
   }
 
@@ -93,38 +93,19 @@
   }
 
   function hardRefresh() {
-    computeStickyTop();
-    measureAnchor();
+    anchorY = null;
     updateSticky();
   }
 
   hardRefresh();
 
   window.addEventListener('scroll', requestUpdate, { passive: true });
-  window.addEventListener('resize', () => {
-    anchorY = null;
-    hardRefresh();
-  }, { passive: true });
-  window.addEventListener('orientationchange', () => {
-    anchorY = null;
-    hardRefresh();
-  }, { passive: true });
+  window.addEventListener('resize', hardRefresh, { passive: true });
+  window.addEventListener('orientationchange', hardRefresh, { passive: true });
+  window.addEventListener('hashchange', hardRefresh, { passive: true });
+  window.addEventListener('account:layout-change', hardRefresh);
 
-  const mutationObserver = new MutationObserver(() => {
-    anchorY = null;
-    hardRefresh();
-  });
-
-  mutationObserver.observe(subnav, {
-    attributes: true,
-    attributeFilter: ['hidden', 'style', 'class']
-  });
-
-  const dashboard = document.getElementById('contaDashboard');
-  if (dashboard) {
-    mutationObserver.observe(dashboard, {
-      attributes: true,
-      attributeFilter: ['hidden', 'style', 'class']
-    });
-  }
+  window.setTimeout(hardRefresh, 0);
+  window.setTimeout(hardRefresh, 250);
+  window.setTimeout(hardRefresh, 800);
 })();
