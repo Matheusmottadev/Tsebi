@@ -504,3 +504,272 @@ nav.account-subnav {
     grid-template-columns: 1fr;
   }
 }
+
+/* ===== Premium Login ===== */
+body.login-page {
+  --login-topbar-h: 38px;
+  --login-header-h: 84px;
+  background: #ffffff;
+  color: #111111;
+  padding-top: calc(var(--login-topbar-h) + var(--login-header-h));
+}
+
+body.login-page > .home-header {
+  position: fixed;
+  top: var(--login-topbar-h);
+  left: 0;
+  right: 0;
+  width: 100%;
+  min-height: var(--login-header-h);
+  padding: 8px 24px;
+  z-index: 5600;
+  background: #ffffff !important;
+  border-bottom: 1px solid #ececec !important;
+}
+
+body.login-page > .home-header .search-box-trigger {
+  height: 44px;
+}
+
+.t-login-main {
+  padding: 48px 24px 64px;
+}
+
+.t-login-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  display: flex;
+  justify-content: center;
+}
+
+.t-login-card {
+  width: min(420px, 100%);
+  background: #f7f7f7;
+  border: 1px solid #eaeaea;
+  border-radius: 12px;
+  padding: 28px;
+}
+
+.t-login-card h1 {
+  font-family: "Playfair Display", serif;
+  font-size: 28px;
+  font-weight: 500;
+  color: #111111;
+}
+
+.t-login-subtitle {
+  margin-top: 8px;
+  font-size: 14px;
+  line-height: 1.5;
+  color: #666666;
+}
+
+.t-login-feedback {
+  margin-top: 16px;
+  padding: 10px 12px;
+  border: 1px solid #e6c8c8;
+  border-radius: 8px;
+  background: #fff5f5;
+  color: #8f1d1d;
+  font-size: 13px;
+}
+
+#loginFormPremium {
+  margin-top: 18px;
+}
+
+.t-login-field {
+  margin-bottom: 16px;
+}
+
+.t-login-field label {
+  display: block;
+  margin-bottom: 8px;
+  font-size: 12px;
+  color: #111111;
+}
+
+.t-login-field input {
+  width: 100%;
+  height: 44px;
+  border: 1px solid #e6e6e6;
+  border-radius: 8px;
+  background: #ffffff;
+  padding: 0 12px;
+  font-size: 14px;
+  color: #111111;
+}
+
+.t-login-field input::placeholder {
+  color: #8f8f8f;
+}
+
+.t-login-field input:focus {
+  outline: 2px solid rgba(17, 17, 17, 0.2);
+  outline-offset: 0;
+  border-color: #111111;
+}
+
+.t-login-password-wrap {
+  position: relative;
+}
+
+.t-login-password-wrap input {
+  padding-right: 82px;
+}
+
+.t-login-toggle-pass {
+  position: absolute;
+  top: 50%;
+  right: 10px;
+  transform: translateY(-50%);
+  border: 0;
+  background: transparent;
+  color: #111111;
+  font-size: 12px;
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.t-login-error {
+  display: block;
+  min-height: 16px;
+  margin-top: 6px;
+  font-size: 12px;
+  color: #8f1d1d;
+}
+
+.t-login-helper-row {
+  margin: 4px 0 18px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.t-login-remember {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: #111111;
+}
+
+.t-login-remember input {
+  width: 14px;
+  height: 14px;
+}
+
+.t-login-link {
+  color: #111111;
+  font-size: 13px;
+  text-decoration: none;
+  border-bottom: 1px solid rgba(17, 17, 17, 0.35);
+}
+
+.t-login-link:hover {
+  border-bottom-color: #111111;
+}
+
+.t-login-submit,
+.t-login-google {
+  width: 100%;
+  min-height: 48px;
+  border-radius: 999px;
+  font-size: 14px;
+  transition: opacity 0.2s ease;
+}
+
+.t-login-submit {
+  border: 0;
+  background: #000000;
+  color: #ffffff;
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.t-login-submit:hover,
+.t-login-google:hover {
+  opacity: 0.88;
+}
+
+.t-login-submit[disabled] {
+  opacity: 0.78;
+  cursor: not-allowed;
+}
+
+.t-login-submit-loader {
+  display: none;
+  width: 16px;
+  height: 16px;
+  border: 2px solid rgba(255, 255, 255, 0.45);
+  border-top-color: #ffffff;
+  border-radius: 50%;
+  animation: tLoginSpin 0.8s linear infinite;
+}
+
+.t-login-submit.is-loading .t-login-submit-text {
+  display: none;
+}
+
+.t-login-submit.is-loading .t-login-submit-loader {
+  display: inline-block;
+}
+
+.t-login-divider {
+  margin: 18px 0;
+  border-top: 1px solid #e6e6e6;
+  text-align: center;
+}
+
+.t-login-divider span {
+  position: relative;
+  top: -10px;
+  padding: 0 10px;
+  background: #f7f7f7;
+  color: #666666;
+  font-size: 12px;
+  text-transform: lowercase;
+}
+
+.t-login-google {
+  border: 1px solid #111111;
+  background: transparent;
+  color: #111111;
+  cursor: pointer;
+}
+
+.t-login-footnote {
+  margin-top: 16px;
+  text-align: center;
+  font-size: 14px;
+  color: #666666;
+}
+
+@keyframes tLoginSpin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (max-width: 768px) {
+  body.login-page {
+    --login-header-h: 72px;
+  }
+
+  body.login-page > .home-header {
+    padding: 8px 16px;
+  }
+
+  .t-login-main {
+    padding: 24px 16px 40px;
+  }
+
+  .t-login-card {
+    padding: 22px 18px;
+  }
+}

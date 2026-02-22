@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Entrar | Tsebi Brasil</title>
+  <meta name="description" content="Acesse sua conta Tsebi." />
+  <meta name="robots" content="noindex,nofollow" />
+
+  <link rel="icon" type="image/svg+xml" href="/images/favicon-dark.svg?v=20260219c" media="(prefers-color-scheme: dark)" />
+  <link rel="icon" type="image/svg+xml" href="/images/favicon-light.svg?v=20260219c" media="(prefers-color-scheme: light)" />
+  <link rel="icon" type="image/png" href="/images/logo-tsebi.png?v=20260219c" />
+  <link rel="shortcut icon" href="/images/logo-tsebi.png?v=20260219c" />
+  <link rel="apple-touch-icon" href="/images/logo-tsebi.png?v=20260219c" />
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600&family=Montserrat:wght@300;400;500;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/style.css?v=20260220h" />
+  <link rel="stylesheet" href="css/account.css?v=20260222d" />
+</head>
+<body class="login-page">
+  <div class="top-bar">
+    <div class="top-wrapper">
+      <button class="arrow left" type="button">&#10094;</button>
+      <div class="top-message" id="topMessage">Frete Grátis!</div>
+      <button class="arrow right" type="button">&#10095;</button>
+    </div>
+  </div>
+
+  <header class="home-header is-scrolled">
+    <div class="header-row">
+      <div class="header-left">
+        <button class="menu-toggle" id="openHeaderMenu" type="button" aria-label="Abrir menu">
+          <span></span><span></span><span></span>
+        </button>
+        <button class="search-box-trigger" id="openSearch" type="button" aria-label="Abrir busca">
+          <span class="search-box-label">O que você está buscando?</span>
+          <span class="search-box-icon">&#8985;</span>
+        </button>
+      </div>
+
+      <h1 class="logo">
+        <a class="logo-center-link" href="index.html">
+          <span class="logo-center-text">TSEBI</span>
+          <img class="logo-center-image" src="images/logo-tsebi.png" alt="Logo TSEBI" />
+        </a>
+      </h1>
+
+      <div class="header-right">
+        <a class="quick-action" href="login.html" aria-label="Conta">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M20 21a8 8 0 0 0-16 0"></path>
+            <circle cx="12" cy="8" r="4"></circle>
+          </svg>
+        </a>
+        <a class="quick-action cart-link" href="cart.html" aria-label="Carrinho">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M7 7h10l1 12H6L7 7z"></path>
+            <path d="M9 7V6a3 3 0 1 1 6 0v1"></path>
+          </svg>
+        </a>
+      </div>
+    </div>
+  </header>
+
+  <aside class="header-menu" id="headerMenu" aria-hidden="true">
+    <button class="header-menu-close" id="closeHeaderMenu" type="button" aria-label="Fechar menu">&times;</button>
+    <nav class="header-menu-nav">
+      <div class="menu-group"><a class="menu-group-title" href="lancamento.html">Coleção Gênesis</a></div>
+      <div class="menu-group"><a class="menu-group-title" href="nossa-historia.html">Origem</a></div>
+      <div class="menu-group"><a class="menu-group-title" href="processos.html">Processos</a></div>
+      <div class="menu-group"><a class="menu-group-title" href="faq.html">FAQ</a></div>
+    </nav>
+  </aside>
+
+  <main class="t-login-main">
+    <div class="t-login-container">
+      <section class="t-login-card" aria-labelledby="loginTitle">
+        <h1 id="loginTitle">Entrar</h1>
+        <p class="t-login-subtitle">Acesse sua conta Tsebi para acompanhar pedidos e preferências.</p>
+
+        <p class="t-login-feedback" id="loginFeedback" role="alert" aria-live="polite" hidden></p>
+
+        <form id="loginFormPremium" novalidate>
+          <div class="t-login-field">
+            <label for="loginEmailPremium">Email</label>
+            <input id="loginEmailPremium" type="email" autocomplete="email" placeholder="seu@email.com" required />
+            <small class="t-login-error" id="loginEmailError"></small>
+          </div>
+
+          <div class="t-login-field">
+            <label for="loginPasswordPremium">Senha</label>
+            <div class="t-login-password-wrap">
+              <input id="loginPasswordPremium" type="password" autocomplete="current-password" placeholder="Digite sua senha" required />
+              <button type="button" class="t-login-toggle-pass" id="togglePasswordBtn" aria-label="Mostrar senha">Mostrar</button>
+            </div>
+            <small class="t-login-error" id="loginPasswordError"></small>
+          </div>
+
+          <div class="t-login-helper-row">
+            <label class="t-login-remember">
+              <input id="rememberMePremium" type="checkbox" />
+              <span>Lembrar de mim</span>
+            </label>
+            <a href="recuperar-senha.html" class="t-login-link">Esqueci minha senha</a>
+          </div>
+
+          <button type="submit" class="t-login-submit" id="loginSubmitBtn">
+            <span class="t-login-submit-text">Entrar</span>
+            <span class="t-login-submit-loader" aria-hidden="true"></span>
+          </button>
+        </form>
+
+        <div class="t-login-divider" aria-hidden="true"><span>ou</span></div>
+
+        <button type="button" class="t-login-google">Continuar com Google</button>
+
+        <p class="t-login-footnote">Ainda não tem conta? <a href="conta.html" class="t-login-link">Criar conta</a></p>
+      </section>
+    </div>
+  </main>
+
+  <script src="JS/user-utils.js?v=20260222a"></script>
+  <script src="JS/script.js?v=20260220i"></script>
+  <script src="JS/auth-login.js?v=20260222a"></script>
+  <script src="JS/posthog.js"></script>
+</body>
+</html>
