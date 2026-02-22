@@ -18,7 +18,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600&family=Montserrat:wght@300;400;500;600&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="css/style.css?v=20260220h" />
-  <link rel="stylesheet" href="css/conta.css?v=20260221a" />
+  <link rel="stylesheet" href="css/conta.css?v=20260222b" />
   <link rel="stylesheet" href="css/account.css?v=20260221a" />
 </head>
 <body class="conta-page">
@@ -29,6 +29,42 @@
       <button class="arrow right" type="button">&#10095;</button>
     </div>
   </div>
+
+  <header class="home-header is-scrolled">
+    <div class="header-row">
+      <div class="header-left">
+        <button class="menu-toggle" id="openHeaderMenu" type="button" aria-label="Abrir menu">
+          <span></span><span></span><span></span>
+        </button>
+        <button class="search-box-trigger" id="openSearch" type="button" aria-label="Abrir busca">
+          <span class="search-box-label">O que vocÃª estÃ¡ buscando?</span>
+          <span class="search-box-icon">&#8985;</span>
+        </button>
+      </div>
+
+      <h1 class="logo">
+        <a class="logo-center-link" href="index.html">
+          <span class="logo-center-text">TSEBI</span>
+          <img class="logo-center-image" src="images/logo-tsebi.png" alt="Logo TSEBI" />
+        </a>
+      </h1>
+
+      <div class="header-right">
+        <a class="quick-action" href="conta.html" aria-label="Conta">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M20 21a8 8 0 0 0-16 0"></path>
+            <circle cx="12" cy="8" r="4"></circle>
+          </svg>
+        </a>
+        <a class="quick-action" href="#" aria-label="Carrinho">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M7 7h10l1 12H6L7 7z"></path>
+            <path d="M9 7V6a3 3 0 1 1 6 0v1"></path>
+          </svg>
+        </a>
+      </div>
+    </div>
+  </header>
 
   <aside class="header-menu" id="headerMenu" aria-hidden="true">
     <button class="header-menu-close" id="closeHeaderMenu" type="button" aria-label="Fechar menu">&times;</button>
@@ -155,6 +191,33 @@
     </section>
   </template>
 
+  <template id="tpl-orders">
+    <h1 class="account-title">Meus Pedidos</h1>
+    <section class="account-grid orders-grid">
+      <div class="account-panel orders-main-panel">
+        <div id="ordersListMount"></div>
+        <div class="orders-load-more-wrap">
+          <button type="button" class="btn-outline" id="ordersLoadMoreBtn" hidden>Carregar mais</button>
+        </div>
+      </div>
+      <div class="account-right-col">
+        <section class="account-panel">
+          <h2>Resumo</h2>
+          <div class="orders-summary-list">
+            <div class="orders-summary-row"><span>Total de pedidos</span><strong id="ordersSummaryCount">0</strong></div>
+            <div class="orders-summary-row"><span>Ãšltimo pedido</span><strong id="ordersSummaryLast">-</strong></div>
+            <div class="orders-summary-row"><span>Status do Ãºltimo</span><strong id="ordersSummaryStatus">-</strong></div>
+          </div>
+        </section>
+        <section class="account-panel">
+          <h2>Ajuda com pedidos</h2>
+          <a class="btn-primary" href="https://wa.me/5511918596632?text=Ol%C3%A1%2C%20preciso%20de%20ajuda%20com%20meu%20pedido." target="_blank" rel="noopener noreferrer">Falar com suporte</a>
+          <a class="policy-link" href="politica-privacidade.html">PolÃ­tica de trocas e devoluÃ§Ãµes</a>
+        </section>
+      </div>
+    </section>
+  </template>
+
   <template id="tpl-profile">
     <h1 class="account-title">Meu Perfil</h1>
     <section class="account-grid">
@@ -264,8 +327,9 @@
   <script src="JS/user-utils.js?v=20260222a"></script>
   <script src="JS/script.js?v=20260220i"></script>
   <script src="JS/account-header-stack-fix.js?v=20260222a"></script>
+  <script src="JS/account-orders.js?v=20260222b"></script>
   <script src="JS/account-profile.js?v=20260221a"></script>
-  <script src="JS/account-router.js?v=20260221c"></script>
+  <script src="JS/account-router.js?v=20260222b"></script>
   <script src="JS/posthog.js"></script>
 </body>
 </html>

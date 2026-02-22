@@ -94,11 +94,10 @@
   }
 
   function setActiveSubnav(section) {
-    const baseSection = section === "profile" ? "profile" : "overview";
+    const active = normalizeSection(section);
     subnavLinks.forEach((link) => {
-      const linkSection = String(link.getAttribute("data-section") || "");
-      const isActive = baseSection === "profile" ? linkSection === "profile" : linkSection !== "profile";
-      link.classList.toggle("is-active", isActive);
+      const linkSection = normalizeSection(link.getAttribute("data-section") || "");
+      link.classList.toggle("is-active", linkSection === active);
     });
   }
 
@@ -268,7 +267,7 @@
 
   async function navigate(section, options = {}) {
     const next = normalizeSection(section);
-    const targetSection = next === "profile" ? "profile" : "overview";
+    const targetSection = next === "overview" ? "overview" : "profile";
     toggleHeroImages(targetSection);
     showLoader();
     await new Promise((resolve) => window.setTimeout(resolve, 500));
@@ -282,9 +281,18 @@
           onAuthRequired: () => showAuthGate()
         });
       }
+    } else if (next === "orders") {
+      renderTemplate("tpl-orders");
+      setActiveSubnav("orders");
+      if (typeof window.initOrdersSection === "function") {
+        window.initOrdersSection({
+          orders: state.orders || [],
+          products: state.products || []
+        });
+      }
     } else {
       renderTemplate("tpl-overview");
-      setActiveSubnav("overview");
+      setActiveSubnav(next);
       initOverviewSection();
       if (next !== "overview") {
         const target = document.getElementById(`card-${next}`);
