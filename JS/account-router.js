@@ -384,8 +384,8 @@
     const me = await store.fetchMe();
     const fallbackUser = typeof store.getCurrentUser === "function" ? store.getCurrentUser() : null;
     if ((!me.ok || !me.user) && !fallbackUser) {
-      showAuthGate();
-      window.dispatchEvent(new Event("account:layout-change"));
+      const returnUrl = `${window.location.pathname}${window.location.search}${window.location.hash}`;
+      window.location.href = `login.html?returnUrl=${encodeURIComponent(returnUrl)}`;
       return;
     }
     state.user = me.user || fallbackUser;
