@@ -34,6 +34,14 @@ body.conta-page > .home-header .search-box-trigger {
 
 body.conta-page > .home-header .header-row {
   width: 100%;
+  min-height: calc(var(--conta-header-height) - 16px);
+  align-items: center;
+}
+
+body.conta-page > .home-header .header-left,
+body.conta-page > .home-header .logo,
+body.conta-page > .home-header .header-right {
+  align-self: center;
 }
 
 .conta-subnav {
