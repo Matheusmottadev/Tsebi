@@ -80,7 +80,8 @@
       return;
     }
 
-    const shouldStick = (window.scrollY + stickyTop) >= anchorY;
+    const hasScrolled = window.scrollY > 2;
+    const shouldStick = hasScrolled && (window.scrollY + stickyTop) >= (anchorY + 1);
     setSticky(shouldStick);
   }
 
