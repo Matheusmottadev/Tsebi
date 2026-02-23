@@ -559,6 +559,10 @@ body.login-page > .home-header .search-box-trigger {
 
 .account-benefits {
   max-width: 420px;
+  background: #f7f7f7;
+  border: 1px solid #eaeaea;
+  border-radius: 12px;
+  padding: 28px;
 }
 
 .account-benefits h2 {
@@ -832,6 +836,7 @@ body.login-page > .home-header .search-box-trigger {
   .account-benefits {
     order: 2;
     max-width: none;
+    padding: 22px 18px;
   }
 
   .login-form {
