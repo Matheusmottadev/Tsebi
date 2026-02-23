@@ -5,6 +5,7 @@
   const authError = document.getElementById("authError");
 
   const emailInput = document.getElementById("emailInput");
+  const showPasswordBtnPrimary = document.getElementById("showPasswordBtnPrimary");
   const sendCodeBtn = document.getElementById("sendCodeBtn");
 
   const emailPreview = document.getElementById("emailPreview");
@@ -401,6 +402,7 @@
   verifyCodeBtn?.addEventListener("click", verifyCode);
   resendBtn?.addEventListener("click", resendCode);
   changeEmailBtn?.addEventListener("click", () => setState("email"));
+  showPasswordBtnPrimary?.addEventListener("click", () => setState("password"));
   showPasswordBtn?.addEventListener("click", () => setState("password"));
   backToCodeBtn?.addEventListener("click", () => setState("code"));
   loginPasswordBtn?.addEventListener("click", loginWithPassword);
