@@ -17,6 +17,7 @@
   const nameEl = document.getElementById("contaClientName");
 
   const previewMode = String(new URLSearchParams(window.location.search).get("preview") || "") === "1";
+  if (subnav) subnav.hidden = true;
 
   const state = {
     user: null,
@@ -270,8 +271,11 @@
     const next = normalizeSection(section);
     const targetSection = next === "overview" ? "overview" : "profile";
     toggleHeroImages(targetSection);
-    showLoader();
-    await new Promise((resolve) => window.setTimeout(resolve, 500));
+    const useLoader = !options.skipLoader;
+    if (useLoader) showLoader();
+    if (!options.skipDelay) {
+      await new Promise((resolve) => window.setTimeout(resolve, 500));
+    }
 
     if (next === "profile") {
       renderTemplate("tpl-profile");
@@ -344,8 +348,10 @@
     if (!options.skipHash) {
       history.pushState({}, "", `#${next}`);
     }
-    hideLoader();
-    window.dispatchEvent(new Event("account:layout-change"));
+    if (useLoader) hideLoader();
+    if (!options.skipLayoutEvent) {
+      window.dispatchEvent(new Event("account:layout-change"));
+    }
   }
 
   async function bootAuthenticated() {
@@ -358,9 +364,14 @@
     state.orders = ordersResult.ok ? (ordersResult.orders || []) : [];
     state.products = Array.isArray(products) ? products : [];
     state.favorites = Array.isArray(favIds) ? favIds.map((id) => String(id || "")) : [];
-    showDashboard();
     renderHeaderUser();
-    await navigate(normalizeSection(window.location.hash || "overview"), { skipHash: true });
+    await navigate(normalizeSection(window.location.hash || "overview"), {
+      skipHash: true,
+      skipLoader: true,
+      skipDelay: true,
+      skipLayoutEvent: true
+    });
+    showDashboard();
     window.dispatchEvent(new Event("account:layout-change"));
   }
 
@@ -370,9 +381,15 @@
       state.orders = [];
       state.favorites = [];
       state.products = await loadProductsCatalog();
-      showDashboard();
       renderHeaderUser();
-      await navigate(normalizeSection(window.location.hash || "overview"), { skipHash: true });
+      await navigate(normalizeSection(window.location.hash || "overview"), {
+        skipHash: true,
+        skipLoader: true,
+        skipDelay: true,
+        skipLayoutEvent: true
+      });
+      showDashboard();
+      window.dispatchEvent(new Event("account:layout-change"));
       return;
     }
 
@@ -440,8 +457,10 @@
     state.orders = [];
     state.favorites = [];
     state.products = [];
-    showDashboard();
     renderHeaderUser();
-    navigate("overview", { skipHash: true });
+    navigate("overview", { skipHash: true, skipLoader: true, skipDelay: true, skipLayoutEvent: true }).finally(() => {
+      showDashboard();
+      window.dispatchEvent(new Event("account:layout-change"));
+    });
   });
 })();
