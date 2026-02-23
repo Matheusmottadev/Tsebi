@@ -25,6 +25,7 @@
 
   const GOOGLE_STATE_KEY = "tsebi-google-oauth-state";
   const GOOGLE_NONCE_KEY = "tsebi-google-oauth-nonce";
+  const GOOGLE_RETURN_URL_KEY = "tsebi-google-return-url";
 
   let currentState = "email";
   let activeEmail = "";
@@ -343,15 +344,15 @@
 
     const state = randomToken(24);
     const nonce = randomToken(24);
+    const returnUrl = getReturnUrl();
     try {
       sessionStorage.setItem(GOOGLE_STATE_KEY, state);
       sessionStorage.setItem(GOOGLE_NONCE_KEY, nonce);
+      sessionStorage.setItem(GOOGLE_RETURN_URL_KEY, returnUrl);
     } catch {}
 
-    const returnUrl = getReturnUrl();
     const callbackUrl = new URL(window.location.origin + window.location.pathname);
     callbackUrl.searchParams.set("google", "1");
-    callbackUrl.searchParams.set("returnUrl", returnUrl);
 
     const oauthUrl = new URL("https://accounts.google.com/o/oauth2/v2/auth");
     oauthUrl.searchParams.set("client_id", config.clientId);
@@ -379,11 +380,14 @@
     const stateFromHash = String(hashParams.get("state") || "").trim();
     let expectedState = "";
     let expectedNonce = "";
+    let storedReturnUrl = "";
     try {
       expectedState = String(sessionStorage.getItem(GOOGLE_STATE_KEY) || "");
       expectedNonce = String(sessionStorage.getItem(GOOGLE_NONCE_KEY) || "");
+      storedReturnUrl = String(sessionStorage.getItem(GOOGLE_RETURN_URL_KEY) || "");
       sessionStorage.removeItem(GOOGLE_STATE_KEY);
       sessionStorage.removeItem(GOOGLE_NONCE_KEY);
+      sessionStorage.removeItem(GOOGLE_RETURN_URL_KEY);
     } catch {}
 
     history.replaceState({}, "", `${window.location.pathname}${window.location.search}`);
@@ -408,7 +412,7 @@
       return;
     }
 
-    window.location.href = getReturnUrl();
+    window.location.href = storedReturnUrl || getReturnUrl();
   }
 
   sendCodeBtn?.addEventListener("click", sendCode);
