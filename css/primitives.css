@@ -92,6 +92,29 @@ h6 {
   }
 }
 
+/* Mobile touch carousel (opt-in) */
+@media (max-width: 639px) {
+  .t-grid--mobile-carousel {
+    display: flex;
+    gap: var(--t-space-4);
+    overflow-x: auto;
+    overflow-y: hidden;
+    padding-bottom: var(--t-space-2);
+    scroll-snap-type: x mandatory;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+
+  .t-grid--mobile-carousel::-webkit-scrollbar {
+    display: none;
+  }
+
+  .t-grid--mobile-carousel > .t-card-link {
+    flex: 0 0 min(78vw, 300px);
+    scroll-snap-align: start;
+  }
+}
+
 /* Card */
 .t-card-link {
   display: block;

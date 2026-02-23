@@ -7,6 +7,8 @@ Disallow: /studio-portal
 Disallow: /studio-portal.html
 Disallow: /vip-admin.html
 Disallow: /conta.html
+Disallow: /meu-perfil.html
+Disallow: /login.html
 Disallow: /cart.html
 Disallow: /minha-conta.html
 Disallow: /order.html
