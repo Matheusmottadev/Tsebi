@@ -5,6 +5,12 @@ const Stripe = require("stripe");
 const rateLimit = require("express-rate-limit");
 const { z } = require("zod");
 const {
+  generateRegistrationOptions,
+  verifyRegistrationResponse,
+  generateAuthenticationOptions,
+  verifyAuthenticationResponse
+} = require("@simplewebauthn/server");
+const {
   publicUser,
   normalizeEmail,
   findUserByEmail,
@@ -14,6 +20,12 @@ const {
   markUserLoggedInNow,
   markUserEmailVerified
 } = require("./user-repository");
+const {
+  listPasskeysByUserId,
+  findPasskeyByCredentialId,
+  createPasskey,
+  updatePasskeyCounter
+} = require("./lib/passkey-repository");
 const { query } = require("./lib/db");
 const { listOrdersByUserId, updateOrder } = require("./lib/order-repository");
 const { commitStock } = require("./lib/inventory-repository");
@@ -133,6 +145,16 @@ const activateAccountSchema = z.object({
   password: passwordSchema,
   confirmPassword: z.string().min(8).max(128),
   orderNumber: z.string().trim().min(3).max(120).optional().default("")
+});
+const passkeyLoginOptionsSchema = z.object({
+  email: emailSchema
+});
+const passkeyRegistrationVerifySchema = z.object({
+  credential: z.any()
+});
+const passkeyLoginVerifySchema = z.object({
+  email: emailSchema,
+  credential: z.any()
 });
 
 const resetPasswordCodeSchema = z.object({
@@ -313,6 +335,61 @@ function getGoogleClientIds() {
     .filter(Boolean);
 }
 
+function parseWebauthnOrigins() {
+  const fromEnv = String(process.env.WEBAUTHN_ORIGIN || "")
+    .split(",")
+    .map((item) => String(item || "").trim())
+    .filter(Boolean);
+  const appBase = String(process.env.APP_BASE_URL || "").trim();
+  if (appBase) fromEnv.push(appBase);
+  const rpId = String(process.env.WEBAUTHN_RP_ID || "").trim().toLowerCase();
+  if (rpId) {
+    fromEnv.push(`https://${rpId}`);
+    if (!rpId.startsWith("www.")) {
+      fromEnv.push(`https://www.${rpId}`);
+    }
+  }
+  const unique = [];
+  const seen = new Set();
+  for (const origin of fromEnv) {
+    try {
+      const normalized = new URL(origin).origin;
+      if (seen.has(normalized)) continue;
+      seen.add(normalized);
+      unique.push(normalized);
+    } catch {}
+  }
+  return unique;
+}
+
+function getWebauthnConfig() {
+  const rpId = String(process.env.WEBAUTHN_RP_ID || "").trim().toLowerCase();
+  const rpName = String(process.env.WEBAUTHN_RP_NAME || process.env.APP_NAME || "Tsebi").trim() || "Tsebi";
+  const origins = parseWebauthnOrigins();
+  return {
+    enabled: Boolean(rpId && origins.length > 0),
+    rpId,
+    rpName,
+    origins
+  };
+}
+
+function getWebauthnExpectedOrigin() {
+  const config = getWebauthnConfig();
+  if (config.origins.length <= 1) return config.origins[0] || "";
+  return config.origins;
+}
+
+function encodeChallengeForSession(challenge) {
+  return String(challenge || "");
+}
+
+function getAuthenticatorAttachment() {
+  const value = String(process.env.WEBAUTHN_AUTHENTICATOR_ATTACHMENT || "").trim().toLowerCase();
+  if (value === "platform" || value === "cross-platform") return value;
+  return undefined;
+}
+
 async function verifyGoogleIdToken(idToken) {
   const response = await fetch(`https://oauth2.googleapis.com/tokeninfo?id_token=${encodeURIComponent(idToken)}`);
   if (!response.ok) {
@@ -355,6 +432,198 @@ authRouter.get("/google/config", (req, res) => {
     enabled: Boolean(clientId),
     clientId
   });
+});
+
+authRouter.get("/passkey/config", (req, res) => {
+  const config = getWebauthnConfig();
+  return res.json({
+    ok: true,
+    enabled: config.enabled,
+    rpId: config.rpId,
+    rpName: config.rpName
+  });
+});
+
+authRouter.post("/passkey/register/options", requireAuth, async (req, res) => {
+  const config = getWebauthnConfig();
+  if (!config.enabled) return res.status(503).json({ error: "PASSKEY_NOT_CONFIGURED" });
+
+  const user = await findUserById(req.session.userId);
+  if (!user) return res.status(401).json({ error: "UNAUTHORIZED" });
+
+  const existing = await listPasskeysByUserId(user.id);
+
+  const options = await generateRegistrationOptions({
+    rpID: config.rpId,
+    rpName: config.rpName,
+    userID: user.id,
+    userName: user.email,
+    userDisplayName: user.name || user.email,
+    timeout: 60000,
+    attestationType: "none",
+    authenticatorSelection: {
+      residentKey: "preferred",
+      userVerification: "preferred",
+      authenticatorAttachment: getAuthenticatorAttachment()
+    },
+    excludeCredentials: existing.map((item) => ({
+      id: item.credentialId,
+      transports: Array.isArray(item.transports) ? item.transports : []
+    }))
+  });
+
+  req.session.passkeyRegistration = {
+    userId: user.id,
+    challenge: encodeChallengeForSession(options.challenge),
+    createdAt: Date.now()
+  };
+
+  return res.json({ ok: true, options });
+});
+
+authRouter.post("/passkey/register/verify", requireAuth, async (req, res) => {
+  const config = getWebauthnConfig();
+  if (!config.enabled) return res.status(503).json({ error: "PASSKEY_NOT_CONFIGURED" });
+
+  const parsed = passkeyRegistrationVerifySchema.safeParse(req.body || {});
+  if (!parsed.success) return res.status(400).json({ error: "INVALID_INPUT" });
+
+  const pending = req.session?.passkeyRegistration || null;
+  if (!pending || pending.userId !== req.session.userId || !pending.challenge) {
+    return res.status(400).json({ error: "PASSKEY_CHALLENGE_NOT_FOUND" });
+  }
+
+  let verification = null;
+  try {
+    verification = await verifyRegistrationResponse({
+      response: parsed.data.credential,
+      expectedChallenge: pending.challenge,
+      expectedOrigin: getWebauthnExpectedOrigin(),
+      expectedRPID: config.rpId,
+      requireUserVerification: true
+    });
+  } catch {
+    return res.status(400).json({ error: "PASSKEY_REGISTRATION_FAILED" });
+  }
+
+  if (!verification?.verified || !verification.registrationInfo) {
+    return res.status(400).json({ error: "PASSKEY_REGISTRATION_FAILED" });
+  }
+
+  const registrationInfo = verification.registrationInfo;
+  const created = await createPasskey({
+    userId: req.session.userId,
+    credentialId: String(registrationInfo.credentialID || "").trim(),
+    publicKey: Buffer.from(registrationInfo.credentialPublicKey || new Uint8Array()).toString("base64url"),
+    counter: Number(registrationInfo.counter || 0),
+    transports: parsed.data?.credential?.response?.transports || [],
+    deviceType: String(registrationInfo.credentialDeviceType || ""),
+    backedUp: registrationInfo.credentialBackedUp == null ? null : Boolean(registrationInfo.credentialBackedUp)
+  });
+
+  if (!created.ok) {
+    if (created.error === "PASSKEY_ALREADY_EXISTS") {
+      return res.status(409).json({ error: created.error });
+    }
+    return res.status(500).json({ error: "PASSKEY_SAVE_FAILED" });
+  }
+
+  delete req.session.passkeyRegistration;
+  return res.json({ ok: true });
+});
+
+authRouter.post("/passkey/login/options", authRateLimit, async (req, res) => {
+  const config = getWebauthnConfig();
+  if (!config.enabled) return res.status(503).json({ error: "PASSKEY_NOT_CONFIGURED" });
+
+  const parsed = passkeyLoginOptionsSchema.safeParse(req.body || {});
+  if (!parsed.success) return res.status(400).json({ error: "INVALID_INPUT" });
+
+  const user = await findUserByEmail(parsed.data.email);
+  if (!user) return res.status(404).json({ error: "EMAIL_NOT_FOUND" });
+
+  const credentials = await listPasskeysByUserId(user.id);
+  if (!credentials.length) {
+    return res.status(404).json({ error: "PASSKEY_NOT_FOUND" });
+  }
+
+  const options = await generateAuthenticationOptions({
+    rpID: config.rpId,
+    timeout: 60000,
+    userVerification: "preferred",
+    allowCredentials: credentials.map((item) => ({
+      id: item.credentialId,
+      transports: Array.isArray(item.transports) ? item.transports : []
+    }))
+  });
+
+  req.session.passkeyAuthentication = {
+    userId: user.id,
+    email: user.email,
+    challenge: encodeChallengeForSession(options.challenge),
+    createdAt: Date.now()
+  };
+
+  return res.json({ ok: true, options });
+});
+
+authRouter.post("/passkey/login/verify", authRateLimit, async (req, res) => {
+  const config = getWebauthnConfig();
+  if (!config.enabled) return res.status(503).json({ error: "PASSKEY_NOT_CONFIGURED" });
+
+  const parsed = passkeyLoginVerifySchema.safeParse(req.body || {});
+  if (!parsed.success) return res.status(400).json({ error: "INVALID_INPUT" });
+
+  const pending = req.session?.passkeyAuthentication || null;
+  if (!pending || !pending.challenge || !pending.userId) {
+    return res.status(400).json({ error: "PASSKEY_CHALLENGE_NOT_FOUND" });
+  }
+
+  const email = normalizeEmail(parsed.data.email);
+  if (!email || email !== normalizeEmail(pending.email || "")) {
+    return res.status(400).json({ error: "INVALID_CREDENTIALS" });
+  }
+
+  const user = await findUserById(pending.userId);
+  if (!user || normalizeEmail(user.email) !== email) {
+    return res.status(401).json({ error: "INVALID_CREDENTIALS" });
+  }
+
+  const rawCredentialId = String(parsed.data?.credential?.id || "").trim();
+  if (!rawCredentialId) return res.status(400).json({ error: "INVALID_INPUT" });
+  const storedPasskey = await findPasskeyByCredentialId(rawCredentialId);
+  if (!storedPasskey || storedPasskey.userId !== user.id) {
+    return res.status(401).json({ error: "INVALID_CREDENTIALS" });
+  }
+
+  let verification = null;
+  try {
+    verification = await verifyAuthenticationResponse({
+      response: parsed.data.credential,
+      expectedChallenge: pending.challenge,
+      expectedOrigin: getWebauthnExpectedOrigin(),
+      expectedRPID: config.rpId,
+      requireUserVerification: true,
+      authenticator: {
+        credentialID: storedPasskey.credentialId,
+        credentialPublicKey: Buffer.from(storedPasskey.publicKey, "base64url"),
+        counter: Number(storedPasskey.counter || 0),
+        transports: Array.isArray(storedPasskey.transports) ? storedPasskey.transports : []
+      }
+    });
+  } catch {
+    return res.status(401).json({ error: "INVALID_CREDENTIALS" });
+  }
+
+  if (!verification?.verified) {
+    return res.status(401).json({ error: "INVALID_CREDENTIALS" });
+  }
+
+  await updatePasskeyCounter(storedPasskey.credentialId, Number(verification.authenticationInfo?.newCounter || 0));
+  delete req.session.passkeyAuthentication;
+  req.session.userId = user.id;
+  markUserLoggedInNow(user.id).catch(() => {});
+  return res.json({ ok: true, user: publicUser(user), stage: "authenticated" });
 });
 
 async function issueAndSendAccountVerifyCode(user) {

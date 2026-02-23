@@ -370,6 +370,22 @@ nav.account-subnav {
   font-size: 14px;
 }
 
+.login-passkey-row {
+  margin-top: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  font-family: "Montserrat", sans-serif;
+  font-size: 14px;
+}
+
+#passkeyFeedback {
+  margin-top: 10px;
+  font-size: 12px;
+  color: #666;
+}
+
 .empty-copy {
   font-family: "Montserrat", sans-serif;
   font-size: 14px;

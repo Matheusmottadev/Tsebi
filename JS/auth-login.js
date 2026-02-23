@@ -22,6 +22,7 @@
   const backToCodeBtn = document.getElementById("backToCodeBtn");
 
   const googleBtn = document.getElementById("googleBtn");
+  const passkeyBtn = document.getElementById("passkeyBtn");
 
   const GOOGLE_STATE_KEY = "tsebi-google-oauth-state";
   const GOOGLE_NONCE_KEY = "tsebi-google-oauth-nonce";
@@ -32,6 +33,7 @@
   let resendTimerId = null;
   let resendRemaining = 0;
   let googleLoginAvailable = true;
+  let passkeyAvailable = true;
 
   function getReturnUrl() {
     const params = new URLSearchParams(window.location.search);
@@ -149,7 +151,55 @@
     if (value === "AUTH_CODE_ISSUE_FAILED") return "Não foi possível gerar o código agora.";
     if (value === "EMAIL_DELIVERY_FAILED") return "Não foi possível enviar o código. Tente novamente.";
     if (value === "TOO_MANY_ATTEMPTS") return "Muitas tentativas. Aguarde alguns minutos.";
+    if (value === "PASSKEY_NOT_FOUND") return "Nenhuma passkey cadastrada para este e-mail.";
+    if (value === "PASSKEY_CHALLENGE_NOT_FOUND") return "Sessão de passkey expirada. Tente novamente.";
+    if (value === "PASSKEY_NOT_CONFIGURED") return "Passkey indisponível no momento.";
     return value;
+  }
+
+  function toBase64Url(arrayBuffer) {
+    const bytes = new Uint8Array(arrayBuffer);
+    let str = "";
+    for (let i = 0; i < bytes.length; i += 1) str += String.fromCharCode(bytes[i]);
+    return btoa(str).replace(/\+/g, "-").replace(/\//g, "_").replace(/=/g, "");
+  }
+
+  function fromBase64Url(value) {
+    const input = String(value || "").replace(/-/g, "+").replace(/_/g, "/");
+    const padded = input + "===".slice((input.length + 3) % 4);
+    const binary = atob(padded);
+    const bytes = new Uint8Array(binary.length);
+    for (let i = 0; i < binary.length; i += 1) {
+      bytes[i] = binary.charCodeAt(i);
+    }
+    return bytes.buffer;
+  }
+
+  function serializeCredential(credential) {
+    if (!credential) return null;
+    return {
+      id: credential.id,
+      rawId: toBase64Url(credential.rawId),
+      type: credential.type,
+      response: {
+        clientDataJSON: toBase64Url(credential.response.clientDataJSON),
+        authenticatorData: toBase64Url(credential.response.authenticatorData),
+        signature: toBase64Url(credential.response.signature),
+        userHandle: credential.response.userHandle ? toBase64Url(credential.response.userHandle) : null
+      },
+      clientExtensionResults: credential.getClientExtensionResults?.() || {},
+      authenticatorAttachment: credential.authenticatorAttachment || null
+    };
+  }
+
+  function decodeAuthenticationOptions(options) {
+    const decoded = { ...options };
+    decoded.challenge = fromBase64Url(options.challenge);
+    decoded.allowCredentials = (Array.isArray(options.allowCredentials) ? options.allowCredentials : []).map((item) => ({
+      ...item,
+      id: fromBase64Url(item.id)
+    }));
+    return decoded;
   }
 
   async function postJson(url, payload) {
@@ -323,6 +373,9 @@
     const googleConfig = await fetchGoogleConfig();
     googleLoginAvailable = Boolean(googleConfig.enabled && googleConfig.clientId);
     setSocialButtonAvailability(googleBtn, googleLoginAvailable);
+    const passkeySupported = Boolean(window.PublicKeyCredential && navigator.credentials);
+    passkeyAvailable = passkeySupported;
+    setSocialButtonAvailability(passkeyBtn, passkeyAvailable);
   }
 
   async function beginGoogleLogin() {
@@ -364,6 +417,55 @@
     oauthUrl.searchParams.set("nonce", nonce);
 
     window.location.href = oauthUrl.toString();
+  }
+
+  async function loginWithPasskey() {
+    clearError();
+    const passkeySupported = Boolean(window.PublicKeyCredential && navigator.credentials);
+    if (!passkeySupported) {
+      showError("Este navegador não suporta Passkey.");
+      return;
+    }
+
+    const email = normalizeEmail(emailInput?.value || emailInput2?.value || activeEmail || "");
+    if (!isValidEmail(email)) {
+      showError("Informe seu e-mail para entrar com Passkey.");
+      if (currentState !== "email") setState("email");
+      return;
+    }
+
+    setButtonLoading(passkeyBtn, true, "Conectando...");
+    const optionsResult = await postJson("/api/auth/passkey/login/options", { email });
+    if (!optionsResult.ok || !optionsResult.data?.ok || !optionsResult.data?.options) {
+      setButtonLoading(passkeyBtn, false, "Conectando...");
+      showError(mapAuthError(optionsResult.data?.error || "PASSKEY_NOT_FOUND"));
+      return;
+    }
+
+    let assertion = null;
+    try {
+      assertion = await navigator.credentials.get({
+        publicKey: decodeAuthenticationOptions(optionsResult.data.options)
+      });
+    } catch (error) {
+      setButtonLoading(passkeyBtn, false, "Conectando...");
+      showError(error?.name === "NotAllowedError" ? "Autenticação cancelada." : "Falha ao usar Passkey.");
+      return;
+    }
+
+    const serialized = serializeCredential(assertion);
+    const verifyResult = await postJson("/api/auth/passkey/login/verify", {
+      email,
+      credential: serialized
+    });
+    setButtonLoading(passkeyBtn, false, "Conectando...");
+
+    if (!verifyResult.ok || !verifyResult.data?.ok) {
+      showError(mapAuthError(verifyResult.data?.error || "INVALID_CREDENTIALS"));
+      return;
+    }
+
+    window.location.href = getReturnUrl();
   }
 
   function parseHashParams() {
@@ -449,6 +551,7 @@
   });
 
   googleBtn?.addEventListener("click", beginGoogleLogin);
+  passkeyBtn?.addEventListener("click", loginWithPasskey);
 
   syncSocialAvailability();
   completeGoogleLoginFromHash();

@@ -1,4 +1,4 @@
-window.initProfileSection = function initProfileSection(options = {}) {
+﻿window.initProfileSection = function initProfileSection(options = {}) {
   const store = window.TsebiUserStore;
   const profileForm = document.getElementById("profileForm");
   const profileTitle = document.getElementById("profileTitle");
@@ -19,6 +19,8 @@ window.initProfileSection = function initProfileSection(options = {}) {
   const prefPostal = document.getElementById("prefPostal");
 
   const loginEmail = document.getElementById("loginEmail");
+  const enablePasskeyBtn = document.getElementById("enablePasskeyBtn");
+  const passkeyFeedback = document.getElementById("passkeyFeedback");
   const addressesEmpty = document.getElementById("addressesEmpty");
   const addressesList = document.getElementById("addressesList");
   const addAddressBtn = document.getElementById("addAddressBtn");
@@ -36,7 +38,7 @@ window.initProfileSection = function initProfileSection(options = {}) {
   });
 
   const monthLabels = [
-    "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
+    "Janeiro", "Fevereiro", "MarÃ§o", "Abril", "Maio", "Junho",
     "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"
   ];
 
@@ -60,6 +62,63 @@ window.initProfileSection = function initProfileSection(options = {}) {
     window.setTimeout(() => {
       toastEl.classList.remove("is-visible");
     }, 1800);
+  }
+
+  function setPasskeyFeedback(message, isError = false) {
+    if (!passkeyFeedback) return;
+    passkeyFeedback.textContent = String(message || "");
+    passkeyFeedback.style.color = isError ? "#9f1f1f" : "#666";
+  }
+
+  function toBase64Url(arrayBuffer) {
+    const bytes = new Uint8Array(arrayBuffer);
+    let str = "";
+    for (let i = 0; i < bytes.length; i += 1) str += String.fromCharCode(bytes[i]);
+    return btoa(str).replace(/\+/g, "-").replace(/\//g, "_").replace(/=/g, "");
+  }
+
+  function fromBase64Url(value) {
+    const input = String(value || "").replace(/-/g, "+").replace(/_/g, "/");
+    const padded = input + "===".slice((input.length + 3) % 4);
+    const binary = atob(padded);
+    const bytes = new Uint8Array(binary.length);
+    for (let i = 0; i < binary.length; i += 1) {
+      bytes[i] = binary.charCodeAt(i);
+    }
+    return bytes.buffer;
+  }
+
+  function decodeRegistrationOptions(options) {
+    const decoded = { ...options };
+    decoded.challenge = fromBase64Url(options.challenge);
+    decoded.user = {
+      ...options.user,
+      id: fromBase64Url(options.user.id)
+    };
+    decoded.excludeCredentials = (Array.isArray(options.excludeCredentials) ? options.excludeCredentials : []).map((item) => ({
+      ...item,
+      id: fromBase64Url(item.id)
+    }));
+    return decoded;
+  }
+
+  function serializeRegistrationCredential(credential) {
+    if (!credential) return null;
+    return {
+      id: credential.id,
+      rawId: toBase64Url(credential.rawId),
+      type: credential.type,
+      response: {
+        clientDataJSON: toBase64Url(credential.response.clientDataJSON),
+        attestationObject: toBase64Url(credential.response.attestationObject),
+        transports:
+          typeof credential.response.getTransports === "function"
+            ? credential.response.getTransports()
+            : []
+      },
+      clientExtensionResults: credential.getClientExtensionResults?.() || {},
+      authenticatorAttachment: credential.authenticatorAttachment || null
+    };
   }
 
   function readLocalProfile() {
@@ -205,7 +264,7 @@ window.initProfileSection = function initProfileSection(options = {}) {
       const article = document.createElement("article");
       article.className = "address-card";
       article.innerHTML = `
-        <strong>${String(address?.label || address?.fullName || "Endereço")}</strong>
+        <strong>${String(address?.label || address?.fullName || "EndereÃ§o")}</strong>
         <p>${String(address?.street || "")}, ${String(address?.number || "")}</p>
         <p>${String(address?.district || "")} - ${String(address?.city || "")}/${String(address?.state || "")}</p>
         <p>CEP ${String(address?.cep || "")}</p>
@@ -276,19 +335,19 @@ window.initProfileSection = function initProfileSection(options = {}) {
     let valid = true;
 
     if (!data.title) {
-      setError("profileTitle", "Campo obrigatório");
+      setError("profileTitle", "Campo obrigatÃ³rio");
       valid = false;
     }
     if (data.firstName.length < 2) {
-      setError("profileFirstName", "Campo obrigatório");
+      setError("profileFirstName", "Campo obrigatÃ³rio");
       valid = false;
     }
     if (data.lastName.length < 2) {
-      setError("profileLastName", "Campo obrigatório");
+      setError("profileLastName", "Campo obrigatÃ³rio");
       valid = false;
     }
     if (!data.country) {
-      setError("profileCountry", "Campo obrigatório");
+      setError("profileCountry", "Campo obrigatÃ³rio");
       valid = false;
     }
 
@@ -303,10 +362,10 @@ window.initProfileSection = function initProfileSection(options = {}) {
 
       const result = await saveProfile(data);
       if (!result?.ok) {
-        showToast(result?.error || "Não foi possível salvar");
+        showToast(result?.error || "NÃ£o foi possÃ­vel salvar");
         return;
       }
-      showToast("Informações salvas");
+      showToast("InformaÃ§Ãµes salvas");
     });
 
     const prefMap = {
@@ -324,7 +383,7 @@ window.initProfileSection = function initProfileSection(options = {}) {
     });
 
     addAddressBtn?.addEventListener("click", () => {
-      showToast("TODO: fluxo de adicionar endereço");
+      showToast("TODO: fluxo de adicionar endereÃ§o");
     });
 
     addressesList?.addEventListener("click", (event) => {
@@ -332,7 +391,7 @@ window.initProfileSection = function initProfileSection(options = {}) {
       if (!(target instanceof HTMLElement)) return;
       const button = target.closest("[data-address-edit]");
       if (!button) return;
-      showToast("TODO: fluxo de editar endereço");
+      showToast("TODO: fluxo de editar endereÃ§o");
     });
 
     openPasswordModalBtn?.addEventListener("click", () => {
@@ -349,9 +408,63 @@ window.initProfileSection = function initProfileSection(options = {}) {
 
     passwordForm?.addEventListener("submit", (event) => {
       event.preventDefault();
-      showToast("TODO: integração para alteração de senha");
+      showToast("TODO: integraÃ§Ã£o para alteraÃ§Ã£o de senha");
       if (passwordModal) passwordModal.hidden = true;
       if (passwordForm) passwordForm.reset();
+    });
+
+    enablePasskeyBtn?.addEventListener("click", async () => {
+      setPasskeyFeedback("");
+      if (!(window.PublicKeyCredential && navigator.credentials)) {
+        setPasskeyFeedback("Este navegador não suporta Passkey.", true);
+        return;
+      }
+
+      enablePasskeyBtn.disabled = true;
+      enablePasskeyBtn.textContent = "Ativando...";
+
+      try {
+        const optionsResponse = await fetch("/api/auth/passkey/register/options", {
+          method: "POST",
+          credentials: "same-origin",
+          headers: { "Content-Type": "application/json" },
+          body: "{}"
+        });
+        const optionsData = await optionsResponse.json().catch(() => ({}));
+        if (!optionsResponse.ok || !optionsData?.ok || !optionsData?.options) {
+          setPasskeyFeedback("Não foi possível iniciar a ativação de Passkey.", true);
+          return;
+        }
+
+        const credential = await navigator.credentials.create({
+          publicKey: decodeRegistrationOptions(optionsData.options)
+        });
+        const serialized = serializeRegistrationCredential(credential);
+
+        const verifyResponse = await fetch("/api/auth/passkey/register/verify", {
+          method: "POST",
+          credentials: "same-origin",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ credential: serialized })
+        });
+        const verifyData = await verifyResponse.json().catch(() => ({}));
+        if (!verifyResponse.ok || !verifyData?.ok) {
+          setPasskeyFeedback("Falha ao salvar Passkey. Tente novamente.", true);
+          return;
+        }
+
+        setPasskeyFeedback("Passkey ativada com sucesso neste dispositivo.");
+        showToast("Passkey ativada");
+      } catch (error) {
+        if (error?.name === "NotAllowedError") {
+          setPasskeyFeedback("Ativação de Passkey cancelada.", true);
+        } else {
+          setPasskeyFeedback("Não foi possível ativar a Passkey.", true);
+        }
+      } finally {
+        enablePasskeyBtn.disabled = false;
+        enablePasskeyBtn.textContent = "Ativar neste dispositivo";
+      }
     });
   }
 
@@ -370,7 +483,7 @@ window.initProfileSection = function initProfileSection(options = {}) {
           street: "Rua Exemplo",
           number: "123",
           district: "Centro",
-          city: "São Paulo",
+          city: "SÃ£o Paulo",
           state: "SP",
           cep: "01000-000"
         }
@@ -404,3 +517,4 @@ window.initProfileSection = function initProfileSection(options = {}) {
   bindEvents();
   loadUserProfile();
 };
+
