@@ -1,4 +1,4 @@
-body.account-profile-page {
+﻿body.account-profile-page {
   --account-topbar-h: 38px;
   --account-header-h: 84px;
   --account-subnav-h: 54px;
@@ -538,16 +538,18 @@ body.login-page > .home-header .search-box-trigger {
 .t-login-container {
   max-width: 1200px;
   margin: 0 auto;
-  display: flex;
-  justify-content: center;
+  display: block;
 }
 
 .login-layout {
   width: 100%;
+  max-width: 980px;
+  margin: 0 auto;
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: minmax(320px, 1fr) minmax(360px, 420px);
   gap: 48px;
   align-items: center;
+  justify-content: space-between;
 }
 
 .login-form {
@@ -567,12 +569,13 @@ body.login-page > .home-header .search-box-trigger {
 }
 
 .benefits-list {
-  list-style: none;
-  padding: 0;
+  list-style: none !important;
+  padding: 0 !important;
   margin: 0;
 }
 
 .benefits-list li {
+  list-style: none !important;
   margin-bottom: 20px;
 }
 
@@ -823,6 +826,7 @@ body.login-page > .home-header .search-box-trigger {
   .login-layout {
     grid-template-columns: 1fr;
     gap: 32px;
+    max-width: 420px;
   }
 
   .account-benefits {
@@ -1008,3 +1012,4 @@ body.login-page > .home-header .search-box-trigger {
     padding: 22px 18px;
   }
 }
+
