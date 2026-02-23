@@ -22,7 +22,6 @@
   const backToCodeBtn = document.getElementById("backToCodeBtn");
 
   const googleBtn = document.getElementById("googleBtn");
-  const appleBtn = document.getElementById("appleBtn");
 
   const GOOGLE_STATE_KEY = "tsebi-google-oauth-state";
   const GOOGLE_NONCE_KEY = "tsebi-google-oauth-nonce";
@@ -31,6 +30,7 @@
   let activeEmail = "";
   let resendTimerId = null;
   let resendRemaining = 0;
+  let googleLoginAvailable = true;
 
   function getReturnUrl() {
     const params = new URLSearchParams(window.location.search);
@@ -293,24 +293,51 @@
   }
 
   async function fetchGoogleConfig() {
-    const response = await fetch("/api/auth/google/config", {
-      method: "GET",
-      credentials: "same-origin"
-    });
-    if (!response.ok) return null;
-    const data = await response.json().catch(() => null);
-    if (!data || !data.enabled || !data.clientId) return null;
-    return data;
+    try {
+      const response = await fetch("/api/auth/google/config", {
+        method: "GET",
+        credentials: "same-origin"
+      });
+      if (!response.ok) return { enabled: false, clientId: "" };
+      const data = await response.json().catch(() => null);
+      if (!data || typeof data !== "object") return { enabled: false, clientId: "" };
+      return {
+        enabled: Boolean(data.enabled),
+        clientId: String(data.clientId || "").trim()
+      };
+    } catch {
+      return { enabled: false, clientId: "" };
+    }
+  }
+
+  function setSocialButtonAvailability(button, isAvailable) {
+    if (!button) return;
+    const available = Boolean(isAvailable);
+    button.disabled = !available;
+    button.classList.toggle("is-disabled", !available);
+    button.setAttribute("aria-disabled", available ? "false" : "true");
+  }
+
+  async function syncSocialAvailability() {
+    const googleConfig = await fetchGoogleConfig();
+    googleLoginAvailable = Boolean(googleConfig.enabled && googleConfig.clientId);
+    setSocialButtonAvailability(googleBtn, googleLoginAvailable);
   }
 
   async function beginGoogleLogin() {
     clearError();
+    if (!googleLoginAvailable) {
+      showError("Login com Google indisponivel no momento.");
+      return;
+    }
     setButtonLoading(googleBtn, true, "Conectando...");
     const config = await fetchGoogleConfig();
     setButtonLoading(googleBtn, false, "Conectando...");
 
-    if (!config) {
-      showError("Login com Google indisponível no momento.");
+    if (!config.enabled || !config.clientId) {
+      googleLoginAvailable = false;
+      setSocialButtonAvailability(googleBtn, false);
+      showError("Login com Google indisponivel no momento.");
       return;
     }
 
@@ -384,20 +411,6 @@
     window.location.href = getReturnUrl();
   }
 
-  function beginAppleLogin() {
-    clearError();
-    const returnUrl = getReturnUrl();
-    window.location.href = `/api/auth/apple?returnUrl=${encodeURIComponent(returnUrl)}`;
-  }
-
-  function handleExternalFeedback() {
-    const params = new URLSearchParams(window.location.search);
-    const apple = String(params.get("apple") || "").trim();
-    if (apple === "unavailable") {
-      showError("Login com Apple indisponível no momento.");
-    }
-  }
-
   sendCodeBtn?.addEventListener("click", sendCode);
   verifyCodeBtn?.addEventListener("click", verifyCode);
   resendBtn?.addEventListener("click", resendCode);
@@ -432,9 +445,8 @@
   });
 
   googleBtn?.addEventListener("click", beginGoogleLogin);
-  appleBtn?.addEventListener("click", beginAppleLogin);
 
-  handleExternalFeedback();
+  syncSocialAvailability();
   completeGoogleLoginFromHash();
   setState("email");
 })();

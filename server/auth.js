@@ -306,14 +306,6 @@ function getGoogleClientIds() {
     .filter(Boolean);
 }
 
-function getAppleConfig() {
-  return {
-    clientId: String(process.env.APPLE_CLIENT_ID || "").trim(),
-    redirectUri: String(process.env.APPLE_REDIRECT_URI || "").trim(),
-    scope: String(process.env.APPLE_SCOPE || "name email").trim() || "name email"
-  };
-}
-
 async function verifyGoogleIdToken(idToken) {
   const response = await fetch(`https://oauth2.googleapis.com/tokeninfo?id_token=${encodeURIComponent(idToken)}`);
   if (!response.ok) {
@@ -356,41 +348,6 @@ authRouter.get("/google/config", (req, res) => {
     enabled: Boolean(clientId),
     clientId
   });
-});
-
-authRouter.get("/apple/config", (req, res) => {
-  const config = getAppleConfig();
-  return res.json({
-    ok: true,
-    enabled: Boolean(config.clientId && config.redirectUri)
-  });
-});
-
-authRouter.get("/apple", (req, res) => {
-  const config = getAppleConfig();
-  const returnUrl = String(req.query.returnUrl || "conta.html").trim() || "conta.html";
-  if (!config.clientId || !config.redirectUri) {
-    return res.redirect(`/login.html?apple=unavailable&returnUrl=${encodeURIComponent(returnUrl)}`);
-  }
-
-  // Placeholder route for Apple OAuth kickoff. Callback handling should be enabled with APPLE private key flow.
-  const state = crypto.randomBytes(16).toString("hex");
-  const nonce = crypto.randomBytes(16).toString("hex");
-  const authorizeUrl = new URL("https://appleid.apple.com/auth/authorize");
-  authorizeUrl.searchParams.set("response_type", "code");
-  authorizeUrl.searchParams.set("response_mode", "form_post");
-  authorizeUrl.searchParams.set("client_id", config.clientId);
-  authorizeUrl.searchParams.set("redirect_uri", config.redirectUri);
-  authorizeUrl.searchParams.set("scope", config.scope);
-  authorizeUrl.searchParams.set("state", state);
-  authorizeUrl.searchParams.set("nonce", nonce);
-
-  return res.redirect(authorizeUrl.toString());
-});
-
-authRouter.all("/apple/callback", (req, res) => {
-  const returnUrl = String(req.query.returnUrl || req.body?.returnUrl || "conta.html").trim() || "conta.html";
-  return res.redirect(`/login.html?apple=unavailable&returnUrl=${encodeURIComponent(returnUrl)}`);
 });
 
 async function issueAndSendAccountVerifyCode(user) {

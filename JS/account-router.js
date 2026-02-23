@@ -267,6 +267,11 @@
     return "overview";
   }
 
+  function buildLoginUrl() {
+    const returnTarget = `${window.location.pathname}${window.location.search}` || "/conta.html";
+    return `login.html?returnUrl=${encodeURIComponent(returnTarget)}`;
+  }
+
   async function navigate(section, options = {}) {
     const next = normalizeSection(section);
     const targetSection = next === "overview" ? "overview" : "profile";
@@ -428,7 +433,7 @@
     state.orders = [];
     state.favorites = [];
     if (authPassword) authPassword.value = "";
-    showAuthGate();
+    window.location.href = buildLoginUrl();
   });
 
   authForm?.addEventListener("submit", async (event) => {
