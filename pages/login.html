@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8" />
@@ -76,63 +76,89 @@
 
   <main class="t-login-main">
     <div class="t-login-container">
-      <section class="auth-card" aria-labelledby="loginTitle">
-        <h1 id="loginTitle">Entrar</h1>
-        <p class="auth-sub">Acesse sua conta Tsebi para acompanhar pedidos e preferências.</p>
-
-        <div id="authError" class="auth-error" role="alert" hidden></div>
-
-        <section id="stateEmail" class="auth-state">
-          <label for="emailInput">Email</label>
-          <input id="emailInput" class="auth-input" type="email" autocomplete="email" placeholder="seu@email.com" />
-          <button id="showPasswordBtnPrimary" class="btn-primary auth-btn" type="button">Entrar com senha</button>
-          <button id="sendCodeBtn" class="btn-primary auth-btn" type="button">Enviar código</button>
-          <div class="auth-micro">Enviaremos um código para seu e-mail.</div>
+      <div class="login-layout">
+        <section class="account-benefits">
+          <h2>Tenha uma conta Tsebi</h2>
+          <ul class="benefits-list">
+            <li>
+              <strong>Acompanhe seus pedidos</strong>
+              <span>Visualize o status e o histórico de compras em um só lugar.</span>
+            </li>
+            <li>
+              <strong>Checkout mais rápido</strong>
+              <span>Seus dados ficam salvos para futuras compras.</span>
+            </li>
+            <li>
+              <strong>Lista de desejos</strong>
+              <span>Salve suas peças favoritas para comprar depois.</span>
+            </li>
+            <li>
+              <strong>Atendimento prioritário</strong>
+              <span>Acesso a suporte e serviços exclusivos da Tsebi.</span>
+            </li>
+          </ul>
         </section>
 
-        <section id="stateCode" class="auth-state" hidden>
-          <div class="auth-inline">
-            <span id="emailPreview"></span>
-            <button id="changeEmailBtn" type="button" class="auth-link auth-link-btn">Alterar e-mail</button>
-          </div>
+        <section class="login-form">
+          <section class="auth-card" aria-labelledby="loginTitle">
+            <h1 id="loginTitle">Entrar</h1>
+            <p class="auth-sub">Acesse sua conta Tsebi para acompanhar pedidos e preferências.</p>
 
-          <label for="codeInput">Código</label>
-          <input id="codeInput" class="auth-input" inputmode="numeric" maxlength="6" autocomplete="one-time-code" placeholder="000000" />
-          <button id="verifyCodeBtn" class="btn-primary auth-btn" type="button">Confirmar</button>
+            <div id="authError" class="auth-error" role="alert" hidden></div>
 
-          <div class="auth-row">
-            <button id="resendBtn" type="button" class="auth-link auth-link-btn" disabled>Reenviar código (30s)</button>
-            <button id="showPasswordBtn" type="button" class="auth-link auth-link-btn">Entrar com senha</button>
-          </div>
+            <section id="stateEmail" class="auth-state">
+              <label for="emailInput">Email</label>
+              <input id="emailInput" class="auth-input" type="email" autocomplete="email" placeholder="seu@email.com" />
+              <button id="showPasswordBtnPrimary" class="btn-primary auth-btn" type="button">Entrar com senha</button>
+              <button id="sendCodeBtn" class="btn-primary auth-btn" type="button">Enviar código</button>
+              <div class="auth-micro">Enviaremos um código para seu e-mail.</div>
+            </section>
+
+            <section id="stateCode" class="auth-state" hidden>
+              <div class="auth-inline">
+                <span id="emailPreview"></span>
+                <button id="changeEmailBtn" type="button" class="auth-link auth-link-btn">Alterar e-mail</button>
+              </div>
+
+              <label for="codeInput">Código</label>
+              <input id="codeInput" class="auth-input" inputmode="numeric" maxlength="6" autocomplete="one-time-code" placeholder="000000" />
+              <button id="verifyCodeBtn" class="btn-primary auth-btn" type="button">Confirmar</button>
+
+              <div class="auth-row">
+                <button id="resendBtn" type="button" class="auth-link auth-link-btn" disabled>Reenviar código (30s)</button>
+                <button id="showPasswordBtn" type="button" class="auth-link auth-link-btn">Entrar com senha</button>
+              </div>
+            </section>
+
+            <section id="statePassword" class="auth-state" hidden>
+              <label for="emailInput2">Email</label>
+              <input id="emailInput2" class="auth-input" type="email" autocomplete="email" placeholder="seu@email.com" />
+
+              <label for="passwordInput">Senha</label>
+              <div class="auth-password-wrap">
+                <input id="passwordInput" class="auth-input" type="password" autocomplete="current-password" placeholder="Digite sua senha" />
+                <button type="button" id="togglePasswordBtn" class="auth-link-btn auth-toggle-pass">Mostrar</button>
+              </div>
+
+              <button id="loginPasswordBtn" class="btn-primary auth-btn" type="button">Entrar</button>
+
+              <div class="auth-row">
+                <a class="auth-link" href="recuperar-senha.html">Esqueci minha senha</a>
+                <button id="backToCodeBtn" type="button" class="auth-link auth-link-btn">Voltar para código por e-mail</button>
+              </div>
+            </section>
+
+            <div class="auth-divider"><span>ou</span></div>
+
+            <div class="auth-social-stack">
+              <button id="googleBtn" class="btn-outline auth-btn" type="button">Continuar com Google</button>
+              <button class="btn-outline auth-btn is-disabled" type="button" disabled title="Em breve">Entrar com Passkey (em breve)</button>
+            </div>
+
+            <p class="auth-footer">Ainda não tem conta? <a class="auth-link" href="conta.html">Criar conta</a></p>
+          </section>
         </section>
-
-        <section id="statePassword" class="auth-state" hidden>
-          <label for="emailInput2">Email</label>
-          <input id="emailInput2" class="auth-input" type="email" autocomplete="email" placeholder="seu@email.com" />
-
-          <label for="passwordInput">Senha</label>
-          <div class="auth-password-wrap">
-            <input id="passwordInput" class="auth-input" type="password" autocomplete="current-password" placeholder="Digite sua senha" />
-            <button type="button" id="togglePasswordBtn" class="auth-link-btn auth-toggle-pass">Mostrar</button>
-          </div>
-
-          <button id="loginPasswordBtn" class="btn-primary auth-btn" type="button">Entrar</button>
-
-          <div class="auth-row">
-            <a class="auth-link" href="recuperar-senha.html">Esqueci minha senha</a>
-            <button id="backToCodeBtn" type="button" class="auth-link auth-link-btn">Voltar para código por e-mail</button>
-          </div>
-        </section>
-
-        <div class="auth-divider"><span>ou</span></div>
-
-        <div class="auth-social-stack">
-          <button id="googleBtn" class="btn-outline auth-btn" type="button">Continuar com Google</button>
-          <button class="btn-outline auth-btn is-disabled" type="button" disabled title="Em breve">Entrar com Passkey (em breve)</button>
-        </div>
-
-        <p class="auth-footer">Ainda não tem conta? <a class="auth-link" href="conta.html">Criar conta</a></p>
-      </section>
+      </div>
     </div>
   </main>
 
@@ -142,3 +168,4 @@
   <script src="JS/posthog.js"></script>
 </body>
 </html>
+

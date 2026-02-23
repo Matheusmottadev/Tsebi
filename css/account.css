@@ -542,6 +542,53 @@ body.login-page > .home-header .search-box-trigger {
   justify-content: center;
 }
 
+.login-layout {
+  width: 100%;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 48px;
+  align-items: center;
+}
+
+.login-form {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.account-benefits {
+  max-width: 420px;
+}
+
+.account-benefits h2 {
+  margin: 0 0 24px;
+  font-size: 28px;
+  font-weight: 500;
+  color: #111;
+}
+
+.benefits-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.benefits-list li {
+  margin-bottom: 20px;
+}
+
+.benefits-list strong {
+  display: block;
+  margin-bottom: 4px;
+  font-size: 15px;
+  color: #111;
+}
+
+.benefits-list span {
+  font-size: 14px;
+  color: #666;
+  line-height: 1.5;
+}
+
 .t-login-card {
   width: min(420px, 100%);
   background: #f7f7f7;
@@ -771,6 +818,21 @@ body.login-page > .home-header .search-box-trigger {
 
   .t-login-card {
     padding: 22px 18px;
+  }
+
+  .login-layout {
+    grid-template-columns: 1fr;
+    gap: 32px;
+  }
+
+  .account-benefits {
+    order: 2;
+    max-width: none;
+  }
+
+  .login-form {
+    order: 1;
+    justify-content: center;
   }
 }
 
