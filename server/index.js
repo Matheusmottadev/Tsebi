@@ -13,8 +13,7 @@ const { authRouter, myRouter } = require("./auth");
 const { studioAuthRouter } = require("./studio-auth");
 const { vipRouter } = require("./vip");
 const { adminRouter } = require("./admin");
-const { findUserById } = require("./user-repository");
-const { requireAuth } = require("./middlewares/requireAuth");
+const { findUserById, upsertCheckoutGuestUser, normalizeEmail } = require("./user-repository");
 const {
   createOrder,
   updateOrder,
@@ -80,6 +79,8 @@ const paymentIntentSchema = z.object({
     .min(1),
   shipping: z
     .object({
+      firstName: z.string().trim().max(80).optional().default(""),
+      lastName: z.string().trim().max(120).optional().default(""),
       fullName: z.string().trim().max(120).optional().default(""),
       email: z.string().trim().max(160).optional().default(""),
       phone: z.string().trim().max(40).optional().default(""),
@@ -97,6 +98,27 @@ const paymentIntentSchema = z.object({
       quoteId: z.string().trim().uuid().optional().nullable().default(null)
     })
     .nullable()
+    .optional(),
+  customer: z
+    .object({
+      firstName: z.string().trim().max(80).optional().default(""),
+      lastName: z.string().trim().max(120).optional().default(""),
+      email: z.string().trim().max(160).optional().default(""),
+      phone: z.string().trim().max(40).optional().default(""),
+      cpf: z.string().trim().max(20).optional().default("")
+    })
+    .optional(),
+  shippingAddress: z
+    .object({
+      zip: z.string().trim().max(20).optional().default(""),
+      street: z.string().trim().max(160).optional().default(""),
+      number: z.string().trim().max(20).optional().default(""),
+      complement: z.string().trim().max(120).optional().default(""),
+      district: z.string().trim().max(120).optional().default(""),
+      city: z.string().trim().max(120).optional().default(""),
+      state: z.string().trim().max(2).optional().default(""),
+      country: z.string().trim().max(2).optional().default("BR")
+    })
     .optional()
 });
 
@@ -134,6 +156,35 @@ function normalizeShipping(rawShipping) {
     shippingCost: Math.max(0, Number(rawShipping.shippingCost) || 0),
     shippingEstimate: value("shippingEstimate"),
     quoteId: String(rawShipping.quoteId || "").trim() || null
+  };
+}
+
+function normalizeGuestCustomer(payload = {}) {
+  const shipping = payload?.shipping || {};
+  const customer = payload?.customer || {};
+  const shippingAddress = payload?.shippingAddress || {};
+
+  const firstName = String(customer.firstName || shipping.firstName || "").trim();
+  const lastName = String(customer.lastName || shipping.lastName || "").trim();
+  const fullName = String(shipping.fullName || [firstName, lastName].filter(Boolean).join(" ")).trim();
+
+  return {
+    firstName,
+    lastName,
+    fullName,
+    email: normalizeEmail(customer.email || shipping.email || ""),
+    phone: String(customer.phone || shipping.phone || "").trim(),
+    cpf: String(customer.cpf || shipping.cpf || "").replace(/\D/g, "").slice(0, 11),
+    shippingAddress: {
+      cep: String(shipping.cep || shippingAddress.zip || "").replace(/\D/g, "").slice(0, 8),
+      street: String(shipping.street || shippingAddress.street || "").trim(),
+      number: String(shipping.number || shippingAddress.number || "").trim(),
+      complement: String(shipping.complement || shippingAddress.complement || "").trim(),
+      district: String(shipping.district || shippingAddress.district || "").trim(),
+      city: String(shipping.city || shippingAddress.city || "").trim(),
+      state: String(shipping.state || shippingAddress.state || "").trim().toUpperCase().slice(0, 2),
+      country: String(shippingAddress.country || "BR").trim().toUpperCase().slice(0, 2) || "BR"
+    }
   };
 }
 
@@ -766,7 +817,7 @@ app.get("/api/config", (req, res) => {
   });
 });
 
-app.post("/api/orders/payment-intent", requireAuth, paymentIntentRateLimit, async (req, res) => {
+app.post("/api/orders/payment-intent", paymentIntentRateLimit, async (req, res) => {
   if (!stripe) {
     return res.status(500).json({ error: "Stripe is not configured. Set STRIPE_SECRET_KEY." });
   }
@@ -780,10 +831,39 @@ app.post("/api/orders/payment-intent", requireAuth, paymentIntentRateLimit, asyn
   const installments = parsed.data.installments;
   const normalizedItems = normalizeAndAggregateItems(parsed.data.items);
   const shipping = normalizeShipping(parsed.data.shipping || null);
-  const sessionUserId = req.session.userId;
-  const sessionUser = await findUserById(sessionUserId);
-  if (!sessionUser) {
-    return res.status(401).json({ error: "UNAUTHORIZED" });
+  const sessionUserId = req.session?.userId ? String(req.session.userId) : "";
+  let checkoutUser = sessionUserId ? await findUserById(sessionUserId) : null;
+  const guest = normalizeGuestCustomer(parsed.data);
+
+  if (!checkoutUser) {
+    const hasRequiredGuestData =
+      guest.email &&
+      guest.fullName &&
+      guest.phone &&
+      guest.shippingAddress.cep &&
+      guest.shippingAddress.street &&
+      guest.shippingAddress.number &&
+      guest.shippingAddress.district &&
+      guest.shippingAddress.city &&
+      guest.shippingAddress.state;
+
+    if (!hasRequiredGuestData) {
+      return res.status(400).json({ error: "GUEST_CHECKOUT_CUSTOMER_REQUIRED" });
+    }
+
+    const upsertedGuest = await upsertCheckoutGuestUser({
+      name: guest.fullName,
+      email: guest.email,
+      phone: guest.phone,
+      cpf: guest.cpf,
+      cep: guest.shippingAddress.cep,
+      shippingAddress: guest.shippingAddress
+    });
+
+    if (!upsertedGuest.ok || !upsertedGuest.user) {
+      return res.status(409).json({ error: upsertedGuest.error || "GUEST_CHECKOUT_USER_FAILED" });
+    }
+    checkoutUser = upsertedGuest.user;
   }
 
   if (normalizedItems.length === 0) {
@@ -805,7 +885,7 @@ app.post("/api/orders/payment-intent", requireAuth, paymentIntentRateLimit, asyn
     try {
       selectedShippingQuote = await resolveQuoteForCheckout({
         quoteId: shipping.quoteId,
-        userId: sessionUserId,
+        userId: checkoutUser.id,
         destinationZip: shipping.cep
       });
       shippingAmount = Math.max(0, Number(selectedShippingQuote.priceCents || 0));
@@ -822,7 +902,7 @@ app.post("/api/orders/payment-intent", requireAuth, paymentIntentRateLimit, asyn
 
   try {
     const reusableOrder = await findReusableCheckoutOrder({
-      userId: sessionUserId,
+      userId: checkoutUser.id,
       paymentMethod,
       installments,
       itemsAmount,
@@ -835,7 +915,13 @@ app.post("/api/orders/payment-intent", requireAuth, paymentIntentRateLimit, asyn
     if (reusableOrder) {
       const reusableClientSecret = await getReusablePaymentIntentClientSecret(reusableOrder, orderAmount);
       if (reusableClientSecret) {
-        return res.status(200).json({ orderId: reusableOrder.id, clientSecret: reusableClientSecret });
+        return res.status(200).json({
+          orderId: reusableOrder.id,
+          orderNumber: reusableOrder.orderNumber || "",
+          customerEmail: reusableOrder.userEmail || checkoutUser.email || guest.email || "",
+          clientSecret: reusableClientSecret,
+          paymentIntentClientSecret: reusableClientSecret
+        });
       }
     }
   } catch {}
@@ -867,16 +953,16 @@ app.post("/api/orders/payment-intent", requireAuth, paymentIntentRateLimit, asyn
     shippingSelectedCarrierName: selectedShippingQuote?.carrierName || "",
     shippingDeadlineDays: selectedShippingQuote?.deadlineDays == null ? null : selectedShippingQuote?.deadlineDays,
     shippingDestinationZip: shipping?.cep || selectedShippingQuote?.destinationZip || "",
-    userId: sessionUserId,
-    userEmail: sessionUser.email || null,
-    userName: sessionUser.name || null
+    userId: checkoutUser.id,
+    userEmail: checkoutUser.email || guest.email || null,
+    userName: checkoutUser.name || guest.fullName || null
   });
 
   if (selectedShippingQuote?.id) {
     try {
       const selected = await selectShippingForOrder({
         orderId: order.id,
-        userId: sessionUserId,
+        userId: checkoutUser.id,
         quoteId: selectedShippingQuote.id,
         destinationZip: shipping?.cep || ""
       });
@@ -923,7 +1009,13 @@ app.post("/api/orders/payment-intent", requireAuth, paymentIntentRateLimit, asyn
       stripePaymentIntentId: paymentIntent.id
     });
 
-    return res.status(201).json({ orderId: updatedOrder.id, clientSecret: paymentIntent.client_secret });
+    return res.status(201).json({
+      orderId: updatedOrder.id,
+      orderNumber: updatedOrder.orderNumber || "",
+      customerEmail: updatedOrder.userEmail || checkoutUser.email || guest.email || "",
+      clientSecret: paymentIntent.client_secret,
+      paymentIntentClientSecret: paymentIntent.client_secret
+    });
   } catch (error) {
     await updateOrder(order.id, {
       status: "failed",
@@ -933,11 +1025,16 @@ app.post("/api/orders/payment-intent", requireAuth, paymentIntentRateLimit, asyn
   }
 });
 
-app.get("/api/orders/:orderId", requireAuth, async (req, res) => {
+app.get("/api/orders/:orderId", async (req, res) => {
   const order = await findOrderById(req.params.orderId);
   if (!order) return res.status(404).json({ error: "Order not found." });
-  if (order.userId !== req.session.userId) {
-    return res.status(404).json({ error: "Order not found." });
+  const sessionUserId = req.session?.userId ? String(req.session.userId) : "";
+  const requestedEmail = normalizeEmail(req.query?.email || "");
+  const orderEmail = normalizeEmail(order.userEmail || "");
+  const hasSessionAccess = Boolean(sessionUserId && String(order.userId || "") === sessionUserId);
+  const hasEmailAccess = Boolean(requestedEmail && orderEmail && requestedEmail === orderEmail);
+  if (!hasSessionAccess && !hasEmailAccess) {
+    return res.status(401).json({ error: "UNAUTHORIZED" });
   }
 
   try {

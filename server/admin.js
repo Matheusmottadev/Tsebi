@@ -1220,6 +1220,26 @@ adminRouter.get("/orders", async (req, res) => {
       return payload.includes(queryText);
     });
     const paged = paginateArray(filtered, limit, offset);
+    const userIds = Array.from(
+      new Set(
+        paged.rows
+          .map((order) => String(order.userId || "").trim())
+          .filter(Boolean)
+      )
+    );
+    const userGuestById = new Map();
+    if (userIds.length) {
+      await Promise.all(
+        userIds.map(async (userId) => {
+          try {
+            const user = await findUserById(userId);
+            userGuestById.set(String(userId), Boolean(user?.isGuest));
+          } catch {
+            userGuestById.set(String(userId), false);
+          }
+        })
+      );
+    }
     const shipmentsByOrderId = await listShipmentsByOrderIds(
       paged.rows.map((order) => String(order.id)).filter(Boolean)
     );
@@ -1262,6 +1282,7 @@ adminRouter.get("/orders", async (req, res) => {
         shippingDestinationZip: String(order.shippingDestinationZip || ""),
         userEmail: order.userEmail || "",
         userName: order.userName || "",
+        isGuest: Boolean(userGuestById.get(String(order.userId || ""))),
         trackingId: String(order.trackingId || ""),
         trackingStatus: String(order.trackingStatus || ""),
         carrier: String(order.carrier || ""),

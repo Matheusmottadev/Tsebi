@@ -1,4 +1,5 @@
 const { query, withTransaction } = require("./db");
+const crypto = require("node:crypto");
 
 let orderSchemaPromise = null;
 
@@ -148,8 +149,11 @@ async function insertOrderItems(client, orderId, items) {
 async function createOrder(payload) {
   const { withTransaction } = require("./db");
   return withTransaction(async (client) => {
+    const generatedOrderId = crypto.randomUUID();
+    const generatedOrderNumber = `PED-${String(generatedOrderId).replace(/-/g, "").slice(0, 10).toUpperCase()}`;
     const sql = `
       INSERT INTO orders (
+        id, order_number,
         status, payment_method, installments, currency,
         total_cents, items_cents, shipping_cents,
         shipping_price_cents, shipping_selected_provider,
@@ -158,16 +162,19 @@ async function createOrder(payload) {
         shipping_destination_zip, shipping_json, user_id, user_email, user_name,
         stock_committed
       ) VALUES (
-        $1, $2, $3, $4,
-        $5, $6, $7,
-        $8, $9, $10, $11,
-        $12, $13, $14, $15::jsonb, $16::uuid, $17, $18,
-        $19
+        $1::uuid, $2,
+        $3, $4, $5, $6,
+        $7, $8, $9,
+        $10, $11, $12, $13,
+        $14, $15, $16, $17::jsonb, $18::uuid, $19, $20,
+        $21
       )
       RETURNING *
     `;
 
     const result = await client.query(sql, [
+      generatedOrderId,
+      generatedOrderNumber,
       String(payload.status || "pending_payment"),
       String(payload.paymentMethod || "automatic"),
       Math.max(1, Number(payload.installments || 1)),

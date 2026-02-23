@@ -439,6 +439,7 @@
         <td>
           <div>${escapeHtml(order.userName || "-")}</div>
           <small>${escapeHtml(order.userEmail || "-")}</small>
+          ${order.isGuest ? '<div><span class="pill no">Guest</span></div>' : ""}
         </td>
         <td>${escapeHtml(moneyFromCents(order.shippingPriceCents || order.shippingAmount || 0, order.currency))}</td>
         <td>

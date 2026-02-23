@@ -119,9 +119,15 @@
           <form id="shippingForm" class="checkout-form" novalidate>
             <div class="checkout-form-grid">
               <label class="checkout-field">
-                <span>Nome completo *</span>
-                <input type="text" id="fullName" name="fullName" autocomplete="name" />
-                <small class="field-error" id="error-fullName"></small>
+                <span>Nome *</span>
+                <input type="text" id="firstName" name="firstName" autocomplete="given-name" />
+                <small class="field-error" id="error-firstName"></small>
+              </label>
+
+              <label class="checkout-field">
+                <span>Sobrenome *</span>
+                <input type="text" id="lastName" name="lastName" autocomplete="family-name" />
+                <small class="field-error" id="error-lastName"></small>
               </label>
 
               <label class="checkout-field">
@@ -131,7 +137,7 @@
               </label>
 
               <label class="checkout-field">
-                <span>Telefone</span>
+                <span>Telefone *</span>
                 <input type="text" id="phone" name="phone" autocomplete="tel" />
                 <small class="field-error" id="error-phone"></small>
               </label>
@@ -183,6 +189,8 @@
                 <input type="text" id="state" name="state" maxlength="2" autocomplete="address-level1" class="is-locked" readonly aria-readonly="true" />
                 <small class="field-error" id="error-state"></small>
               </label>
+
+              <input type="hidden" id="country" name="country" value="BR" />
             </div>
 
             <fieldset class="shipping-methods" id="shippingMethods">

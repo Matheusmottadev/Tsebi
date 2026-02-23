@@ -1,4 +1,4 @@
-(() => {
+﻿(() => {
 if (window.__TSEBI_CART_BOOTED__) {
   return;
 }
@@ -9,13 +9,16 @@ const LEGACY_CART_KEYS = ["tsebi-cart", "cart"];
 const SHIPPING_KEY_BASE = "tsebi-checkout-shipping-v2";
 const SHIPPING_KEY_LEGACY = "tsebi-checkout-shipping-v1";
 const userStore = window.TsebiUserStore;
-const LOGIN_REQUIRED_MESSAGE = "Para finalizar sua compra, entre ou crie sua conta.";
+const GUEST_CHECKOUT_MESSAGE = "Finalize como visitante. Sua conta pode ser ativada apÃ³s a compra.";
 const CEP_LOOKUP_DEBOUNCE_MS = 450;
 const cepLookupCache = new Map();
 let cepLookupTimeoutId = 0;
 let cepLookupController = null;
 let cepLookupRequestSeq = 0;
 let shippingQuoteRequestSeq = 0;
+const CHECKOUT_TRACKING_KEY = "tsebi-checkout-tracking";
+const LAST_ORDER_EMAIL_KEY = "tsebi_last_order_email";
+const LAST_ORDER_NUMBER_KEY = "tsebi_last_order_number";
 
 const checkoutState = {
   currentStep: 1,
@@ -26,6 +29,8 @@ const checkoutState = {
     discount: 0
   },
   shipping: {
+    firstName: "",
+    lastName: "",
     fullName: "",
     email: "",
     phone: "",
@@ -37,6 +42,7 @@ const checkoutState = {
     district: "",
     city: "",
     state: "",
+    country: "BR",
     shippingMethod: "",
     shippingCost: 0,
     shippingEstimate: "",
@@ -59,6 +65,8 @@ const checkoutState = {
     billingNameTouched: false,
     sessionSignature: "",
     orderId: "",
+    orderNumber: "",
+    checkoutEmail: "",
     clientSecret: "",
     elements: null,
     paymentElement: null,
@@ -71,6 +79,8 @@ const checkoutState = {
 };
 
 const DEFAULT_SHIPPING_STATE = {
+  firstName: "",
+  lastName: "",
   fullName: "",
   email: "",
   phone: "",
@@ -82,6 +92,7 @@ const DEFAULT_SHIPPING_STATE = {
   district: "",
   city: "",
   state: "",
+  country: "BR",
   shippingMethod: "",
   shippingCost: 0,
   shippingEstimate: "",
@@ -128,6 +139,8 @@ const dom = {
 };
 
 const shippingFields = [
+  "firstName",
+  "lastName",
   "fullName",
   "email",
   "phone",
@@ -138,7 +151,8 @@ const shippingFields = [
   "complement",
   "district",
   "city",
-  "state"
+  "state",
+  "country"
 ];
 const CEP_AUTOFILL_LOCKED_FIELDS = ["street", "district", "city", "state"];
 
@@ -275,13 +289,13 @@ const COLOR_SWATCH_MAP = {
   laranja: "#d67a2e",
   roxo: "#6e4c8f",
   lilas: "#a08cc6",
-  "lilás": "#a08cc6",
+  "lilÃ¡s": "#a08cc6",
   lilac: "#a08cc6",
   dourado: "#b08a2e",
   prata: "#b1b3b8",
   "off white": "#f5f2ea",
   unico: "#d3d3d3",
-  "único": "#d3d3d3"
+  "Ãºnico": "#d3d3d3"
 };
 
 function resolveColorSwatch(colorName) {
@@ -304,7 +318,7 @@ function getInstallmentsTotal() {
 function updateInstallmentsPreview(isCard) {
   if (!dom.installmentsPreview) return;
   if (!isCard) {
-    dom.installmentsPreview.textContent = "Parcelamento disponível apenas para pagamentos com cartão.";
+    dom.installmentsPreview.textContent = "Parcelamento disponÃ­vel apenas para pagamentos com cartÃ£o.";
     return;
   }
 
@@ -795,9 +809,21 @@ function getServerItemsPayload() {
   return Array.from(grouped.entries()).map(([id, qty]) => ({ id, qty }));
 }
 
+function getShippingFullName() {
+  const first = String(checkoutState.shipping.firstName || "").trim();
+  const last = String(checkoutState.shipping.lastName || "").trim();
+  const combined = [first, last].filter(Boolean).join(" ").trim();
+  return combined || String(checkoutState.shipping.fullName || "").trim();
+}
+
 function buildShippingPayload() {
+  const firstName = String(checkoutState.shipping.firstName || "").trim();
+  const lastName = String(checkoutState.shipping.lastName || "").trim();
+  const fullName = getShippingFullName();
   return {
-    fullName: checkoutState.shipping.fullName.trim(),
+    firstName,
+    lastName,
+    fullName,
     email: checkoutState.shipping.email.trim(),
     phone: checkoutState.shipping.phone.trim(),
     cpf: checkoutState.shipping.cpf.trim(),
@@ -808,6 +834,7 @@ function buildShippingPayload() {
     district: checkoutState.shipping.district.trim(),
     city: checkoutState.shipping.city.trim(),
     state: checkoutState.shipping.state.trim().toUpperCase(),
+    country: String(checkoutState.shipping.country || "BR").trim().toUpperCase().slice(0, 2) || "BR",
     shippingMethod: checkoutState.shipping.shippingMethod,
     shippingCost: checkoutState.shipping.shippingCost,
     shippingEstimate: checkoutState.shipping.shippingEstimate,
@@ -820,14 +847,30 @@ function buildShippingPayload() {
   };
 }
 
+function saveTrackingContext(partial = {}) {
+  try {
+    const current = JSON.parse(sessionStorage.getItem(CHECKOUT_TRACKING_KEY) || "{}");
+    const next = {
+      ...current,
+      ...partial,
+      updatedAt: new Date().toISOString()
+    };
+    sessionStorage.setItem(CHECKOUT_TRACKING_KEY, JSON.stringify(next));
+    const normalizedEmail = String(next.email || "").trim().toLowerCase();
+    const normalizedOrderNumber = String(next.orderNumber || "").trim();
+    if (normalizedEmail) sessionStorage.setItem(LAST_ORDER_EMAIL_KEY, normalizedEmail);
+    if (normalizedOrderNumber) sessionStorage.setItem(LAST_ORDER_NUMBER_KEY, normalizedOrderNumber);
+  } catch {}
+}
+
 function renderCheckoutAuthCta() {
   if (!dom.checkoutAuthCta) return;
   const user = userStore?.getCurrentUser?.() || null;
   if (user) {
-    dom.checkoutAuthCta.textContent = `Você está comprando como ${user.email}.`;
+    dom.checkoutAuthCta.textContent = `VocÃª estÃ¡ comprando como ${user.email}.`;
     return;
   }
-  dom.checkoutAuthCta.innerHTML = `${LOGIN_REQUIRED_MESSAGE} <a href="${getLoginUrlForStep(2)}">Entrar agora</a>.`;
+  dom.checkoutAuthCta.textContent = GUEST_CHECKOUT_MESSAGE;
 }
 
 function prefillShippingFromUser() {
@@ -839,7 +882,11 @@ function prefillShippingFromUser() {
     addresses.find((address) => address && address.isDefault) ||
     null;
 
-  if (!checkoutState.shipping.fullName) checkoutState.shipping.fullName = String(user.name || "").trim();
+  const userName = String(user.name || "").trim();
+  const [firstFromUser = "", ...restFromUser] = userName.split(/\s+/).filter(Boolean);
+  if (!checkoutState.shipping.firstName) checkoutState.shipping.firstName = firstFromUser;
+  if (!checkoutState.shipping.lastName) checkoutState.shipping.lastName = restFromUser.join(" ");
+  checkoutState.shipping.fullName = getShippingFullName();
   if (!checkoutState.shipping.email) checkoutState.shipping.email = String(user.email || "").trim();
   if (!checkoutState.shipping.cpf) checkoutState.shipping.cpf = String(user.cpf || "").replace(/\D/g, "").slice(0, 11);
   if (!checkoutState.shipping.cep) {
@@ -853,6 +900,7 @@ function prefillShippingFromUser() {
   if (!checkoutState.shipping.district) checkoutState.shipping.district = String(defaultAddress?.district || "").trim();
   if (!checkoutState.shipping.city) checkoutState.shipping.city = String(defaultAddress?.city || "").trim();
   if (!checkoutState.shipping.state) checkoutState.shipping.state = String(defaultAddress?.state || "").trim().toUpperCase().slice(0, 2);
+  if (!checkoutState.shipping.country) checkoutState.shipping.country = "BR";
   syncBillingNameFromShipping();
 }
 
@@ -866,19 +914,10 @@ function setFieldLocked(fieldId, locked) {
 
 function syncLockedPrefilledFields() {
   CEP_AUTOFILL_LOCKED_FIELDS.forEach((fieldId) => setFieldLocked(fieldId, true));
-
-  const user = userStore?.getCurrentUser?.() || null;
-  if (!user) {
-    setFieldLocked("fullName", false);
-    setFieldLocked("email", false);
-    setFieldLocked("cpf", false);
-    setFieldLocked("cep", false);
-    return;
-  }
-
-  setFieldLocked("fullName", false);
+  setFieldLocked("firstName", false);
+  setFieldLocked("lastName", false);
   setFieldLocked("email", false);
-  setFieldLocked("cpf", Boolean(String(user.cpf || "").trim()));
+  setFieldLocked("cpf", false);
   setFieldLocked("cep", false);
 }
 
@@ -918,52 +957,6 @@ function syncInstallmentsByPaymentMethod(methodType) {
   updateInstallmentsOptions();
 }
 
-function getLoginUrlForStep(step = 2) {
-  const safeStep = Math.max(2, Math.min(3, Number(step) || 2));
-  const hash = `#step=${safeStep}`;
-  const returnUrl = `${window.location.pathname}${window.location.search}${hash}`;
-  return `login.html?returnUrl=${encodeURIComponent(returnUrl)}`;
-}
-
-function redirectToLogin(step = 2) {
-  window.location.href = getLoginUrlForStep(step);
-}
-
-async function ensureAuthenticatedOrRedirect(step = 2) {
-  if (!userStore) {
-    redirectToLogin(step);
-    return false;
-  }
-
-  const cachedUser = userStore.getCurrentUser?.() || null;
-  if (!cachedUser) {
-    setCheckoutStatus(LOGIN_REQUIRED_MESSAGE, "error");
-    redirectToLogin(step);
-    return false;
-  }
-
-  const me = await userStore.fetchMe();
-  if (me.ok && me.user) return true;
-  if (String(me?.code || "") !== "UNAUTHORIZED") {
-    setCheckoutStatus("Nao foi possivel validar sua sessao agora. Tente novamente.", "warning");
-    return true;
-  }
-
-  // Evita falso redirecionamento em refresh/rede instavel no mobile:
-  // confirma UNAUTHORIZED com uma segunda leitura antes de mandar para login.
-  await new Promise((resolve) => setTimeout(resolve, 220));
-  const retry = await userStore.fetchMe();
-  if (retry.ok && retry.user) return true;
-  if (String(retry?.code || "") !== "UNAUTHORIZED") {
-    setCheckoutStatus("Nao foi possivel validar sua sessao agora. Tente novamente.", "warning");
-    return true;
-  }
-
-  setCheckoutStatus(LOGIN_REQUIRED_MESSAGE, "error");
-  redirectToLogin(step);
-  return false;
-}
-
 function invalidatePaymentSession() {
   if (checkoutState.payment.paymentElement) {
     checkoutState.payment.paymentElement.unmount();
@@ -972,6 +965,8 @@ function invalidatePaymentSession() {
     ...checkoutState.payment,
     sessionSignature: "",
     orderId: "",
+    orderNumber: "",
+    checkoutEmail: "",
     clientSecret: "",
     elements: null,
     paymentElement: null
@@ -988,6 +983,7 @@ function getBillingName() {
 
 function syncBillingNameFromShipping() {
   if (checkoutState.payment.billingNameTouched && getBillingName()) return;
+  checkoutState.shipping.fullName = getShippingFullName();
   checkoutState.payment.billingName = String(checkoutState.shipping.fullName || "").trim();
   if (dom.billingName) dom.billingName.value = checkoutState.payment.billingName;
   setBillingNameError("");
@@ -1022,15 +1018,17 @@ function validateShipping() {
   const s = checkoutState.shipping;
   const errors = {};
 
-  if (!s.fullName || s.fullName.trim().length < 3) errors.fullName = "Informe seu nome completo.";
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(s.email || "").trim())) errors.email = "Informe um email válido.";
-  if (!/^\d{8}$/.test(String(s.cep || ""))) errors.cep = "CEP deve conter 8 dígitos.";
+  if (!s.firstName || s.firstName.trim().length < 2) errors.firstName = "Informe seu nome.";
+  if (!s.lastName || s.lastName.trim().length < 2) errors.lastName = "Informe seu sobrenome.";
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(s.email || "").trim())) errors.email = "Informe um email valido.";
+  if (!String(s.phone || "").replace(/\D/g, "").trim()) errors.phone = "Informe seu telefone.";
+  if (!/^\d{8}$/.test(String(s.cep || ""))) errors.cep = "CEP deve conter 8 digitos.";
   if (!s.street || s.street.trim().length < 3) errors.street = "Informe a rua.";
-  if (!s.number || !String(s.number).trim()) errors.number = "Informe o número.";
+  if (!s.number || !String(s.number).trim()) errors.number = "Informe o numero.";
   if (!s.district || s.district.trim().length < 2) errors.district = "Informe o bairro.";
   if (!s.city || s.city.trim().length < 2) errors.city = "Informe a cidade.";
   if (!/^[A-Za-z]{2}$/.test(String(s.state || "").trim())) errors.state = "Use a sigla do estado.";
-  if (!s.shippingMethod) errors.shippingMethod = "Selecione um método de entrega.";
+  if (!s.shippingMethod) errors.shippingMethod = "Selecione um metodo de entrega.";
   if (s.shippingMethod && !s.shippingQuoteId) {
     errors.shippingMethod = "Recalcule o frete para o CEP informado.";
   }
@@ -1042,9 +1040,12 @@ function validateShipping() {
 function isShippingValidForProgress() {
   const s = checkoutState.shipping;
   return Boolean(
-    s.fullName &&
-      s.fullName.trim().length >= 3 &&
+    s.firstName &&
+      s.firstName.trim().length >= 2 &&
+      s.lastName &&
+      s.lastName.trim().length >= 2 &&
       /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(s.email || "").trim()) &&
+      String(s.phone || "").replace(/\D/g, "").trim() &&
       /^\d{8}$/.test(String(s.cep || "")) &&
       s.street &&
       s.street.trim().length >= 3 &&
@@ -1091,8 +1092,7 @@ function updateShippingMethodPrices() {
 }
 
 function canQuoteShippingNow() {
-  const user = userStore?.getCurrentUser?.() || null;
-  return Boolean(user && user.id);
+  return true;
 }
 
 function clearShippingQuotes({ keepSelection = false } = {}) {
@@ -1344,12 +1344,10 @@ function focusFirstFieldInStep(step) {
 async function ensurePaymentElementReady() {
   if (checkoutState.payment.preparing) return;
   if (!checkoutState.stripe.instance || !dom.paymentElement) return;
-  const isAuthenticated = await ensureAuthenticatedOrRedirect(3);
-  if (!isAuthenticated) return;
 
   const items = getServerItemsPayload();
   if (items.length === 0) {
-    setCheckoutStatus("Seu carrinho está vazio.", "error");
+    setCheckoutStatus("Seu carrinho estÃ¡ vazio.", "error");
     return;
   }
 
@@ -1375,6 +1373,7 @@ async function ensurePaymentElementReady() {
   try {
     invalidatePaymentSession();
 
+    const shippingPayload = buildShippingPayload();
     const order = await apiRequest("/api/orders/payment-intent", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -1382,12 +1381,37 @@ async function ensurePaymentElementReady() {
         items,
         paymentMethod: checkoutState.payment.methodPreference || "automatic",
         installments: checkoutState.payment.installments,
-        shipping: buildShippingPayload()
+        shipping: shippingPayload,
+        customer: {
+          firstName: shippingPayload.firstName,
+          lastName: shippingPayload.lastName,
+          email: shippingPayload.email,
+          phone: shippingPayload.phone,
+          cpf: shippingPayload.cpf
+        },
+        shippingAddress: {
+          zip: shippingPayload.cep,
+          street: shippingPayload.street,
+          number: shippingPayload.number,
+          complement: shippingPayload.complement,
+          district: shippingPayload.district,
+          city: shippingPayload.city,
+          state: shippingPayload.state,
+          country: shippingPayload.country || "BR"
+        },
+        cartItems: items,
+        totals: {
+          subtotal: checkoutState.cart.subtotal,
+          shipping: checkoutState.shipping.shippingCost,
+          discount: checkoutState.cart.discount,
+          total: getSummaryTotal()
+        }
       })
     });
 
-    if (!order || !order.orderId || !order.clientSecret) {
-      throw new Error("Não foi possível iniciar a sessão de pagamento.");
+    const paymentIntentClientSecret = String(order?.clientSecret || order?.paymentIntentClientSecret || "").trim();
+    if (!order || !order.orderId || !paymentIntentClientSecret) {
+      throw new Error("NÃ£o foi possÃ­vel iniciar a sessÃ£o de pagamento.");
     }
 
     const appearance = {
@@ -1402,7 +1426,7 @@ async function ensurePaymentElementReady() {
     };
 
     const elements = checkoutState.stripe.instance.elements({
-      clientSecret: order.clientSecret,
+      clientSecret: paymentIntentClientSecret,
       appearance
     });
 
@@ -1447,18 +1471,24 @@ async function ensurePaymentElementReady() {
       ...checkoutState.payment,
       sessionSignature: nextSignature,
       orderId: order.orderId,
-      clientSecret: order.clientSecret,
+      orderNumber: String(order.orderNumber || "").trim(),
+      checkoutEmail: String(order.customerEmail || shippingPayload.email || "").trim(),
+      clientSecret: paymentIntentClientSecret,
       elements,
       paymentElement
     };
+    if (!checkoutState.payment.orderNumber) {
+      // eslint-disable-next-line no-console
+      console.error("[checkout] payment-intent sem orderNumber", order);
+    }
+    saveTrackingContext({
+      orderId: checkoutState.payment.orderId,
+      orderNumber: checkoutState.payment.orderNumber || "",
+      email: checkoutState.payment.checkoutEmail || ""
+    });
 
     setCheckoutStatus("Pagamento pronto.");
   } catch (error) {
-    if (error.status === 401 || error.code === "UNAUTHORIZED") {
-      setCheckoutStatus(LOGIN_REQUIRED_MESSAGE, "error");
-      redirectToLogin(3);
-      return;
-    }
     if (isInvalidCartError(error)) {
       const refreshed = await refreshCartFromLatestProducts();
       if (refreshed.ok) {
@@ -1521,9 +1551,6 @@ function advanceToStep(step) {
 }
 
 async function handleCheckoutSubmit() {
-  const isAuthenticated = await ensureAuthenticatedOrRedirect(3);
-  if (!isAuthenticated) return;
-
   if (!checkoutState.stripe.instance || !checkoutState.payment.elements || !checkoutState.payment.orderId) {
     await ensurePaymentElementReady();
     if (!checkoutState.payment.elements || !checkoutState.payment.orderId) return;
@@ -1538,9 +1565,15 @@ async function handleCheckoutSubmit() {
   setProcessingState(true);
 
   try {
+    const checkoutEmail = String(
+      checkoutState.payment.checkoutEmail ||
+        checkoutState.shipping.email ||
+        ""
+    ).trim();
+    const orderNumber = String(checkoutState.payment.orderNumber || "").trim();
     const returnUrl = `${window.location.origin}/payment-result.html?orderId=${encodeURIComponent(
       checkoutState.payment.orderId
-    )}`;
+    )}&orderNumber=${encodeURIComponent(orderNumber)}&email=${encodeURIComponent(checkoutEmail)}`;
 
     const billingName = getBillingName();
     const result = await checkoutState.stripe.instance.confirmPayment({
@@ -1557,7 +1590,7 @@ async function handleCheckoutSubmit() {
     });
 
     if (result.error) {
-      setCheckoutStatus(result.error.message || "Não foi possível confirmar o pagamento.", "error");
+      setCheckoutStatus(result.error.message || "NÃ£o foi possÃ­vel confirmar o pagamento.", "error");
       return;
     }
 
@@ -1565,9 +1598,15 @@ async function handleCheckoutSubmit() {
       saveCart([]);
     }
 
-    window.location.href = `payment-result.html?orderId=${encodeURIComponent(checkoutState.payment.orderId)}`;
+    saveTrackingContext({
+      orderId: checkoutState.payment.orderId,
+      orderNumber: orderNumber || "",
+      email: checkoutEmail || ""
+    });
+
+    window.location.href = `payment-result.html?orderId=${encodeURIComponent(checkoutState.payment.orderId)}&orderNumber=${encodeURIComponent(orderNumber || "")}&email=${encodeURIComponent(checkoutEmail || "")}`;
   } catch (error) {
-    setCheckoutStatus(error.message || "Não foi possível finalizar seu pagamento.", "error");
+    setCheckoutStatus(error.message || "NÃ£o foi possÃ­vel finalizar seu pagamento.", "error");
   } finally {
     setProcessingState(false);
   }
@@ -1580,7 +1619,7 @@ async function initStripe() {
     const config = await apiRequest("/api/config", { method: "GET" });
     checkoutState.config = config;
     if (!config.stripePublishableKey) {
-      setCheckoutStatus("Checkout indisponível no momento.", "error");
+      setCheckoutStatus("Checkout indisponÃ­vel no momento.", "error");
       setButtonDisabled(dom.checkoutButton, true);
       return;
     }
@@ -1591,7 +1630,7 @@ async function initStripe() {
       ensurePaymentElementReady();
     }
   } catch {
-    setCheckoutStatus("Não foi possível iniciar o pagamento.", "error");
+    setCheckoutStatus("NÃ£o foi possÃ­vel iniciar o pagamento.", "error");
     setButtonDisabled(dom.checkoutButton, true);
   }
 }
@@ -1629,7 +1668,8 @@ function onShippingFieldInput(event) {
     updateSummary();
     scheduleCepLookup();
   }
-  if (id === "fullName") {
+  if (id === "firstName" || id === "lastName") {
+    checkoutState.shipping.fullName = getShippingFullName();
     syncBillingNameFromShipping();
   }
   refreshShippingProgressButton();
@@ -1672,19 +1712,15 @@ function bindEvents() {
     if (action === "remove") removeItem(key);
   });
 
-  dom.goToShippingBtn?.addEventListener("click", async () => {
+  dom.goToShippingBtn?.addEventListener("click", () => {
     if (checkoutState.cart.items.length === 0) return;
-    const isAuthenticated = await ensureAuthenticatedOrRedirect(2);
-    if (!isAuthenticated) return;
     advanceToStep(2);
   });
 
   dom.shippingForm?.addEventListener("input", onShippingFieldInput);
   dom.shippingForm?.addEventListener("change", onShippingMethodChange);
-  dom.shippingForm?.addEventListener("submit", async (event) => {
+  dom.shippingForm?.addEventListener("submit", (event) => {
     event.preventDefault();
-    const isAuthenticated = await ensureAuthenticatedOrRedirect(3);
-    if (!isAuthenticated) return;
     const validation = validateShipping();
     if (!validation.valid) return;
     saveShipping();
@@ -1692,27 +1728,19 @@ function bindEvents() {
   });
 
   document.querySelectorAll("[data-go-step]").forEach((button) => {
-    button.addEventListener("click", async () => {
+    button.addEventListener("click", () => {
       const target = Number(button.getAttribute("data-go-step") || 1);
-      if (target >= 2) {
-        const isAuthenticated = await ensureAuthenticatedOrRedirect(target);
-        if (!isAuthenticated) return;
-      }
       goToStep(target);
     });
   });
 
-  dom.stepper?.addEventListener("click", async (event) => {
+  dom.stepper?.addEventListener("click", (event) => {
     const target = event.target;
     if (!(target instanceof Element)) return;
     const button = target.closest(".checkout-step-btn");
     if (!button) return;
     const step = Number(button.dataset.stepTarget || 1);
     if (step > checkoutState.maxStepReached) return;
-    if (step >= 2) {
-      const isAuthenticated = await ensureAuthenticatedOrRedirect(step);
-      if (!isAuthenticated) return;
-    }
     goToStep(step);
   });
 
@@ -1765,6 +1793,8 @@ function bindEvents() {
         ...DEFAULT_SHIPPING_STATE,
         ...persistedShipping
       };
+      checkoutState.shipping.fullName = getShippingFullName();
+      if (!checkoutState.shipping.country) checkoutState.shipping.country = "BR";
       clearSelectedShippingQuote();
       checkoutState.payment.billingName = "";
       checkoutState.payment.billingNameTouched = false;
@@ -1783,12 +1813,6 @@ function bindEvents() {
     updateSummary();
     refreshShippingProgressButton();
     invalidatePaymentSession();
-    const user = userStore?.getCurrentUser?.() || null;
-    if (!user && checkoutState.currentStep > 1) {
-      checkoutState.maxStepReached = 1;
-      goToStep(1);
-      setCheckoutStatus(LOGIN_REQUIRED_MESSAGE, "error");
-    }
   });
 }
 
@@ -1807,8 +1831,11 @@ function hydrateState() {
     ...DEFAULT_SHIPPING_STATE,
     ...persistedShipping
   };
+  checkoutState.shipping.fullName = getShippingFullName();
+  if (!checkoutState.shipping.country) checkoutState.shipping.country = "BR";
   clearSelectedShippingQuote();
   prefillShippingFromUser();
+  checkoutState.shipping.fullName = getShippingFullName();
   checkoutState.payment.billingName = String(checkoutState.shipping.fullName || "").trim();
   checkoutState.payment.billingNameTouched = false;
   saveShipping();
@@ -1833,11 +1860,8 @@ async function init() {
   const requestedStep = readStepFromHash();
   goToStep(1);
   if (requestedStep >= 2) {
-    const isAuthenticated = await ensureAuthenticatedOrRedirect(requestedStep);
-    if (isAuthenticated) {
-      checkoutState.maxStepReached = Math.max(checkoutState.maxStepReached, requestedStep);
-      goToStep(requestedStep);
-    }
+    checkoutState.maxStepReached = Math.max(checkoutState.maxStepReached, requestedStep);
+    goToStep(requestedStep);
   }
 
   if (/^\d{8}$/.test(checkoutState.shipping.cep) && shouldAutofillAddressFromCep()) {
@@ -1849,4 +1873,6 @@ async function init() {
 
 init();
 })();
+
+
 

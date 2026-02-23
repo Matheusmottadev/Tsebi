@@ -14,6 +14,7 @@ const {
   markUserLoggedInNow,
   markUserEmailVerified
 } = require("./user-repository");
+const { query } = require("./lib/db");
 const { listOrdersByUserId, updateOrder } = require("./lib/order-repository");
 const { commitStock } = require("./lib/inventory-repository");
 const { requireAuth } = require("./middlewares/requireAuth");
@@ -127,6 +128,12 @@ const verifyCodeSchema = z.object({
 
 const loginVerifySchema = verifyCodeSchema;
 const accountVerifySchema = verifyCodeSchema;
+const activateAccountSchema = z.object({
+  email: emailSchema,
+  password: passwordSchema,
+  confirmPassword: z.string().min(8).max(128),
+  orderNumber: z.string().trim().min(3).max(120).optional().default("")
+});
 
 const resetPasswordCodeSchema = z.object({
   email: emailSchema,
@@ -694,6 +701,60 @@ authRouter.post("/login/verify-code", authRateLimit, async (req, res) => {
   req.session.userId = user.id;
   markUserLoggedInNow(user.id).catch(() => {});
   return res.json({ ok: true, user: publicUser(user) });
+});
+
+authRouter.post("/activate", authRateLimit, async (req, res) => {
+  const parsed = activateAccountSchema.safeParse(req.body || {});
+  if (!parsed.success) return res.status(400).json({ error: "INVALID_INPUT" });
+
+  const payload = parsed.data;
+  if (String(payload.password) !== String(payload.confirmPassword)) {
+    return res.status(400).json({ error: "PASSWORD_MISMATCH" });
+  }
+
+  const email = normalizeEmail(payload.email);
+  const user = await findUserByEmail(email);
+  if (!user) return res.status(404).json({ error: "USER_NOT_FOUND" });
+
+  if (String(user.passwordHash || "").trim()) {
+    return res.status(409).json({ error: "ACCOUNT_ALREADY_HAS_PASSWORD" });
+  }
+
+  const normalizedOrderLookup = String(payload.orderNumber || "")
+    .replace(/[^a-zA-Z0-9]/g, "")
+    .toUpperCase();
+
+  if (normalizedOrderLookup) {
+    const orderResult = await query(
+      `
+      SELECT id
+      FROM orders
+      WHERE lower(COALESCE(user_email, '')) = $1
+        AND (
+          upper(replace(COALESCE(order_number, ''), '-', '')) = $2
+          OR upper(replace(COALESCE(order_number, ''), '-', '')) = CONCAT('PED', $2)
+        )
+      LIMIT 1
+      `,
+      [email, normalizedOrderLookup]
+    );
+    if (orderResult.rowCount === 0) {
+      return res.status(400).json({ error: "ORDER_NOT_FOUND_FOR_EMAIL" });
+    }
+  }
+
+  const passwordHash = await bcrypt.hash(payload.password, 12);
+  const updated = await updateUser(user.id, {
+    passwordHash,
+    passwordResetRequired: false,
+    isGuest: false,
+    createdVia: user.createdVia || "checkout_guest"
+  });
+  if (!updated) return res.status(404).json({ error: "USER_NOT_FOUND" });
+
+  req.session.userId = updated.id;
+  markUserLoggedInNow(updated.id).catch(() => {});
+  return res.json({ ok: true, user: publicUser(updated), stage: "authenticated" });
 });
 
 authRouter.post("/logout", (req, res) => {

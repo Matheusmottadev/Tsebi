@@ -10,7 +10,9 @@ async function ensureUserSecurityColumns() {
       await query(`
         ALTER TABLE users
           ADD COLUMN IF NOT EXISTS password_reset_required BOOLEAN NOT NULL DEFAULT FALSE,
-          ADD COLUMN IF NOT EXISTS title TEXT;
+          ADD COLUMN IF NOT EXISTS title TEXT,
+          ADD COLUMN IF NOT EXISTS is_guest BOOLEAN NOT NULL DEFAULT FALSE,
+          ADD COLUMN IF NOT EXISTS created_via TEXT;
       `);
     })().catch((error) => {
       userSecuritySchemaPromise = null;
@@ -72,6 +74,8 @@ function fromRow(row) {
     name: row.name,
     email: normalizeEmail(row.email),
     phone: String(row.phone || "").trim(),
+    isGuest: Boolean(row.is_guest),
+    createdVia: String(row.created_via || "").trim(),
     loginDisabled: Boolean(row.login_disabled),
     lastLoginAt: row.last_login_at || null,
     emailVerified: Boolean(row.email_verified),
@@ -285,6 +289,8 @@ async function updateUser(id, patch) {
     addresses: patch.addresses ?? current.addresses,
     defaultAddressId: patch.defaultAddressId ?? current.defaultAddressId,
     passwordHash: patch.passwordHash ?? current.passwordHash,
+    isGuest: patch.isGuest == null ? Boolean(current.isGuest) : Boolean(patch.isGuest),
+    createdVia: patch.createdVia ?? current.createdVia,
     passwordResetRequired:
       patch.passwordResetRequired == null
         ? patch.passwordHash
@@ -306,6 +312,8 @@ async function updateUser(id, patch) {
       default_address_id = $8,
       password_hash = $9,
       password_reset_required = $10,
+      is_guest = $11,
+      created_via = NULLIF($12, ''),
       updated_at = NOW()
     WHERE id = $1
     RETURNING *
@@ -320,7 +328,9 @@ async function updateUser(id, patch) {
       JSON.stringify(toDbAddresses(next.addresses)),
       String(next.defaultAddressId || ""),
       next.passwordHash,
-      Boolean(next.passwordResetRequired)
+      Boolean(next.passwordResetRequired),
+      Boolean(next.isGuest),
+      String(next.createdVia || "").trim()
     ]
   );
 
@@ -806,6 +816,135 @@ async function restoreUserFromSnapshot(snapshot = {}) {
   }
 }
 
+function buildCheckoutAddress(address, fallbackName = "") {
+  const fullName = String(fallbackName || "").trim();
+  const cep = String(address?.cep || "").replace(/\D/g, "").slice(0, 8);
+  const street = String(address?.street || "").trim();
+  const number = String(address?.number || "").trim();
+  const district = String(address?.district || "").trim();
+  const city = String(address?.city || "").trim();
+  const state = String(address?.state || "").trim().toUpperCase().slice(0, 2);
+  if (!cep || !street || !number || !district || !city || !state) return null;
+
+  return {
+    id: crypto.randomUUID(),
+    label: "Principal",
+    fullName: fullName || "Cliente",
+    cep,
+    street,
+    number,
+    complement: String(address?.complement || "").trim(),
+    district,
+    city,
+    state,
+    isDefault: true,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
+  };
+}
+
+async function upsertCheckoutGuestUser({
+  name = "",
+  email = "",
+  phone = "",
+  cpf = "",
+  cep = "",
+  shippingAddress = null
+} = {}) {
+  await ensureUserSecurityColumns();
+  const normalizedEmail = normalizeEmail(email);
+  if (!normalizedEmail) {
+    return { ok: false, error: "EMAIL_REQUIRED" };
+  }
+
+  const safeName = String(name || "").trim() || normalizedEmail.split("@")[0] || "Cliente Tsebi";
+  const safePhone = String(phone || "").trim().slice(0, 40);
+  const safeCpf = String(cpf || "").replace(/\D/g, "").slice(0, 11) || null;
+  const safeCep = String(cep || "").replace(/\D/g, "").slice(0, 8) || null;
+  const candidateAddress = buildCheckoutAddress(shippingAddress, safeName);
+
+  const existing = await findUserByEmail(normalizedEmail);
+  if (!existing) {
+    const created = await createUser({
+      title: "nao_informar",
+      name: safeName,
+      email: normalizedEmail,
+      phone: safePhone,
+      passwordHash: null,
+      birthDate: "",
+      cpf: safeCpf || "",
+      cep: safeCep || "",
+      emailVerified: true
+    });
+
+    if (!created.ok || !created.user) return created;
+
+    const initialAddresses = candidateAddress ? [candidateAddress] : [];
+    const updated = await query(
+      `
+      UPDATE users
+      SET
+        is_guest = TRUE,
+        created_via = 'checkout_guest',
+        phone = NULLIF($2, ''),
+        addresses = $3::jsonb,
+        default_address_id = $4,
+        updated_at = NOW()
+      WHERE id = $1
+      RETURNING *
+      `,
+      [
+        created.user.id,
+        safePhone,
+        JSON.stringify(toDbAddresses(initialAddresses)),
+        initialAddresses[0]?.id || ""
+      ]
+    );
+    return { ok: true, user: fromRow(updated.rows[0] || created.user) };
+  }
+
+  const existingAddresses = Array.isArray(existing.addresses) ? existing.addresses : [];
+  const hasDefault = Boolean(existing.defaultAddressId) && existingAddresses.some((address) => address.id === existing.defaultAddressId);
+  const nextAddresses = existingAddresses.length ? [...existingAddresses] : [];
+  let defaultAddressId = String(existing.defaultAddressId || "").trim();
+
+  if (candidateAddress && nextAddresses.length === 0) {
+    nextAddresses.push(candidateAddress);
+    defaultAddressId = candidateAddress.id;
+  } else if (!hasDefault && nextAddresses.length > 0) {
+    defaultAddressId = nextAddresses[0].id;
+  }
+
+  const updated = await query(
+    `
+    UPDATE users
+    SET
+      name = COALESCE(NULLIF($2, ''), name),
+      phone = COALESCE(NULLIF($3, ''), phone),
+      cpf = COALESCE($4, cpf),
+      cep = COALESCE($5, cep),
+      addresses = $6::jsonb,
+      default_address_id = $7,
+      is_guest = CASE WHEN password_hash IS NULL THEN TRUE ELSE FALSE END,
+      created_via = COALESCE(NULLIF(created_via, ''), 'checkout_guest'),
+      updated_at = NOW()
+    WHERE id = $1
+    RETURNING *
+    `,
+    [
+      existing.id,
+      safeName,
+      safePhone,
+      safeCpf,
+      safeCep,
+      JSON.stringify(toDbAddresses(nextAddresses)),
+      defaultAddressId
+    ]
+  );
+
+  return { ok: true, user: fromRow(updated.rows[0] || existing) };
+}
+
 module.exports = {
   normalizeEmail,
   publicUser,
@@ -829,5 +968,6 @@ module.exports = {
   consumeAdminRecoveryCode,
   disableAdminMfa,
   markUserEmailVerified,
-  restoreUserFromSnapshot
+  restoreUserFromSnapshot,
+  upsertCheckoutGuestUser
 };

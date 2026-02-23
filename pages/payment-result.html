@@ -54,9 +54,34 @@
 
         <div class="payment-result-summary" id="resultSummary" hidden>
           <p><strong>N?mero do pedido:</strong> <span id="resultOrderId">-</span></p>
+          <p><strong>C?digo de rastreio:</strong> <span id="resultOrderNumber">-</span></p>
+          <p><strong>E-mail:</strong> <span id="resultOrderEmail">-</span></p>
           <p><strong>Total:</strong> <span id="resultOrderTotal">-</span></p>
           <ul id="resultItems"></ul>
         </div>
+
+        <section class="payment-activation" id="paymentActivation" hidden>
+          <h2>Cadastro aprovado automaticamente</h2>
+          <p>
+            Seu cadastro foi aprovado automaticamente para facilitar suas pr?ximas compras.
+            Se quiser acompanhar pedidos na ?rea logada, crie uma senha agora.
+          </p>
+          <form id="activationForm" class="payment-activation-form" novalidate>
+            <label>
+              <span>Criar senha</span>
+              <input type="password" id="activationPassword" minlength="8" autocomplete="new-password" />
+            </label>
+            <label>
+              <span>Confirmar senha</span>
+              <input type="password" id="activationPasswordConfirm" minlength="8" autocomplete="new-password" />
+            </label>
+            <p class="payment-activation-error" id="activationError" role="alert" hidden></p>
+            <div class="payment-activation-actions">
+              <button type="submit" class="payment-refresh-btn" id="activationSubmit">Criar senha e acessar minha conta</button>
+              <button type="button" class="payment-action-link payment-skip-btn" id="activationSkip">Pular por enquanto</button>
+            </div>
+          </form>
+        </section>
 
         <p class="payment-result-hint" id="supportHint" hidden>
           Ainda não recebemos a confirmação final. Se o status não mudar, fale com nosso suporte.
@@ -64,6 +89,7 @@
 
         <div class="payment-result-actions">
           <button class="payment-refresh-btn" id="refreshStatusButton" type="button">Atualizar status</button>
+          <button class="payment-action-link" id="trackGuestButton" type="button">Acompanhar pedido</button>
           <a class="payment-action-link" id="ordersButton" href="conta.html#card-orders">Ver meus pedidos</a>
           <a class="payment-action-link" id="storeButton" href="index.html">Voltar ? loja</a>
           <a class="payment-action-link" id="retryButton" href="cart.html">Tentar novamente</a>
