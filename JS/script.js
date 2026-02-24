@@ -303,6 +303,7 @@ async function bootstrap() {
   initCartEntryPoints();
   initAccountEntryPoints();
   initTrackOrderEntryPoints();
+  initNewsletterForms();
   initNewsletterPopup();
 }
 
@@ -1491,6 +1492,128 @@ function initTrackOrderEntryPoints() {
 
   render();
   window.addEventListener("tsebi:auth-changed", render);
+}
+
+function normalizeNewsletterEmail(value) {
+  return String(value || "").trim().toLowerCase();
+}
+
+function normalizeNewsletterPhone(value) {
+  return String(value || "").replace(/\D/g, "").slice(0, 15);
+}
+
+function isValidNewsletterEmail(value) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizeNewsletterEmail(value));
+}
+
+function getNewsletterSource(form) {
+  if (!(form instanceof HTMLFormElement)) return "footer";
+  if (form.classList.contains("newsletter-popup-form")) return "popup";
+  return "footer";
+}
+
+function ensureNewsletterFeedback(form) {
+  if (!(form instanceof HTMLFormElement)) return null;
+  let node = form.querySelector(".newsletter-feedback");
+  if (node) return node;
+  node = document.createElement("p");
+  node.className = "newsletter-feedback";
+  node.setAttribute("role", "status");
+  node.setAttribute("aria-live", "polite");
+  form.appendChild(node);
+  return node;
+}
+
+function setNewsletterFeedback(form, message, type) {
+  const feedback = ensureNewsletterFeedback(form);
+  if (!feedback) return;
+  feedback.textContent = String(message || "");
+  feedback.dataset.state = type === "error" ? "error" : "success";
+}
+
+function setNewsletterFormLoading(form, loading) {
+  if (!(form instanceof HTMLFormElement)) return;
+  const submitButton = form.querySelector('button[type="submit"]');
+  if (!(submitButton instanceof HTMLButtonElement)) return;
+  if (!submitButton.dataset.defaultLabel) {
+    submitButton.dataset.defaultLabel = submitButton.textContent || "";
+  }
+  submitButton.disabled = Boolean(loading);
+  if (loading) {
+    submitButton.dataset.loading = "true";
+    submitButton.textContent = "...";
+  } else {
+    submitButton.dataset.loading = "false";
+    submitButton.textContent = submitButton.dataset.defaultLabel || submitButton.textContent;
+  }
+}
+
+function closeNewsletterPopupAfterSuccess(form) {
+  if (!(form instanceof HTMLFormElement)) return;
+  if (!form.classList.contains("newsletter-popup-form")) return;
+  const popup = document.getElementById("newsletterPopup");
+  if (!popup) return;
+  popup.classList.remove("is-open");
+  popup.setAttribute("aria-hidden", "true");
+  document.body.classList.remove("newsletter-popup-open");
+}
+
+function initNewsletterForms() {
+  const forms = Array.from(document.querySelectorAll(".newsletter-form, .newsletter-popup-form"));
+  if (!forms.length) return;
+
+  forms.forEach((form) => {
+    if (!(form instanceof HTMLFormElement)) return;
+    if (form.dataset.newsletterBound === "true") return;
+
+    form.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      const emailInput = form.querySelector('input[type="email"]');
+      const phoneInput = form.querySelector('input[type="tel"]');
+      const email = normalizeNewsletterEmail(emailInput?.value || "");
+      const phone = normalizeNewsletterPhone(phoneInput?.value || "");
+
+      if (!isValidNewsletterEmail(email)) {
+        setNewsletterFeedback(form, "Informe um e-mail valido para assinar.", "error");
+        emailInput?.focus();
+        return;
+      }
+
+      setNewsletterFormLoading(form, true);
+      setNewsletterFeedback(form, "", "success");
+
+      try {
+        const response = await fetch("/api/newsletter/subscribe", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "same-origin",
+          body: JSON.stringify({
+            email,
+            phone,
+            source: getNewsletterSource(form),
+            page: `${window.location.pathname}${window.location.search}`.slice(0, 200),
+            consent: true
+          })
+        });
+
+        const payload = await response.json().catch(() => ({}));
+        if (!response.ok || !payload?.ok) {
+          setNewsletterFeedback(form, "Nao foi possivel concluir sua inscricao. Tente novamente.", "error");
+          return;
+        }
+
+        setNewsletterFeedback(form, "Inscricao confirmada. Voce recebera as novidades da Tsebi.", "success");
+        form.reset();
+        closeNewsletterPopupAfterSuccess(form);
+      } catch {
+        setNewsletterFeedback(form, "Falha de conexao. Tente novamente em instantes.", "error");
+      } finally {
+        setNewsletterFormLoading(form, false);
+      }
+    });
+
+    form.dataset.newsletterBound = "true";
+  });
 }
 
 function initNewsletterPopup() {

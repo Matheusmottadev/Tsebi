@@ -13,6 +13,7 @@ const { authRouter, myRouter } = require("./auth");
 const { studioAuthRouter } = require("./studio-auth");
 const { vipRouter } = require("./vip");
 const { adminRouter } = require("./admin");
+const { readJson, writeJson } = require("./lib/json-store");
 const { findUserById, upsertCheckoutGuestUser, normalizeEmail } = require("./user-repository");
 const {
   createOrder,
@@ -47,6 +48,8 @@ const posthogPublicKey = process.env.POSTHOG_PUBLIC_KEY || "";
 const posthogHost = process.env.POSTHOG_HOST || "";
 const stripe = stripeSecretKey ? new Stripe(stripeSecretKey) : null;
 let melhorEnvioSyncTimer = null;
+const newsletterDataFile = path.resolve(__dirname, "..", "data", "newsletter-subscribers.json");
+let newsletterWriteQueue = Promise.resolve();
 
 function normalizePosthogHost(value) {
   const fallback = "https://us.i.posthog.com";
@@ -77,6 +80,22 @@ const paymentIntentRateLimit = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
   message: { error: "TOO_MANY_REQUESTS" }
+});
+
+const newsletterSubscribeRateLimit = rateLimit({
+  windowMs: 60 * 1000,
+  max: 20,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: "TOO_MANY_REQUESTS" }
+});
+
+const newsletterSubscribeSchema = z.object({
+  email: z.string().trim().email(),
+  phone: z.string().trim().max(32).optional().default(""),
+  source: z.string().trim().max(80).optional().default(""),
+  page: z.string().trim().max(200).optional().default(""),
+  consent: z.coerce.boolean().optional().default(false)
 });
 
 const paymentIntentSchema = z.object({
@@ -230,6 +249,23 @@ function normalizeItemsForComparison(items) {
     }))
     .filter((item) => item.id)
     .sort((a, b) => a.id.localeCompare(b.id));
+}
+
+function normalizeNewsletterPhone(value) {
+  return String(value || "").replace(/\D/g, "").slice(0, 15);
+}
+
+function sanitizeNewsletterSource(value) {
+  return String(value || "")
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9_\-/.:]+/g, "-")
+    .slice(0, 80);
+}
+
+function enqueueNewsletterWrite(task) {
+  newsletterWriteQueue = newsletterWriteQueue.then(task, task);
+  return newsletterWriteQueue;
 }
 
 function parseBooleanEnv(value, fallback = false) {
@@ -828,6 +864,67 @@ app.get("/api/config", (req, res) => {
         }
       : null
   });
+});
+
+app.post("/api/newsletter/subscribe", newsletterSubscribeRateLimit, async (req, res) => {
+  const parsed = newsletterSubscribeSchema.safeParse(req.body || {});
+  if (!parsed.success) {
+    return res.status(400).json({ ok: false, error: "INVALID_INPUT" });
+  }
+
+  if (!parsed.data.consent) {
+    return res.status(400).json({ ok: false, error: "CONSENT_REQUIRED" });
+  }
+
+  const now = new Date().toISOString();
+  const email = normalizeEmail(parsed.data.email);
+  const source = sanitizeNewsletterSource(parsed.data.source || "footer");
+  const page = String(parsed.data.page || "").trim().slice(0, 200);
+  const phone = normalizeNewsletterPhone(parsed.data.phone || "");
+  const ipAddress = String(req.headers["x-forwarded-for"] || req.ip || "")
+    .split(",")[0]
+    .trim()
+    .slice(0, 64);
+  const userAgent = String(req.headers["user-agent"] || "").trim().slice(0, 300);
+
+  try {
+    const result = await enqueueNewsletterWrite(async () => {
+      const list = await readJson(newsletterDataFile, []);
+      const safeList = Array.isArray(list) ? list : [];
+      const existingIndex = safeList.findIndex((entry) => normalizeEmail(entry?.email || "") === email);
+      const previous = existingIndex >= 0 ? safeList[existingIndex] : null;
+
+      const record = {
+        email,
+        phone: phone || String(previous?.phone || ""),
+        source: source || String(previous?.source || "footer"),
+        page: page || String(previous?.page || ""),
+        consent: true,
+        subscribedAt: String(previous?.subscribedAt || now),
+        updatedAt: now,
+        status: "active",
+        lastIp: ipAddress || String(previous?.lastIp || ""),
+        lastUserAgent: userAgent || String(previous?.lastUserAgent || "")
+      };
+
+      if (existingIndex >= 0) {
+        safeList[existingIndex] = record;
+      } else {
+        safeList.unshift(record);
+      }
+
+      await writeJson(newsletterDataFile, safeList);
+      return { created: existingIndex < 0 };
+    });
+
+    return res.status(result.created ? 201 : 200).json({
+      ok: true,
+      created: result.created,
+      message: result.created ? "SUBSCRIBED" : "ALREADY_SUBSCRIBED"
+    });
+  } catch {
+    return res.status(500).json({ ok: false, error: "NEWSLETTER_SUBSCRIBE_FAILED" });
+  }
 });
 
 app.post("/api/orders/payment-intent", paymentIntentRateLimit, async (req, res) => {

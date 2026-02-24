@@ -861,6 +861,17 @@ body.menu-open {
   color: #fff;
 }
 
+.newsletter-feedback {
+  margin-top: 10px;
+  font-size: 13px;
+  line-height: 1.35;
+  color: #88d498;
+}
+
+.newsletter-feedback[data-state="error"] {
+  color: #ffb3b3;
+}
+
 .newsletter-legal {
   margin-top: 14px;
   font-size: 13px;
@@ -2025,6 +2036,14 @@ body.newsletter-popup-open{
 
 .newsletter-popup-form button:hover{
   background: #000;
+}
+
+.newsletter-popup-form .newsletter-feedback {
+  color: #1d572a;
+}
+
+.newsletter-popup-form .newsletter-feedback[data-state="error"] {
+  color: #8f1f1f;
 }
 
 @media (max-width: 980px){

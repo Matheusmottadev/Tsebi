@@ -31,6 +31,12 @@
   const passwordForm = document.getElementById("passwordForm");
 
   const toastEl = document.getElementById("profileToast");
+  let addressModal = null;
+  let addressForm = null;
+  let addressTitleEl = null;
+  let addressSubmitEl = null;
+  let addressMode = "create";
+  let editingAddressId = "";
 
   const errorMap = new Map();
   document.querySelectorAll("[data-error-for]").forEach((node) => {
@@ -274,6 +280,187 @@
     });
   }
 
+  function onlyDigits(value, max = 32) {
+    return String(value || "")
+      .replace(/\D/g, "")
+      .slice(0, Math.max(0, Number(max) || 0));
+  }
+
+  function formatCep(value) {
+    const digits = onlyDigits(value, 8);
+    if (digits.length <= 5) return digits;
+    return `${digits.slice(0, 5)}-${digits.slice(5)}`;
+  }
+
+  function ensureAddressModal() {
+    if (addressModal instanceof HTMLElement) return;
+    const wrapper = document.createElement("div");
+    wrapper.className = "modal-backdrop";
+    wrapper.id = "addressModal";
+    wrapper.hidden = true;
+    wrapper.innerHTML = `
+      <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="addressModalTitle">
+        <h3 id="addressModalTitle">Novo endereço</h3>
+        <form id="addressFormModal" class="modal-form">
+          <label for="addressLabelInput">Rótulo</label>
+          <input id="addressLabelInput" name="label" type="text" placeholder="Casa, Trabalho..." required />
+
+          <label for="addressFullNameInput">Nome completo</label>
+          <input id="addressFullNameInput" name="fullName" type="text" required />
+
+          <label for="addressCepInput">CEP</label>
+          <input id="addressCepInput" name="cep" type="text" inputmode="numeric" maxlength="9" required />
+
+          <label for="addressStreetInput">Rua</label>
+          <input id="addressStreetInput" name="street" type="text" required />
+
+          <label for="addressNumberInput">Número</label>
+          <input id="addressNumberInput" name="number" type="text" required />
+
+          <label for="addressComplementInput">Complemento (opcional)</label>
+          <input id="addressComplementInput" name="complement" type="text" />
+
+          <label for="addressDistrictInput">Bairro</label>
+          <input id="addressDistrictInput" name="district" type="text" required />
+
+          <label for="addressCityInput">Cidade</label>
+          <input id="addressCityInput" name="city" type="text" required />
+
+          <label for="addressStateInput">UF</label>
+          <input id="addressStateInput" name="state" type="text" maxlength="2" required />
+
+          <div class="modal-actions">
+            <button type="button" class="btn-outline" data-address-action="cancel">Cancelar</button>
+            <button type="submit" class="btn-primary" id="addressModalSubmitBtn">Salvar endereço</button>
+          </div>
+        </form>
+      </div>
+    `;
+    document.body.appendChild(wrapper);
+
+    addressModal = document.getElementById("addressModal");
+    addressForm = document.getElementById("addressFormModal");
+    addressTitleEl = document.getElementById("addressModalTitle");
+    addressSubmitEl = document.getElementById("addressModalSubmitBtn");
+
+    const cepInput = document.getElementById("addressCepInput");
+    const stateInput = document.getElementById("addressStateInput");
+    cepInput?.addEventListener("input", () => {
+      cepInput.value = formatCep(cepInput.value);
+    });
+    stateInput?.addEventListener("input", () => {
+      stateInput.value = String(stateInput.value || "")
+        .replace(/[^a-zA-Z]/g, "")
+        .toUpperCase()
+        .slice(0, 2);
+    });
+
+    addressModal?.addEventListener("click", (event) => {
+      const target = event.target;
+      if (target === addressModal) {
+        addressModal.hidden = true;
+        return;
+      }
+      if (!(target instanceof HTMLElement)) return;
+      const action = target.closest("[data-address-action]");
+      if (!action) return;
+      addressModal.hidden = true;
+    });
+
+    addressForm?.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      const payload = {
+        label: String(document.getElementById("addressLabelInput")?.value || "").trim(),
+        fullName: String(document.getElementById("addressFullNameInput")?.value || "").trim(),
+        cep: onlyDigits(document.getElementById("addressCepInput")?.value || "", 8),
+        street: String(document.getElementById("addressStreetInput")?.value || "").trim(),
+        number: String(document.getElementById("addressNumberInput")?.value || "").trim(),
+        complement: String(document.getElementById("addressComplementInput")?.value || "").trim(),
+        district: String(document.getElementById("addressDistrictInput")?.value || "").trim(),
+        city: String(document.getElementById("addressCityInput")?.value || "").trim(),
+        state: String(document.getElementById("addressStateInput")?.value || "")
+          .replace(/[^a-zA-Z]/g, "")
+          .toUpperCase()
+          .slice(0, 2)
+      };
+
+      if (
+        !payload.label ||
+        !payload.fullName ||
+        payload.cep.length !== 8 ||
+        !payload.street ||
+        !payload.number ||
+        !payload.district ||
+        !payload.city ||
+        payload.state.length !== 2
+      ) {
+        showToast("Preencha os campos obrigatórios do endereço.");
+        return;
+      }
+
+      if (addressSubmitEl) addressSubmitEl.disabled = true;
+      try {
+        if (previewMode || !store?.createMyAddress || !store?.updateMyAddress) {
+          if (addressMode === "edit" && editingAddressId) {
+            currentAddresses = currentAddresses.map((item) =>
+              String(item?.id || "") === editingAddressId ? { ...item, ...payload } : item
+            );
+          } else {
+            currentAddresses.unshift({ id: `preview-address-${Date.now()}`, ...payload });
+          }
+          renderAddresses(currentAddresses);
+          addressModal.hidden = true;
+          showToast("Endereço salvo.");
+          return;
+        }
+
+        const result =
+          addressMode === "edit" && editingAddressId
+            ? await store.updateMyAddress(editingAddressId, payload)
+            : await store.createMyAddress(payload);
+
+        if (!result?.ok) {
+          showToast(result?.error || "Não foi possível salvar o endereço.");
+          return;
+        }
+
+        currentAddresses = Array.isArray(result.addresses) ? result.addresses : currentAddresses;
+        renderAddresses(currentAddresses);
+        addressModal.hidden = true;
+        showToast("Endereço salvo.");
+      } finally {
+        if (addressSubmitEl) addressSubmitEl.disabled = false;
+      }
+    });
+  }
+
+  function openAddressModal(mode, address = null) {
+    ensureAddressModal();
+    if (!(addressForm instanceof HTMLFormElement) || !(addressModal instanceof HTMLElement)) return;
+
+    addressMode = mode === "edit" ? "edit" : "create";
+    editingAddressId = String(address?.id || "");
+    addressForm.reset();
+
+    const fullNameFallback = String(currentUser?.name || "").trim();
+    document.getElementById("addressLabelInput").value = String(address?.label || "");
+    document.getElementById("addressFullNameInput").value = String(address?.fullName || fullNameFallback || "");
+    document.getElementById("addressCepInput").value = formatCep(String(address?.cep || ""));
+    document.getElementById("addressStreetInput").value = String(address?.street || "");
+    document.getElementById("addressNumberInput").value = String(address?.number || "");
+    document.getElementById("addressComplementInput").value = String(address?.complement || "");
+    document.getElementById("addressDistrictInput").value = String(address?.district || "");
+    document.getElementById("addressCityInput").value = String(address?.city || "");
+    document.getElementById("addressStateInput").value = String(address?.state || "")
+      .replace(/[^a-zA-Z]/g, "")
+      .toUpperCase()
+      .slice(0, 2);
+
+    if (addressTitleEl) addressTitleEl.textContent = addressMode === "edit" ? "Editar endereço" : "Novo endereço";
+    if (addressSubmitEl) addressSubmitEl.textContent = addressMode === "edit" ? "Salvar alterações" : "Salvar endereço";
+    addressModal.hidden = false;
+  }
+
   function collectFormData() {
     const day = String(birthDay?.value || "");
     const month = String(birthMonth?.value || "");
@@ -383,7 +570,7 @@
     });
 
     addAddressBtn?.addEventListener("click", () => {
-      showToast("TODO: fluxo de adicionar endereÃ§o");
+      openAddressModal("create");
     });
 
     addressesList?.addEventListener("click", (event) => {
@@ -391,7 +578,13 @@
       if (!(target instanceof HTMLElement)) return;
       const button = target.closest("[data-address-edit]");
       if (!button) return;
-      showToast("TODO: fluxo de editar endereÃ§o");
+      const addressId = String(button.getAttribute("data-address-edit") || "");
+      const address = currentAddresses.find((item) => String(item?.id || "") === addressId) || null;
+      if (!address) {
+        showToast("Endereço não encontrado.");
+        return;
+      }
+      openAddressModal("edit", address);
     });
 
     openPasswordModalBtn?.addEventListener("click", () => {

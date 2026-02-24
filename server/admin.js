@@ -1,4 +1,5 @@
 const express = require("express");
+const path = require("node:path");
 const rateLimit = require("express-rate-limit");
 const Stripe = require("stripe");
 const bcrypt = require("bcrypt");
@@ -49,6 +50,8 @@ const {
 } = require("./lib/admin-audit-repository");
 const { ensureAdminProfile, updateAdminProfile } = require("./lib/admin-profile-repository");
 const { listAdminLoginEvents } = require("./lib/admin-login-events-repository");
+const { readJson } = require("./lib/json-store");
+const { sendEmail } = require("./lib/email-service");
 // Lazy load R2 upload module to avoid build-time errors
 let uploadR2Buffer = null;
 function getR2Upload() {
@@ -68,6 +71,7 @@ const {
 } = require("../src/shipping/melhorenvio-status");
 const { getVipDatabaseUrl } = require("./lib/vip-db");
 const { requireAdmin, requireAdminCsrfForMutations } = require("./middlewares/requireAdmin");
+const newsletterDataFile = path.resolve(__dirname, "..", "data", "newsletter-subscribers.json");
 
 let stripeClient = null;
 function getStripeClient() {
@@ -236,6 +240,14 @@ const vipUpsertSchema = z.object({
   accountCreated: z.boolean().optional().default(false)
 });
 
+const newsletterSendSchema = z.object({
+  subject: z.string().trim().min(3).max(180),
+  html: z.string().trim().min(10).max(100_000),
+  text: z.string().trim().max(100_000).optional().default(""),
+  source: z.string().trim().max(80).optional().default(""),
+  testEmail: z.string().trim().email().optional().default("")
+});
+
 function maskCpfForList(cpf) {
   const digits = String(cpf || "").replace(/\D/g, "");
   if (digits.length !== 11) return "";
@@ -395,6 +407,15 @@ function buildUserSnapshotForRestore(user) {
     createdAt: user.createdAt || null,
     updatedAt: user.updatedAt || null
   };
+}
+
+function stripHtmlToText(value) {
+  return String(value || "")
+    .replace(/<style[\s\S]*?>[\s\S]*?<\/style>/gi, " ")
+    .replace(/<script[\s\S]*?>[\s\S]*?<\/script>/gi, " ")
+    .replace(/<[^>]+>/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
 }
 
 function buildUserPatchFromSnapshot(user) {
@@ -1713,6 +1734,144 @@ adminRouter.delete("/products/:id", async (req, res) => {
     return res.json({ ok: true, product: archived });
   } catch {
     return res.status(500).json({ error: "ADMIN_PRODUCT_DELETE_FAILED" });
+  }
+});
+
+adminRouter.get("/newsletter", async (req, res) => {
+  const queryText = String(req.query.query || "").trim().toLowerCase();
+  const page = Math.max(1, Number(req.query.page || 1) || 1);
+  const pageSize = Math.max(1, Math.min(200, Number(req.query.pageSize || 50) || 50));
+
+  try {
+    const raw = await readJson(newsletterDataFile, []);
+    const rows = (Array.isArray(raw) ? raw : []).map((entry, index) => ({
+      id: String(entry?.email || `newsletter_${index + 1}`),
+      email: String(entry?.email || ""),
+      phone: String(entry?.phone || ""),
+      source: String(entry?.source || ""),
+      page: String(entry?.page || ""),
+      status: String(entry?.status || "active"),
+      consent: Boolean(entry?.consent),
+      subscribedAt: entry?.subscribedAt || null,
+      updatedAt: entry?.updatedAt || null
+    }));
+
+    const filtered = queryText
+      ? rows.filter((row) => {
+          const haystack = [
+            row.email,
+            row.phone,
+            row.source,
+            row.page,
+            row.status
+          ]
+            .join(" ")
+            .toLowerCase();
+          return haystack.includes(queryText);
+        })
+      : rows;
+
+    const total = filtered.length;
+    const offset = (page - 1) * pageSize;
+    const paged = filtered.slice(offset, offset + pageSize);
+
+    return res.json({
+      rows: paged,
+      total,
+      page,
+      pageSize
+    });
+  } catch {
+    return res.status(500).json({ error: "ADMIN_NEWSLETTER_LIST_FAILED" });
+  }
+});
+
+adminRouter.post("/newsletter/send", sensitiveAdminRateLimit, async (req, res) => {
+  const parsed = newsletterSendSchema.safeParse(req.body || {});
+  if (!parsed.success) return res.status(400).json({ error: "INVALID_INPUT" });
+
+  const payload = parsed.data;
+  const subject = String(payload.subject || "").trim();
+  const html = String(payload.html || "").trim();
+  const textFallback = String(payload.text || "").trim() || stripHtmlToText(html);
+  const sourceFilter = String(payload.source || "").trim().toLowerCase();
+  const testEmail = normalizeEmail(payload.testEmail || "");
+
+  try {
+    if (testEmail) {
+      await sendEmail({
+        to: testEmail,
+        subject: `[TESTE] ${subject}`,
+        html,
+        text: textFallback
+      });
+
+      return res.json({
+        ok: true,
+        mode: "test",
+        sent: 1,
+        failed: 0,
+        totalTargets: 1,
+        targets: [testEmail]
+      });
+    }
+
+    const raw = await readJson(newsletterDataFile, []);
+    const list = Array.isArray(raw) ? raw : [];
+    const uniqueEmails = new Set();
+    const recipients = [];
+
+    list.forEach((entry) => {
+      const email = normalizeEmail(entry?.email || "");
+      const source = String(entry?.source || "").trim().toLowerCase();
+      const consent = Boolean(entry?.consent);
+      const status = String(entry?.status || "active").trim().toLowerCase();
+      if (!email || uniqueEmails.has(email)) return;
+      if (!consent) return;
+      if (status && status !== "active") return;
+      if (sourceFilter && source !== sourceFilter) return;
+      uniqueEmails.add(email);
+      recipients.push(email);
+    });
+
+    if (!recipients.length) {
+      return res.status(400).json({ error: "NEWSLETTER_NO_RECIPIENTS" });
+    }
+
+    let sent = 0;
+    let failed = 0;
+    const errors = [];
+
+    for (const recipient of recipients) {
+      try {
+        await sendEmail({
+          to: recipient,
+          subject,
+          html,
+          text: textFallback
+        });
+        sent += 1;
+      } catch (error) {
+        failed += 1;
+        if (errors.length < 20) {
+          errors.push({
+            email: recipient,
+            error: String(error?.message || "EMAIL_DELIVERY_FAILED")
+          });
+        }
+      }
+    }
+
+    return res.json({
+      ok: true,
+      mode: "campaign",
+      totalTargets: recipients.length,
+      sent,
+      failed,
+      errors
+    });
+  } catch {
+    return res.status(500).json({ error: "ADMIN_NEWSLETTER_SEND_FAILED" });
   }
 });
 

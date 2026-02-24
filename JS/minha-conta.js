@@ -19,6 +19,9 @@ const publicTrackOrderNumberInput = document.getElementById("publicTrackOrderNum
 const publicTrackEmailInput = document.getElementById("publicTrackEmail");
 const ordersList = document.getElementById("ordersList");
 const ordersEmpty = document.getElementById("ordersEmpty");
+const favoritesGrid = document.getElementById("favoritesGrid");
+const favoritesEmpty = document.getElementById("favoritesEmpty");
+const favoritesSummary = document.getElementById("favoritesSummary");
 const feedbackEl = document.getElementById("accountFeedback");
 const logoutBtn = document.getElementById("logoutBtn");
 
@@ -58,6 +61,7 @@ let selectedTrackingOrderKey = "";
 let defaultAddressId = "";
 let currentUser = null;
 let isPublicTrackMode = false;
+let productsCatalog = [];
 
 function normalizeTitle(value) {
   const normalized = String(value || "").trim().toLowerCase();
@@ -442,6 +446,92 @@ function renderOrders(orders) {
   });
 }
 
+function normalizeCatalogList(payload) {
+  if (Array.isArray(payload)) return payload;
+  if (payload && typeof payload === "object" && Array.isArray(payload.products)) return payload.products;
+  return [];
+}
+
+async function loadProductsCatalog() {
+  try {
+    const response = await fetch("/api/products");
+    if (!response.ok) return;
+    const payload = await response.json().catch(() => ({}));
+    productsCatalog = normalizeCatalogList(payload).map((item) => ({
+      ...item,
+      id: String(item?.id || item?.sku || "").trim(),
+      sku: String(item?.sku || item?.id || "").trim()
+    }));
+  } catch {}
+}
+
+function findProductByFavoriteId(favoriteId) {
+  const targetId = String(favoriteId || "").trim();
+  if (!targetId) return null;
+  return (
+    productsCatalog.find((item) => String(item?.id || "").trim() === targetId) ||
+    productsCatalog.find((item) => String(item?.sku || "").trim() === targetId) ||
+    null
+  );
+}
+
+function formatCurrencyBRL(value, currency = "brl") {
+  const amount = Number(value || 0);
+  if (!Number.isFinite(amount)) return "R$ 0,00";
+  return (amount / 100).toLocaleString("pt-BR", {
+    style: "currency",
+    currency: String(currency || "brl").toUpperCase()
+  });
+}
+
+function renderFavorites() {
+  if (!favoritesGrid || !favoritesEmpty || !favoritesSummary) return;
+
+  const favoriteIds = Array.isArray(store?.getFavoriteIds?.()) ? store.getFavoriteIds().map(String) : [];
+  const uniqueIds = Array.from(new Set(favoriteIds));
+  const favoriteItems = uniqueIds
+    .map((id) => ({ id, product: findProductByFavoriteId(id) }))
+    .filter((entry) => Boolean(entry.product));
+
+  favoritesGrid.innerHTML = "";
+  favoritesSummary.textContent = uniqueIds.length
+    ? `${uniqueIds.length} item(ns) salvos na sua lista de favoritos.`
+    : "Suas peças salvas para comprar depois.";
+
+  if (!favoriteItems.length) {
+    favoritesEmpty.hidden = false;
+    return;
+  }
+
+  favoritesEmpty.hidden = true;
+  favoriteItems.forEach((entry) => {
+    const item = entry.product;
+    const id = String(item?.id || item?.sku || entry.id || "").trim();
+    const image = String(item?.image || item?.imageUrl || "images/produtos/sug1.jpeg");
+    const href = `produto.html?id=${encodeURIComponent(id)}`;
+    const name = String(item?.name || id || "Produto");
+    const priceText = formatCurrencyBRL(item?.priceCents || item?.price_cents || 0, item?.currency || "brl");
+
+    const article = document.createElement("article");
+    article.className = "account-favorite-card";
+    article.innerHTML = `
+      <a class="account-favorite-media" href="${escapeHtml(href)}">
+        <img src="${escapeHtml(image)}" alt="${escapeHtml(name)}" loading="lazy" decoding="async" />
+      </a>
+      <div class="account-favorite-info">
+        <h3>${escapeHtml(name)}</h3>
+        <p>${escapeHtml(priceText)}</p>
+        <div class="account-favorite-actions">
+          <a class="account-inline-link" href="${escapeHtml(href)}">Ver produto</a>
+          <button type="button" class="account-auth-link" data-remove-favorite="${escapeHtml(id)}">Remover</button>
+        </div>
+      </div>
+    `;
+
+    favoritesGrid.appendChild(article);
+  });
+}
+
 function readAddressForm() {
   return {
     label: String(addressLabelInput?.value || "").trim(),
@@ -735,7 +825,8 @@ async function boot() {
 
   currentUser = me.user;
   renderUser(me.user);
-  await Promise.all([loadOrders(), loadAddresses()]);
+  await Promise.all([loadOrders(), loadAddresses(), loadProductsCatalog()]);
+  renderFavorites();
 
   if (trackingPublicSearch) trackingPublicSearch.hidden = true;
   if (trackingAccountOrdersWrap) trackingAccountOrdersWrap.hidden = false;
@@ -753,6 +844,9 @@ navButtons.forEach((button) => {
     if (!isPublicTrackMode && panelName === "track") {
       loadTrackingOrdersForAccount();
     }
+    if (!isPublicTrackMode && panelName === "favorites") {
+      renderFavorites();
+    }
   });
 });
 
@@ -760,6 +854,18 @@ profileForm?.addEventListener("submit", handleProfileUpdate);
 publicTrackForm?.addEventListener("submit", handlePublicTrackSubmit);
 addressForm?.addEventListener("submit", handleAddressSubmit);
 addressesList?.addEventListener("click", handleAddressAction);
+favoritesGrid?.addEventListener("click", (event) => {
+  const target = event.target;
+  if (!(target instanceof Element)) return;
+  const button = target.closest("[data-remove-favorite]");
+  if (!(button instanceof HTMLButtonElement)) return;
+  event.preventDefault();
+  const favoriteId = String(button.getAttribute("data-remove-favorite") || "").trim();
+  if (!favoriteId) return;
+  store.toggleFavorite(favoriteId);
+  renderFavorites();
+  setFeedback("Favorito removido.");
+});
 cancelAddressEditBtn?.addEventListener("click", clearAddressForm);
 logoutBtn?.addEventListener("click", handleLogout);
 
@@ -785,6 +891,10 @@ addressStateInput?.addEventListener("input", (event) => {
   const input = event.target;
   if (!(input instanceof HTMLInputElement)) return;
   input.value = String(input.value || "").replace(/[^a-zA-Z]/g, "").toUpperCase().slice(0, 2);
+});
+
+window.addEventListener("tsebi:auth-changed", () => {
+  renderFavorites();
 });
 
 boot();
