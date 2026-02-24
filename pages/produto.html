@@ -218,6 +218,33 @@
     </aside>
   </div>
 
+  <div class="product-details-popup" id="sizeGuidePopup" aria-hidden="true">
+    <div class="product-details-popup-backdrop" id="sizeGuidePopupBackdrop"></div>
+    <aside class="product-details-popup-panel" role="dialog" aria-modal="true" aria-labelledby="sizeGuideTitle">
+      <button class="product-details-popup-close" id="closeSizeGuidePopup" type="button" aria-label="Fechar">&times;</button>
+      <p class="product-details-popup-kicker">Tabela de tamanhos</p>
+      <h2 class="product-details-popup-title" id="sizeGuideTitle">Guia de medidas</h2>
+      <div class="product-details-popup-content" id="sizeGuideMount"></div>
+    </aside>
+  </div>
+
+  <template id="tplSizeGuideContent">
+    <div class="product-size-guide-layout">
+      <section class="product-size-guide-card">
+        <h3 class="product-size-guide-card-title">Como medir</h3>
+        <p class="product-size-guide-copy" data-size-intro></p>
+        <ol class="product-size-guide-steps" data-size-steps></ol>
+      </section>
+      <section class="product-size-guide-card">
+        <h3 class="product-size-guide-card-title">Tabela</h3>
+        <div class="product-size-guide-table-wrap">
+          <table class="product-size-guide-table" data-size-table></table>
+        </div>
+        <p class="product-size-guide-copy" data-size-note></p>
+      </section>
+    </div>
+  </template>
+
   <script src="JS/user-utils.js?v=20260220a"></script>
   <script src="JS/produto.js?v=20260222c"></script>
   <script src="JS/posthog.js"></script>

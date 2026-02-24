@@ -470,10 +470,17 @@ if (!product) {
   const productColorOptions = document.getElementById("productColorOptions");
   const productSizeSelect = document.getElementById("productSizeSelect");
   const productStockNote = document.getElementById("productStockNote");
+  const sizeGuideBtn = document.querySelector(".product-size-guide");
   const openProductDetailsPopup = document.getElementById("openProductDetailsPopup");
   const productDetailsPopup = document.getElementById("productDetailsPopup");
   const productDetailsPopupBackdrop = document.getElementById("productDetailsPopupBackdrop");
   const closeProductDetailsPopup = document.getElementById("closeProductDetailsPopup");
+  const sizeGuidePopup = document.getElementById("sizeGuidePopup");
+  const sizeGuidePopupBackdrop = document.getElementById("sizeGuidePopupBackdrop");
+  const closeSizeGuidePopup = document.getElementById("closeSizeGuidePopup");
+  const sizeGuideTitle = document.getElementById("sizeGuideTitle");
+  const sizeGuideMount = document.getElementById("sizeGuideMount");
+  const sizeGuideTemplate = document.getElementById("tplSizeGuideContent");
   const productDetailsTitle = document.getElementById("productDetailsTitle");
   const productDetailsOrigin = document.getElementById("productDetailsOrigin");
   const productDetailsComposition = document.getElementById("productDetailsComposition");
@@ -515,6 +522,147 @@ if (!product) {
       construction: "Modelagem precisa, costuras limpas e estrutura pensada para manter caimento elegante ao longo do uso.",
       care: "Lavar a seco ou higienização profissional especializada. Guardar em local arejado e evitar contato com superfícies ásperas."
     };
+  }
+
+  function normalizeText(value) {
+    return String(value || "")
+      .toLowerCase()
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .trim();
+  }
+
+  function getGuideType(item) {
+    const category = normalizeText(item?.category);
+    if (/(calcad|tenis|sapato|bota|sneaker)/.test(category)) return "shoes";
+    if (/(calca|saia|short|bermuda|trouser)/.test(category)) return "bottom";
+    if (/(jaqueta|casaco|blazer|coat|jacket)/.test(category)) return "outerwear";
+    if (/(camisa|blusa|vestido|malha|shirt|dress|top|knit)/.test(category)) return "top";
+    return "top";
+  }
+
+  function getTopRowsBySize(size) {
+    const map = {
+      PP: { bust: "78-82", waist: "58-62", hip: "86-90" },
+      P: { bust: "83-88", waist: "63-68", hip: "91-96" },
+      M: { bust: "89-94", waist: "69-74", hip: "97-102" },
+      G: { bust: "95-102", waist: "75-82", hip: "103-110" },
+      GG: { bust: "103-110", waist: "83-90", hip: "111-118" },
+      XG: { bust: "111-118", waist: "91-98", hip: "119-126" }
+    };
+    return map[String(size || "").toUpperCase()] || { bust: "-", waist: "-", hip: "-" };
+  }
+
+  function getBottomRowsBySize(size) {
+    const map = {
+      PP: { waist: "58-62", hip: "86-90" },
+      P: { waist: "63-68", hip: "91-96" },
+      M: { waist: "69-74", hip: "97-102" },
+      G: { waist: "75-82", hip: "103-110" },
+      GG: { waist: "83-90", hip: "111-118" },
+      XG: { waist: "91-98", hip: "119-126" }
+    };
+    return map[String(size || "").toUpperCase()] || { waist: "-", hip: "-" };
+  }
+
+  function getShoeRowsBySize(size) {
+    const raw = String(size || "").trim();
+    const br = Number(raw);
+    if (!Number.isFinite(br)) return { br: raw || "-", eu: "-", cm: "-" };
+    return { br: String(br), eu: String(br + 2), cm: (22 + (br - 33) * 0.67).toFixed(1) };
+  }
+
+  function renderSizeGuide() {
+    if (!sizeGuideMount || !(sizeGuideTemplate instanceof HTMLTemplateElement)) return;
+    const guideType = getGuideType(product);
+    const sizes = Array.isArray(product.sizes) ? product.sizes : [];
+    const steps = isEnglish
+      ? [
+          "Measure with a flexible tape over light clothes.",
+          "Keep the tape close to the body, without tightening.",
+          "Compare your measurements with the row that best fits."
+        ]
+      : [
+          "Meça com fita métrica sobre roupa leve.",
+          "Mantenha a fita rente ao corpo, sem apertar.",
+          "Compare suas medidas com a linha que melhor se aproxima."
+        ];
+
+    if (sizeGuideTitle) sizeGuideTitle.textContent = `${tProductName(product)} • ${isEnglish ? "Size guide" : "Guia de medidas"}`;
+    const intro = isEnglish
+      ? "Measurements in centimeters. Compare with a similar piece you already own."
+      : "Medidas em centímetros. Compare com uma peça semelhante que você já possui.";
+    const note = isEnglish
+      ? "Tip: for a looser fit, choose one size up."
+      : "Dica: para um caimento mais solto, escolha um tamanho acima.";
+
+    const fragment = sizeGuideTemplate.content.cloneNode(true);
+    const introEl = fragment.querySelector("[data-size-intro]");
+    const noteEl = fragment.querySelector("[data-size-note]");
+    const stepsEl = fragment.querySelector("[data-size-steps]");
+    const tableEl = fragment.querySelector("[data-size-table]");
+    if (introEl) introEl.textContent = intro;
+    if (noteEl) noteEl.textContent = note;
+    if (stepsEl) {
+      stepsEl.innerHTML = steps.map((step) => `<li>${step}</li>`).join("");
+    }
+    if (!(tableEl instanceof HTMLTableElement)) {
+      sizeGuideMount.innerHTML = "";
+      sizeGuideMount.appendChild(fragment);
+      return;
+    }
+
+    let tableHtml = "";
+    if (guideType === "shoes") {
+      tableHtml = `
+        <thead>
+          <tr><th>Tamanho BR</th><th>EU</th><th>Palmilha (cm)</th></tr>
+        </thead>
+        <tbody>
+          ${sizes
+            .map((size) => {
+              const row = getShoeRowsBySize(size);
+              const selected = String(size) === String(selectedSize) ? "is-selected" : "";
+              return `<tr class="${selected}"><td>${row.br}</td><td>${row.eu}</td><td>${row.cm}</td></tr>`;
+            })
+            .join("")}
+        </tbody>
+      `;
+    } else if (guideType === "bottom") {
+      tableHtml = `
+        <thead>
+          <tr><th>Tamanho</th><th>Cintura (cm)</th><th>Quadril (cm)</th></tr>
+        </thead>
+        <tbody>
+          ${sizes
+            .map((size) => {
+              const row = getBottomRowsBySize(size);
+              const selected = String(size) === String(selectedSize) ? "is-selected" : "";
+              return `<tr class="${selected}"><td>${tSize(size)}</td><td>${row.waist}</td><td>${row.hip}</td></tr>`;
+            })
+            .join("")}
+        </tbody>
+      `;
+    } else {
+      tableHtml = `
+        <thead>
+          <tr><th>Tamanho</th><th>Busto/Tórax (cm)</th><th>Cintura (cm)</th><th>Quadril (cm)</th></tr>
+        </thead>
+        <tbody>
+          ${sizes
+            .map((size) => {
+              const row = getTopRowsBySize(size);
+              const selected = String(size) === String(selectedSize) ? "is-selected" : "";
+              return `<tr class="${selected}"><td>${tSize(size)}</td><td>${row.bust}</td><td>${row.waist}</td><td>${row.hip}</td></tr>`;
+            })
+            .join("")}
+        </tbody>
+      `;
+    }
+
+    tableEl.innerHTML = tableHtml;
+    sizeGuideMount.innerHTML = "";
+    sizeGuideMount.appendChild(fragment);
   }
 
   function getStock(color, size) {
@@ -716,6 +864,9 @@ if (!product) {
     renderGallery(gallery);
     renderVariantOptions();
     syncStockState();
+    if (sizeGuidePopup?.classList.contains("is-open")) {
+      renderSizeGuide();
+    }
   }
 
   function scoreSimilarity(baseProduct, candidate) {
@@ -878,6 +1029,21 @@ if (!product) {
     document.body.classList.add("no-scroll");
   }
 
+  function closeSizeGuidePopupPanel() {
+    if (!sizeGuidePopup) return;
+    sizeGuidePopup.classList.remove("is-open");
+    sizeGuidePopup.setAttribute("aria-hidden", "true");
+    document.body.classList.remove("no-scroll");
+  }
+
+  function openSizeGuidePopupPanel() {
+    if (!sizeGuidePopup) return;
+    renderSizeGuide();
+    sizeGuidePopup.classList.add("is-open");
+    sizeGuidePopup.setAttribute("aria-hidden", "false");
+    document.body.classList.add("no-scroll");
+  }
+
   function openCartPopup(lastKey) {
     if (!cartPopup) return;
     const cart = readCart();
@@ -1000,11 +1166,18 @@ if (!product) {
     event.preventDefault();
     openDetailsPopup();
   });
+  sizeGuideBtn?.addEventListener("click", (event) => {
+    event.preventDefault();
+    openSizeGuidePopupPanel();
+  });
   closeProductDetailsPopup?.addEventListener("click", closeDetailsPopup);
   productDetailsPopupBackdrop?.addEventListener("click", closeDetailsPopup);
+  closeSizeGuidePopup?.addEventListener("click", closeSizeGuidePopupPanel);
+  sizeGuidePopupBackdrop?.addEventListener("click", closeSizeGuidePopupPanel);
   window.addEventListener("keydown", (event) => {
     if (event.key === "Escape" && cartPopup?.classList.contains("is-open")) closePopup();
     if (event.key === "Escape" && productDetailsPopup?.classList.contains("is-open")) closeDetailsPopup();
+    if (event.key === "Escape" && sizeGuidePopup?.classList.contains("is-open")) closeSizeGuidePopupPanel();
   });
 
   if (productView) productView.hidden = false;
