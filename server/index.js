@@ -48,6 +48,19 @@ const posthogHost = process.env.POSTHOG_HOST || "";
 const stripe = stripeSecretKey ? new Stripe(stripeSecretKey) : null;
 let melhorEnvioSyncTimer = null;
 
+function normalizePosthogHost(value) {
+  const fallback = "https://us.i.posthog.com";
+  const raw = String(value || "").trim();
+  if (!raw) return fallback;
+  try {
+    const parsed = new URL(raw);
+    if (parsed.protocol !== "http:" && parsed.protocol !== "https:") return fallback;
+    return parsed.origin;
+  } catch {
+    return fallback;
+  }
+}
+
 app.set("trust proxy", 1);
 
 const webhookRateLimit = rateLimit({
@@ -811,7 +824,7 @@ app.get("/api/config", (req, res) => {
     posthog: posthogPublicKey
       ? {
           key: posthogPublicKey,
-          host: String(posthogHost || "https://us.i.posthog.com").trim() || "https://us.i.posthog.com"
+          host: normalizePosthogHost(posthogHost)
         }
       : null
   });

@@ -1038,10 +1038,10 @@ authRouter.post("/logout", (req, res) => {
 
 authRouter.get("/me", async (req, res) => {
   const userId = req.session?.userId;
-  if (!userId) return res.status(401).json({ error: "UNAUTHORIZED" });
+  if (!userId) return res.json({ authenticated: false, user: null });
   const user = await findUserById(userId);
-  if (!user) return res.status(401).json({ error: "UNAUTHORIZED" });
-  return res.json({ user: publicUser(user) });
+  if (!user) return res.json({ authenticated: false, user: null });
+  return res.json({ authenticated: true, user: publicUser(user) });
 });
 
 authRouter.post("/forgot-password", resetRateLimit, async (req, res) => {

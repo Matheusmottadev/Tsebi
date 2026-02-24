@@ -1,5 +1,5 @@
 (function initAccountRouter() {
-  const store = window.TsebiUserStore;
+  let store = window.TsebiUserStore || null;
   const subnav = document.querySelector(".conta-subnav");
   const subnavLinks = Array.from(document.querySelectorAll(".conta-subnav [data-section]"));
   const mount = document.getElementById("accountSectionMount");
@@ -26,6 +26,13 @@
     products: [],
     detailCache: {}
   };
+
+  function resolveStore() {
+    if (!store && window.TsebiUserStore) {
+      store = window.TsebiUserStore;
+    }
+    return store;
+  }
 
   function showLoader() {
     if (!loader) return;
@@ -321,12 +328,15 @@
       renderTemplate("tpl-wishlist");
       setActiveSubnav("wishlist");
       if (typeof window.initWishlistSection === "function") {
+        const activeStore = resolveStore();
         window.initWishlistSection({
-          store,
+          store: activeStore,
           favorites: state.favorites || [],
           products: state.products || [],
           onFavoritesChanged: async () => {
-            state.favorites = Array.isArray(store?.getFavoriteIds?.()) ? store.getFavoriteIds().map((id) => String(id || "")) : [];
+            state.favorites = Array.isArray(activeStore?.getFavoriteIds?.())
+              ? activeStore.getFavoriteIds().map((id) => String(id || ""))
+              : [];
           }
         });
       }
@@ -360,10 +370,17 @@
   }
 
   async function bootAuthenticated() {
+    const activeStore = resolveStore();
+    if (!activeStore) {
+      showAuthGate();
+      setAuthFeedback("NÃ£o foi possÃ­vel iniciar sua sessÃ£o agora. Tente novamente.", true);
+      return;
+    }
+
     const [ordersResult, products, favIds] = await Promise.all([
-      store.fetchMyOrders(),
+      activeStore.fetchMyOrders(),
       loadProductsCatalog(),
-      Promise.resolve(store.getFavoriteIds())
+      Promise.resolve(activeStore.getFavoriteIds())
     ]);
 
     state.orders = ordersResult.ok ? (ordersResult.orders || []) : [];
@@ -398,13 +415,15 @@
       return;
     }
 
-    if (!store) {
-      window.location.href = "index.html";
+    const activeStore = resolveStore();
+    if (!activeStore) {
+      showAuthGate();
+      setAuthFeedback("NÃ£o foi possÃ­vel carregar o login agora. Atualize a pÃ¡gina e tente novamente.", true);
       return;
     }
 
-    const me = await store.fetchMe();
-    const fallbackUser = typeof store.getCurrentUser === "function" ? store.getCurrentUser() : null;
+    const me = await activeStore.fetchMe();
+    const fallbackUser = typeof activeStore.getCurrentUser === "function" ? activeStore.getCurrentUser() : null;
     if ((!me.ok || !me.user) && !fallbackUser) {
       const returnUrl = `${window.location.pathname}${window.location.search}${window.location.hash}`;
       window.location.href = `login.html?returnUrl=${encodeURIComponent(returnUrl)}`;
@@ -428,7 +447,9 @@
   });
 
   logoutBtn?.addEventListener("click", async () => {
-    await store.logout();
+    const activeStore = resolveStore();
+    if (!activeStore) return;
+    await activeStore.logout();
     state.user = null;
     state.orders = [];
     state.favorites = [];
@@ -446,7 +467,13 @@
     }
     if (authSubmit) authSubmit.disabled = true;
     setAuthFeedback("");
-    const result = await store.login({ email, password });
+    const activeStore = resolveStore();
+    if (!activeStore) {
+      if (authSubmit) authSubmit.disabled = false;
+      setAuthFeedback("NÃ£o foi possÃ­vel iniciar o login agora. Atualize a pÃ¡gina e tente novamente.", true);
+      return;
+    }
+    const result = await activeStore.login({ email, password });
     if (authSubmit) authSubmit.disabled = false;
     if (!result?.ok || !result?.user) {
       setAuthFeedback(result?.error || "Não foi possível entrar.", true);

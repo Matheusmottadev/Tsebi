@@ -10,6 +10,18 @@
     config: null
   };
 
+  function normalizeHost(value) {
+    const raw = String(value || "").trim();
+    if (!raw) return DEFAULT_HOST;
+    try {
+      const parsed = new URL(raw);
+      if (parsed.protocol !== "http:" && parsed.protocol !== "https:") return DEFAULT_HOST;
+      return parsed.origin;
+    } catch {
+      return DEFAULT_HOST;
+    }
+  }
+
   function isLocalhost() {
     return LOCAL_HOSTS.has(window.location.hostname);
   }
@@ -38,7 +50,7 @@
       if (!res.ok) return null;
       const json = await res.json();
       if (!json || !json.posthog || !json.posthog.key) return null;
-      const host = String(json.posthog.host || DEFAULT_HOST).trim() || DEFAULT_HOST;
+      const host = normalizeHost(json.posthog.host || DEFAULT_HOST);
       state.config = { key: String(json.posthog.key || "").trim(), host };
       return state.config;
     } catch {
@@ -49,7 +61,7 @@
   function ensurePosthogSnippet(apiHost) {
     if (window.posthog && window.posthog.__SV) return;
 
-    const scriptHost = String(apiHost || DEFAULT_HOST)
+    const scriptHost = normalizeHost(apiHost || DEFAULT_HOST)
       .replace(".i.posthog.com", "-assets.i.posthog.com")
       .replace("https://", "https://");
 
