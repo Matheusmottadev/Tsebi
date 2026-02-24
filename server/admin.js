@@ -52,6 +52,12 @@ const { ensureAdminProfile, updateAdminProfile } = require("./lib/admin-profile-
 const { listAdminLoginEvents } = require("./lib/admin-login-events-repository");
 const { readJson } = require("./lib/json-store");
 const { sendEmail } = require("./lib/email-service");
+const {
+  listAccessCodes,
+  upsertAccessCode,
+  deleteAccessCode,
+  normalizeCode
+} = require("./lib/access-code-repository");
 // Lazy load R2 upload module to avoid build-time errors
 let uploadR2Buffer = null;
 function getR2Upload() {
@@ -246,6 +252,24 @@ const newsletterSendSchema = z.object({
   text: z.string().trim().max(100_000).optional().default(""),
   source: z.string().trim().max(80).optional().default(""),
   testEmail: z.string().trim().email().optional().default("")
+});
+
+const accessCodeUpsertSchema = z.object({
+  code: z
+    .string()
+    .trim()
+    .min(3)
+    .max(40)
+    .transform((value) => normalizeCode(value)),
+  type: z.enum(["percent", "fixed"]).default("percent"),
+  percentOff: z.coerce.number().int().min(0).max(100).optional().default(0),
+  amountOffCents: z.coerce.number().int().min(0).max(9_999_999).optional().default(0),
+  minSubtotalCents: z.coerce.number().int().min(0).max(9_999_999).optional().default(0),
+  maxDiscountCents: z.coerce.number().int().min(0).max(9_999_999).optional().default(0),
+  active: z.coerce.boolean().optional().default(true),
+  startsAt: z.string().trim().max(40).optional().default(""),
+  expiresAt: z.string().trim().max(40).optional().default(""),
+  description: z.string().trim().max(180).optional().default("")
 });
 
 function maskCpfForList(cpf) {
@@ -1872,6 +1896,76 @@ adminRouter.post("/newsletter/send", sensitiveAdminRateLimit, async (req, res) =
     });
   } catch {
     return res.status(500).json({ error: "ADMIN_NEWSLETTER_SEND_FAILED" });
+  }
+});
+
+adminRouter.get("/coupons", async (req, res) => {
+  try {
+    const query = String(req.query.query || "").trim();
+    const page = Number(req.query.page || 1);
+    const pageSize = Number(req.query.pageSize || 50);
+    const result = await listAccessCodes({ query, page, pageSize });
+    return res.json({
+      rows: result.rows,
+      total: result.total,
+      page: result.page,
+      pageSize: result.pageSize
+    });
+  } catch {
+    return res.status(500).json({ error: "ADMIN_COUPONS_LIST_FAILED" });
+  }
+});
+
+adminRouter.post("/coupons", async (req, res) => {
+  const parsed = accessCodeUpsertSchema.safeParse(req.body || {});
+  if (!parsed.success) return res.status(400).json({ error: "INVALID_INPUT" });
+
+  try {
+    const result = await upsertAccessCode(parsed.data);
+    if (!result?.ok) return res.status(400).json({ error: result?.error || "INVALID_INPUT" });
+    return res.status(result.created ? 201 : 200).json({
+      ok: true,
+      created: Boolean(result.created),
+      coupon: result.code
+    });
+  } catch {
+    return res.status(500).json({ error: "ADMIN_COUPON_SAVE_FAILED" });
+  }
+});
+
+adminRouter.patch("/coupons/:code", async (req, res) => {
+  const currentCode = normalizeCode(String(req.params.code || ""));
+  if (!currentCode) return res.status(400).json({ error: "INVALID_CODE" });
+
+  const parsed = accessCodeUpsertSchema.partial().safeParse(req.body || {});
+  if (!parsed.success) return res.status(400).json({ error: "INVALID_INPUT" });
+
+  try {
+    const listed = await listAccessCodes({ query: currentCode, page: 1, pageSize: 200 });
+    const current =
+      (Array.isArray(listed.rows) ? listed.rows : []).find((entry) => String(entry?.code || "") === currentCode) || null;
+    if (!current) return res.status(404).json({ error: "NOT_FOUND" });
+
+    const merged = { ...current, ...parsed.data, code: currentCode };
+    const result = await upsertAccessCode(merged);
+    if (!result?.ok) return res.status(400).json({ error: result?.error || "INVALID_INPUT" });
+    return res.json({ ok: true, coupon: result.code });
+  } catch {
+    return res.status(500).json({ error: "ADMIN_COUPON_UPDATE_FAILED" });
+  }
+});
+
+adminRouter.delete("/coupons/:code", async (req, res) => {
+  const code = normalizeCode(String(req.params.code || ""));
+  if (!code) return res.status(400).json({ error: "INVALID_CODE" });
+
+  try {
+    const result = await deleteAccessCode(code);
+    if (!result?.ok && result?.error === "NOT_FOUND") return res.status(404).json({ error: "NOT_FOUND" });
+    if (!result?.ok) return res.status(400).json({ error: result?.error || "REQUEST_FAILED" });
+    return res.json({ ok: true, removed: result.removed });
+  } catch {
+    return res.status(500).json({ error: "ADMIN_COUPON_DELETE_FAILED" });
   }
 });
 

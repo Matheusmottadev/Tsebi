@@ -7,6 +7,7 @@ import { createOrdersPage } from "./orders.js";
 import { createProductsPage } from "./products.js";
 import { createVipPage } from "./vip.js";
 import { createNewsletterPage } from "./newsletter.js";
+import { createCouponsPage } from "./coupons.js";
 import { createAuditPage } from "./audit.js";
 import { createWhatsAppPage } from "./whatsapp.js";
 
@@ -214,6 +215,7 @@ async function main() {
     productsMount: document.getElementById("productsMount"),
     vipMount: document.getElementById("vipMount"),
     newsletterMount: document.getElementById("newsletterMount"),
+    couponsMount: document.getElementById("couponsMount"),
     whatsappMount: document.getElementById("whatsappMount"),
     auditMount: document.getElementById("auditMount")
   };
@@ -252,6 +254,7 @@ async function main() {
   });
   const vipPage = createVipPage({ mount: els.vipMount, drawer });
   const newsletterPage = createNewsletterPage({ mount: els.newsletterMount });
+  const couponsPage = createCouponsPage({ mount: els.couponsMount });
   const whatsappPage = createWhatsAppPage({ mount: els.whatsappMount });
   const auditPage = createAuditPage({
     mount: els.auditMount,
@@ -265,6 +268,7 @@ async function main() {
     products: productsPage,
     vip: vipPage,
     newsletter: newsletterPage,
+    coupons: couponsPage,
     whatsapp: whatsappPage,
     audit: auditPage
   };

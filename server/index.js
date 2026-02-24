@@ -24,6 +24,7 @@ const {
 const { notifyOrderConfirmed, notifyPaymentApproved } = require("./lib/order-notification-service");
 const { listProducts, getProductByIdentifier } = require("./lib/product-repository");
 const { checkAvailability, commitStock } = require("./lib/inventory-repository");
+const { evaluateAccessCode } = require("./lib/access-code-repository");
 const { withTransaction } = require("./lib/db");
 const { shippingRouter } = require("../src/routes/shipping.routes");
 const { adminShippingRouter } = require("../src/routes/admin.shipping.routes");
@@ -100,6 +101,7 @@ const newsletterSubscribeSchema = z.object({
 
 const paymentIntentSchema = z.object({
   paymentMethod: z.string().trim().optional().default("automatic"),
+  discountCode: z.string().trim().max(40).optional().default(""),
   installments: z.coerce.number().int().min(1).max(6).optional().default(1),
   items: z
     .array(
@@ -866,6 +868,40 @@ app.get("/api/config", (req, res) => {
   });
 });
 
+app.post("/api/discount-codes/apply", async (req, res) => {
+  const code = String(req.body?.code || "").trim();
+  const subtotalCents = Math.max(0, Math.floor(Number(req.body?.subtotalCents || 0)));
+  const shippingCents = Math.max(0, Math.floor(Number(req.body?.shippingCents || 0)));
+
+  if (!code) return res.status(400).json({ ok: false, error: "INVALID_CODE" });
+
+  try {
+    const result = await evaluateAccessCode({
+      code,
+      subtotalCents,
+      shippingCents
+    });
+
+    if (!result.ok) {
+      return res.status(400).json({ ok: false, error: result.error || "CODE_NOT_APPLICABLE" });
+    }
+
+    return res.json({
+      ok: true,
+      code: result.entry.code,
+      discountCents: result.discountCents,
+      subtotalCents: result.subtotalCents,
+      shippingCents: result.shippingCents,
+      totalCents: result.totalCents,
+      type: result.entry.type,
+      percentOff: result.entry.percentOff,
+      amountOffCents: result.entry.amountOffCents
+    });
+  } catch {
+    return res.status(500).json({ ok: false, error: "ACCESS_CODE_EVALUATION_FAILED" });
+  }
+});
+
 app.post("/api/newsletter/subscribe", newsletterSubscribeRateLimit, async (req, res) => {
   const parsed = newsletterSubscribeSchema.safeParse(req.body || {});
   if (!parsed.success) {
@@ -938,6 +974,7 @@ app.post("/api/orders/payment-intent", paymentIntentRateLimit, async (req, res) 
   }
 
   const paymentMethod = parsed.data.paymentMethod;
+  const requestedDiscountCode = String(parsed.data.discountCode || "").trim();
   const installments = parsed.data.installments;
   const normalizedItems = normalizeAndAggregateItems(parsed.data.items);
   const shipping = normalizeShipping(parsed.data.shipping || null);
@@ -1007,7 +1044,20 @@ app.post("/api/orders/payment-intent", paymentIntentRateLimit, async (req, res) 
     }
   }
 
-  const orderAmount = itemsAmount + shippingAmount;
+  let discountAmount = 0;
+  if (requestedDiscountCode) {
+    const discountResult = await evaluateAccessCode({
+      code: requestedDiscountCode,
+      subtotalCents: itemsAmount,
+      shippingCents: shippingAmount
+    });
+    if (!discountResult.ok) {
+      return res.status(400).json({ error: discountResult.error || "CODE_NOT_APPLICABLE" });
+    }
+    discountAmount = Math.max(0, Number(discountResult.discountCents || 0));
+  }
+
+  const orderAmount = Math.max(0, itemsAmount + shippingAmount - discountAmount);
   const currency = "brl";
 
   try {
@@ -1048,6 +1098,8 @@ app.post("/api/orders/payment-intent", paymentIntentRateLimit, async (req, res) 
     shipping: shipping
       ? {
           ...shipping,
+          discountCode: requestedDiscountCode || "",
+          discountCents: discountAmount,
           shippingCost: shippingAmount / 100,
           selectedProvider: selectedShippingQuote?.provider || "",
           selectedService: selectedShippingQuote?.serviceName || "",

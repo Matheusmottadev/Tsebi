@@ -47,7 +47,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600&family=Montserrat:wght@300;400;500;600&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="css/style.css?v=20260220h" />
-  <link rel="stylesheet" href="css/checkout.css?v=20260218e" />
+  <link rel="stylesheet" href="css/checkout.css?v=20260224a" />
 </head>
 <body class="checkout-v2">
   <header class="cart-simple-header">
@@ -271,6 +271,15 @@
         </button>
         <div class="checkout-summary-body" id="summaryBody">
           <h3>Resumo do pedido</h3>
+          <section class="access-code-card" aria-label="Código de acesso">
+            <h4>Código de acesso</h4>
+            <p>Disponível para clientes com acesso especial.</p>
+            <div class="access-code-row">
+              <input id="accessCodeInput" type="text" placeholder="Digite seu código" autocomplete="off" />
+              <button type="button" id="applyAccessCodeBtn">Aplicar</button>
+            </div>
+            <p class="access-code-feedback" id="accessCodeFeedback" aria-live="polite"></p>
+          </section>
           <div class="summary-line">
             <span>Subtotal</span>
             <strong id="summarySubtotal">R$ 0,00</strong>
@@ -326,7 +335,7 @@
   <script src="https://js.stripe.com/v3/"></script>
   <script src="JS/user-utils.js?v=20260220a"></script>
   <script src="JS/script.js?v=20260224a"></script>
-  <script src="JS/cart.js?v=20260222d"></script>
+  <script src="JS/cart.js?v=20260224a"></script>
   <script src="JS/posthog.js"></script>
   <script src="JS/cookies.js"></script>
   <script src="JS/language-switcher.js"></script>

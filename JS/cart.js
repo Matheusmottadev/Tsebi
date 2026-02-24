@@ -26,7 +26,8 @@ const checkoutState = {
   cart: {
     items: [],
     subtotal: 0,
-    discount: 0
+    discount: 0,
+    discountCode: ""
   },
   shipping: {
     firstName: "",
@@ -131,6 +132,9 @@ const dom = {
   summaryDiscount: document.getElementById("summaryDiscount"),
   summaryTotal: document.getElementById("summaryTotal"),
   summaryEstimate: document.getElementById("summaryEstimate"),
+  accessCodeInput: document.getElementById("accessCodeInput"),
+  applyAccessCodeBtn: document.getElementById("applyAccessCodeBtn"),
+  accessCodeFeedback: document.getElementById("accessCodeFeedback"),
   summary: document.getElementById("checkoutSummary"),
   summaryCollapseBtn: document.getElementById("summaryCollapseBtn"),
   shippingOptionsList: document.getElementById("shippingOptionsList"),
@@ -267,6 +271,14 @@ function parsePriceLabel(label) {
 
 function formatCurrency(value) {
   return Number(value || 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+}
+
+function toCents(value) {
+  return Math.max(0, Math.round(Number(value || 0) * 100));
+}
+
+function fromCents(value) {
+  return Math.max(0, Number(value || 0) / 100);
 }
 
 const COLOR_SWATCH_MAP = {
@@ -615,10 +627,85 @@ function getSummaryTotal() {
   return checkoutState.cart.subtotal + checkoutState.shipping.shippingCost - checkoutState.cart.discount;
 }
 
+function setAccessCodeFeedback(message, tone = "") {
+  if (!dom.accessCodeFeedback) return;
+  dom.accessCodeFeedback.textContent = String(message || "");
+  dom.accessCodeFeedback.style.color = tone === "error" ? "#9d1f1f" : "#1d6a2d";
+}
+
+function clearAccessCode({ clearInput = false } = {}) {
+  checkoutState.cart.discount = 0;
+  checkoutState.cart.discountCode = "";
+  if (clearInput && dom.accessCodeInput) dom.accessCodeInput.value = "";
+  setAccessCodeFeedback("");
+}
+
+async function applyAccessCode(rawCode, { silent = false } = {}) {
+  const normalized = String(rawCode || "")
+    .trim()
+    .toUpperCase()
+    .replace(/[^A-Z0-9_-]/g, "")
+    .slice(0, 40);
+
+  if (!normalized) {
+    clearAccessCode({ clearInput: false });
+    updateSummary();
+    if (!silent) setAccessCodeFeedback("Informe um código de acesso válido.", "error");
+    return false;
+  }
+
+  if (dom.applyAccessCodeBtn) dom.applyAccessCodeBtn.disabled = true;
+  if (!silent) setAccessCodeFeedback("Validando código de acesso...");
+
+  try {
+    const result = await apiRequest("/api/discount-codes/apply", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        code: normalized,
+        subtotalCents: toCents(checkoutState.cart.subtotal),
+        shippingCents: toCents(checkoutState.shipping.shippingCost)
+      })
+    });
+
+    checkoutState.cart.discount = fromCents(result?.discountCents || 0);
+    checkoutState.cart.discountCode = String(result?.code || normalized);
+    if (dom.accessCodeInput) dom.accessCodeInput.value = checkoutState.cart.discountCode;
+    updateSummary();
+    invalidatePaymentSession();
+    if (!silent) setAccessCodeFeedback("Código de acesso aplicado com sucesso.");
+    return true;
+  } catch (error) {
+    clearAccessCode({ clearInput: false });
+    updateSummary();
+    invalidatePaymentSession();
+    if (!silent) {
+      const code = String(error?.code || error?.message || "");
+      if (code.includes("NOT_FOUND")) setAccessCodeFeedback("Código de acesso não encontrado.", "error");
+      else if (code.includes("INACTIVE")) setAccessCodeFeedback("Código de acesso inativo.", "error");
+      else if (code.includes("NOT_AVAILABLE_NOW")) setAccessCodeFeedback("Código fora do período de validade.", "error");
+      else if (code.includes("NOT_APPLICABLE")) setAccessCodeFeedback("Código não aplicável para este carrinho.", "error");
+      else setAccessCodeFeedback("Não foi possível aplicar o código de acesso.", "error");
+    }
+    return false;
+  } finally {
+    if (dom.applyAccessCodeBtn) dom.applyAccessCodeBtn.disabled = false;
+  }
+}
+
+function revalidateAccessCodeSilently() {
+  if (!checkoutState.cart.discountCode) return;
+  applyAccessCode(checkoutState.cart.discountCode, { silent: true });
+}
+
 function updateSummary() {
   if (dom.summarySubtotal) dom.summarySubtotal.textContent = formatCurrency(checkoutState.cart.subtotal);
   if (dom.summaryShipping) dom.summaryShipping.textContent = formatCurrency(checkoutState.shipping.shippingCost);
-  if (dom.summaryDiscount) dom.summaryDiscount.textContent = formatCurrency(checkoutState.cart.discount);
+  if (dom.summaryDiscount) {
+    dom.summaryDiscount.textContent = checkoutState.cart.discount > 0
+      ? `- ${formatCurrency(checkoutState.cart.discount)}`
+      : formatCurrency(0);
+  }
   if (dom.summaryTotal) dom.summaryTotal.textContent = formatCurrency(getSummaryTotal());
   if (dom.summaryEstimate) {
     dom.summaryEstimate.textContent = checkoutState.shipping.shippingEstimate
@@ -635,6 +722,9 @@ function recalcCartTotals() {
     subtotal += parsePriceLabel(item.priceLabel) * qty;
   });
   checkoutState.cart.subtotal = subtotal;
+  if (checkoutState.cart.discountCode) {
+    revalidateAccessCodeSilently();
+  }
   updateSummary();
 }
 
@@ -653,6 +743,7 @@ function renderCartItems() {
   syncHeaderCartBadge();
 
   if (!hasItems) {
+    clearAccessCode({ clearInput: true });
     clearShippingQuotes({ keepSelection: false });
     dom.shippingForm?.querySelectorAll('input[name="shippingMethod"]').forEach((input) => {
       input.checked = false;
@@ -932,7 +1023,8 @@ function getPaymentSessionSignature() {
     items: getServerItemsPayload(),
     shipping: buildShippingPayload(),
     paymentMethod: checkoutState.payment.methodPreference || "automatic",
-    installments: checkoutState.payment.installments
+    installments: checkoutState.payment.installments,
+    discountCode: checkoutState.cart.discountCode || ""
   });
 }
 
@@ -1380,6 +1472,7 @@ async function ensurePaymentElementReady() {
       body: JSON.stringify({
         items,
         paymentMethod: checkoutState.payment.methodPreference || "automatic",
+        discountCode: checkoutState.cart.discountCode || "",
         installments: checkoutState.payment.installments,
         shipping: shippingPayload,
         customer: {
@@ -1715,6 +1808,18 @@ function bindEvents() {
   dom.goToShippingBtn?.addEventListener("click", () => {
     if (checkoutState.cart.items.length === 0) return;
     advanceToStep(2);
+  });
+
+  dom.applyAccessCodeBtn?.addEventListener("click", () => {
+    const code = String(dom.accessCodeInput?.value || "");
+    applyAccessCode(code, { silent: false });
+  });
+
+  dom.accessCodeInput?.addEventListener("keydown", (event) => {
+    if (event.key !== "Enter") return;
+    event.preventDefault();
+    const code = String(dom.accessCodeInput?.value || "");
+    applyAccessCode(code, { silent: false });
   });
 
   dom.shippingForm?.addEventListener("input", onShippingFieldInput);
