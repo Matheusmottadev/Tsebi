@@ -462,7 +462,7 @@
           <p>Although reasonable safeguards are adopted, data transmission over the internet is not risk-free.</p>
           <h3>8. Acceptance of Terms</h3>
           <p>By using this Site, you acknowledge and accept these Terms and Conditions of Use.</p>
-          <p class="legal-signature">Tsebi<br />[City - State]<br />E-mail: [your@email.com]<br />Tax ID: [if applicable]</p>
+          <p class="legal-signature">Tsebi<br />[City - State]<br />E-mail: [your@email.com]<br />Tax ID: 65.164.000/0001-72</p>
         `;
       }
       return;
