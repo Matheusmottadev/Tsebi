@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { Product } from "@/types";
-import { GenderShowcase } from "@/components/home-legacy/GenderShowcase";
 import { LegacyFooter } from "@/components/home-legacy/LegacyFooter";
 import { LegacyHero } from "@/components/home-legacy/LegacyHero";
 import { NewsletterPopup } from "@/components/home-legacy/NewsletterPopup";
@@ -733,8 +732,6 @@ export function LegacyHome({ products }: LegacyHomeProps) {
 
       <LegacyHero />
       <NewsletterPopup />
-
-      <GenderShowcase products={safeProducts} />
 
       <section className="new-drop" aria-label="Nova colecao em video">
         <div className="new-drop-inner">
