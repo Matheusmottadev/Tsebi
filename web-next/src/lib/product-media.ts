@@ -12,13 +12,7 @@ type ProductLikeWithMedia = {
 };
 
 export const PRODUCT_IMAGE_POOL = [
-  "/images/produtos/sug1.jpeg",
-  "/images/produtos/sug2.jpeg",
-  "/images/produtos/sug3.jpeg",
-  "/images/produtos/sug4.jpeg",
-  "/images/produtos/sug5.jpeg",
-  "/images/produtos/sug6.jpeg",
-  "/images/produtos/sug7.jpeg",
+  "/images/placeholder.jpg",
 ] as const;
 
 export const PRODUCT_IMAGE_FALLBACK = PRODUCT_IMAGE_POOL[0];

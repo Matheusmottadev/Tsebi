@@ -26,15 +26,7 @@ function normalizeImageList(input: unknown): string[] {
 }
 
 function buildGalleryImages(product: Product, recommendations: Product[]): string[] {
-  const fallbackGalleryPool = [
-    "/images/produtos/sug1.jpeg",
-    "/images/produtos/sug2.jpeg",
-    "/images/produtos/sug3.jpeg",
-    "/images/produtos/sug4.jpeg",
-    "/images/produtos/sug5.jpeg",
-    "/images/produtos/sug6.jpeg",
-    "/images/produtos/sug7.jpeg",
-  ];
+  const fallbackGalleryPool = ["/images/placeholder.jpg"];
 
   const anyProduct = product as Product & {
     images?: unknown;
@@ -78,7 +70,7 @@ function getProductMediaList(product: Product): string[] {
 
 function resolveTailoredCardImages(item: Product, fallbackPool: string[]): { primary: string; secondary: string } {
   const media = getProductMediaList(item);
-  const primary = media[0] || String(item.image || "").trim() || fallbackPool[0] || "/images/produtos/sug1.jpeg";
+  const primary = media[0] || String(item.image || "").trim() || fallbackPool[0] || "/images/placeholder.jpg";
   const secondary =
     media.find((src) => src !== primary) ||
     fallbackPool.find((src) => src && src !== primary) ||
