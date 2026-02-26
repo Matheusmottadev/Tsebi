@@ -5,8 +5,20 @@
   "description": "TSEBI storefront with Stripe checkout backend",
   "main": "server/index.js",
   "scripts": {
-    "start": "node server/index.js",
-    "dev": "node --watch server/index.js",
+    "start": "tsx server/index.ts",
+    "dev": "tsx watch server/index.ts",
+    "build:api": "tsc -p tsconfig.build.json",
+    "start:api": "node dist/server/index.js",
+    "test:api": "vitest run tests/api --reporter=default",
+    "test:api:watch": "vitest tests/api",
+    "typecheck": "npm run typecheck:strict",
+    "typecheck:strict": "tsc -p tsconfig.strict.json",
+    "typecheck:ci": "tsc -p tsconfig.ci.json",
+    "typecheck:watch": "tsc -p tsconfig.strict.json --watch",
+    "dev:web": "npm --prefix web-next run dev",
+    "lint:web": "npm --prefix web-next run lint",
+    "typecheck:web": "npm --prefix web-next run typecheck",
+    "build:web": "npm --prefix web-next run build",
     "migrate": "node scripts/run-migrations.js",
     "migrate:json": "node scripts/migrate-json-to-db.js",
     "launch:prelaunch": "node scripts/set-launch-mode.js prelaunch",
@@ -29,5 +41,15 @@
     "qrcode": "^1.5.4",
     "stripe": "^18.0.0",
     "zod": "^3.24.1"
+  },
+  "devDependencies": {
+    "@types/express": "^5.0.3",
+    "@types/express-session": "^1.18.2",
+    "@types/node": "^22.18.11",
+    "@types/supertest": "^6.0.3",
+    "supertest": "^7.1.4",
+    "tsx": "^4.21.0",
+    "typescript": "^5.9.2",
+    "vitest": "^3.2.4"
   }
 }

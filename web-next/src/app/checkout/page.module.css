@@ -1,0 +1,64 @@
+.page {
+  min-height: 100vh;
+  background: #fff;
+}
+
+.main {
+  width: 100%;
+  max-width: 1520px;
+  margin: 0 auto;
+  padding: 112px 24px 52px;
+}
+
+.card {
+  background: #fff;
+  border: 1px solid #ececec;
+  border-radius: 12px;
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-width: 680px;
+}
+
+.kicker {
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-size: 11px;
+  font-weight: 700;
+  color: #7a7a7a;
+}
+
+.card h1 {
+  font-size: 28px;
+  line-height: 1.1;
+}
+
+.card p {
+  color: #555;
+  font-size: 14px;
+}
+
+.primaryLink {
+  margin-top: 8px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 40px;
+  border-radius: 999px;
+  border: 1px solid #111;
+  padding: 0 16px;
+  width: fit-content;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+@media (max-width: 760px) {
+  .main {
+    padding: 86px 16px 40px;
+  }
+
+  .card h1 {
+    font-size: 24px;
+  }
+}

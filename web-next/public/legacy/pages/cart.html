@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="format-detection" content="telephone=no, date=no, email=no, address=no" />
+  <link rel="icon" type="image/svg+xml" href="/images/favicon-dark.svg?v=20260219c" media="(prefers-color-scheme: dark)" />
+  <link rel="icon" type="image/svg+xml" href="/images/favicon-light.svg?v=20260219c" media="(prefers-color-scheme: light)" />
+  <link rel="icon" type="image/png" href="/images/logo-tsebi.png?v=20260219c" />
+  <link rel="shortcut icon" href="/images/logo-tsebi.png?v=20260219c" />
+  <link rel="apple-touch-icon" href="/images/logo-tsebi.png?v=20260219c" />
+  <title>Checkout | Tsebi Brasil</title>
+  <!-- SEO META START -->
+  <meta name="description" content="Checkout da Tsebi para finalizar pedidos." />
+  <meta name="robots" content="noindex,nofollow" />
+  <link rel="canonical" href="https://tsebi.com.br/cart.html" />
+  <meta property="og:locale" content="pt_BR" />
+  <meta property="og:type" content="website" />
+  <meta property="og:title" content="Checkout | Tsebi Brasil" />
+  <meta property="og:description" content="Checkout da Tsebi para finalizar pedidos." />
+  <meta property="og:url" content="https://tsebi.com.br/cart.html" />
+  <meta property="og:site_name" content="Tsebi Brasil" />
+  <meta property="og:image" content="https://tsebi.com.br/images/logo-tsebi.png" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="Checkout | Tsebi Brasil" />
+  <meta name="twitter:description" content="Checkout da Tsebi para finalizar pedidos." />
+  <meta name="twitter:image" content="https://tsebi.com.br/images/logo-tsebi.png" />
+  <!-- SEO META END -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-4GHX4VL6DZ"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    gtag('consent', 'default', {
+      analytics_storage: 'denied',
+      ad_storage: 'denied',
+      ad_user_data: 'denied',
+      ad_personalization: 'denied',
+      functionality_storage: 'denied',
+      security_storage: 'granted'
+    });
+    gtag('config', 'G-4GHX4VL6DZ', {
+      anonymize_ip: true
+    });
+  </script>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600&family=Montserrat:wght@300;400;500;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/style.css?v=20260220h" />
+  <link rel="stylesheet" href="css/checkout.css?v=20260224a" />
+</head>
+<body class="checkout-v2">
+  <header class="cart-simple-header">
+    <a class="cart-simple-logo" href="index.html">TSEBI</a>
+    <button class="search-box-trigger cart-search-trigger" id="openSearch" type="button" aria-label="Abrir busca">
+      <span class="search-box-label">O que voc&ecirc; est&aacute; buscando?</span>
+      <span class="search-box-icon">&#8985;</span>
+    </button>
+    <nav class="cart-simple-actions" aria-label="A&ccedil;&otilde;es do cabe&ccedil;alho">
+      <a href="login.html" aria-label="Conta">Conta</a>
+      <a href="cart.html" aria-label="Carrinho">Carrinho</a>
+    </nav>
+  </header>
+
+  <main class="checkout-main" id="checkoutRoot">
+    <section class="checkout-header">
+      <p class="checkout-kicker">Checkout Tsebi</p>
+      <h1>Finalize seu pedido</h1>
+      <ol class="checkout-stepper" id="checkoutStepper" aria-label="Etapas do checkout">
+        <li>
+          <button type="button" class="checkout-step-btn is-active" data-step-target="1">
+            <span class="checkout-step-index">1</span>
+            <span class="checkout-step-label">Carrinho</span>
+          </button>
+        </li>
+        <li>
+          <button type="button" class="checkout-step-btn" data-step-target="2" aria-disabled="true">
+            <span class="checkout-step-index">2</span>
+            <span class="checkout-step-label">Entrega</span>
+          </button>
+        </li>
+        <li>
+          <button type="button" class="checkout-step-btn" data-step-target="3" aria-disabled="true">
+            <span class="checkout-step-index">3</span>
+            <span class="checkout-step-label">Pagamento</span>
+          </button>
+        </li>
+      </ol>
+    </section>
+
+    <section class="checkout-layout">
+      <div class="checkout-content">
+        <section class="checkout-step-panel is-active" id="step1" aria-labelledby="step1Title">
+          <header class="checkout-panel-head">
+            <h2 id="step1Title">Carrinho</h2>
+            <p>Revise suas pe&ccedil;as e ajuste quantidades antes de seguir.</p>
+          </header>
+
+          <div class="cart-items-v2" id="cartItems"></div>
+
+          <section class="cart-empty-v2" id="cartEmpty" hidden>
+            <h3>Seu carrinho est&aacute; vazio</h3>
+            <p>Adicione pe&ccedil;as para iniciar seu checkout.</p>
+            <a href="index.html">Voltar &agrave; loja</a>
+          </section>
+
+          <div class="checkout-panel-actions">
+            <button type="button" id="goToShippingBtn" class="checkout-primary-btn">Continuar para entrega</button>
+          </div>
+        </section>
+
+        <section class="checkout-step-panel" id="step2" aria-labelledby="step2Title" hidden>
+          <header class="checkout-panel-head">
+            <h2 id="step2Title">Entrega</h2>
+            <p>Informe seu endere&ccedil;o para c&aacute;lculo e prazo de envio.</p>
+            <p class="checkout-auth-cta" id="checkoutAuthCta"></p>
+          </header>
+
+          <form id="shippingForm" class="checkout-form" novalidate>
+            <div class="checkout-form-grid">
+              <label class="checkout-field">
+                <span>Nome *</span>
+                <input type="text" id="firstName" name="firstName" autocomplete="given-name" />
+                <small class="field-error" id="error-firstName"></small>
+              </label>
+
+              <label class="checkout-field">
+                <span>Sobrenome *</span>
+                <input type="text" id="lastName" name="lastName" autocomplete="family-name" />
+                <small class="field-error" id="error-lastName"></small>
+              </label>
+
+              <label class="checkout-field">
+                <span>Email *</span>
+                <input type="email" id="email" name="email" autocomplete="email" />
+                <small class="field-error" id="error-email"></small>
+              </label>
+
+              <label class="checkout-field">
+                <span>Telefone *</span>
+                <input type="text" id="phone" name="phone" autocomplete="tel" />
+                <small class="field-error" id="error-phone"></small>
+              </label>
+
+              <label class="checkout-field">
+                <span>CPF</span>
+                <input type="text" id="cpf" name="cpf" autocomplete="off" />
+                <small class="field-error" id="error-cpf"></small>
+              </label>
+
+              <label class="checkout-field">
+                <span>CEP *</span>
+                <input type="text" id="cep" name="cep" autocomplete="postal-code" />
+                <small class="field-error" id="error-cep"></small>
+              </label>
+
+              <label class="checkout-field">
+                <span>Rua *</span>
+                <input type="text" id="street" name="street" autocomplete="address-line1" class="is-locked" readonly aria-readonly="true" />
+                <small class="field-error" id="error-street"></small>
+              </label>
+
+              <label class="checkout-field">
+                <span>N&uacute;mero *</span>
+                <input type="text" id="number" name="number" autocomplete="address-line2" />
+                <small class="field-error" id="error-number"></small>
+              </label>
+
+              <label class="checkout-field">
+                <span>Complemento</span>
+                <input type="text" id="complement" name="complement" autocomplete="address-line2" />
+                <small class="field-error" id="error-complement"></small>
+              </label>
+
+              <label class="checkout-field">
+                <span>Bairro *</span>
+                <input type="text" id="district" name="district" class="is-locked" readonly aria-readonly="true" />
+                <small class="field-error" id="error-district"></small>
+              </label>
+
+              <label class="checkout-field">
+                <span>Cidade *</span>
+                <input type="text" id="city" name="city" autocomplete="address-level2" class="is-locked" readonly aria-readonly="true" />
+                <small class="field-error" id="error-city"></small>
+              </label>
+
+              <label class="checkout-field">
+                <span>Estado *</span>
+                <input type="text" id="state" name="state" maxlength="2" autocomplete="address-level1" class="is-locked" readonly aria-readonly="true" />
+                <small class="field-error" id="error-state"></small>
+              </label>
+
+              <input type="hidden" id="country" name="country" value="BR" />
+            </div>
+
+            <fieldset class="shipping-methods" id="shippingMethods">
+              <legend>M&eacute;todo de entrega *</legend>
+              <div id="shippingOptionsList">
+                <label class="shipping-option">
+                  <input type="radio" name="shippingMethod" value="" disabled />
+                  <span>Informe o CEP para carregar as op&ccedil;&otilde;es de frete</span>
+                  <strong>R$ 0,00</strong>
+                </label>
+              </div>
+              <small class="field-error" id="error-shippingMethod"></small>
+            </fieldset>
+
+            <div class="checkout-panel-actions">
+              <button type="button" class="checkout-secondary-btn" data-go-step="1">Voltar ao carrinho</button>
+              <button type="submit" id="goToPaymentBtn" class="checkout-primary-btn">Continuar para pagamento</button>
+            </div>
+          </form>
+        </section>
+
+        <section class="checkout-step-panel" id="step3" aria-labelledby="step3Title" hidden>
+          <header class="checkout-panel-head">
+            <h2 id="step3Title">Pagamento</h2>
+            <p>Selecione sua forma de pagamento com seguran&ccedil;a.</p>
+          </header>
+
+          <div class="checkout-form">
+
+            <section class="checkout-installments-card is-disabled" id="installmentsField" aria-live="polite">
+              <div class="checkout-installments-head">
+                <span class="checkout-installments-title">Parcelamento no cartão</span>
+                <small class="checkout-installments-hint" id="installmentsHint">
+                  Selecione cartão na forma de pagamento para habilitar as parcelas.
+                </small>
+              </div>
+              <label class="checkout-field checkout-installments-select" for="installments">
+                <span>Número de parcelas</span>
+                <select id="installments" disabled>
+                  <option value="1">1x sem juros</option>
+                  <option value="2">2x</option>
+                  <option value="3">3x</option>
+                  <option value="4">4x</option>
+                  <option value="5">5x</option>
+                  <option value="6">6x</option>
+                </select>
+              </label>
+              <p class="checkout-installments-preview" id="installmentsPreview">
+                Parcelamento disponível apenas para pagamentos com cartão.
+              </p>
+            </section>
+
+            <div class="checkout-field" id="paymentElementWrap">
+              <span>Forma de pagamento</span>
+              <div id="payment-element" class="card-element"></div>
+            </div>
+
+            <label class="checkout-field">
+              <span>Nome do titular *</span>
+              <input type="text" id="billingName" name="billingName" autocomplete="cc-name" required />
+              <small class="field-error" id="error-billingName"></small>
+            </label>
+
+
+            <p id="checkoutStatus" class="checkout-status" aria-live="polite"></p>
+          </div>
+
+          <div class="checkout-panel-actions">
+            <button type="button" class="checkout-secondary-btn" data-go-step="2">Voltar para entrega</button>
+            <button type="button" id="checkoutButton" class="checkout-primary-btn">Finalizar compra</button>
+          </div>
+        </section>
+      </div>
+
+      <aside class="checkout-summary" id="checkoutSummary">
+        <button type="button" class="summary-collapse-btn" id="summaryCollapseBtn" aria-expanded="false">
+          Resumo do pedido
+        </button>
+        <div class="checkout-summary-body" id="summaryBody">
+          <h3>Resumo do pedido</h3>
+          <section class="access-code-card" aria-label="Código de acesso">
+            <h4>Código de acesso</h4>
+            <p>Disponível para clientes com acesso especial.</p>
+            <div class="access-code-row">
+              <input id="accessCodeInput" type="text" placeholder="Digite seu código" autocomplete="off" />
+              <button type="button" id="applyAccessCodeBtn">Aplicar</button>
+            </div>
+            <p class="access-code-feedback" id="accessCodeFeedback" aria-live="polite"></p>
+          </section>
+          <div class="summary-line">
+            <span>Subtotal</span>
+            <strong id="summarySubtotal">R$ 0,00</strong>
+          </div>
+          <div class="summary-line">
+            <span>Frete</span>
+            <strong id="summaryShipping">R$ 0,00</strong>
+          </div>
+          <div class="summary-line">
+            <span>Descontos</span>
+            <strong id="summaryDiscount">R$ 0,00</strong>
+          </div>
+          <div class="summary-total">
+            <span>Total</span>
+            <strong id="summaryTotal">R$ 0,00</strong>
+          </div>
+          <p class="summary-estimate" id="summaryEstimate">Selecione um m&eacute;todo de entrega para ver o prazo estimado.</p>
+        </div>
+      </aside>
+    </section>
+  </main>
+
+  <div class="search-overlay" id="searchOverlay" aria-hidden="true">
+    <button class="search-close" id="closeSearch" type="button" aria-label="Fechar">&times;</button>
+
+    <div class="search-panel">
+      <div class="search-field">
+        <span class="search-field-icon">&#8985;</span>
+        <input
+          id="searchInput"
+          class="search-input"
+          type="text"
+          placeholder="Pesquisar (vestido azul, etc)"
+          autocomplete="off"
+        />
+      </div>
+
+      <section class="search-section">
+        <h3>SUGESTÕES</h3>
+        <div class="chips">
+          <button class="chip" type="button">NOVIDADE PARA HOMENS</button>
+          <button class="chip" type="button">NOVIDADE PARA MULHERES</button>
+          <button class="chip" type="button">BOLSAS FEMININAS</button>
+          <button class="chip" type="button">VESTIDOS</button>
+          <button class="chip" type="button">TÊNIS</button>
+          <button class="chip" type="button">ACESSÓRIOS</button>
+          <button class="chip" type="button">ACESSÓRIOS</button>
+        </div>
+      </section>
+    </div>
+  </div>
+
+  <script src="https://js.stripe.com/v3/"></script>
+  <script src="JS/user-utils.js?v=20260220a"></script>
+  <script src="JS/script.js?v=20260224a"></script>
+  <script src="JS/cart.js?v=20260224a"></script>
+  <script src="JS/posthog.js"></script>
+  <script src="JS/cookies.js"></script>
+  <script src="JS/language-switcher.js?v=20260224a"></script>
+</body>
+</html>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

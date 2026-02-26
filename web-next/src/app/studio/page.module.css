@@ -1,0 +1,30 @@
+.filters {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 180px 120px;
+  gap: 8px;
+}
+
+.filters input,
+.filters select,
+.filters button {
+  min-height: 40px;
+  border-radius: 10px;
+  border: 1px solid var(--studio-border);
+  padding: 0 10px;
+  font-size: 14px;
+  background: rgba(8, 24, 59, 0.55);
+  color: var(--studio-text);
+}
+
+.filters button {
+  border-color: var(--studio-accent);
+  background: var(--studio-accent-soft);
+  color: var(--studio-text);
+  cursor: pointer;
+}
+
+@media (max-width: 900px) {
+  .filters {
+    grid-template-columns: 1fr;
+  }
+}

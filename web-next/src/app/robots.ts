@@ -1,0 +1,29 @@
+import type { MetadataRoute } from "next";
+
+const defaultSiteUrl = "https://tsebi.com.br";
+
+function resolveSiteUrl(): string {
+  const raw = String(process.env.NEXT_PUBLIC_SITE_URL || "").trim();
+  if (!raw) return defaultSiteUrl;
+  try {
+    return new URL(raw).toString().replace(/\/+$/, "");
+  } catch {
+    return defaultSiteUrl;
+  }
+}
+
+export default function robots(): MetadataRoute.Robots {
+  const siteUrl = resolveSiteUrl();
+  return {
+    rules: [
+      {
+        userAgent: "*",
+        allow: ["/", "/products", "/product/", "/lancamento", "/nossa-historia", "/processos", "/faq"],
+        disallow: ["/api/", "/account", "/checkout", "/cart", "/studio", "/login", "/search"],
+      },
+    ],
+    sitemap: `${siteUrl}/sitemap.xml`,
+    host: siteUrl,
+  };
+}
+

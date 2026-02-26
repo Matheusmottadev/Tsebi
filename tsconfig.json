@@ -1,0 +1,20 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "CommonJS",
+    "moduleResolution": "Node",
+    "strict": true,
+    "allowJs": true,
+    "checkJs": true,
+    "noEmit": true,
+    "skipLibCheck": true,
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
+    "resolveJsonModule": true,
+    "forceConsistentCasingInFileNames": true,
+    "typeRoots": ["./src/types", "./node_modules/@types"],
+    "types": ["node", "express", "express-session"]
+  },
+  "include": ["server/**/*.js", "src/**/*.js", "scripts/**/*.js", "src/types/**/*.d.ts"],
+  "exclude": ["node_modules", "web-next", "pages", "public", "assets", "data"]
+}

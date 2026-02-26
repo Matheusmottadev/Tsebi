@@ -18,7 +18,7 @@ export type WhatsAppVipBroadcastResult = {
 
 /**
  * Reference-only interface for the WhatsApp Cloud API service.
- * Runtime implementation lives in `server/lib/whatsapp-service.js`.
+ * Runtime implementation lives in `server/lib/whatsapp-service.ts`.
  */
 export interface WhatsAppService {
   canSendFreeMessage(phone: string): Promise<boolean>;

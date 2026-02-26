@@ -1,0 +1,41 @@
+﻿.route {
+  min-height: 100vh;
+  background: #fff;
+}
+
+:global(body.home-legacy-page > .top-bar),
+:global(body.home-legacy-page > .siteHeader) {
+  display: none !important;
+}
+
+:global(.home-legacy-menu-backdrop) {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.24);
+  border: 0;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s ease;
+  z-index: 1240;
+}
+
+:global(.home-legacy-menu-backdrop.is-open) {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+:global(.legacy-dev-badge) {
+  position: absolute;
+  left: 14px;
+  bottom: 14px;
+  z-index: 3;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  padding: 4px 10px;
+  font-size: 11px;
+  letter-spacing: 0.4px;
+  color: #fff;
+  background: rgba(0, 0, 0, 0.52);
+}

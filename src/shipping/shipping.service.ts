@@ -1,0 +1,397 @@
+export {};
+const { findOrderById } = require("../../server/lib/order-repository");
+const { assertShippingProvider } = require("./provider.interface");
+const melhorEnvioProvider = require("./providers/melhorenvio");
+const dummyProvider = require("./providers/dummy");
+const { mapMelhorEnvioStatusToInternal } = require("./melhorenvio-status");
+const {
+  normalizeZip,
+  saveShippingQuotes,
+  findShippingQuoteById,
+  assignShippingQuoteToOrder,
+  applyShippingSelectionToOrder,
+  upsertShipmentPending,
+  findShipmentByOrderId,
+  markShipmentLabelPurchased,
+  updateShipmentTracking
+} = require("../db/queries/shipping.queries");
+const {
+  updateOrderTrackingState,
+  insertTrackingEvents
+} = require("../db/queries/order-tracking.queries");
+
+const SHIPPING_QUOTE_TTL_MS = 30 * 60 * 1000;
+
+function createShippingError(code: any, status: any = 400, details: any = null) {
+  const error = new Error(code);
+  error.code = code;
+  error.status = status;
+  if (details != null) {
+    error.details = details;
+  }
+  return error;
+}
+
+function getConfiguredProviderName() {
+  const explicit = String(process.env.SHIPPING_PROVIDER || "").trim().toLowerCase();
+  if (explicit) return explicit;
+  if (String(process.env.MELHOR_ENVIO_TOKEN || "").trim()) return "melhorenvio";
+  if (String(process.env.MELHORENVIO_CLIENT_ID || "").trim()) return "melhorenvio";
+  if (String(process.env.MELHORENVIO_BASE_URL || "").trim()) return "melhorenvio";
+  return "dummy";
+}
+
+function getProvider(providerName: any = "") {
+  const normalized = String(providerName || getConfiguredProviderName()).trim().toLowerCase();
+  if (normalized === "melhorenvio") return assertShippingProvider(melhorEnvioProvider, "melhorenvio");
+  if (normalized === "dummy") return assertShippingProvider(dummyProvider, "dummy");
+  throw createShippingError("SHIPPING_PROVIDER_NOT_SUPPORTED", 500, normalized);
+}
+
+function getFromZip() {
+  return normalizeZip(process.env.SHIP_FROM_ZIP || "");
+}
+
+function numberEnv(name: any, fallback: any) {
+  const value = Number(process.env[name]);
+  return Number.isFinite(value) ? value : fallback;
+}
+
+function buildDefaultPackages(itemsCount: any = 1) {
+  const qty = Math.max(1, Number(itemsCount || 1));
+  const weightKg = Math.max(0.1, numberEnv("DEFAULT_PACKAGE_WEIGHT_KG", 0.3) * qty);
+  return [
+    {
+      quantity: 1,
+      weightKg,
+      lengthCm: Math.max(1, Math.round(numberEnv("DEFAULT_PACKAGE_LENGTH_CM", 20))),
+      widthCm: Math.max(1, Math.round(numberEnv("DEFAULT_PACKAGE_WIDTH_CM", 15))),
+      heightCm: Math.max(1, Math.round(numberEnv("DEFAULT_PACKAGE_HEIGHT_CM", 5)))
+    }
+  ];
+}
+
+function sanitizeQuoteList(quotes: any = []) {
+  const list = Array.isArray(quotes) ? quotes : [];
+  return list
+    .map((quote: any) => ({
+      provider: String(quote?.provider || "").trim().toLowerCase(),
+      serviceCode: String(quote?.serviceCode || "").trim(),
+      serviceName: String(quote?.serviceName || "").trim(),
+      priceCents: Math.max(0, Number(quote?.priceCents || 0)),
+      deadlineDays: quote?.deadlineDays == null ? null : Math.max(0, Number(quote.deadlineDays || 0)),
+      carrierName: String(quote?.carrierName || "").trim(),
+      rawPayload: quote?.rawPayload || {}
+    }))
+    .filter((quote: any) => quote.provider && quote.serviceCode && quote.serviceName && quote.priceCents >= 0)
+    .sort((a: any, b: any) => a.priceCents - b.priceCents);
+}
+
+async function quoteShipping({ orderId = null, userId = null, destinationZip, itemsCount = 1 }: any) {
+  const toZip = normalizeZip(destinationZip);
+  if (!/^\d{8}$/.test(toZip)) {
+    throw createShippingError("INVALID_DESTINATION_ZIP", 400);
+  }
+
+  const fromZip = getFromZip();
+  if (!/^\d{8}$/.test(fromZip)) {
+    throw createShippingError("SHIP_FROM_ZIP_NOT_CONFIGURED", 500);
+  }
+
+  const provider = getProvider();
+  const providerQuotes = await provider.quote({
+    fromZip,
+    toZip,
+    packages: buildDefaultPackages(itemsCount)
+  });
+
+  const normalizedQuotes = sanitizeQuoteList(providerQuotes);
+  if (normalizedQuotes.length === 0) {
+    throw createShippingError("NO_SHIPPING_QUOTES", 409);
+  }
+
+  const saved = await saveShippingQuotes({
+    orderId,
+    userId,
+    destinationZip: toZip,
+    quotes: normalizedQuotes
+  });
+
+  return saved;
+}
+
+function assertQuoteBelongsToUser(quote: any, userId: any) {
+  const quoteUserId = String(quote?.userId || "").trim();
+  // Guest quotes may be created before checkout user upsert (userId null).
+  // In this case, keep zip/TTL validation and allow resolving the quote.
+  if (!quoteUserId) return;
+  if (quoteUserId !== String(userId || "").trim()) {
+    throw createShippingError("SHIPPING_QUOTE_NOT_FOUND", 404);
+  }
+}
+
+function assertQuoteZip(quote: any, destinationZip: any) {
+  const quoteZip = normalizeZip(quote?.destinationZip || "");
+  const expected = normalizeZip(destinationZip || "");
+  if (expected && quoteZip !== expected) {
+    throw createShippingError("SHIPPING_QUOTE_ZIP_MISMATCH", 409);
+  }
+}
+
+function assertQuoteFresh(quote: any) {
+  const createdAt = new Date(quote?.createdAt || 0).getTime();
+  if (!Number.isFinite(createdAt) || Date.now() - createdAt > SHIPPING_QUOTE_TTL_MS) {
+    throw createShippingError("SHIPPING_QUOTE_EXPIRED", 409);
+  }
+}
+
+async function resolveQuoteForCheckout({ quoteId, userId, destinationZip }: any) {
+  const id = String(quoteId || "").trim();
+  if (!id) {
+    throw createShippingError("SHIPPING_QUOTE_REQUIRED", 400);
+  }
+
+  const quote = await findShippingQuoteById(id);
+  if (!quote) {
+    throw createShippingError("SHIPPING_QUOTE_NOT_FOUND", 404);
+  }
+
+  assertQuoteBelongsToUser(quote, userId);
+  assertQuoteZip(quote, destinationZip);
+  assertQuoteFresh(quote);
+  return quote;
+}
+
+async function selectShippingForOrder({ orderId, userId, quoteId, destinationZip }: any) {
+  const order = await findOrderById(orderId);
+  if (!order) throw createShippingError("ORDER_NOT_FOUND", 404);
+  if (String(order.userId || "") !== String(userId || "")) {
+    throw createShippingError("ORDER_NOT_FOUND", 404);
+  }
+
+  const quote = await resolveQuoteForCheckout({
+    quoteId,
+    userId,
+    destinationZip: destinationZip || order.shippingDestinationZip || order.shipping?.cep || ""
+  });
+
+  await applyShippingSelectionToOrder({
+    orderId: order.id,
+    provider: quote.provider,
+    serviceName: quote.serviceName,
+    serviceCode: quote.serviceCode,
+    carrierName: quote.carrierName,
+    priceCents: quote.priceCents,
+    deadlineDays: quote.deadlineDays,
+    destinationZip: quote.destinationZip
+  });
+
+  await assignShippingQuoteToOrder(quote.id, order.id);
+
+  const shipment = await upsertShipmentPending({
+    orderId: order.id,
+    provider: quote.provider,
+    serviceCode: quote.serviceCode,
+    priceCents: quote.priceCents,
+    deadlineDays: quote.deadlineDays,
+    rawPayload: {
+      quoteId: quote.id,
+      source: "checkout_select"
+    }
+  });
+
+  const updatedOrder = await findOrderById(order.id);
+  return {
+    order: updatedOrder,
+    shipment,
+    quote
+  };
+}
+
+async function ensureShipmentPendingFromOrder(order: any) {
+  if (!order) throw createShippingError("ORDER_NOT_FOUND", 404);
+
+  let provider = String(order.shippingSelectedProvider || "").trim().toLowerCase();
+  let serviceCode = String(order.shippingSelectedServiceCode || "").trim();
+
+  if (!provider || !serviceCode) {
+    const fallbackProvider = String(order.shipping?.shippingProvider || "").trim().toLowerCase();
+    const fallbackServiceCode = String(order.shipping?.shippingServiceCode || "").trim();
+    if (!fallbackProvider || !fallbackServiceCode) {
+      throw createShippingError("ORDER_SHIPPING_NOT_SELECTED", 409);
+    }
+
+    await applyShippingSelectionToOrder({
+      orderId: order.id,
+      provider: fallbackProvider,
+      serviceName: String(order.shipping?.shippingServiceName || "").trim(),
+      serviceCode: fallbackServiceCode,
+      carrierName: String(order.shipping?.shippingCarrierName || "").trim(),
+      priceCents: Number(order.shippingPriceCents || order.shippingAmount || 0),
+      deadlineDays: order.shippingDeadlineDays ?? order.shipping?.shippingDeadlineDays ?? null,
+      destinationZip: String(order.shippingDestinationZip || order.shipping?.cep || "").replace(/\D/g, "").slice(0, 8)
+    });
+
+    provider = fallbackProvider;
+    serviceCode = fallbackServiceCode;
+  }
+
+  return upsertShipmentPending({
+    orderId: order.id,
+    provider,
+    serviceCode,
+    priceCents: Number(order.shippingPriceCents || order.shippingAmount || 0),
+    deadlineDays: order.shippingDeadlineDays,
+    rawPayload: {
+      source: "ensure_pending"
+    }
+  });
+}
+
+async function buyLabelForOrder(order: any) {
+  if (!order) throw createShippingError("ORDER_NOT_FOUND", 404);
+  if (String(order.status || "").toLowerCase() !== "paid") {
+    throw createShippingError("ORDER_NOT_PAID", 409);
+  }
+
+  const existingShipment = await findShipmentByOrderId(order.id);
+  const previousStatus = String(existingShipment?.status || "").trim().toUpperCase();
+  if (!existingShipment) {
+    await ensureShipmentPendingFromOrder(order);
+  }
+
+  const providerName = String(order.shippingSelectedProvider || getConfiguredProviderName()).trim().toLowerCase();
+  const provider = getProvider(providerName);
+  const bought = await provider.buyLabel({ order });
+
+  const updated = await markShipmentLabelPurchased({
+    orderId: order.id,
+    labelExternalId: bought?.labelExternalId,
+    trackingCode: bought?.trackingCode || null,
+    status: bought?.status || "ETIQUETA_COMPRADA",
+    rawPayload: bought?.rawPayload || {}
+  });
+
+  const nowIso = new Date().toISOString();
+  const carrierName =
+    String(order?.carrier || order?.shippingSelectedCarrierName || "Melhor Envio").trim() || "Melhor Envio";
+  const isDelivered = String(order?.currentStatus || "").trim().toUpperCase() === "DELIVERED";
+  const effectiveStatus = isDelivered ? "DELIVERED" : "SHIPPED";
+
+  await updateOrderTrackingState(order.id, {
+    currentStatus: effectiveStatus,
+    trackingCode: bought?.trackingCode || order?.trackingCode || null,
+    carrier: carrierName,
+    shippedAt: order?.shippedAt || nowIso,
+    lastTrackingUpdate: nowIso
+  }).catch(() => {});
+
+  await insertTrackingEvents(order.id, [
+    {
+      status: effectiveStatus,
+      rawStatus: "LABEL_PURCHASED",
+      description: "Etiqueta expedida",
+      location: "",
+      occurredAt: nowIso
+    }
+  ]).catch(() => {});
+
+  if (bought?.trackingCode) {
+    try {
+      const tracked = await provider.track({ trackingCode: bought.trackingCode });
+      const mapped = mapMelhorEnvioStatusToInternal(tracked?.status || tracked?.current_status || "");
+      const nextStatus = mapped?.status || effectiveStatus;
+      await updateShipmentTracking({
+        orderId: order.id,
+        trackingCode: bought.trackingCode,
+        status: tracked?.status || nextStatus,
+        rawPayload: tracked?.rawPayload || tracked || {}
+      }).catch(() => {});
+
+      if (nextStatus && nextStatus !== effectiveStatus) {
+        await updateOrderTrackingState(order.id, {
+          currentStatus: nextStatus,
+          lastTrackingUpdate: new Date().toISOString()
+        }).catch(() => {});
+
+        await insertTrackingEvents(order.id, [
+          {
+            status: nextStatus,
+            rawStatus: String(tracked?.status || tracked?.current_status || "TRACKING_SYNC"),
+            description: "Rastreio sincronizado automaticamente",
+            location: "",
+            occurredAt: new Date().toISOString()
+          }
+        ]).catch(() => {});
+      }
+    } catch {
+      // Best-effort: etiqueta comprada já foi registrada.
+    }
+  }
+
+  return updated
+    ? {
+        ...updated,
+        previousStatus
+      }
+    : updated;
+}
+
+async function getLabelForOrder(order: any) {
+  if (!order) throw createShippingError("ORDER_NOT_FOUND", 404);
+  const shipment = await findShipmentByOrderId(order.id);
+  if (!shipment) throw createShippingError("SHIPMENT_NOT_FOUND", 404);
+  if (!shipment.labelExternalId) throw createShippingError("LABEL_NOT_PURCHASED", 409);
+
+  const provider = getProvider(shipment.provider || order.shippingSelectedProvider || getConfiguredProviderName());
+  const label = await provider.getLabel({
+    labelExternalId: shipment.labelExternalId,
+    shipment,
+    order
+  });
+  return {
+    shipment,
+    label
+  };
+}
+
+async function trackOrderShipment(order: any) {
+  if (!order) throw createShippingError("ORDER_NOT_FOUND", 404);
+  const shipment = await findShipmentByOrderId(order.id);
+  if (!shipment) throw createShippingError("SHIPMENT_NOT_FOUND", 404);
+  if (!shipment.trackingCode) throw createShippingError("TRACKING_NOT_AVAILABLE", 409);
+  const previousStatus = String(shipment.status || "").trim().toUpperCase();
+
+  const provider = getProvider(shipment.provider || order.shippingSelectedProvider || getConfiguredProviderName());
+  const tracking = await provider.track({
+    trackingCode: shipment.trackingCode,
+    shipment,
+    order
+  });
+
+  const nextStatus = String(tracking?.status || "").trim().toUpperCase();
+  const updatedShipment = await updateShipmentTracking({
+    orderId: order.id,
+    trackingCode: shipment.trackingCode,
+    status: nextStatus || "",
+    rawPayload: tracking?.rawPayload || tracking || {}
+  });
+
+  return {
+    previousStatus,
+    shipment: updatedShipment || shipment,
+    tracking
+  };
+}
+
+module.exports = {
+  SHIPPING_QUOTE_TTL_MS,
+  createShippingError,
+  quoteShipping,
+  resolveQuoteForCheckout,
+  selectShippingForOrder,
+  ensureShipmentPendingFromOrder,
+  buyLabelForOrder,
+  getLabelForOrder,
+  trackOrderShipment
+};

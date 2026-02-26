@@ -1,0 +1,43 @@
+.page {
+  min-height: 100dvh;
+  background: radial-gradient(circle at top center, #0e1d43 0%, #050d23 42%, #030713 100%);
+  display: grid;
+  place-items: center;
+  padding: 24px 14px;
+}
+
+.main {
+  width: min(100%, 640px);
+}
+
+.card {
+  border: 1px solid #253b65;
+  border-radius: 18px;
+  background: rgba(3, 13, 34, 0.86);
+  padding: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.kicker {
+  margin: 0;
+  color: #a8b7da;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.card h1 {
+  margin: 0;
+  color: #f2f5ff;
+  font-size: 34px;
+  line-height: 1.1;
+  font-family: var(--font-playfair), Georgia, serif;
+  font-weight: 500;
+}
+
+.card p {
+  margin: 0;
+  color: #a8b7da;
+}

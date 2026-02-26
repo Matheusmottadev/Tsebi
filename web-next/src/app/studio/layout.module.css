@@ -1,0 +1,17 @@
+.root {
+  min-height: 100dvh;
+  background: radial-gradient(circle at top center, #0e1d43 0%, #050d23 42%, #030713 100%);
+  color: #e6ebff;
+  --studio-bg: #02091a;
+  --studio-surface: #07132d;
+  --studio-surface-soft: #0b1a3a;
+  --studio-border: #223862;
+  --studio-text: #e6ebff;
+  --studio-muted: #a8b7da;
+  --studio-accent: #19be87;
+  --studio-accent-soft: rgba(25, 190, 135, 0.18);
+}
+
+.root :global(*) {
+  box-sizing: border-box;
+}

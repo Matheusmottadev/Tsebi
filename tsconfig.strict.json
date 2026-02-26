@@ -1,0 +1,24 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "allowJs": false,
+    "checkJs": false,
+    "strict": true,
+    "noEmit": true
+  },
+  "include": [
+    "src/types/**/*.d.ts",
+    "src/**/*.ts",
+    "server/**/*.ts",
+    "scripts/**/*.ts"
+  ],
+  "exclude": [
+    "node_modules",
+    "web-next",
+    "dist",
+    "pages",
+    "public",
+    "assets",
+    "data"
+  ]
+}

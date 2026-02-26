@@ -1,0 +1,438 @@
+.account-auth-page{
+  background: #f8f7f4;
+  color: #131313;
+}
+
+.account-auth-main,
+.account-main-page{
+  max-width: 760px;
+  margin: 0 auto;
+  padding: 120px 24px 56px;
+}
+
+.account-auth-card,
+.account-dashboard-card{
+  border: 1px solid #e6e1d8;
+  background: #fff;
+  padding: 24px 24px 22px;
+}
+
+.account-auth-kicker{
+  font-family: "Montserrat", sans-serif;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 1.2px;
+  color: #65625b;
+}
+
+.account-auth-card h1,
+.account-dashboard-head h1{
+  margin-top: 8px;
+  font-family: "Playfair Display", serif;
+  font-size: clamp(32px, 5vw, 44px);
+  font-weight: 600;
+}
+
+.account-auth-panel{
+  margin-top: 18px;
+}
+
+.account-auth-flow-note{
+  margin-bottom: 14px;
+  font-family: "Montserrat", sans-serif;
+  font-size: 12px;
+  color: #5c574f;
+}
+
+.account-auth-form{
+  display: grid;
+  gap: 12px;
+}
+
+.account-auth-grid{
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.account-auth-grid-full{
+  grid-column: 1 / -1;
+}
+
+.account-auth-form label{
+  display: grid;
+  gap: 6px;
+}
+
+.account-auth-form span{
+  font-family: "Montserrat", sans-serif;
+  font-size: 11px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+
+.account-auth-form input,
+.account-auth-form select{
+  min-height: 48px;
+  border: 1px solid #d8d3c8;
+  padding: 0 12px;
+  font-family: "Montserrat", sans-serif;
+  font-size: 14px;
+  background: #f9f9f7;
+}
+
+.account-auth-consent-group{
+  display: grid;
+  gap: 12px;
+  margin-top: 2px;
+}
+
+.account-auth-consent{
+  display: grid !important;
+  grid-template-columns: 18px 1fr;
+  gap: 10px !important;
+  align-items: start;
+}
+
+.account-auth-consent input[type="checkbox"]{
+  margin-top: 1px;
+  width: 18px;
+  height: 18px;
+  min-height: 18px;
+  padding: 0;
+  accent-color: #111;
+}
+
+.account-auth-consent span{
+  font-size: 12px;
+  letter-spacing: 0.1px;
+  text-transform: none;
+  line-height: 1.45;
+  color: #2d2a25;
+}
+
+.account-auth-consent a{
+  color: #111;
+  text-decoration: underline;
+}
+
+.account-auth-submit{
+  min-height: 42px;
+  border: 1px solid #111;
+  background: #111;
+  color: #fff;
+  font-family: "Montserrat", sans-serif;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 1.2px;
+  cursor: pointer;
+  padding: 10px 16px;
+}
+
+.account-auth-submit:disabled{
+  opacity: .55;
+  cursor: not-allowed;
+}
+
+.account-auth-link{
+  margin-top: 10px;
+  border: 0;
+  background: transparent;
+  padding: 0;
+  font-family: "Montserrat", sans-serif;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: #59544d;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.account-auth-link[disabled]{
+  opacity: .45;
+  cursor: not-allowed;
+  text-decoration: none;
+}
+
+.account-auth-row{
+  margin-top: 10px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+  align-items: center;
+}
+
+.account-auth-feedback{
+  margin-top: 18px;
+  min-height: 18px;
+  font-family: "Montserrat", sans-serif;
+  font-size: 12px;
+}
+
+.account-dashboard-head{
+  display: flex;
+  justify-content: space-between;
+  gap: 14px;
+  align-items: flex-start;
+}
+
+.account-dashboard-head p{
+  margin-top: 8px;
+  font-family: "Montserrat", sans-serif;
+  font-size: 13px;
+  color: #57534d;
+}
+
+.account-logout-btn{
+  min-width: 120px;
+}
+
+.account-shell{
+  margin-top: 26px;
+  padding-top: 18px;
+  border-top: 1px solid #ede8de;
+  display: grid;
+  grid-template-columns: 280px 1fr;
+  gap: 28px;
+  align-items: start;
+}
+
+.account-sidebar{
+  display: grid;
+  gap: 8px;
+}
+
+.account-nav-btn{
+  min-height: 44px;
+  border: 1px solid #e6e1d8;
+  background: #fbfaf7;
+  text-align: left;
+  padding: 0 14px;
+  font-family: "Montserrat", sans-serif;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: #1b1b1b;
+  cursor: pointer;
+}
+
+.account-nav-btn.is-active{
+  border-color: #111;
+  background: #111;
+  color: #fff;
+}
+
+.account-content{
+  min-height: 460px;
+}
+
+.account-panel{
+  border: 1px solid #ede8de;
+  padding: 20px;
+}
+
+.account-panel h2{
+  font-family: "Playfair Display", serif;
+  font-size: 40px;
+  font-weight: 600;
+}
+
+.account-panel-note{
+  margin-top: 10px;
+  font-family: "Montserrat", sans-serif;
+  color: #57534d;
+  font-size: 13px;
+}
+
+.account-track-form{
+  margin-top: 16px;
+  grid-template-columns: 1fr auto;
+  align-items: end;
+}
+
+.account-order-single{
+  margin-top: 16px;
+}
+
+.account-inline-form{
+  margin-top: 14px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: end;
+}
+
+.account-inline-form .account-auth-submit{
+  width: fit-content;
+}
+
+.account-orders-list{
+  margin-top: 14px;
+  display: grid;
+  gap: 10px;
+}
+
+.account-order-item{
+  border: 1px solid #e6e1d8;
+  padding: 14px;
+}
+
+.account-order-item p{
+  font-family: "Montserrat", sans-serif;
+  font-size: 12px;
+  color: #4f4b45;
+}
+
+.account-order-actions{
+  margin-top: 14px;
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.account-order-title{
+  font-family: "Playfair Display", serif;
+  font-size: 24px !important;
+  color: #131313 !important;
+}
+
+.account-inline-link{
+  margin-top: 14px;
+  display: inline-block;
+  font-family: "Montserrat", sans-serif;
+  font-size: 12px;
+  color: #1b1b1b;
+  text-decoration: underline;
+}
+
+.account-address-form{
+  margin-top: 16px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: end;
+}
+
+.account-address-form .account-address-actions{
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.account-address-list{
+  margin-top: 16px;
+  display: grid;
+  gap: 12px;
+}
+
+.account-address-item{
+  border: 1px solid #e6e1d8;
+  padding: 14px;
+  background: #fbfaf7;
+}
+
+.account-address-item-actions{
+  margin-top: 10px;
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.account-address-item-actions button{
+  border: 1px solid #111;
+  background: #fff;
+  min-height: 34px;
+  padding: 0 12px;
+  font-family: "Montserrat", sans-serif;
+  font-size: 11px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.account-address-item-actions button[disabled]{
+  opacity: .5;
+  cursor: default;
+}
+
+.account-favorites-grid{
+  margin-top: 16px;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.account-favorite-card{
+  border: 1px solid #e6e1d8;
+  background: #fbfaf7;
+  overflow: hidden;
+}
+
+.account-favorite-media{
+  display: block;
+  aspect-ratio: 4 / 5;
+  background: #f3f0e9;
+}
+
+.account-favorite-media img{
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.account-favorite-info{
+  padding: 10px 12px 12px;
+}
+
+.account-favorite-info h3{
+  font-family: "Montserrat", sans-serif;
+  font-size: 13px;
+  line-height: 1.35;
+  font-weight: 600;
+}
+
+.account-favorite-info p{
+  margin-top: 6px;
+  font-family: "Montserrat", sans-serif;
+  font-size: 12px;
+  color: #4f4b45;
+}
+
+.account-favorite-actions{
+  margin-top: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.account-favorite-actions .account-auth-link{
+  margin-top: 0;
+}
+
+@media (max-width: 980px){
+  .account-shell{
+    grid-template-columns: 1fr;
+  }
+
+  .account-sidebar{
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .account-nav-btn{
+    text-align: center;
+  }
+}
+
+@media (max-width: 780px){
+  .account-dashboard-head{
+    flex-direction: column;
+  }
+
+  .account-auth-grid,
+  .account-inline-form,
+  .account-track-form,
+  .account-sidebar,
+  .account-address-form,
+  .account-favorites-grid{
+    grid-template-columns: 1fr;
+  }
+}
+

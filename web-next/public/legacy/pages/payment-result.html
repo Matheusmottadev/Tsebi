@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <link rel="icon" type="image/svg+xml" href="/images/favicon-dark.svg?v=20260219c" media="(prefers-color-scheme: dark)" />
+  <link rel="icon" type="image/svg+xml" href="/images/favicon-light.svg?v=20260219c" media="(prefers-color-scheme: light)" />
+  <link rel="icon" type="image/png" href="/images/logo-tsebi.png?v=20260219c" />
+  <link rel="shortcut icon" href="/images/logo-tsebi.png?v=20260219c" />
+  <link rel="apple-touch-icon" href="/images/logo-tsebi.png?v=20260219c" />
+  <title>Resultado do pagamento | Tsebi Brasil</title>
+  <!-- SEO META START -->
+  <meta name="description" content="Resultado de pagamento da Tsebi." />
+  <meta name="robots" content="noindex,nofollow" />
+  <link rel="canonical" href="https://tsebi.com.br/payment-result.html" />
+  <meta property="og:locale" content="pt_BR" />
+  <meta property="og:type" content="website" />
+  <meta property="og:title" content="Resultado do pagamento | Tsebi Brasil" />
+  <meta property="og:description" content="Resultado de pagamento da Tsebi." />
+  <meta property="og:url" content="https://tsebi.com.br/payment-result.html" />
+  <meta property="og:site_name" content="Tsebi Brasil" />
+  <meta property="og:image" content="https://tsebi.com.br/images/logo-tsebi.png" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="Resultado do pagamento | Tsebi Brasil" />
+  <meta name="twitter:description" content="Resultado de pagamento da Tsebi." />
+  <meta name="twitter:image" content="https://tsebi.com.br/images/logo-tsebi.png" />
+  <!-- SEO META END -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600&family=Montserrat:wght@300;400;500;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/style.css?v=20260220h" />
+</head>
+<body>
+  <header class="cart-simple-header">
+    <a class="cart-simple-logo" href="index.html">TSEBI</a>
+    <nav class="cart-simple-actions" aria-label="Ações da página">
+      <a href="login.html" aria-label="Conta">Conta</a>
+      <a href="cart.html" aria-label="Carrinho">Carrinho</a>
+    </nav>
+  </header>
+
+  <main class="payment-result-page">
+    <section class="payment-result-card" id="paymentResultCard">
+      <div class="payment-loader" id="paymentLoader">
+        <span class="payment-loader-spinner" aria-hidden="true"></span>
+        <p>Verificando status do pagamento...</p>
+      </div>
+
+      <div class="payment-result-content" id="paymentResultContent" hidden>
+        <p class="payment-result-kicker" id="resultKicker">Pedido</p>
+        <h1 class="payment-result-title" id="resultTitle"></h1>
+        <p class="payment-result-message" id="resultMessage"></p>
+
+        <div class="payment-result-summary" id="resultSummary" hidden>
+          <p><strong>Número do pedido:</strong> <span id="resultOrderId">-</span></p>
+          <p><strong>Código de rastreio:</strong> <span id="resultOrderNumber">-</span></p>
+          <p><strong>E-mail:</strong> <span id="resultOrderEmail">-</span></p>
+          <p><strong>Total:</strong> <span id="resultOrderTotal">-</span></p>
+          <ul id="resultItems"></ul>
+        </div>
+
+        <section class="payment-activation" id="paymentActivation" hidden>
+          <h2>Cadastro aprovado automaticamente</h2>
+          <p>
+            Seu cadastro foi aprovado automaticamente para facilitar suas próximas compras.
+            Se quiser acompanhar pedidos na ?rea logada, crie uma senha agora.
+          </p>
+          <form id="activationForm" class="payment-activation-form" novalidate>
+            <label>
+              <span>Criar senha</span>
+              <input type="password" id="activationPassword" minlength="8" autocomplete="new-password" />
+            </label>
+            <label>
+              <span>Confirmar senha</span>
+              <input type="password" id="activationPasswordConfirm" minlength="8" autocomplete="new-password" />
+            </label>
+            <p class="payment-activation-error" id="activationError" role="alert" hidden></p>
+            <div class="payment-activation-actions">
+              <button type="submit" class="payment-refresh-btn" id="activationSubmit">Criar senha e acessar minha conta</button>
+              <button type="button" class="payment-action-link payment-skip-btn" id="activationSkip">Pular por enquanto</button>
+            </div>
+          </form>
+        </section>
+
+        <p class="payment-result-hint" id="supportHint" hidden>
+          Ainda não recebemos a confirmação final. Se o status não mudar, fale com nosso suporte.
+        </p>
+
+        <div class="payment-result-actions">
+          <button class="payment-refresh-btn" id="refreshStatusButton" type="button">Atualizar status</button>
+          <button class="payment-action-link" id="trackGuestButton" type="button">Acompanhar pedido</button>
+          <a class="payment-action-link" id="ordersButton" href="conta.html#card-orders">Ver meus pedidos</a>
+          <a class="payment-action-link" id="storeButton" href="index.html">Voltar ? loja</a>
+          <a class="payment-action-link" id="retryButton" href="cart.html">Tentar novamente</a>
+          <a class="payment-action-link" id="whatsappButton" href="https://wa.me/5511918596632" target="_blank" rel="noopener noreferrer">Falar no WhatsApp</a>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script src="JS/payment-result.js?v=20260222b"></script>
+  <script src="JS/posthog.js"></script>
+</body>
+</html>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

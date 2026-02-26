@@ -1,0 +1,245 @@
+.section {
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) minmax(280px, 360px);
+  gap: 22px;
+  margin-top: 40px;
+  width: min(100%, 1180px);
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.items {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.itemCard {
+  background: #fff;
+  border: 1px solid #e8e8e8;
+  border-radius: 12px;
+  display: grid;
+  grid-template-columns: 140px minmax(0, 1fr);
+  gap: 12px;
+  padding: 12px;
+}
+
+.imageWrap {
+  border-radius: 10px;
+  overflow: hidden;
+  background: #f2f2f2;
+}
+
+.image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.itemContent {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.itemContent h3 {
+  font-size: 18px;
+  line-height: 1.25;
+}
+
+.variant {
+  font-size: 13px;
+  color: #666;
+}
+
+.unitPrice {
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.rowActions {
+  margin-top: 6px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.qtyControl {
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid #d8d8d8;
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.qtyControl button {
+  width: 30px;
+  height: 30px;
+  border: 0;
+  background: #fff;
+  cursor: pointer;
+  font-size: 16px;
+}
+
+.qtyControl span {
+  min-width: 28px;
+  text-align: center;
+  font-size: 14px;
+}
+
+.removeButton {
+  border: 0;
+  background: transparent;
+  color: #7a7a7a;
+  text-decoration: underline;
+  cursor: pointer;
+  font-size: 13px;
+}
+
+.summary {
+  background: #fff;
+  border: 1px solid #e8e8e8;
+  border-radius: 12px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  height: fit-content;
+  position: sticky;
+  top: 76px;
+}
+
+.summary h2 {
+  font-size: 20px;
+}
+
+.summaryLine {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 15px;
+}
+
+.checkoutBanner {
+  font-size: 13px;
+  border-radius: 9px;
+  background: #fff4d8;
+  color: #7a4d00;
+  border: 1px solid #f1d08b;
+  padding: 8px 10px;
+}
+
+.checkoutHint {
+  font-size: 12px;
+  color: #666;
+}
+
+.checkoutButton {
+  width: 100%;
+  height: 42px;
+  border-radius: 999px;
+  border: 1px solid #111;
+  background: #111;
+  color: #fff;
+  font-weight: 600;
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.checkoutLink {
+  width: 100%;
+  min-height: 42px;
+  border-radius: 999px;
+  border: 1px solid #111;
+  background: #111;
+  color: #fff;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+}
+
+.summaryActions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.continueLink {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 34px;
+  border-radius: 999px;
+  border: 1px solid #111;
+  padding: 0 12px;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.clearButton {
+  min-height: 34px;
+  border-radius: 999px;
+  border: 1px solid #d8d8d8;
+  background: #fff;
+  padding: 0 12px;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.empty {
+  background: #fff;
+  border: 1px solid #e8e8e8;
+  border-radius: 12px;
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.empty h2 {
+  font-size: 24px;
+}
+
+.empty p {
+  color: #666;
+}
+
+.errorBox {
+  background: #fff4f2;
+  border: 1px solid #ffd4cf;
+  color: #7a2f25;
+  border-radius: 10px;
+  padding: 10px 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.errorBox button {
+  border: 0;
+  background: transparent;
+  text-decoration: underline;
+  cursor: pointer;
+  color: inherit;
+}
+
+@media (max-width: 980px) {
+  .section {
+    grid-template-columns: 1fr;
+  }
+
+  .summary {
+    position: static;
+  }
+}
+
+@media (max-width: 640px) {
+  .itemCard {
+    grid-template-columns: 1fr;
+  }
+}

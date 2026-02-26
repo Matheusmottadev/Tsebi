@@ -1,0 +1,56 @@
+.page {
+  min-height: 100vh;
+  background: #f7f7f7;
+}
+
+.main {
+  width: 100%;
+  max-width: 1240px;
+  margin: 0 auto;
+  padding: 42px 24px 72px;
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+}
+
+.hero {
+  background: linear-gradient(135deg, #ffffff 0%, #f1f1f1 100%);
+  border: 1px solid #e8e8e8;
+  border-radius: 14px;
+  padding: 30px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.kicker {
+  font-size: 12px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: #777;
+}
+
+.hero h1 {
+  font-size: 38px;
+  line-height: 1.1;
+  letter-spacing: -0.03em;
+}
+
+.hero p {
+  font-size: 15px;
+  color: #5d5d5d;
+}
+
+@media (max-width: 760px) {
+  .main {
+    padding: 24px 16px 40px;
+  }
+
+  .hero {
+    padding: 20px 16px;
+  }
+
+  .hero h1 {
+    font-size: 30px;
+  }
+}

@@ -1,0 +1,207 @@
+.application-header{
+  min-height: 88px;
+  background: #000;
+  color: #fff;
+  border-bottom: 1px solid #151515;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 28px;
+}
+
+.application-logo{
+  color: #fff;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: baseline;
+  gap: 8px;
+  font-family: 'Playfair Display', serif;
+}
+
+.application-logo-main{
+  font-size: 38px;
+}
+
+.application-logo-sub{
+  font-size: 24px;
+  opacity: .95;
+}
+
+.application-back{
+  color: #fff;
+  text-decoration: none;
+  font-family: 'Montserrat', sans-serif;
+  font-size: 13px;
+  letter-spacing: .9px;
+  text-transform: uppercase;
+}
+
+.application-header .site-language-switcher{
+  margin-left: 10px;
+}
+
+.application-header .site-language-switcher .lang-btn{
+  color: rgba(255,255,255,.62);
+}
+
+.application-header .site-language-switcher .lang-btn.is-active{
+  color: #fff;
+}
+
+.application-header .site-language-switcher .lang-divider{
+  color: rgba(255,255,255,.42);
+}
+
+.application-main{
+  max-width: 980px;
+  margin: 0 auto;
+  padding: 34px 20px 54px;
+}
+
+.application-intro .application-kicker{
+  font-family: 'Montserrat', sans-serif;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  font-size: 12px;
+  color: #555;
+}
+
+.application-intro h1{
+  margin-top: 8px;
+  font-family: 'Playfair Display', serif;
+  font-size: clamp(34px, 5vw, 52px);
+  line-height: 1.03;
+}
+
+.application-intro p{
+  margin-top: 10px;
+  font-family: 'Montserrat', sans-serif;
+  font-size: 14px;
+  line-height: 1.5;
+  color: #3b3b3b;
+}
+
+.application-card{
+  margin-top: 22px;
+  border: 1px solid #e7e7e7;
+  padding: 22px;
+  background: #fff;
+}
+
+.application-form{
+  display: grid;
+  gap: 14px;
+}
+
+.application-grid{
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.application-form label{
+  display: grid;
+  gap: 7px;
+  font-family: 'Montserrat', sans-serif;
+  font-size: 13px;
+  letter-spacing: .2px;
+}
+
+.application-form input,
+.application-form textarea{
+  width: 100%;
+  border: 1px solid #cfcfcf;
+  min-height: 46px;
+  padding: 0 12px;
+  font-family: 'Montserrat', sans-serif;
+  font-size: 14px;
+}
+
+.application-form textarea{
+  min-height: 120px;
+  padding: 10px 12px;
+  resize: vertical;
+}
+
+.application-actions{
+  display: flex;
+  justify-content: flex-end;
+}
+
+.application-actions button{
+  border: 1px solid #111;
+  background: #111;
+  color: #fff;
+  min-height: 48px;
+  padding: 0 22px;
+  font-family: 'Montserrat', sans-serif;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: .9px;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.application-success{
+  text-align: center;
+  padding: 20px;
+}
+
+.application-success h2{
+  font-family: 'Playfair Display', serif;
+  font-size: 34px;
+}
+
+.application-success p{
+  margin-top: 10px;
+  font-family: 'Montserrat', sans-serif;
+  color: #444;
+}
+
+.application-success a{
+  margin-top: 14px;
+  display: inline-flex;
+  height: 44px;
+  padding: 0 18px;
+  align-items: center;
+  justify-content: center;
+  background: #111;
+  color: #fff;
+  border: 1px solid #111;
+  text-decoration: none;
+  font-family: 'Montserrat', sans-serif;
+  font-size: 12px;
+  letter-spacing: .9px;
+  text-transform: uppercase;
+}
+
+@media (max-width: 760px){
+  .application-header{
+    min-height: 72px;
+    padding: 0 14px;
+  }
+
+  .application-logo-main{
+    font-size: 30px;
+  }
+
+  .application-logo-sub{
+    font-size: 18px;
+  }
+
+  .application-back{
+    font-size: 11px;
+  }
+
+  .application-main{
+    padding: 24px 12px 34px;
+  }
+
+  .application-card{
+    padding: 14px;
+  }
+
+  .application-grid{
+    grid-template-columns: 1fr;
+  }
+}

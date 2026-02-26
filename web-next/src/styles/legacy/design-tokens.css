@@ -1,0 +1,69 @@
+:root {
+  /* Breakpoints:
+     mobile: < 640px
+     tablet: 640px - 1024px
+     desktop: > 1024px
+  */
+
+  /* Typography */
+  --t-font-sans: 'Montserrat', system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+  --t-font-serif: 'Playfair Display', Georgia, serif;
+
+  --t-text-xs: 0.75rem;
+  --t-text-sm: 0.875rem;
+  --t-text-md: 1rem;
+  --t-text-lg: 1.125rem;
+  --t-text-xl: 1.375rem;
+  --t-text-2xl: 1.75rem;
+  --t-text-3xl: 2.25rem;
+
+  --t-weight-regular: 400;
+  --t-weight-medium: 500;
+  --t-weight-semibold: 600;
+
+  --t-lh-tight: 1.15;
+  --t-lh-normal: 1.45;
+  --t-lh-relaxed: 1.7;
+
+  --t-tracking-tight: -0.01em;
+  --t-tracking-normal: 0.01em;
+  --t-tracking-wide: 0.08em;
+
+  /* Colors */
+  --t-bg: #ffffff;
+  --t-surface: #ffffff;
+  --t-text: #111111;
+  --t-text-muted: #5c5c5c;
+  --t-line: #e8e8e8;
+  --t-ghost: #f5f5f5;
+  --t-overlay: rgba(0, 0, 0, 0.06);
+
+  /* Spacing */
+  --t-space-1: 4px;
+  --t-space-2: 8px;
+  --t-space-3: 12px;
+  --t-space-4: 16px;
+  --t-space-5: 24px;
+  --t-space-6: 32px;
+  --t-space-7: 48px;
+  --t-space-8: 64px;
+  --t-space-9: 96px;
+
+  /* Radius & shadow */
+  --t-radius-sm: 8px;
+  --t-radius-md: 12px;
+  --t-radius-lg: 16px;
+  --t-shadow-soft: 0 8px 24px rgba(0, 0, 0, 0.06);
+
+  /* Containers */
+  --t-container: 1240px;
+  --t-container-wide: 1400px;
+  --t-gutter: 16px;
+  --t-gutter-lg: 24px;
+
+  /* Motion */
+  --t-ease: cubic-bezier(.2, .8, .2, 1);
+  --t-dur-fast: 160ms;
+  --t-dur-med: 320ms;
+}
+

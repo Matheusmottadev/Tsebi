@@ -1,0 +1,177 @@
+.genesis-page-body .home-header{
+  background: #fff;
+  border-bottom-color: transparent;
+}
+
+.genesis-page-body .header-left,
+.genesis-page-body .header-right{
+  opacity: 1;
+  transform: translateY(0);
+  pointer-events: auto;
+}
+
+.genesis-page-body .logo-center-text{
+  color: #000;
+}
+
+.genesis-page-body .logo-center-image{
+  display: none !important;
+}
+
+.genesis-page{
+  padding: calc(var(--top-bar-height) + var(--header-height) + 18px) 24px 46px;
+}
+
+.genesis-hero{
+  border-bottom: 1px solid #ececec;
+  padding-bottom: 20px;
+}
+
+.genesis-kicker{
+  font-family: 'Montserrat', sans-serif;
+  text-transform: uppercase;
+  letter-spacing: 1.3px;
+  font-size: 12px;
+  color: #666;
+}
+
+.genesis-hero h1{
+  margin-top: 8px;
+  font-family: 'Playfair Display', serif;
+  font-size: clamp(42px, 6vw, 74px);
+  line-height: 0.95;
+}
+
+.genesis-subtitle{
+  margin-top: 10px;
+  font-family: 'Montserrat', sans-serif;
+  font-size: 15px;
+  color: #3d3d3d;
+}
+
+.genesis-category-filters{
+  margin-top: 18px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.genesis-filter-btn{
+  border: 1px solid #1f1f1f;
+  background: #fff;
+  color: #111;
+  height: 36px;
+  padding: 0 14px;
+  font-family: 'Montserrat', sans-serif;
+  font-size: 12px;
+  letter-spacing: 0.7px;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.genesis-filter-btn.is-active{
+  background: #111;
+  color: #fff;
+}
+
+.genesis-grid-wrap{
+  margin-top: 24px;
+}
+
+.genesis-groups{
+  display: block;
+}
+
+.genesis-group{
+  margin-bottom: 34px;
+}
+
+.genesis-group-title{
+  margin-bottom: 14px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #ececec;
+  font-family: 'Montserrat', sans-serif;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+
+.genesis-grid{
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.genesis-card{
+  text-decoration: none;
+  color: #111;
+}
+
+.genesis-card-media{
+  background: #f7f7f7;
+  border: 1px solid #ececec;
+  overflow: hidden;
+}
+
+.genesis-card-media img{
+  width: 100%;
+  aspect-ratio: 4 / 5;
+  object-fit: cover;
+  display: block;
+  transition: transform 0.28s ease;
+}
+
+.genesis-card:hover .genesis-card-media img{
+  transform: scale(1.02);
+}
+
+.genesis-card-meta{
+  margin-top: 10px;
+  display: grid;
+  gap: 5px;
+}
+
+.genesis-card-name{
+  font-family: 'Montserrat', sans-serif;
+  font-size: 15px;
+  line-height: 1.35;
+}
+
+.genesis-card-price{
+  font-family: 'Montserrat', sans-serif;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.genesis-empty{
+  border: 1px solid #ececec;
+  padding: 24px;
+  text-align: center;
+  font-family: 'Montserrat', sans-serif;
+  font-size: 14px;
+  color: #444;
+}
+
+@media (max-width: 1080px){
+  .genesis-grid{
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 760px){
+  .genesis-page{
+    padding: calc(var(--top-bar-height) + 74px + 10px) 12px 30px;
+  }
+
+  .genesis-grid{
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+  }
+
+  .genesis-filter-btn{
+    height: 34px;
+    padding: 0 10px;
+    font-size: 11px;
+  }
+}

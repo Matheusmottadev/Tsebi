@@ -1,0 +1,109 @@
+.overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.26s ease, background 0.26s ease;
+  z-index: 2400;
+}
+
+.overlay.open {
+  background: rgba(0, 0, 0, 0.42);
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.drawer {
+  margin-left: auto;
+  width: 25vw;
+  min-width: 360px;
+  height: 100%;
+  background: #fff;
+  transform: translate3d(100%, 0, 0);
+  transition: transform 0.3s ease;
+  display: block;
+  overflow: hidden;
+}
+
+.drawerWide {
+  width: 40vw;
+  min-width: 520px;
+}
+
+.drawer.open {
+  transform: translate3d(0, 0, 0);
+}
+
+.contentArea {
+  width: 100%;
+  height: 100%;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid #ececec;
+  padding: 12px 16px;
+}
+
+.header h2 {
+  margin: 0;
+  font-family: "Playfair Display", serif;
+  font-size: 20px;
+  font-weight: 400;
+  letter-spacing: 0.01em;
+}
+
+.closeButton {
+  width: 30px;
+  height: 30px;
+  border: 0;
+  background: transparent;
+  font-size: 22px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.content {
+  flex: 1 1 auto;
+  overflow: auto;
+  padding: 14px 16px 18px;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+  touch-action: pan-y;
+  font-family: "Montserrat", sans-serif;
+  min-height: 0;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.content::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+  display: none;
+}
+
+@media (max-width: 900px) {
+  .drawer {
+    width: 100vw;
+    min-width: 0;
+    height: 100%;
+  }
+
+  .drawerWide {
+    width: 100vw;
+    min-width: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .overlay,
+  .drawer {
+    transition: none !important;
+  }
+}

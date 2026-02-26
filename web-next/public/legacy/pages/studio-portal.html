@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <link rel="icon" type="image/svg+xml" href="/images/favicon-dark.svg?v=20260219c" media="(prefers-color-scheme: dark)" />
+  <link rel="icon" type="image/svg+xml" href="/images/favicon-light.svg?v=20260219c" media="(prefers-color-scheme: light)" />
+  <link rel="icon" type="image/png" href="/images/logo-tsebi.png?v=20260219c" />
+  <link rel="shortcut icon" href="/images/logo-tsebi.png?v=20260219c" />
+  <link rel="apple-touch-icon" href="/images/logo-tsebi.png?v=20260219c" />
+<title>Studio Portal | Tsebi</title>
+  <!-- SEO META START -->
+  <meta name="description" content="Painel interno do Studio Tsebi." />
+  <meta name="robots" content="noindex,nofollow" />
+  <link rel="canonical" href="https://tsebi.com.br/studio-portal" />
+  <meta property="og:locale" content="pt_BR" />
+  <meta property="og:type" content="website" />
+  <meta property="og:title" content="Studio Portal | Tsebi" />
+  <meta property="og:description" content="Painel interno do Studio Tsebi." />
+  <meta property="og:url" content="https://tsebi.com.br/studio-portal" />
+  <meta property="og:site_name" content="Tsebi Brasil" />
+  <meta property="og:image" content="https://tsebi.com.br/images/logo-tsebi.png" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="Studio Portal | Tsebi" />
+  <meta name="twitter:description" content="Painel interno do Studio Tsebi." />
+  <meta name="twitter:image" content="https://tsebi.com.br/images/logo-tsebi.png" />
+  <!-- SEO META END -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;600&family=Montserrat:wght@400;500;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="assets/css/studio-admin.css?v=20260218a" />
+</head>
+<body>
+  <main class="admin-shell" id="studioPortalRoot">
+    <header class="topbar">
+      <div class="brand">
+        <div class="brand-kicker">Painel interno</div>
+        <div class="brand-title">Studio Portal</div>
+      </div>
+
+      <div class="topbar-actions">
+        <div class="search" role="search">
+          <input id="globalSearch" type="search" placeholder="Buscar nesta aba..." autocomplete="off" />
+        </div>
+        <button id="refreshBtn" type="button" class="btn btn-ghost">Atualizar</button>
+        <div class="avatar" id="adminAvatar" title="Admin"></div>
+        <div class="menu">
+          <button id="adminMenuBtn" type="button" class="btn btn-ghost">Menu</button>
+          <div id="adminMenuPanel" class="menu-panel" hidden>
+            <button class="menu-item" type="button" data-action="profile">Perfil</button>
+            <button class="menu-item" type="button" data-action="theme">Tema</button>
+            <button class="menu-item" type="button" data-action="accent">Paleta</button>
+            <button class="menu-item" type="button" data-action="logout">Sair</button>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <nav class="tabs" aria-label="Abas do painel">
+      <button type="button" class="tab is-active" data-tab="users">Usuários</button>
+      <button type="button" class="tab" data-tab="orders">Pedidos</button>
+      <button type="button" class="tab" data-tab="products">Produtos</button>
+      <button type="button" class="tab" data-tab="vip">Lista VIP</button>
+      <button type="button" class="tab" data-tab="newsletter">Newsletter</button>
+      <button type="button" class="tab" data-tab="coupons">Códigos de acesso</button>
+      <button type="button" class="tab" data-tab="whatsapp">WhatsApp</button>
+      <button type="button" class="tab" data-tab="audit">Auditoria</button>
+    </nav>
+
+    <section class="panel" id="panelUsers" data-panel="users">
+      <div class="panel-head">
+        <div class="panel-title">
+          <h2>Usuários</h2>
+          <p>Editar dados, senha temporária e ações críticas com auditoria.</p>
+        </div>
+        <div class="panel-actions">
+          <select id="usersStatus">
+            <option value="">Todos</option>
+            <option value="active">Ativos</option>
+            <option value="disabled">Login desativado</option>
+          </select>
+          <button id="usersCreateBtn" type="button" class="btn">Cadastrar</button>
+        </div>
+      </div>
+      <div id="usersMount"></div>
+    </section>
+
+    <section class="panel" id="panelOrders" data-panel="orders" hidden>
+      <div class="panel-head">
+        <div class="panel-title">
+          <h2>Pedidos</h2>
+          <p>Tracking manual, status, notas, prazos e etiqueta.</p>
+        </div>
+        <div class="panel-actions">
+          <select id="ordersStatus">
+            <option value="">Todos status</option>
+            <option value="pending_payment">Pendente</option>
+            <option value="processing">Processando</option>
+            <option value="paid">Pago</option>
+            <option value="failed">Falhou</option>
+            <option value="canceled">Cancelado</option>
+            <option value="refunded">Reembolsado</option>
+          </select>
+        </div>
+      </div>
+      <div id="ordersMount"></div>
+    </section>
+
+    <section class="panel" id="panelProducts" data-panel="products" hidden>
+      <div class="panel-head">
+        <div class="panel-title">
+          <h2>Produtos</h2>
+          <p>Editar dados, foto, estoque e status com confirmação e diff.</p>
+        </div>
+        <div class="panel-actions">
+          <select id="productsStatus">
+            <option value="">Todos</option>
+            <option value="active">Ativos</option>
+            <option value="inactive">Inativos</option>
+          </select>
+          <select id="productsStock">
+            <option value="">Todo estoque</option>
+            <option value="in">Em estoque</option>
+            <option value="out">Sem estoque</option>
+          </select>
+          <button id="productsCreateBtn" type="button" class="btn">Criar</button>
+        </div>
+      </div>
+      <div id="productsMount"></div>
+    </section>
+
+    <section class="panel" id="panelVip" data-panel="vip" hidden>
+      <div class="panel-head">
+        <div class="panel-title">
+          <h2>Lista VIP</h2>
+          <p>Inscritos com busca, edição e auditoria.</p>
+        </div>
+        <div class="panel-actions">
+          <button id="vipCreateBtn" type="button" class="btn">Cadastrar</button>
+        </div>
+      </div>
+      <div id="vipMount"></div>
+    </section>
+
+    <section class="panel" id="panelNewsletter" data-panel="newsletter" hidden>
+      <div class="panel-head">
+        <div class="panel-title">
+          <h2>Newsletter</h2>
+          <p>Inscritos de newsletter por e-mail, origem e página de captura.</p>
+        </div>
+      </div>
+      <div id="newsletterMount"></div>
+    </section>
+
+    <section class="panel" id="panelCoupons" data-panel="coupons" hidden>
+      <div class="panel-head">
+        <div class="panel-title">
+          <h2>Códigos de acesso</h2>
+          <p>Crie regras de desconto por percentual ou valor fixo para clientes com acesso especial.</p>
+        </div>
+      </div>
+      <div id="couponsMount"></div>
+    </section>
+
+    <section class="panel" id="panelWhatsApp" data-panel="whatsapp" hidden>
+      <div class="panel-head">
+        <div class="panel-title">
+          <h2>WhatsApp</h2>
+          <p>Atendimento, VIP e envios manuais com controle de custos.</p>
+        </div>
+      </div>
+      <div id="whatsappMount"></div>
+    </section>
+
+    <section class="panel" id="panelAudit" data-panel="audit" hidden>
+      <div class="panel-head">
+        <div class="panel-title">
+          <h2>Auditoria</h2>
+          <p>Alterações e logins admin (reversão até 30 dias quando aplicável).</p>
+        </div>
+        <div class="panel-actions">
+          <select id="auditMode">
+            <option value="changes">Alterações</option>
+            <option value="logins">Logins admin</option>
+          </select>
+        </div>
+      </div>
+      <div id="auditMount"></div>
+    </section>
+  </main>
+
+  <script type="module" src="assets/js/pages/studio-portal.js?v=20260224b"></script>
+  <script src="JS/posthog.js"></script>
+</body>
+</html>
+
+
+
+
+
+
+
+
+
+
+
+
+

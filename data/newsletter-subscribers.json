@@ -1,0 +1,26 @@
+[
+  {
+    "email": "qa4@example.com",
+    "phone": "",
+    "source": "qa",
+    "page": "/home-legacy",
+    "consent": true,
+    "subscribedAt": "2026-02-25T15:14:56.466Z",
+    "updatedAt": "2026-02-25T15:14:56.466Z",
+    "status": "active",
+    "lastIp": "::1",
+    "lastUserAgent": "Mozilla/5.0 (Windows NT; Windows NT 10.0; de-DE) WindowsPowerShell/5.1.26100.7705"
+  },
+  {
+    "email": "qa@example.com",
+    "phone": "",
+    "source": "qa",
+    "page": "/home-legacy",
+    "consent": true,
+    "subscribedAt": "2026-02-25T15:12:45.475Z",
+    "updatedAt": "2026-02-25T15:12:45.475Z",
+    "status": "active",
+    "lastIp": "::1",
+    "lastUserAgent": "Mozilla/5.0 (Windows NT; Windows NT 10.0; de-DE) WindowsPowerShell/5.1.26100.7705"
+  }
+]

@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <link rel="icon" type="image/svg+xml" href="/images/favicon-dark.svg?v=20260219c" media="(prefers-color-scheme: dark)" />
+  <link rel="icon" type="image/svg+xml" href="/images/favicon-light.svg?v=20260219c" media="(prefers-color-scheme: light)" />
+  <link rel="icon" type="image/png" href="/images/logo-tsebi.png?v=20260219c" />
+  <link rel="shortcut icon" href="/images/logo-tsebi.png?v=20260219c" />
+  <link rel="apple-touch-icon" href="/images/logo-tsebi.png?v=20260219c" />
+  <title>Detalhes do pedido | Tsebi Brasil</title>
+  <!-- SEO META START -->
+  <meta name="description" content="Detalhes de pedidos da conta Tsebi." />
+  <meta name="robots" content="noindex,nofollow" />
+  <link rel="canonical" href="https://tsebi.com.br/order.html" />
+  <meta property="og:locale" content="pt_BR" />
+  <meta property="og:type" content="website" />
+  <meta property="og:title" content="Detalhes do pedido | Tsebi Brasil" />
+  <meta property="og:description" content="Detalhes de pedidos da conta Tsebi." />
+  <meta property="og:url" content="https://tsebi.com.br/order.html" />
+  <meta property="og:site_name" content="Tsebi Brasil" />
+  <meta property="og:image" content="https://tsebi.com.br/images/logo-tsebi.png" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="Detalhes do pedido | Tsebi Brasil" />
+  <meta name="twitter:description" content="Detalhes de pedidos da conta Tsebi." />
+  <meta name="twitter:image" content="https://tsebi.com.br/images/logo-tsebi.png" />
+  <!-- SEO META END -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600&family=Montserrat:wght@300;400;500;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/style.css?v=20260220h" />
+  <link rel="stylesheet" href="css/account-auth.css" />
+</head>
+<body class="account-auth-page">
+  <header class="cart-simple-header">
+    <a class="cart-simple-logo" href="index.html">TSEBI</a>
+    <nav class="cart-simple-actions">
+      <a href="conta.html">Minha conta</a>
+      <a href="cart.html">Carrinho</a>
+    </nav>
+  </header>
+
+  <main class="account-main-page">
+    <section class="account-dashboard-card">
+      <div class="account-dashboard-head">
+        <div>
+          <p class="account-auth-kicker">Pedido</p>
+          <h1 id="orderTitle">Detalhes do pedido</h1>
+          <p id="orderSubtitle"></p>
+        </div>
+        <a href="conta.html" class="account-auth-submit" style="text-decoration:none;display:inline-flex;align-items:center;">Voltar</a>
+      </div>
+
+      <section class="account-orders-block">
+        <h2>Resumo</h2>
+        <div id="orderSummary"></div>
+        <div id="orderActions" class="account-order-actions" hidden>
+          <button type="button" class="account-auth-submit" id="cancelOrderBtn" hidden>Cancelar pedido</button>
+          <button type="button" class="account-auth-submit" id="refundOrderBtn" hidden>Solicitar reembolso</button>
+        </div>
+      </section>
+
+      <section class="account-orders-block">
+        <h2>Itens</h2>
+        <div id="orderItems"></div>
+      </section>
+
+      <section class="account-orders-block">
+        <h2>Entrega</h2>
+        <div id="orderShipping"></div>
+      </section>
+
+      <p class="account-auth-feedback" id="orderFeedback" aria-live="polite"></p>
+    </section>
+  </main>
+
+  <script src="JS/user-utils.js?v=20260220a"></script>
+  <script src="JS/order.js?v=20260222b"></script>
+  <script src="JS/posthog.js"></script>
+</body>
+</html>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

@@ -1,0 +1,50 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  ci:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js (LTS)
+        uses: actions/setup-node@v4
+        with:
+          node-version: "lts/*"
+
+      - name: Cache npm
+        uses: actions/cache@v4
+        with:
+          path: ~/.npm
+          key: ${{ runner.os }}-npm-${{ hashFiles('package-lock.json', 'web-next/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-npm-
+
+      - name: Install root dependencies
+        run: npm ci
+
+      - name: Install web-next dependencies
+        run: npm ci --prefix web-next
+
+      - name: Root lint (if present)
+        run: npm run lint --if-present
+
+      - name: Root typecheck (CI profile)
+        run: npm run typecheck:ci
+
+      - name: Root API tests
+        run: npm run test:api
+
+      - name: Web lint
+        run: npm run lint:web
+
+      - name: Web typecheck
+        run: npm run typecheck:web
+
+      - name: Web build
+        run: npm run build:web

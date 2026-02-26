@@ -1,0 +1,220 @@
+.processos-page {
+  background: #ffffff;
+  color: #111111;
+}
+
+.process-main {
+  max-width: 1240px;
+  margin: 0 auto;
+  padding: calc(var(--top-bar-height) + var(--header-height) + 44px) 24px 110px;
+}
+
+.processos-page .home-header {
+  background: #ffffff;
+  border-bottom: 1px solid #d9d9d9;
+}
+
+.processos-page .home-header .header-left,
+.processos-page .home-header .header-right {
+  opacity: 1;
+  transform: translateY(0);
+  pointer-events: auto;
+}
+
+.processos-page .logo-center-text {
+  color: #000000;
+  opacity: 1;
+}
+
+.processos-page .logo-center-image {
+  display: block;
+  opacity: 0;
+}
+
+.processos-page .home-header.logo-cycle-image .logo-center-text {
+  opacity: 0;
+}
+
+.processos-page .home-header.logo-cycle-image .logo-center-image {
+  opacity: 1;
+}
+
+.process-hero {
+  text-align: center;
+  max-width: 820px;
+  margin: 0 auto 72px;
+}
+
+.process-kicker {
+  margin: 0 0 12px;
+  font-size: 11px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+}
+
+.process-hero h2 {
+  margin: 0;
+  font-family: "Playfair Display", serif;
+  font-size: clamp(2rem, 4.2vw, 4.1rem);
+  font-weight: 400;
+  line-height: 1.1;
+}
+
+.process-subtitle {
+  margin: 20px auto 26px;
+  max-width: 720px;
+  font-size: clamp(0.95rem, 1.6vw, 1.12rem);
+  line-height: 1.75;
+  color: #2a2a2a;
+}
+
+.process-cta {
+  display: inline-block;
+  font-size: 0.8rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: #111111;
+  text-decoration: none;
+  border-bottom: 1px solid #111111;
+  padding-bottom: 4px;
+  transition: opacity 0.25s ease;
+}
+
+.process-cta:hover,
+.process-cta:focus-visible {
+  opacity: 0.65;
+}
+
+.process-video-section {
+  max-width: 980px;
+  margin: 0 auto 90px;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 20px;
+}
+
+.process-video {
+  width: 100%;
+  aspect-ratio: 9 / 16;
+  height: auto;
+  display: block;
+  border: 0;
+  outline: none;
+  border-radius: 10px;
+  box-shadow: 0 22px 38px rgba(0, 0, 0, 0.08);
+  background: #f4f4f4;
+  object-fit: cover;
+}
+
+.process-steps {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 26px;
+  margin: 0 0 100px;
+}
+
+.process-step {
+  background: #ffffff;
+  transition: transform 0.35s ease, box-shadow 0.35s ease;
+}
+
+.process-step img {
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  object-fit: cover;
+  display: block;
+  margin-bottom: 16px;
+  border-radius: 8px;
+}
+
+.process-step h3 {
+  margin: 0 0 8px;
+  font-family: "Playfair Display", serif;
+  font-size: clamp(1.15rem, 1.8vw, 1.45rem);
+  font-weight: 400;
+}
+
+.process-step p {
+  margin: 0;
+  font-size: 0.95rem;
+  line-height: 1.65;
+  color: #333333;
+}
+
+.process-step:hover {
+  transform: translateY(-4px);
+}
+
+.process-closing {
+  text-align: center;
+  max-width: 760px;
+  margin: 0 auto;
+  padding-top: 10px;
+}
+
+.process-closing p {
+  margin: 0;
+  font-family: "Playfair Display", serif;
+  font-size: clamp(1.3rem, 2.4vw, 2.05rem);
+  line-height: 1.35;
+}
+
+[data-reveal] {
+  opacity: 0;
+  transform: translateY(20px);
+  transition: opacity 0.65s ease, transform 0.65s ease;
+}
+
+[data-reveal].is-visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+@media (min-width: 760px) {
+  .process-main {
+    padding-left: 34px;
+    padding-right: 34px;
+  }
+
+  .process-steps {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 34px 30px;
+  }
+}
+
+@media (min-width: 1180px) {
+  .process-steps {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 38px 34px;
+  }
+}
+
+@media (max-width: 700px) {
+  .process-main {
+    padding-top: calc(var(--top-bar-height) + var(--header-height) + 28px);
+    padding-bottom: 82px;
+  }
+
+  .process-hero {
+    margin-bottom: 54px;
+  }
+
+  .process-video-section {
+    grid-template-columns: 1fr;
+    margin-bottom: 64px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-reveal] {
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
+
+  .process-step,
+  .process-cta {
+    transition: none;
+  }
+}
+

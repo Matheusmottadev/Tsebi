@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Entrar | Tsebi Brasil</title>
+  <meta name="description" content="Acesse sua conta Tsebi." />
+  <meta name="robots" content="noindex,nofollow" />
+  <link rel="canonical" href="https://tsebi.com.br/login.html" />
+
+  <link rel="icon" type="image/svg+xml" href="/images/favicon-dark.svg?v=20260219c" media="(prefers-color-scheme: dark)" />
+  <link rel="icon" type="image/svg+xml" href="/images/favicon-light.svg?v=20260219c" media="(prefers-color-scheme: light)" />
+  <link rel="icon" type="image/png" href="/images/logo-tsebi.png?v=20260219c" />
+  <link rel="shortcut icon" href="/images/logo-tsebi.png?v=20260219c" />
+  <link rel="apple-touch-icon" href="/images/logo-tsebi.png?v=20260219c" />
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600&family=Montserrat:wght@300;400;500;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/style.css?v=20260220h" />
+  <link rel="stylesheet" href="css/account.css?v=20260223i" />
+</head>
+<body class="login-page">
+  <div class="top-bar">
+    <div class="top-wrapper">
+      <button class="arrow left" type="button">&#10094;</button>
+      <div class="top-message" id="topMessage">Frete Grátis!</div>
+      <button class="arrow right" type="button">&#10095;</button>
+    </div>
+  </div>
+
+  <header class="home-header is-scrolled">
+    <div class="header-row">
+      <div class="header-left">
+        <button class="menu-toggle" id="openHeaderMenu" type="button" aria-label="Abrir menu">
+          <span></span><span></span><span></span>
+        </button>
+        <button class="search-box-trigger" id="openSearch" type="button" aria-label="Abrir busca">
+          <span class="search-box-label">O que você está buscando?</span>
+          <span class="search-box-icon">&#8985;</span>
+        </button>
+      </div>
+
+      <h1 class="logo">
+        <a class="logo-center-link" href="index.html">
+          <span class="logo-center-text">TSEBI</span>
+          <img class="logo-center-image" src="images/logo-tsebi.png" alt="Logo TSEBI" />
+        </a>
+      </h1>
+
+      <div class="header-right">
+        <a class="quick-action" href="login.html" aria-label="Conta">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M20 21a8 8 0 0 0-16 0"></path>
+            <circle cx="12" cy="8" r="4"></circle>
+          </svg>
+        </a>
+        <a class="quick-action cart-link" href="cart.html" aria-label="Carrinho">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M7 7h10l1 12H6L7 7z"></path>
+            <path d="M9 7V6a3 3 0 1 1 6 0v1"></path>
+          </svg>
+        </a>
+      </div>
+    </div>
+  </header>
+
+  <aside class="header-menu" id="headerMenu" aria-hidden="true">
+    <button class="header-menu-close" id="closeHeaderMenu" type="button" aria-label="Fechar menu">&times;</button>
+    <nav class="header-menu-nav">
+      <div class="menu-group"><a class="menu-group-title" href="lancamento.html">Coleção Gênesis</a></div>
+      <div class="menu-group"><a class="menu-group-title" href="nossa-historia.html">Origem</a></div>
+      <div class="menu-group"><a class="menu-group-title" href="processos.html">Processos</a></div>
+      <div class="menu-group"><a class="menu-group-title" href="faq.html">FAQ</a></div>
+    </nav>
+  </aside>
+
+  <main class="t-login-main">
+    <div class="t-login-container">
+      <div class="login-wrapper">
+        <div class="login-layout">
+          <section class="account-benefits auth-card">
+            <h2>Tenha uma conta Tsebi</h2>
+            <ul class="benefits-list">
+              <li>
+                <strong>Acompanhe seus pedidos</strong>
+                <span>Visualize o status e o histórico de compras em um só lugar.</span>
+              </li>
+              <li>
+                <strong>Checkout mais rápido</strong>
+                <span>Seus dados ficam salvos para futuras compras.</span>
+              </li>
+              <li>
+                <strong>Lista de desejos</strong>
+                <span>Salve suas peças favoritas para comprar depois.</span>
+              </li>
+              <li>
+                <strong>Atendimento prioritário</strong>
+                <span>Acesso a suporte e serviços exclusivos da Tsebi.</span>
+              </li>
+            </ul>
+          </section>
+
+          <section class="login-form">
+            <section class="auth-card" aria-labelledby="loginTitle">
+            <h1 id="loginTitle">Entrar</h1>
+            <p class="auth-sub">Acesse sua conta Tsebi para acompanhar pedidos e preferências.</p>
+
+            <div id="authError" class="auth-error" role="alert" hidden></div>
+
+            <section id="stateEmail" class="auth-state">
+              <label for="emailInput">Email</label>
+              <input id="emailInput" class="auth-input" type="email" autocomplete="email" placeholder="seu@email.com" />
+              <button id="showPasswordBtnPrimary" class="btn-primary auth-btn" type="button">Entrar com senha</button>
+              <button id="sendCodeBtn" class="btn-primary auth-btn" type="button">Enviar código</button>
+              <div class="auth-micro">Enviaremos um código para seu e-mail.</div>
+            </section>
+
+            <section id="stateCode" class="auth-state" hidden>
+              <div class="auth-inline">
+                <span id="emailPreview"></span>
+                <button id="changeEmailBtn" type="button" class="auth-link auth-link-btn">Alterar e-mail</button>
+              </div>
+
+              <label for="codeInput">Código</label>
+              <input id="codeInput" class="auth-input" inputmode="numeric" maxlength="6" autocomplete="one-time-code" placeholder="000000" />
+              <button id="verifyCodeBtn" class="btn-primary auth-btn" type="button">Confirmar</button>
+
+              <div class="auth-row">
+                <button id="resendBtn" type="button" class="auth-link auth-link-btn" disabled>Reenviar código (30s)</button>
+                <button id="showPasswordBtn" type="button" class="auth-link auth-link-btn">Entrar com senha</button>
+              </div>
+            </section>
+
+            <section id="statePassword" class="auth-state" hidden>
+              <label for="emailInput2">Email</label>
+              <input id="emailInput2" class="auth-input" type="email" autocomplete="email" placeholder="seu@email.com" />
+
+              <label for="passwordInput">Senha</label>
+              <div class="auth-password-wrap">
+                <input id="passwordInput" class="auth-input" type="password" autocomplete="current-password" placeholder="Digite sua senha" />
+                <button type="button" id="togglePasswordBtn" class="auth-link-btn auth-toggle-pass">Mostrar</button>
+              </div>
+
+              <button id="loginPasswordBtn" class="btn-primary auth-btn" type="button">Entrar</button>
+
+              <div class="auth-row">
+                <a class="auth-link" href="recuperar-senha.html">Esqueci minha senha</a>
+                <button id="backToCodeBtn" type="button" class="auth-link auth-link-btn">Voltar para código por e-mail</button>
+              </div>
+            </section>
+
+            <div class="auth-divider"><span>ou</span></div>
+
+            <div class="auth-social-stack">
+              <button id="googleBtn" class="btn-outline auth-btn" type="button">Continuar com Google</button>
+              <button id="passkeyBtn" class="btn-outline auth-btn" type="button">Entrar com Passkey</button>
+            </div>
+
+            <p class="auth-footer">Ainda não tem conta? <a class="auth-link" href="conta.html">Criar conta</a></p>
+            </section>
+          </section>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <script src="JS/user-utils.js?v=20260222a"></script>
+  <script src="JS/script.js?v=20260224a"></script>
+  <script src="JS/auth-login.js?v=20260223e"></script>
+  <script src="JS/posthog.js"></script>
+</body>
+</html>
+
+
+
+

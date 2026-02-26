@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <link rel="icon" type="image/svg+xml" href="/images/favicon-dark.svg?v=20260219c" media="(prefers-color-scheme: dark)" />
+  <link rel="icon" type="image/svg+xml" href="/images/favicon-light.svg?v=20260219c" media="(prefers-color-scheme: light)" />
+  <link rel="icon" type="image/png" href="/images/logo-tsebi.png?v=20260219c" />
+  <link rel="shortcut icon" href="/images/logo-tsebi.png?v=20260219c" />
+  <link rel="apple-touch-icon" href="/images/logo-tsebi.png?v=20260219c" />
+  <title>Candidatura | Tsebi Careers</title>
+  <!-- SEO META START -->
+  <meta name="description" content="Envie sua candidatura para trabalhar na Tsebi e participar da construcao da marca." />
+  <meta name="robots" content="index,follow" />
+  <link rel="canonical" href="https://tsebi.com.br/candidatura.html" />
+  <meta property="og:locale" content="pt_BR" />
+  <meta property="og:type" content="website" />
+  <meta property="og:title" content="Candidatura | Tsebi Careers" />
+  <meta property="og:description" content="Envie sua candidatura para trabalhar na Tsebi e participar da construcao da marca." />
+  <meta property="og:url" content="https://tsebi.com.br/candidatura.html" />
+  <meta property="og:site_name" content="Tsebi Brasil" />
+  <meta property="og:image" content="https://tsebi.com.br/images/logo-tsebi.png" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="Candidatura | Tsebi Careers" />
+  <meta name="twitter:description" content="Envie sua candidatura para trabalhar na Tsebi e participar da construcao da marca." />
+  <meta name="twitter:image" content="https://tsebi.com.br/images/logo-tsebi.png" />
+  <!-- SEO META END -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-4GHX4VL6DZ"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    gtag('consent', 'default', {
+      analytics_storage: 'denied',
+      ad_storage: 'denied',
+      ad_user_data: 'denied',
+      ad_personalization: 'denied',
+      functionality_storage: 'denied',
+      security_storage: 'granted'
+    });
+    gtag('config', 'G-4GHX4VL6DZ', {
+      anonymize_ip: true
+    });
+  </script>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600&family=Montserrat:wght@300;400;500;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/style.css?v=20260220h" />
+  <link rel="stylesheet" href="css/candidatura.css" />
+</head>
+<body>
+  <header class="application-header">
+    <a class="application-logo" href="carreiras.html">
+      <span class="application-logo-main">Tsebi</span>
+      <span class="application-logo-sub">Careers</span>
+    </a>
+    <a class="application-back" href="carreiras.html">Voltar para carreiras</a>
+  </header>
+
+  <main class="application-main">
+    <section class="application-intro">
+      <p class="application-kicker">Candidatura</p>
+      <h1>Faça parte do time Tsebi</h1>
+      <p>Preencha seus dados para concluir sua candidatura. Nossa equipe analisar? seu perfil e retornar? em breve.</p>
+    </section>
+
+    <section class="application-card">
+      <form id="applicationForm" class="application-form">
+        <div class="application-grid">
+          <label>
+            Nome
+            <input type="text" name="firstName" minlength="2" required />
+          </label>
+          <label>
+            Sobrenome
+            <input type="text" name="lastName" minlength="2" required />
+          </label>
+          <label>
+            E-mail
+            <input type="email" name="email" required />
+          </label>
+          <label>
+            Telefone
+            <input type="tel" name="phone" required />
+          </label>
+          <label>
+            LinkedIn (opcional)
+            <input type="url" name="linkedin" placeholder="https://linkedin.com/in/seu-perfil" />
+          </label>
+          <label>
+            Portfólio (opcional)
+            <input type="url" name="portfolio" placeholder="https://seuportfolio.com" />
+          </label>
+        </div>
+
+        <label>
+          Vaga de interesse
+          <input id="jobInterestInput" type="text" name="jobInterest" required />
+        </label>
+
+        <label>
+          Mensagem
+          <textarea name="message" rows="5" placeholder="Conte sua experiência e por que quer fazer parte da Tsebi."></textarea>
+        </label>
+
+        <label>
+          Link do currículo (Drive/Dropbox)
+          <input type="url" name="resumeUrl" required placeholder="https://..." />
+        </label>
+
+        <div class="application-actions">
+          <button type="submit">Enviar candidatura</button>
+        </div>
+      </form>
+
+      <div class="application-success" id="applicationSuccess" hidden>
+        <h2>Candidatura enviada com sucesso.</h2>
+        <p>Recebemos seus dados e entraremos em contato pelo e-mail informado.</p>
+        <a href="carreiras.html">Voltar para oportunidades</a>
+      </div>
+    </section>
+  </main>
+
+  <script src="JS/candidatura.js"></script>
+  <script src="JS/posthog.js"></script>
+  <script src="JS/cookies.js"></script>
+  <script src="JS/language-switcher.js?v=20260224a"></script>
+</body>
+</html>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

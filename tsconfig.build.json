@@ -1,0 +1,31 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "noEmit": false,
+    "outDir": "dist",
+    "rootDir": ".",
+    "declaration": false,
+    "sourceMap": true,
+    "module": "CommonJS",
+    "strict": true,
+    "allowJs": false,
+    "checkJs": false
+  },
+  "include": [
+    "server/**/*.ts",
+    "src/**/*.ts",
+    "scripts/**/*.ts",
+    "src/services/whatsapp.service.ts",
+    "src/types/**/*.d.ts"
+  ],
+  "exclude": [
+    "node_modules",
+    "web-next",
+    "dist",
+    "pages",
+    "public",
+    "assets",
+    "data",
+    "tests"
+  ]
+}

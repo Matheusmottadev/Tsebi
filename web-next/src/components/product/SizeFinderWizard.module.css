@@ -1,0 +1,431 @@
+.root {
+  display: grid;
+  gap: 10px;
+  font-family: "Montserrat", sans-serif;
+}
+
+.progress {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0;
+}
+
+.progress span {
+  width: 9px;
+  height: 9px;
+  border-radius: 999px;
+  background: #d4d4d4;
+  border: 0;
+  position: relative;
+}
+
+.progress span:not(:last-child) {
+  margin-right: 30px;
+}
+
+.progress span:not(:last-child)::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: calc(100% + 6px);
+  width: 18px;
+  height: 1px;
+  background: #d4d4d4;
+  transform: translateY(-50%);
+}
+
+.progressOn {
+  background: #111 !important;
+}
+
+.progressCurrent {
+  animation: wizardPulse 1s ease-in-out infinite;
+}
+
+@keyframes wizardPulse {
+  0% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.15);
+    opacity: 0.48;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .progressCurrent {
+    animation: none !important;
+  }
+}
+
+.section {
+  display: grid;
+  gap: 10px;
+}
+
+.bodyGuideWrap {
+  background: #f7f7f7;
+  border: 1px solid #ececec;
+  min-height: 260px;
+  display: grid;
+  place-items: center;
+  padding: 12px 0;
+}
+
+.bodyGuideSvg {
+  width: auto;
+  height: min(62vh, 360px);
+  max-width: 100%;
+}
+
+.mannequinStroke {
+  fill: none;
+  stroke: #9aa0a6;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.guideLine {
+  stroke: #6d8cff;
+  stroke-width: 2;
+  stroke-dasharray: 5 6;
+  opacity: 0.22;
+  transition: opacity 0.18s ease, stroke 0.18s ease;
+}
+
+.guideLineActive {
+  opacity: 1;
+}
+
+.guideCenter {
+  opacity: 0.12;
+}
+
+.section h3 {
+  text-align: center;
+  margin: 0;
+  font-family: "Playfair Display", serif;
+  font-size: 20px;
+  font-weight: 400;
+}
+
+.subtitle {
+  margin: 0;
+  text-align: center;
+  font-size: 12px;
+  color: #2f2f2f;
+}
+
+.tabs {
+  display: flex;
+  border-bottom: 1px solid #cfd1d3;
+}
+
+.tabs button {
+  flex: 1;
+  min-height: 38px;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  font-size: 11px;
+  letter-spacing: 0.06em;
+}
+
+.tabActive {
+  border-bottom: 2px solid #111 !important;
+}
+
+.stepOneFields {
+  display: grid;
+  gap: 10px;
+}
+
+.inputGroup {
+  display: grid;
+  gap: 4px;
+}
+
+.inlineInput {
+  min-height: 52px;
+  border: 1px solid #d8d8d8;
+  background: #f3f3f3;
+  padding: 0 14px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.inlineInput input {
+  flex: 1;
+  border: 0;
+  outline: none;
+  background: transparent;
+  font-size: 12px;
+}
+
+.unitSwitch {
+  display: inline-flex;
+  gap: 6px;
+}
+
+.unitSwitch button {
+  border: 0;
+  background: transparent;
+  color: #9ea2a8;
+  font-size: 11px;
+  cursor: pointer;
+}
+
+.unitOn {
+  color: #111 !important;
+  font-weight: 600;
+}
+
+.required {
+  font-size: 11px;
+  color: #d73030;
+}
+
+.formStack {
+  display: grid;
+  gap: 6px;
+}
+
+.stackLabel {
+  font-size: 11px;
+}
+
+.selectRow {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.selectRow select {
+  min-height: 42px;
+  border: 1px solid #d8d8d8;
+  background: #f3f3f3;
+  padding: 0 10px;
+  font-size: 12px;
+}
+
+.ethnicityField {
+  display: grid;
+  gap: 6px;
+}
+
+.ethnicityField span:first-child {
+  font-size: 11px;
+}
+
+.ethnicityInput {
+  min-height: 42px;
+  border: 1px solid #d8d8d8;
+  background: #f3f3f3;
+  display: flex;
+  align-items: center;
+  padding: 0 10px;
+  gap: 8px;
+}
+
+.ethnicityInput input {
+  border: 0;
+  outline: none;
+  background: transparent;
+  flex: 1;
+  font-size: 12px;
+}
+
+.ethnicityInput span {
+  width: 18px;
+  height: 18px;
+  border: 1px solid #666;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+}
+
+.clearLink {
+  justify-self: center;
+  border: 0;
+  background: transparent;
+  text-decoration: underline;
+  font-size: 12px;
+  color: #111;
+  cursor: pointer;
+  margin-top: 2px;
+}
+
+.scaleField {
+  border-bottom: 1px solid #ededed;
+  padding-bottom: 8px;
+}
+
+.scaleLabelRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 12px;
+}
+
+.scaleButtons {
+  display: inline-flex;
+  gap: 6px;
+}
+
+.scaleButtons button {
+  min-width: 22px;
+  min-height: 22px;
+  border: 1px solid #d8d8d8;
+  background: #fff;
+  cursor: pointer;
+}
+
+.scaleDots {
+  margin-top: 8px;
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.dot,
+.dotActive {
+  width: 11px;
+  height: 11px;
+  border-radius: 999px;
+  border: 1px solid #666;
+  background: transparent;
+  cursor: pointer;
+  justify-self: center;
+}
+
+.dotActive {
+  background: #111;
+  border-color: #111;
+}
+
+.actions,
+.actionsDual {
+  display: flex;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.actions {
+  justify-content: center;
+}
+
+.actionsDual {
+  justify-content: space-between;
+}
+
+.primary,
+.secondary {
+  min-height: 42px;
+  border: 1px solid #111;
+  padding: 0 16px;
+  cursor: pointer;
+  letter-spacing: 0.08em;
+  font-size: 11px;
+}
+
+.primary {
+  background: #111;
+  color: #fff;
+  width: 100%;
+}
+
+.primary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.secondary {
+  background: #fff;
+  color: #111;
+}
+
+.recommendedSize {
+  margin: 0;
+  font-size: 28px;
+  line-height: 1;
+  font-family: "Playfair Display", serif;
+  font-weight: 400;
+}
+
+.fitLabel,
+.confidence {
+  margin: 0;
+  color: #444;
+  font-size: 11px;
+}
+
+.horizontalSizes {
+  display: grid;
+  grid-template-columns: 28px 1fr 28px;
+  align-items: center;
+  gap: 6px;
+  border-top: 1px solid #ececec;
+  border-bottom: 1px solid #ececec;
+  padding: 8px 0;
+}
+
+.arrowButton {
+  width: 26px;
+  height: 26px;
+  border: 1px solid #d8d8d8;
+  background: #fff;
+  font-size: 17px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.arrowButton:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.sizeRail {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 4px;
+  text-align: center;
+}
+
+.sizeOption,
+.sizeSelected {
+  width: 100%;
+  padding: 0;
+  min-height: 22px;
+  display: grid;
+  place-items: center;
+  border: 1px solid #d8d8d8;
+  background: #fff;
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  cursor: pointer;
+}
+
+.sizeSelected {
+  border-color: #111;
+  background: #111;
+  color: #fff;
+}
+
+@media (max-width: 640px) {
+  .selectRow {
+    grid-template-columns: 1fr;
+  }
+
+  .bodyGuideWrap {
+    min-height: 220px;
+  }
+}
