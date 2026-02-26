@@ -10,7 +10,8 @@ const { query } = require("./db") as {
   query: <TRow extends JsonRecord = JsonRecord>(text: string, params?: unknown[]) => Promise<QueryResult<TRow>>;
 };
 
-const DEFAULT_IMAGE = "images/produtos/sug1.jpeg";
+const DEFAULT_IMAGE = "images/placeholder.jpg";
+const STOREFRONT_DEFAULT_PRICE_CENTS = 100;
 
 export type VariantStockMap = Record<string, number>;
 
@@ -347,13 +348,17 @@ function mapProduct(row: ProductRow | null | undefined): Product {
   const sku = String(row?.sku || "").trim();
   const staticMetadata = PRODUCT_METADATA[sku] || {};
   const metadata = normalizeProductMetadata(row?.metadata, staticMetadata);
-  const priceValue = Math.max(0, Math.round(Number(row?.price_cents || 0) / 100));
+  const metadataRecord = asRecord(row?.metadata);
+  // New storefront baseline: keep all catalog prices at R$ 1,00 until real launch pricing is published.
+  const effectivePriceCents = STOREFRONT_DEFAULT_PRICE_CENTS;
+  const priceValue = Math.round(effectivePriceCents / 100);
   const dbImage = String(row?.image_url || "").trim();
-  const staticImage = String(staticMetadata.image || "").trim();
-  const dbLooksLikeLegacyLocalProductImage =
-    /^images\/produtos\/sug[1-9]\d*\.jpeg$/i.test(dbImage) && dbImage !== staticImage;
-  const resolvedImage = dbLooksLikeLegacyLocalProductImage ? staticImage || dbImage : dbImage || staticImage || DEFAULT_IMAGE;
-  const resolvedSecondaryImage = String(staticMetadata.secondaryImage || "").trim();
+  const metadataImage = String(metadataRecord.image || metadataRecord.image_url || metadataRecord.imageUrl || "").trim();
+  const metadataSecondaryImage = String(
+    metadataRecord.secondaryImage || metadataRecord.secondary_image || metadataRecord.image2 || metadataRecord.hoverImage || ""
+  ).trim();
+  const resolvedImage = dbImage || metadataImage || DEFAULT_IMAGE;
+  const resolvedSecondaryImage = metadataSecondaryImage;
 
   return {
     id: sku,
@@ -368,9 +373,9 @@ function mapProduct(row: ProductRow | null | undefined): Product {
     colors: metadata.colors,
     variantStock: metadata.variantStock,
     gender: String(staticMetadata.gender || "Unissex"),
-    priceLabel: formatPriceLabelFromCents(row?.price_cents),
+    priceLabel: formatPriceLabelFromCents(effectivePriceCents),
     priceValue,
-    unitAmount: Math.max(0, Number(row?.price_cents || 0)),
+    unitAmount: effectivePriceCents,
     currency: String(row?.currency || "brl").toLowerCase(),
     stock: Math.max(0, Number(row?.stock_qty || 0)),
     active: Boolean(row?.active),
