@@ -50,7 +50,8 @@ const SEARCH_CHIPS = [
 const COLLECTION_VIDEO = "https://media.tsebi.com.br/31377-386628887.mp4";
 const COLLECTION_IMAGE = "/images/legacy/home/collection.jpg";
 const COLLECTION_PLACEHOLDER = "/images/hero.jpg";
-const HOMEPAGE_PICTURE_IMAGE = "/images/collection.jpg";
+const HOMEPAGE_PICTURE_IMAGE = "/images/homepagepicture.jpg";
+const HOMEPAGE_PICTURE_IMAGE_ALT = "/images/Homepagepicture.jpg";
 const HOMEPAGE_PICTURE_FALLBACK = "/images/hero.jpg";
 
 const HOMEPAGE_CATEGORIES = [
@@ -845,6 +846,10 @@ export function LegacyHome({ products }: LegacyHomeProps) {
                 const element = event.currentTarget;
                 const currentSrc = element.getAttribute("src") || "";
                 if (currentSrc.endsWith(HOMEPAGE_PICTURE_IMAGE)) {
+                  element.src = HOMEPAGE_PICTURE_IMAGE_ALT;
+                  return;
+                }
+                if (currentSrc.endsWith(HOMEPAGE_PICTURE_IMAGE_ALT)) {
                   element.src = HOMEPAGE_PICTURE_FALLBACK;
                   return;
                 }

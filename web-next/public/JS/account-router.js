@@ -285,9 +285,6 @@
     toggleHeroImages(targetSection);
     const useLoader = !options.skipLoader;
     if (useLoader) showLoader();
-    if (!options.skipDelay) {
-      await new Promise((resolve) => window.setTimeout(resolve, 500));
-    }
 
     if (next === "profile") {
       renderTemplate("tpl-profile");
@@ -377,24 +374,38 @@
       return;
     }
 
-    const [ordersResult, products, favoritesResult] = await Promise.all([
-      activeStore.fetchMyOrders(),
-      loadProductsCatalog(),
-      typeof activeStore.fetchMyFavorites === "function" ? activeStore.fetchMyFavorites() : Promise.resolve({ ok: true, favorites: activeStore.getFavoriteIds() })
-    ]);
-
-    state.orders = ordersResult.ok ? (ordersResult.orders || []) : [];
-    state.products = Array.isArray(products) ? products : [];
-    state.favorites = Array.isArray(favoritesResult?.favorites) ? favoritesResult.favorites.map((id) => String(id || "")) : [];
     renderHeaderUser();
     await navigate(normalizeSection(window.location.hash || "overview"), {
       skipHash: true,
       skipLoader: true,
-      skipDelay: true,
       skipLayoutEvent: true
     });
     showDashboard();
     window.dispatchEvent(new Event("account:layout-change"));
+
+    Promise.all([
+      activeStore.fetchMyOrders(),
+      loadProductsCatalog(),
+      typeof activeStore.fetchMyFavorites === "function"
+        ? activeStore.fetchMyFavorites()
+        : Promise.resolve({ ok: true, favorites: activeStore.getFavoriteIds() })
+    ])
+      .then(([ordersResult, products, favoritesResult]) => {
+        state.orders = ordersResult.ok ? ordersResult.orders || [] : [];
+        state.products = Array.isArray(products) ? products : [];
+        state.favorites = Array.isArray(favoritesResult?.favorites)
+          ? favoritesResult.favorites.map((id) => String(id || ""))
+          : [];
+        return navigate(normalizeSection(window.location.hash || "overview"), {
+          skipHash: true,
+          skipLoader: true,
+          skipLayoutEvent: true
+        });
+      })
+      .then(() => {
+        window.dispatchEvent(new Event("account:layout-change"));
+      })
+      .catch(() => {});
   }
 
   async function boot() {
@@ -407,7 +418,6 @@
       await navigate(normalizeSection(window.location.hash || "overview"), {
         skipHash: true,
         skipLoader: true,
-        skipDelay: true,
         skipLayoutEvent: true
       });
       showDashboard();
@@ -490,7 +500,7 @@
     state.favorites = [];
     state.products = [];
     renderHeaderUser();
-    navigate("overview", { skipHash: true, skipLoader: true, skipDelay: true, skipLayoutEvent: true }).finally(() => {
+    navigate("overview", { skipHash: true, skipLoader: true, skipLayoutEvent: true }).finally(() => {
       showDashboard();
       window.dispatchEvent(new Event("account:layout-change"));
     });
