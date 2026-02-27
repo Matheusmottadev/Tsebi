@@ -79,16 +79,16 @@ export const metadata: Metadata = {
   icons: {
     icon: [
       {
-        url: "/images/Gazelalogo.png",
+        url: "/images/Gazelalogo.png?v=20260227b",
         type: "image/png",
       },
       {
-        url: "/images/Gazelalogo.png",
-        type: "image/png",
+        url: "/favicon.ico?v=20260227b",
+        type: "image/x-icon",
       },
     ],
-    shortcut: [{ url: "/images/Gazelalogo.png" }],
-    apple: [{ url: "/images/Gazelalogo.png" }],
+    shortcut: [{ url: "/favicon.ico?v=20260227b" }],
+    apple: [{ url: "/images/Gazelalogo.png?v=20260227b" }],
   },
 };
 
