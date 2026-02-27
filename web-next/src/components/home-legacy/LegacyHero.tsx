@@ -32,7 +32,7 @@ export function LegacyHero() {
         <img
           className="hero-video"
           src={mediaMode === "image" ? HERO_IMAGE : HERO_PLACEHOLDER}
-          alt="Colecao Genesis"
+          alt="Coleção Genesis"
           onError={(event) => {
             const element = event.currentTarget;
             element.onerror = null;
@@ -45,7 +45,7 @@ export function LegacyHero() {
       {isDev ? <div className="legacy-dev-badge">hero: {mediaMode}</div> : null}
 
       <div className="hero-text">
-        <h2>Colecao Genesis</h2>
+        <h2>Coleção Genesis</h2>
         <Link className="hero-cta-btn" href="/lancamento">
           EM BREVE
         </Link>
@@ -53,3 +53,4 @@ export function LegacyHero() {
     </section>
   );
 }
+

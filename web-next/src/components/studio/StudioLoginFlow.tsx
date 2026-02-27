@@ -173,7 +173,7 @@ export function StudioLoginFlow({ returnTo }: StudioLoginFlowProps) {
         setNoticeMessage("");
       } catch (error) {
         if (cancelled) return;
-        const resolved = resolveLoginFailure(error, "Nao foi possivel validar a sessao admin.");
+        const resolved = resolveLoginFailure(error, "Não foi possível validar a sessão admin.");
         if (resolved.reason === "session_expired") {
           setFailureReason("session_expired");
           setErrorMessage(resolved.message);

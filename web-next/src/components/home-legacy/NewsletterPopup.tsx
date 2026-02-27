@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { FormEvent, useEffect, useMemo, useState } from "react";
 
@@ -50,7 +50,7 @@ export function NewsletterPopup() {
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!String(email || "").trim()) {
-      setFeedback("Erro: informe um e-mail valido.");
+      setFeedback("Erro: informe um e-mail válido.");
       return;
     }
     setFeedback("Cadastro recebido com sucesso.");
@@ -71,13 +71,13 @@ export function NewsletterPopup() {
           Inscreva-se na newsletter
         </h2>
         <p className="newsletter-popup-text">
-          Receba novidades e seja uma das primeiras pessoas a conhecer cada nova colecao.
+          Receba novidades e seja uma das primeiras pessoas a conhecer cada nova Coleção.
         </p>
 
         <form className="newsletter-popup-form" onSubmit={handleSubmit}>
           <div className="newsletter-popup-image-wrap">
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img className="newsletter-popup-image" src="/images/popup.jpg" alt="Destaque da nova colecao" />
+            <img className="newsletter-popup-image" src="/images/popup.jpg" alt="Destaque da nova Coleção" />
           </div>
 
           <label htmlFor="newsletter-popup-email">E-mail</label>
@@ -113,3 +113,4 @@ export function NewsletterPopup() {
     </div>
   );
 }
+

@@ -1,4 +1,4 @@
-import Link from "next/link";
+﻿import Link from "next/link";
 
 type LegacyFooterProps = {
   variant?: "dark" | "light";
@@ -21,9 +21,9 @@ export function LegacyFooter({ variant = "dark" }: LegacyFooterProps) {
             </div>
           </form>
           <p className="newsletter-legal">
-            Ao clicar em &quot;Assinar&quot;, voce confirma que leu e entendeu nossa{" "}
-            <Link href="/politica-privacidade">Politica de Privacidade</Link> e que deseja receber a newsletter e outras
-            comunicacoes de marketing, conforme nela estabelecido.
+            Ao clicar em &quot;Assinar&quot;, Você confirma que leu e entendeu nossa{" "}
+            <Link href="/Política-privacidade">Política de Privacidade</Link> e que deseja receber a newsletter e outras
+            comunicações de marketing, conforme nela estabelecido.
           </p>
           <div className="footer-socials">
             <a href="https://www.facebook.com" target="_blank" rel="noopener noreferrer" aria-label="Facebook">
@@ -83,7 +83,7 @@ export function LegacyFooter({ variant = "dark" }: LegacyFooterProps) {
           </a>
           <a href="mailto:contato@tsebi.com.br">Contato@tsebi.com.br</a>
           <a href="https://www.google.com/maps/place/S%C3%A3o+Paulo+-+SP" target="_blank" rel="noopener noreferrer">
-            Sao Paulo/SP
+            São Paulo/SP
           </a>
           <Link href="/faq">FAQ</Link>
           <Link href="/">Mapa do site</Link>
@@ -110,10 +110,10 @@ export function LegacyFooter({ variant = "dark" }: LegacyFooterProps) {
         </section>
 
         <section className="footer-column">
-          <h3>TERMOS E CONDICOES LEGAIS</h3>
+          <h3>TERMOS E condições LEGAIS</h3>
           <Link href="/aviso-legal">Aviso legal</Link>
-          <Link href="/politica-privacidade">Politica de Privacidade</Link>
-          <Link href="/cookie-policy">Politica de cookies</Link>
+          <Link href="/Política-privacidade">Política de Privacidade</Link>
+          <Link href="/cookie-policy">Política de cookies</Link>
           <Link href="/cookie-policy">Configuracoes de cookies</Link>
           <Link href="/aviso-legal">Termos de venda</Link>
         </section>
@@ -122,3 +122,4 @@ export function LegacyFooter({ variant = "dark" }: LegacyFooterProps) {
     </footer>
   );
 }
+

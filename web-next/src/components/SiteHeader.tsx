@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
@@ -7,12 +7,12 @@ import { cartSelectors, useCartStore } from "@/lib/cart/cartStore";
 import { getMe } from "@/services/auth";
 
 const TOP_MESSAGES = [
-  "Nova Colecao Genesis",
-  "Voce merece vestir algo a sua altura.",
-  "Cadastre-se para receber lancamentos",
-  "Exclusividade para quem valoriza o que e unico.",
-  "Acesso antecipado a novas colecoes.",
-  "Producao em pequena escala. Qualidade em cada detalhe.",
+  "Nova Coleção Genesis",
+  "Você merece vestir algo a sua altura.",
+  "Cadastre-se para receber lançamentos",
+  "Exclusividade para quem valoriza o que é único.",
+  "Acesso antecipado a novas coleções.",
+  "Produção em pequena escala. Qualidade em cada detalhe.",
 ];
 
 export function SiteHeader() {
@@ -267,7 +267,7 @@ export function SiteHeader() {
             type="button"
             ref={rightArrowRef}
             onClick={() => stepTopMessage("right", 1)}
-            aria-label="Proxima mensagem"
+            aria-label="Próxima mensagem"
           >
             &#10095;
           </button>
@@ -315,7 +315,7 @@ export function SiteHeader() {
                 aria-label="Abrir busca"
                 onClick={goToSearchPage}
               >
-                <span className="search-box-label">O que voce esta buscando?</span>
+                <span className="search-box-label">O que Você esta buscando?</span>
                 <span className="search-box-icon">&#8985;</span>
               </button>
             )}
@@ -380,7 +380,7 @@ export function SiteHeader() {
         <nav className="header-menu-nav">
           <div className="menu-group">
             <Link className="menu-group-title" href="/lancamento" onClick={() => setIsMenuOpen(false)}>
-              Colecao Genesis
+              Coleção Genesis
             </Link>
           </div>
           <div className="menu-group">
@@ -403,3 +403,4 @@ export function SiteHeader() {
     </>
   );
 }
+

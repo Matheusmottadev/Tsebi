@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+﻿import type { Metadata } from "next";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { LoginForm } from "@/components/account/LoginForm";
@@ -40,12 +40,12 @@ export default async function LoginPage() {
                   <span>Visualize o status e o historico de compras em um so lugar.</span>
                 </li>
                 <li>
-                  <strong>Checkout mais rapido</strong>
+                  <strong>Checkout mais rápido</strong>
                   <span>Seus dados ficam salvos para futuras compras.</span>
                 </li>
                 <li>
                   <strong>Lista de desejos</strong>
-                  <span>Salve suas pecas favoritas para comprar depois.</span>
+                  <span>Salve suas Peças favoritas para comprar depois.</span>
                 </li>
                 <li>
                   <strong>Atendimento prioritario</strong>
@@ -63,3 +63,4 @@ export default async function LoginPage() {
     </main>
   );
 }
+

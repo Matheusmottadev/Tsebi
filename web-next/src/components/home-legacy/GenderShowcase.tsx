@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -83,10 +83,10 @@ const LEGACY_SHOWCASE_CARDS: Record<GenderTab, LegacyShowcaseCard[]> = {
     {
       id: "noir-sneaker",
       sku: "noir-sneaker",
-      name: "Tenis em nylon tecnico premium",
+      name: "Tenis em nylon técnico premium",
       image: "/images/product/noir-sneaker-1.jpg",
       secondaryImage: "/images/product/noir-sneaker-2.jpg",
-      alt: "Tenis em nylon tecnico premium",
+      alt: "Tenis em nylon técnico premium",
     },
     {
       id: "flux-trench",
@@ -191,10 +191,10 @@ export function GenderShowcase({ products }: GenderShowcaseProps) {
   }, [productById, renderedTab]);
 
   return (
-    <section className="category-switch" data-category-switch="featured" aria-label="Destaques por genero">
+    <section className="category-switch" data-category-switch="featured" aria-label="Destaques por gênero">
       <div className="category-intro">
-        <p>Ha uma raiz que sustenta tudo o que escolhemos ser. Porque estilo nao e sobre o que voce veste, e sobre quem voce e.</p>
-        <div className="category-tabs" role="tablist" aria-label="Selecionar genero">
+        <p>Ha uma raiz que sustenta tudo o que escolhemos ser. Porque estilo não e sobre o que Você veste, e sobre quem Você e.</p>
+        <div className="category-tabs" role="tablist" aria-label="Selecionar gênero">
           <button
             className={`category-tab ${activeTab === "feminino" ? "is-active" : ""}`}
             id="tabFeminino"
@@ -264,3 +264,4 @@ export function GenderShowcase({ products }: GenderShowcaseProps) {
     </section>
   );
 }
+

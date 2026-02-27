@@ -20,14 +20,14 @@ function isValidEmail(value: string): boolean {
 
 function mapAuthError(errorCode: string): string {
   const value = String(errorCode || "").trim().toUpperCase();
-  if (!value) return "Nao foi possivel concluir a operacao.";
+  if (!value) return "Não foi possível concluir a operação.";
   if (value === "INVALID_INPUT") return "Preencha os campos corretamente.";
   if (value === "INVALID_CREDENTIALS") return "Email, senha ou codigo invalidos.";
   if (value === "INVALID_OR_EXPIRED_CODE") return "Codigo invalido ou expirado.";
   if (value === "EMAIL_NOT_FOUND") return "Nao encontramos conta com este email.";
   if (value === "EMAIL_NOT_VERIFIED") return "Verifique seu email para continuar.";
-  if (value === "AUTH_CODE_ISSUE_FAILED") return "Nao foi possivel gerar o codigo agora.";
-  if (value === "EMAIL_DELIVERY_FAILED") return "Nao foi possivel enviar o codigo. Tente novamente.";
+  if (value === "AUTH_CODE_ISSUE_FAILED") return "Não foi possível gerar o código agora.";
+  if (value === "EMAIL_DELIVERY_FAILED") return "Não foi possível enviar o código. Tente novamente.";
   if (value === "TOO_MANY_ATTEMPTS") return "Muitas tentativas. Aguarde alguns minutos.";
   return errorCode;
 }
@@ -40,7 +40,7 @@ function resolveAuthStageMessage(stage: string): string {
   if (normalized === "password_reset_required") {
     return "Sua conta exige redefinicao de senha antes de continuar.";
   }
-  return "Nao foi possivel concluir o login agora.";
+  return "Não foi possível concluir o login agora.";
 }
 
 function resolveReturnUrl(raw: string): string {
@@ -87,7 +87,7 @@ export function LoginForm() {
   function redirectToForcedPasswordReset(targetEmail: string): void {
     const normalized = normalizeEmail(targetEmail);
     if (!isValidEmail(normalized)) {
-      setErrorMessage("Nao foi possivel iniciar a redefinicao de senha.");
+      setErrorMessage("Não foi possível iniciar a redefinição de senha.");
       return;
     }
     const params = new URLSearchParams();
@@ -163,7 +163,7 @@ export function LoginForm() {
       } else if (error instanceof Error) {
         setErrorMessage(error.message);
       } else {
-        setErrorMessage("Nao foi possivel enviar o codigo.");
+        setErrorMessage("Não foi possível enviar o código.");
       }
     } finally {
       setIsSubmitting(false);
@@ -265,7 +265,7 @@ export function LoginForm() {
       } else if (error instanceof Error) {
         setErrorMessage(error.message);
       } else {
-        setErrorMessage("Nao foi possivel entrar com senha.");
+        setErrorMessage("Não foi possível entrar com senha.");
       }
     } finally {
       setIsSubmitting(false);
@@ -297,7 +297,7 @@ export function LoginForm() {
       } else if (error instanceof Error) {
         setErrorMessage(error.message);
       } else {
-        setErrorMessage("Nao foi possivel reenviar o codigo.");
+        setErrorMessage("Não foi possível reenviar o código.");
       }
     } finally {
       setIsResendingCode(false);
@@ -498,7 +498,7 @@ export function LoginForm() {
 
         <p className="auth-footer">
           Ainda nao tem conta?{" "}
-          <Link className="auth-link" href="/conta.html">
+          <Link className="auth-link" href="/account">
             Criar conta
           </Link>
         </p>

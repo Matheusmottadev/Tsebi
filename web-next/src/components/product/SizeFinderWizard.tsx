@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { type FocusEvent, useMemo, useState } from "react";
 import {
@@ -247,8 +247,8 @@ export function SizeFinderWizard({ productModel, initialAnswers, onApply }: Size
 
       {step === 1 ? (
         <section className={styles.section}>
-          <h3>Fale sobre voce</h3>
-          <p className={styles.subtitle}>Fale sobre voce, para que possamos recomendar o tamanho certo</p>
+          <h3>Fale sobre Você</h3>
+          <p className={styles.subtitle}>Fale sobre Você, para que possamos recomendar o tamanho certo</p>
           <div className={styles.tabs}>
             <button
               type="button"
@@ -473,7 +473,7 @@ export function SizeFinderWizard({ productModel, initialAnswers, onApply }: Size
               onClick={selectPrevSize}
               disabled={sizeIndex <= 0}
             >
-              ‹
+              &#8249;
             </button>
             <div className={styles.sizeRail}>
               {GLOBAL_SIZES.map((size) => (
@@ -495,7 +495,7 @@ export function SizeFinderWizard({ productModel, initialAnswers, onApply }: Size
               onClick={selectNextSize}
               disabled={sizeIndex >= GLOBAL_SIZES.length - 1}
             >
-              ›
+              &#8250;
             </button>
           </div>
 
@@ -512,3 +512,4 @@ export function SizeFinderWizard({ productModel, initialAnswers, onApply }: Size
     </div>
   );
 }
+

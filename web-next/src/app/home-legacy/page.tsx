@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+﻿import type { Metadata } from "next";
 import { LegacyHome } from "@/components/home-legacy/LegacyHome";
 import { BodyClassName } from "@/components/BodyClassName";
 import { listProducts } from "@/services/products";
@@ -7,13 +7,13 @@ import styles from "./page.module.css";
 
 export const metadata: Metadata = {
   title: "Tsebi Brasil",
-  description: "Moda autoral premium com pecas exclusivas, acabamento impecavel e colecoes de luxo.",
+  description: "Moda autoral premium com Peças exclusivas, acabamento impecavel e coleções de luxo.",
   alternates: {
     canonical: "/",
   },
   openGraph: {
     title: "Tsebi Brasil",
-    description: "Moda autoral premium com pecas exclusivas, acabamento impecavel e colecoes de luxo.",
+    description: "Moda autoral premium com Peças exclusivas, acabamento impecavel e coleções de luxo.",
     url: "/",
     type: "website",
   },
@@ -36,3 +36,4 @@ export default async function HomeLegacyPage() {
     </div>
   );
 }
+

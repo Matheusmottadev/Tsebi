@@ -69,28 +69,27 @@ const nextConfig: NextConfig = {
   },
   async rewrites() {
     const apiProxyTarget = readApiProxyTarget();
-    if (!apiProxyTarget) {
-      if (process.env.NODE_ENV !== "production") {
-        throw new Error(
-          "API_PROXY_TARGET is required in development. Set it in web-next/.env.local " +
-            "(e.g. http://localhost:4242 for local dev)."
-        );
-      }
-      return [];
+    const rewrites = [];
+
+    if (!apiProxyTarget && process.env.NODE_ENV !== "production") {
+      throw new Error(
+        "API_PROXY_TARGET is required in development. Set it in web-next/.env.local " +
+          "(e.g. http://localhost:4242 for local dev)."
+      );
     }
 
-    const rewrites = [
-      {
+    if (apiProxyTarget) {
+      rewrites.push({
         source: "/api/:path*",
         destination: `${apiProxyTarget}/api/:path*`,
-      },
-    ];
-
-    if (process.env.NODE_ENV !== "production") {
-      rewrites.push({
-        source: "/images/:path*",
-        destination: `${apiProxyTarget}/images/:path*`,
       });
+
+      if (process.env.NODE_ENV !== "production") {
+        rewrites.push({
+          source: "/images/:path*",
+          destination: `${apiProxyTarget}/images/:path*`,
+        });
+      }
     }
 
     rewrites.push(

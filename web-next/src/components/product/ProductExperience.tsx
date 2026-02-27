@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { ProductImage } from "@/components/ProductImage";
@@ -497,7 +497,7 @@ export function ProductExperience({ product, recommendations, imageBaseUrl }: Pr
       qty: 1,
     });
 
-    setFeedback(result.ok ? "Produto adicionado ao carrinho." : result.error || "Nao foi possivel adicionar.");
+    setFeedback(result.ok ? "Produto adicionado ao carrinho." : result.error || "Não foi possível adicionar.");
     window.setTimeout(() => setFeedback(""), 1800);
   };
 
@@ -584,7 +584,7 @@ export function ProductExperience({ product, recommendations, imageBaseUrl }: Pr
             <div className={styles.sizeSelectorRow}>
               <button type="button" className={styles.sizeTrigger} onClick={() => setOpenDrawer("size-chart")}>
                 <span>{selectedSize ? `Tamanho: ${selectedSize}` : "Selecionar tamanho"}</span>
-                <span className={styles.chevron}>⌄</span>
+                <span className={styles.chevron}>&#8964;</span>
               </button>
               <button type="button" className={styles.sizeTableButton} onClick={() => setOpenDrawer("size-chart")}>
                 Tabela de tamanhos
@@ -599,14 +599,14 @@ export function ProductExperience({ product, recommendations, imageBaseUrl }: Pr
             <div className={styles.infoRows}>
               <button type="button" onClick={() => setOpenDrawer("details")}>Detalhes do produto</button>
               <button type="button" onClick={() => setOpenDrawer("materials")}>Materiais e cuidados</button>
-              <button type="button" onClick={() => setOpenDrawer("contact")}>Frete e devolucao gratis</button>
+              <button type="button" onClick={() => setOpenDrawer("contact")}>Frete e devolução grátis</button>
               <button type="button" className={styles.lastServiceOption} onClick={() => setOpenDrawer("store")}>
                 Marque um atendimento com nossa equipe
               </button>
             </div>
           </div>
           <p className={styles.signatureQuote}>
-            <span>Construida para presenca.</span>
+            <span>Construída para Presença.</span>
             <span>Pensada para durar.</span>
           </p>
         </section>
@@ -696,10 +696,10 @@ export function ProductExperience({ product, recommendations, imageBaseUrl }: Pr
         </section>
         <ul className={styles.drawerList}>
           <li>Categoria: {product.category}</li>
-          <li>Colecao: {product.collection}</li>
-          <li>Genero: {product.gender}</li>
-          <li>Codigo SKU: {product.sku}</li>
-          <li>Modelagem: contemporanea com foco em alfaiataria e conforto.</li>
+          <li>Coleção: {product.collection}</li>
+          <li>gênero: {product.gender}</li>
+          <li>Código SKU: {product.sku}</li>
+          <li>Modelagem: contemporânea com foco em alfaiataria e conforto.</li>
         </ul>
       </Drawer>
 
@@ -724,7 +724,7 @@ export function ProductExperience({ product, recommendations, imageBaseUrl }: Pr
 
       <Drawer
         open={openDrawer === "contact"}
-        title="Frete e devolucao gratis"
+        title="Frete e devolução grátis"
         productImage={galleryImages[0] || product.image}
         productName={product.name}
         imageBaseUrl={imageBaseUrl}
@@ -733,34 +733,34 @@ export function ProductExperience({ product, recommendations, imageBaseUrl }: Pr
         <section className={styles.drawerSplitSection}>
           <h4>Frete</h4>
           <p className={styles.drawerParagraph}>
-            Frete gratis para todo o Brasil em compras elegiveis. Trabalhamos com transportadoras parceiras e
-            acompanhamento completo ate a entrega.
+            Frete grátis para todo o Brasil em compras elegiveis. Trabalhamos com transportadoras parceiras e
+            acompanhamento completo até a entrega.
           </p>
           <p className={styles.drawerParagraph}>
-            Para capitais e regioes metropolitanas, o prazo medio e de 2 a 5 dias uteis. Para demais localidades,
-            o prazo medio e de 4 a 8 dias uteis, podendo variar conforme o CEP.
+            Para capitais e regioes metropolitanas, o prazo medio e de 2 a 5 dias úteis. Para demais localidades,
+            o prazo medio e de 4 a 8 dias úteis, podendo variar conforme o CEP.
           </p>
           <ul className={styles.drawerList}>
-            <li>Prazo medio: 2 a 8 dias uteis, conforme CEP e disponibilidade.</li>
-            <li>Codigo de rastreio enviado por e-mail apos faturamento.</li>
-            <li>Duas tentativas de entrega no endereco informado; depois disso o pedido retorna ao centro logístico.</li>
+            <li>Prazo medio: 2 a 8 dias úteis, conforme CEP e disponibilidade.</li>
+            <li>Código de rastreio enviado por e-mail apos faturamento.</li>
+            <li>Duas tentativas de entrega no endereço informado; depois disso o pedido retorna ao centro logístico.</li>
             <li>Em caso de avaria no recebimento, recuse a entrega e entre em contato imediatamente.</li>
           </ul>
         </section>
 
         <section className={styles.drawerSplitSection}>
-          <h4>Devolucao</h4>
+          <h4>devolução</h4>
           <p className={styles.drawerParagraph}>
-            Nossa politica segue o Codigo de Defesa do Consumidor (Lei 8.078/90) para compras online.
+            Nossa Política segue o Código de Defesa do Consumidor (Lei 8.078/90) para compras online.
           </p>
           <ul className={styles.drawerList}>
-            <li>Troca e devolucao em ate 7 dias corridos apos recebimento.</li>
+            <li>Troca e devolução em até 7 dias corridos apos recebimento.</li>
             <li>Produto deve retornar sem uso, com etiqueta e embalagem original.</li>
-            <li>Estorno aprovado e processado em ate 10 dias uteis apos conferencia do item devolvido.</li>
-            <li>Itens personalizados podem ter regras especificas de arrependimento.</li>
+            <li>Estorno aprovado e processado em até 10 dias úteis apos conferencia do item devolvido.</li>
+            <li>Itens personalizados podem ter regras específicas de arrependimento.</li>
           </ul>
           <p className={styles.drawerParagraph}>
-            Se precisar de suporte durante o envio ou devolucao, nossa equipe acompanha cada etapa em tempo real.
+            Se precisar de suporte durante o envio ou devolução, nossa equipe acompanha cada etapa em tempo real.
           </p>
         </section>
       </Drawer>
@@ -775,7 +775,7 @@ export function ProductExperience({ product, recommendations, imageBaseUrl }: Pr
       >
         <section className={styles.privateCarePanel}>
           <h3>Atendimento privado</h3>
-          <p>Nossa equipe acompanha sua escolha de tamanho, combinacao e finalizacao do pedido.</p>
+          <p>Nossa equipe acompanha sua escolha de tamanho, combinação e finalização do pedido.</p>
           <div className={styles.privateCareGrid}>
             <label>
               Nome
@@ -799,3 +799,4 @@ export function ProductExperience({ product, recommendations, imageBaseUrl }: Pr
     </div>
   );
 }
+

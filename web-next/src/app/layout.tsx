@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+﻿import type { Metadata } from "next";
 import { Montserrat, Playfair_Display } from "next/font/google";
 import { LayoutChrome } from "@/components/LayoutChrome";
 import "./globals.css";
@@ -39,7 +39,7 @@ export const metadata: Metadata = {
   },
   applicationName: "Tsebi Brasil",
   description:
-    "Tsebi Brasil: moda autoral com colecoes exclusivas, design contemporaneo e acabamento premium.",
+    "Tsebi Brasil: moda autoral com coleções exclusivas, design contemporâneo e acabamento premium.",
   keywords: [
     "tsebi",
     "tsebi brasil",
@@ -47,7 +47,7 @@ export const metadata: Metadata = {
     "moda masculina",
     "roupas premium",
     "alfaiataria",
-    "colecao genesis",
+    "Coleção Genesis",
     "ecommerce de moda",
   ],
   metadataBase: resolveMetadataBaseUrl(),
@@ -60,7 +60,7 @@ export const metadata: Metadata = {
     type: "website",
     title: "Tsebi Brasil",
     description:
-      "Tsebi Brasil: moda autoral com colecoes exclusivas, design contemporaneo e acabamento premium.",
+      "Tsebi Brasil: moda autoral com coleções exclusivas, design contemporâneo e acabamento premium.",
     url: "/",
     siteName: "Tsebi Brasil",
     images: [
@@ -73,7 +73,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "Tsebi Brasil",
     description:
-      "Tsebi Brasil: moda autoral com colecoes exclusivas, design contemporaneo e acabamento premium.",
+      "Tsebi Brasil: moda autoral com coleções exclusivas, design contemporâneo e acabamento premium.",
     images: ["/images/Gazelalogo.png"],
   },
   icons: {
@@ -120,3 +120,4 @@ export default function RootLayout({
     </html>
   );
 }
+

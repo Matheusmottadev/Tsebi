@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+﻿import type { Metadata } from "next";
 import { readPublicEnv } from "@/lib/env";
 import { listProducts } from "@/services/products";
 import { CatalogBrowser } from "@/components/CatalogBrowser";
@@ -6,20 +6,20 @@ import type { Product } from "@/types";
 
 export const metadata: Metadata = {
   title: "Produtos",
-  description: "Explore o catalogo da Tsebi por categoria, colecao, estilo e faixa de preco.",
+  description: "Explore o catálogo da Tsebi por categoria, Coleção, estilo e faixa de preço.",
   alternates: {
     canonical: "/products",
   },
   openGraph: {
     title: "Produtos | Tsebi Brasil",
-    description: "Explore o catalogo da Tsebi por categoria, colecao, estilo e faixa de preco.",
+    description: "Explore o catálogo da Tsebi por categoria, Coleção, estilo e faixa de preço.",
     url: "/products",
     type: "website",
   },
   twitter: {
     card: "summary_large_image",
     title: "Produtos | Tsebi Brasil",
-    description: "Explore o catalogo da Tsebi por categoria, colecao, estilo e faixa de preco.",
+    description: "Explore o catálogo da Tsebi por categoria, Coleção, estilo e faixa de preço.",
   },
 };
 
@@ -48,10 +48,10 @@ export default async function ProductsPage() {
       <div className="story-wrap">
         <h2 className="story-title">Produtos</h2>
         <div className="story-content">
-          <p>Explore o catalogo atual da TSEBI.</p>
+          <p>Explore o catálogo atual da TSEBI.</p>
         </div>
       </div>
-      <section className="tsebi-category-section" aria-label="Catalogo de produtos">
+      <section className="tsebi-category-section" aria-label="catálogo de produtos">
         <div className="tsebi-container">
           <CatalogBrowser products={products} imageBaseUrl={imageBaseUrl} initialLimit={12} />
         </div>
@@ -59,3 +59,4 @@ export default async function ProductsPage() {
     </main>
   );
 }
+
