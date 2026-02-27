@@ -26,35 +26,40 @@ const LEGACY_SHOWCASE_CARDS: Record<GenderTab, LegacyShowcaseCard[]> = {
       id: "origem-skirt",
       sku: "origem-skirt",
       name: "Saia estruturada em la fria",
-      image: "/images/placeholder.jpg",
+      image: "/images/product/origem-skirt-1.jpg",
+      secondaryImage: "/images/product/origem-skirt-2.jpg",
       alt: "Saia estruturada em la fria",
     },
     {
       id: "genesis-tailored",
       sku: "genesis-tailored",
       name: "Calca de alfaiataria premium",
-      image: "/images/placeholder.jpg",
+      image: "/images/product/genesis-tailored-1.jpg",
+      secondaryImage: "/images/product/genesis-tailored-2.jpg",
       alt: "Calca de alfaiataria premium",
     },
     {
       id: "atelier-heels",
       sku: "atelier-heels",
       name: "Scarpin em couro envernizado",
-      image: "/images/placeholder.jpg",
+      image: "/images/product/atelier-heels-1.jpg",
+      secondaryImage: "/images/product/atelier-heels-2.jpg",
       alt: "Scarpin em couro envernizado",
     },
     {
       id: "essence-blazer",
       sku: "essence-blazer",
       name: "Blazer em linho premium",
-      image: "/images/placeholder.jpg",
+      image: "/images/product/essence-blazer-1.jpg",
+      secondaryImage: "/images/product/essence-blazer-2.jpg",
       alt: "Blazer em linho premium",
     },
     {
       id: "noir-dress",
       sku: "noir-dress",
       name: "Vestido coluna em crepe de seda",
-      image: "/images/placeholder.jpg",
+      image: "/images/product/noir-dress-1.jpg",
+      secondaryImage: "/images/product/noir-dress-2.jpg",
       alt: "Vestido coluna em crepe de seda",
     },
   ],
@@ -63,35 +68,40 @@ const LEGACY_SHOWCASE_CARDS: Record<GenderTab, LegacyShowcaseCard[]> = {
       id: "origem-shirt",
       sku: "origem-shirt",
       name: "Camisa em algodao croata",
-      image: "/images/placeholder.jpg",
+      image: "/images/product/origem-shirt-1.jpg",
+      secondaryImage: "/images/product/origem-shirt-2.jpg",
       alt: "Camisa em algodao croata",
     },
     {
       id: "genesis-bomber",
       sku: "genesis-bomber",
       name: "Jaqueta bomber em couro italiano",
-      image: "/images/placeholder.jpg",
+      image: "/images/product/genesis-bomber-1.jpg",
+      secondaryImage: "/images/product/genesis-bomber-2.jpg",
       alt: "Jaqueta bomber em couro italiano",
     },
     {
       id: "noir-sneaker",
       sku: "noir-sneaker",
       name: "Tenis em nylon tecnico premium",
-      image: "/images/placeholder.jpg",
+      image: "/images/product/noir-sneaker-1.jpg",
+      secondaryImage: "/images/product/noir-sneaker-2.jpg",
       alt: "Tenis em nylon tecnico premium",
     },
     {
       id: "flux-trench",
       sku: "flux-trench",
       name: "Trench coat em gabardine",
-      image: "/images/placeholder.jpg",
+      image: "/images/product/flux-trench-1.jpg",
+      secondaryImage: "/images/product/flux-trench-2.jpg",
       alt: "Trench coat em gabardine",
     },
     {
       id: "flux-knit",
       sku: "flux-knit",
       name: "Malha em la merino",
-      image: "/images/placeholder.jpg",
+      image: "/images/product/flux-knit-1.jpg",
+      secondaryImage: "/images/product/flux-knit-2.jpg",
       alt: "Malha em la merino",
     },
   ],
@@ -99,7 +109,7 @@ const LEGACY_SHOWCASE_CARDS: Record<GenderTab, LegacyShowcaseCard[]> = {
 
 function resolveProductImageSrc(image: string): string {
   const raw = String(image || "").trim();
-  if (!raw) return "/images/placeholder.jpg";
+  if (!raw) return "/images/product/origem-skirt-1.jpg";
   if (/^https?:\/\//i.test(raw)) return raw;
   if (raw.startsWith("/images/")) return raw;
   if (raw.startsWith("/")) return raw;
@@ -156,10 +166,17 @@ export function GenderShowcase({ products }: GenderShowcaseProps) {
     return LEGACY_SHOWCASE_CARDS[renderedTab].map((item) => {
       const matched = productById.get(item.sku) || productById.get(item.id);
       const resolvedName = String(matched?.name || "").trim() || item.name;
+      const matchedRecord = (matched || {}) as Record<string, unknown>;
       const pair = buildHoverImagePair({
         id: item.id,
-        secondaryImage: matched?.secondaryImage,
-        image: matched?.image ? resolveProductImageSrc(String(matched.image)) : item.image,
+        metadata: matchedRecord.metadata,
+        secondaryImage: String(matchedRecord.secondaryImage || "").trim() || item.secondaryImage,
+        image:
+          (String(matchedRecord.image || "").trim()
+            ? resolveProductImageSrc(String(matchedRecord.image))
+            : String(matchedRecord.image_url || "").trim()
+              ? resolveProductImageSrc(String(matchedRecord.image_url))
+              : item.image),
       });
       const href = `/product/${encodeURIComponent(item.sku || item.id)}`;
 
@@ -220,7 +237,7 @@ export function GenderShowcase({ products }: GenderShowcaseProps) {
                   onError={(event) => {
                     const element = event.currentTarget;
                     element.onerror = null;
-                    element.src = "/images/placeholder.jpg";
+                    element.src = product.image || "/images/product/origem-skirt-1.jpg";
                   }}
                 />
                 {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -233,7 +250,7 @@ export function GenderShowcase({ products }: GenderShowcaseProps) {
                   onError={(event) => {
                     const element = event.currentTarget;
                     element.onerror = null;
-                    element.src = product.image || "/images/placeholder.jpg";
+                    element.src = product.image || "/images/product/origem-skirt-1.jpg";
                   }}
                 />
               </div>
