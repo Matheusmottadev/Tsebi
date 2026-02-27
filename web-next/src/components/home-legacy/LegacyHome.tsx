@@ -47,72 +47,74 @@ const SEARCH_CHIPS = [
   "ACESSORIOS",
 ];
 
-const COLLECTION_VIDEO = "https://media.tsebi.com.br/31377-386628887.mp4";
-const COLLECTION_IMAGE = "/images/legacy/home/collection.jpg";
-const COLLECTION_PLACEHOLDER = "/images/placeholder.jpg";
+const COLLECTION_VIDEO = "/images/lancamento2.mp4";
+const COLLECTION_IMAGE = "/images/collection.jpg";
+const COLLECTION_PLACEHOLDER = "/images/hero.jpg";
+const HOMEPAGE_PICTURE_IMAGE = "/images/collection.jpg";
+const HOMEPAGE_PICTURE_FALLBACK = "/images/hero.jpg";
 
 const HOMEPAGE_CATEGORIES = [
   {
     href: "/categoria/feminino",
-    image: "/images/placeholder.jpg",
-    secondaryImage: "/images/placeholder.jpg",
-    fallbackImage: "/images/placeholder.jpg",
+    image: "/images/product/origem-skirt-1.jpg",
+    secondaryImage: "/images/product/origem-skirt-2.jpg",
+    fallbackImage: "/images/product/origem-skirt-1.jpg",
     alt: "Categoria Feminino",
     label: "Feminino",
   },
   {
     href: "/categoria/masculino",
-    image: "/images/placeholder.jpg",
-    secondaryImage: "/images/placeholder.jpg",
-    fallbackImage: "/images/placeholder.jpg",
+    image: "/images/product/origem-shirt-1.jpg",
+    secondaryImage: "/images/product/origem-shirt-2.jpg",
+    fallbackImage: "/images/product/origem-shirt-1.jpg",
     alt: "Categoria Masculino",
     label: "Masculino",
   },
   {
     href: "/categoria/carteiras-masculinas",
-    image: "/images/placeholder.jpg",
-    secondaryImage: "/images/placeholder.jpg",
-    fallbackImage: "/images/placeholder.jpg",
+    image: "/images/product/atelier-bag-1.jpg",
+    secondaryImage: "/images/product/atelier-bag-2.jpg",
+    fallbackImage: "/images/product/atelier-bag-1.jpg",
     alt: "Categoria Carteiras Masculinas",
     label: "Carteiras Masculinas",
   },
   {
     href: "/categoria/vestidos",
-    image: "/images/placeholder.jpg",
-    secondaryImage: "/images/placeholder.jpg",
-    fallbackImage: "/images/placeholder.jpg",
+    image: "/images/product/noir-dress-1.jpg",
+    secondaryImage: "/images/product/noir-dress-2.jpg",
+    fallbackImage: "/images/product/noir-dress-1.jpg",
     alt: "Categoria Vestidos",
     label: "Vestidos",
   },
   {
     href: "/categoria/calcas",
-    image: "/images/placeholder.jpg",
-    secondaryImage: "/images/placeholder.jpg",
-    fallbackImage: "/images/placeholder.jpg",
+    image: "/images/product/essence-trousers-1.jpg",
+    secondaryImage: "/images/product/essence-trousers-2.jpg",
+    fallbackImage: "/images/product/essence-trousers-1.jpg",
     alt: "Categoria Calcas",
     label: "Calcas",
   },
   {
     href: "/categoria/carteiras-femininas",
-    image: "/images/placeholder.jpg",
-    secondaryImage: "/images/placeholder.jpg",
-    fallbackImage: "/images/placeholder.jpg",
+    image: "/images/product/atelier-heels-1.jpg",
+    secondaryImage: "/images/product/atelier-heels-2.jpg",
+    fallbackImage: "/images/product/atelier-heels-1.jpg",
     alt: "Categoria Carteiras Femininas",
     label: "Carteiras Femininas",
   },
   {
     href: "/categoria/jaquetas",
-    image: "/images/placeholder.jpg",
-    secondaryImage: "/images/placeholder.jpg",
-    fallbackImage: "/images/placeholder.jpg",
+    image: "/images/product/genesis-bomber-1.jpg",
+    secondaryImage: "/images/product/genesis-bomber-2.jpg",
+    fallbackImage: "/images/product/genesis-bomber-1.jpg",
     alt: "Categoria Jaquetas",
     label: "Jaquetas",
   },
   {
     href: "/categoria/acessorios",
-    image: "/images/placeholder.jpg",
-    secondaryImage: "/images/placeholder.jpg",
-    fallbackImage: "/images/placeholder.jpg",
+    image: "/images/product/noir-sneaker-1.jpg",
+    secondaryImage: "/images/product/noir-sneaker-2.jpg",
+    fallbackImage: "/images/product/noir-sneaker-1.jpg",
     alt: "Categoria Acessorios",
     label: "Acessorios",
   },
@@ -162,7 +164,7 @@ function resolveProductHref(product: HomeProductCard): string | null {
 
 function resolveProductImageSrc(product: HomeProductCard): string {
   const raw = String(product.image || "").trim();
-  if (!raw) return "/images/placeholder.jpg";
+  if (!raw) return COLLECTION_PLACEHOLDER;
   if (/^https?:\/\//i.test(raw)) return raw;
   if (raw.startsWith("/images/")) return raw;
   if (raw.startsWith("/")) return raw;
@@ -703,7 +705,7 @@ export function LegacyHome({ products }: LegacyHomeProps) {
                       onError={(event) => {
                         const element = event.currentTarget;
                         element.onerror = null;
-                        element.src = "/images/placeholder.jpg";
+                        element.src = COLLECTION_PLACEHOLDER;
                       }}
                     />
                     {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -716,7 +718,7 @@ export function LegacyHome({ products }: LegacyHomeProps) {
                       onError={(event) => {
                         const element = event.currentTarget;
                         element.onerror = null;
-                        element.src = piece.image || "/images/placeholder.jpg";
+                        element.src = piece.image || COLLECTION_PLACEHOLDER;
                       }}
                     />
                   </div>
@@ -805,7 +807,7 @@ export function LegacyHome({ products }: LegacyHomeProps) {
                       onError={(event) => {
                         const element = event.currentTarget;
                         element.onerror = null;
-                        element.src = "/images/placeholder.jpg";
+                        element.src = COLLECTION_PLACEHOLDER;
                       }}
                     />
                     {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -818,7 +820,7 @@ export function LegacyHome({ products }: LegacyHomeProps) {
                       onError={(event) => {
                         const element = event.currentTarget;
                         element.onerror = null;
-                        element.src = pair.primary || "/images/placeholder.jpg";
+                        element.src = pair.primary || COLLECTION_PLACEHOLDER;
                       }}
                     />
                   </div>
@@ -835,19 +837,15 @@ export function LegacyHome({ products }: LegacyHomeProps) {
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               className="homepage-picture-image"
-              src="/images/Homepagepicture.jpg"
+              src={HOMEPAGE_PICTURE_IMAGE}
               alt="Imagem de destaque da homepage"
               loading="lazy"
               decoding="async"
               onError={(event) => {
                 const element = event.currentTarget;
                 const currentSrc = element.getAttribute("src") || "";
-                if (currentSrc.endsWith("/images/Homepagepicture.jpg")) {
-                  element.src = "/images/homepagepicture.jpg";
-                  return;
-                }
-                if (currentSrc.endsWith("/images/homepagepicture.jpg")) {
-                  element.src = "/images/collection.jpg";
+                if (currentSrc.endsWith(HOMEPAGE_PICTURE_IMAGE)) {
+                  element.src = HOMEPAGE_PICTURE_FALLBACK;
                   return;
                 }
                 element.onerror = null;

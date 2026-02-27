@@ -12,7 +12,7 @@ type ProductLikeWithMedia = {
 };
 
 export const PRODUCT_IMAGE_POOL = [
-  "/images/placeholder.jpg",
+  "/images/hero.jpg",
 ] as const;
 
 export const PRODUCT_IMAGE_FALLBACK = PRODUCT_IMAGE_POOL[0];

@@ -203,7 +203,7 @@ export function ProductExperience({ product, recommendations, imageBaseUrl }: Pr
   const mainRef = useRef<HTMLElement | null>(null);
   const mediaPanelRef = useRef<HTMLElement | null>(null);
   const mediaTrackRef = useRef<HTMLDivElement | null>(null);
-  const stickyShowDelayRef = useRef<number | null>(null);
+  const buyButtonRef = useRef<HTMLButtonElement | null>(null);
   const addItem = useCartStore((state) => state.addItem);
   const clearError = useCartStore((state) => state.clearError);
   const { sizes, colors } = useMemo(() => getProductVariantOptions(product), [product]);
@@ -265,47 +265,40 @@ export function ProductExperience({ product, recommendations, imageBaseUrl }: Pr
   }, [product.id]);
 
   useEffect(() => {
-    const mainElement = mainRef.current;
-    if (!mainElement || typeof window === "undefined") return;
+    const buyButtonElement = buyButtonRef.current;
+    if (!buyButtonElement || typeof window === "undefined") return;
 
     if (typeof window.IntersectionObserver !== "function") {
-      const rafId = window.requestAnimationFrame(() => setShowStickyBar(false));
-      return () => window.cancelAnimationFrame(rafId);
+      const syncSticky = () => {
+        const rect = buyButtonElement.getBoundingClientRect();
+        const outsideViewport = rect.bottom <= 0 || rect.top >= window.innerHeight;
+        setShowStickyBar(outsideViewport);
+      };
+
+      syncSticky();
+      window.addEventListener("scroll", syncSticky, { passive: true });
+      window.addEventListener("resize", syncSticky, { passive: true });
+      return () => {
+        window.removeEventListener("scroll", syncSticky);
+        window.removeEventListener("resize", syncSticky);
+      };
     }
 
     const observer = new IntersectionObserver(
       (entries) => {
         const entry = entries[0];
         if (!entry) return;
-        const heroVisible = entry.isIntersecting && entry.intersectionRatio > 0.08;
-        if (heroVisible) {
-          if (stickyShowDelayRef.current) {
-            window.clearTimeout(stickyShowDelayRef.current);
-            stickyShowDelayRef.current = null;
-          }
-          setShowStickyBar(false);
-          return;
-        }
-
-        if (stickyShowDelayRef.current) return;
-        stickyShowDelayRef.current = window.setTimeout(() => {
-          setShowStickyBar(true);
-          stickyShowDelayRef.current = null;
-        }, 120);
+        setShowStickyBar(!entry.isIntersecting);
       },
       {
         root: null,
-        threshold: [0, 0.08, 0.2, 0.4],
+        threshold: 0.01,
       }
     );
 
-    observer.observe(mainElement);
+    observer.observe(buyButtonElement);
     return () => {
       observer.disconnect();
-      if (stickyShowDelayRef.current) {
-        window.clearTimeout(stickyShowDelayRef.current);
-        stickyShowDelayRef.current = null;
-      }
     };
   }, [product.id]);
 
@@ -597,7 +590,7 @@ export function ProductExperience({ product, recommendations, imageBaseUrl }: Pr
                 Tabela de tamanhos
               </button>
             </div>
-            <button type="button" className={styles.buyButton} onClick={handleBuy}>
+            <button type="button" className={styles.buyButton} onClick={handleBuy} ref={buyButtonRef}>
               Adicionar ao carrinho
             </button>
 
