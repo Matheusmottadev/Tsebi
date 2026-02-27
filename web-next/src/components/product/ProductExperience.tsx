@@ -25,24 +25,60 @@ function normalizeImageList(input: unknown): string[] {
   return input.map((item) => String(item || "").trim()).filter(Boolean);
 }
 
-function buildGalleryImages(product: Product, recommendations: Product[]): string[] {
+function normalizeImageValue(input: unknown): string {
+  const raw = String(input || "").trim();
+  if (!raw) return "";
+  if (/^https?:\/\//i.test(raw)) return raw;
+  if (raw.startsWith("/")) return raw;
+  const clean = raw.replace(/^\.?\//, "");
+  return clean.startsWith("images/") ? `/${clean}` : `/${clean}`;
+}
+
+function buildSkuImageFallbacks(product: Product): string[] {
+  const sku = String(product.sku || "").trim();
+  if (!sku) return [];
+  return [1, 2, 3, 4, 5].map((index) => `/images/product/${sku}-${index}.jpg`);
+}
+
+function buildGalleryImages(product: Product): string[] {
   const anyProduct = product as Product & {
     images?: unknown;
     gallery?: unknown;
     media?: unknown;
+    image_url?: unknown;
+    metadata?: unknown;
   };
 
+  const metadata =
+    anyProduct.metadata && typeof anyProduct.metadata === "object" && !Array.isArray(anyProduct.metadata)
+      ? (anyProduct.metadata as Record<string, unknown>)
+      : {};
+
+  const metadataImages = normalizeImageList(metadata.images);
+  const metadataGallery = normalizeImageList(metadata.gallery);
+  const metadataMedia = normalizeImageList(metadata.media);
+  const metadataSecondary = normalizeImageValue(metadata.secondaryImage);
+
+  const skuFallbacks = buildSkuImageFallbacks(product);
   const images = [
-    String(product.image || "").trim(),
+    normalizeImageValue(product.image),
+    normalizeImageValue(anyProduct.image_url),
+    normalizeImageValue((product as Product & { secondaryImage?: unknown }).secondaryImage),
+    metadataSecondary,
     ...normalizeImageList(anyProduct.images),
     ...normalizeImageList(anyProduct.gallery),
     ...normalizeImageList(anyProduct.media),
+    ...metadataImages,
+    ...metadataGallery,
+    ...metadataMedia,
+    ...skuFallbacks,
   ].filter(Boolean);
 
   const unique = Array.from(new Set(images));
-  const fallback = String(product.image || "").trim() || "/images/placeholder.jpg";
-  if (unique.length === 0) return [fallback];
-  while (unique.length < 5) unique.push(fallback);
+  if (unique.length === 0) return ["/images/placeholder.jpg"];
+  while (unique.length < 5) {
+    unique.push(`/images/placeholder.jpg?v=${unique.length + 1}`);
+  }
   return unique.slice(0, 5);
 }
 
@@ -171,7 +207,7 @@ export function ProductExperience({ product, recommendations, imageBaseUrl }: Pr
   const addItem = useCartStore((state) => state.addItem);
   const clearError = useCartStore((state) => state.clearError);
   const { sizes, colors } = useMemo(() => getProductVariantOptions(product), [product]);
-  const galleryImages = useMemo(() => buildGalleryImages(product, recommendations), [product, recommendations]);
+  const galleryImages = useMemo(() => buildGalleryImages(product), [product]);
   const sizeModel = useMemo(() => buildProductSizeModel(product), [product]);
   const tailoredProducts = useMemo(
     () =>
