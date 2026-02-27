@@ -1895,6 +1895,16 @@ html.no-scroll{
   margin: 0;
 }
 
+.homepage-picture-drop .new-drop-media .homepage-picture-image{
+  width: 100vw !important;
+  min-width: 100vw;
+  max-width: none;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+  transform: none !important;
+}
+
 .new-drop-video.is-loading{
   opacity: .72;
 }
