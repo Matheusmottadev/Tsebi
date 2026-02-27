@@ -26,8 +26,6 @@ function normalizeImageList(input: unknown): string[] {
 }
 
 function buildGalleryImages(product: Product, recommendations: Product[]): string[] {
-  const fallbackGalleryPool = ["/images/placeholder.jpg"];
-
   const anyProduct = product as Product & {
     images?: unknown;
     gallery?: unknown;
@@ -39,13 +37,13 @@ function buildGalleryImages(product: Product, recommendations: Product[]): strin
     ...normalizeImageList(anyProduct.images),
     ...normalizeImageList(anyProduct.gallery),
     ...normalizeImageList(anyProduct.media),
-    ...fallbackGalleryPool,
   ].filter(Boolean);
 
   const unique = Array.from(new Set(images));
-  const fallback = String(product.image || "").trim();
-  while (unique.length < 5 && fallback) unique.push(fallback);
-  return unique.slice(0, 6);
+  const fallback = String(product.image || "").trim() || "/images/placeholder.jpg";
+  if (unique.length === 0) return [fallback];
+  while (unique.length < 5) unique.push(fallback);
+  return unique.slice(0, 5);
 }
 
 function getProductMediaList(product: Product): string[] {
