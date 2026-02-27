@@ -832,20 +832,25 @@ export function LegacyHome({ products }: LegacyHomeProps) {
       <section className="new-drop homepage-picture-drop" aria-label="Imagem de destaque da home">
         <div className="new-drop-inner" style={{ width: "100vw", maxWidth: "none", margin: "0 calc(50% - 50vw)" }}>
           <div className="new-drop-media" style={{ width: "100vw", maxWidth: "none", margin: 0 }}>
-            <div
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
               className="homepage-picture-image"
-              role="img"
-              aria-label="Imagem de destaque da homepage"
-              style={{
-                width: "100vw",
-                maxWidth: "none",
-                height: "100%",
-                backgroundImage: "url('/images/Homepagepicture.jpg')",
-                backgroundSize: "cover",
-                backgroundPosition: "center",
-                backgroundRepeat: "no-repeat",
-                transform: "none",
-                display: "block",
+              src="/images/Homepagepicture.jpg"
+              alt="Imagem de destaque da homepage"
+              loading="lazy"
+              decoding="async"
+              onError={(event) => {
+                const element = event.currentTarget;
+                const currentSrc = element.getAttribute("src") || "";
+                if (currentSrc.endsWith("/images/Homepagepicture.jpg")) {
+                  element.src = "/images/homepagepicture.jpg";
+                  return;
+                }
+                if (currentSrc.endsWith("/images/homepagepicture.jpg")) {
+                  element.src = "/images/collection.jpg";
+                  return;
+                }
+                element.onerror = null;
               }}
             />
           </div>
