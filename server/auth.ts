@@ -73,6 +73,16 @@ function maskEmailForLog(email: any) {
   return domain ? `${maskedLocal}@${domain}` : maskedLocal;
 }
 
+function resolveConfiguredEmailProvider(): string {
+  const explicit = String(process.env.EMAIL_PROVIDER || "").trim().toLowerCase();
+  const hasResendKey = Boolean(String(process.env.RESEND_API_KEY || "").trim());
+  if (explicit === "resend") return "resend";
+  if (explicit === "console" && !hasResendKey) return "console";
+  if (hasResendKey) return "resend";
+  if (explicit) return explicit;
+  return "console";
+}
+
 const authRateLimit = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 10,
@@ -171,9 +181,17 @@ const resetPasswordSchema = z.object({
 const profileSchema = z.object({
   title: titleSchema.optional(),
   name: z.string().trim().min(2).max(120),
-  birthDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
-  cpf: z.string().transform((value: any) => String(value || "").replace(/\D/g, "")).refine((value: any) => /^\d{11}$/.test(value)),
-  cep: z.string().transform((value: any) => String(value || "").replace(/\D/g, "")).refine((value: any) => /^\d{8}$/.test(value))
+  birthDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
+  cpf: z
+    .string()
+    .transform((value: any) => String(value || "").replace(/\D/g, ""))
+    .refine((value: any) => /^\d{11}$/.test(value))
+    .optional(),
+  cep: z
+    .string()
+    .transform((value: any) => String(value || "").replace(/\D/g, ""))
+    .refine((value: any) => /^\d{8}$/.test(value))
+    .optional()
 });
 
 const addressSchema = z.object({
@@ -840,7 +858,7 @@ async function issueAndSendLoginVerifyCode(user: any) {
   await sendLoginVerificationEmail({
     to: user.email,
     code: issued.code,
-    minutes: 10
+    minutes: 20
   });
 
   return { ok: true, issued };
@@ -989,7 +1007,13 @@ authRouter.post("/email/start", authRateLimit, async (req: any, res: any) => {
     const loginCode = await issueAndSendLoginVerifyCode(user);
     if (!loginCode.ok) return res.status(500).json({ error: "AUTH_CODE_ISSUE_FAILED" });
     return res.json(buildEmailCodeResponseBase(user.email, "login_code_required", loginCode.issued));
-  } catch {
+  } catch (error: any) {
+    // eslint-disable-next-line no-console
+    console.error("[auth/email-start] email delivery failed", {
+      email: maskEmailForLog(email),
+      provider: resolveConfiguredEmailProvider(),
+      message: String(error?.message || "unknown_error")
+    });
     return res.status(500).json({ error: "EMAIL_DELIVERY_FAILED" });
   }
 });
@@ -1093,7 +1117,13 @@ authRouter.post(
     const loginCode = await issueAndSendLoginVerifyCode(user);
     if (!loginCode.ok) return res.status(500).json({ error: "AUTH_CODE_ISSUE_FAILED" });
     return res.json(buildEmailCodeResponseBase(user.email, "login_code_required", loginCode.issued));
-  } catch {
+  } catch (error: any) {
+    // eslint-disable-next-line no-console
+    console.error("[auth/login] email delivery failed", {
+      email: maskEmailForLog(email),
+      provider: resolveConfiguredEmailProvider(),
+      message: String(error?.message || "unknown_error")
+    });
     return res.status(500).json({ error: "EMAIL_DELIVERY_FAILED" });
   }
   }
@@ -1436,16 +1466,19 @@ myRouter.put("/profile", requireAuth, async (req: any, res: any) => {
     return res.status(400).json({ error: "INVALID_INPUT" });
   }
 
-  if (!parseBirthDate(parsed.data.birthDate)) {
+  const currentUser = await findUserById(req.session.userId);
+  if (!currentUser) return res.status(404).json({ error: "USER_NOT_FOUND" });
+
+  if (parsed.data.birthDate && !parseBirthDate(parsed.data.birthDate)) {
     return res.status(400).json({ error: "INVALID_INPUT" });
   }
 
   const updated = await updateUser(req.session.userId, {
     title: parsed.data.title,
     name: parsed.data.name,
-    birthDate: parsed.data.birthDate,
-    cpf: parsed.data.cpf,
-    cep: parsed.data.cep
+    birthDate: parsed.data.birthDate || currentUser.birthDate,
+    cpf: parsed.data.cpf || currentUser.cpf,
+    cep: parsed.data.cep || currentUser.cep
   });
   if (!updated) return res.status(404).json({ error: "USER_NOT_FOUND" });
   return res.json({ user: publicUser(updated) });

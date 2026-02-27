@@ -79,6 +79,10 @@ async function sendEmail(payload: EmailPayload): Promise<EmailSendResult> {
   };
 
   const provider = getEmailProvider();
+  if (process.env.NODE_ENV === "production" && provider === "console") {
+    throw new Error("EMAIL_PROVIDER_NOT_CONFIGURED");
+  }
+
   if (provider === "resend") {
     return sendByResend(message);
   }
@@ -241,7 +245,7 @@ async function sendAccountVerificationEmail({ to, code, minutes = 20 }: { to: st
   });
 }
 
-async function sendLoginVerificationEmail({ to, code, minutes = 10 }: { to: string; code: string; minutes?: number }): Promise<EmailSendResult> {
+async function sendLoginVerificationEmail({ to, code, minutes = 20 }: { to: string; code: string; minutes?: number }): Promise<EmailSendResult> {
   const content = buildCodeEmail({
     title: "Confirme seu login",
     intro: "Use o codigo abaixo para concluir seu login com seguranca.",

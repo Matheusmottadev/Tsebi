@@ -90,10 +90,34 @@
     }
   }
 
+  function readCookie(name) {
+    const source = String(document.cookie || "");
+    if (!source) return "";
+    const prefix = `${String(name || "").trim()}=`;
+    const parts = source.split(";");
+    for (const part of parts) {
+      const item = String(part || "").trim();
+      if (!item.startsWith(prefix)) continue;
+      return decodeURIComponent(item.slice(prefix.length));
+    }
+    return "";
+  }
+
   async function apiRequest(url, options) {
+    const method = String(options?.method || "GET").trim().toUpperCase();
+    const isMutation = method === "POST" || method === "PUT" || method === "PATCH" || method === "DELETE";
+    const headers = new Headers((options && options.headers) || undefined);
+
+    if (isMutation && !headers.has("x-csrf-token")) {
+      const csrfToken = readCookie("tsebi.csrf");
+      if (csrfToken) headers.set("x-csrf-token", csrfToken);
+    }
+
     const response = await fetch(url, {
       credentials: "same-origin",
-      ...options
+      ...options,
+      method,
+      headers
     });
     const data = await response.json().catch(() => ({}));
     if (!response.ok) {
@@ -143,6 +167,8 @@
     if (code === "REFUND_FAILED") return "Não foi possível solicitar o reembolso.";
     if (code === "TOO_MANY_REQUESTS") return "Muitas tentativas. Aguarde e tente novamente.";
     if (code === "FORBIDDEN") return "Acesso não autorizado.";
+    if (code === "CSRF_MISSING") return "Sessão expirada. Recarregue a página e tente novamente.";
+    if (code === "CSRF_INVALID") return "Sessão expirada. Recarregue a página e tente novamente.";
     return "Não foi possível concluir a operação.";
   }
 
@@ -512,11 +538,16 @@
   async function updateMyProfile({ title, name, birthDate, cpf, cep }) {
     try {
       const payload = {
-        name: String(name || "").trim(),
-        birthDate: String(birthDate || "").trim(),
-        cpf: String(cpf || "").replace(/\D/g, "").slice(0, 11),
-        cep: String(cep || "").replace(/\D/g, "").slice(0, 8)
+        name: String(name || "").trim()
       };
+      const normalizedBirthDate = String(birthDate || "").trim();
+      const normalizedCpf = String(cpf || "").replace(/\D/g, "").slice(0, 11);
+      const normalizedCep = String(cep || "").replace(/\D/g, "").slice(0, 8);
+
+      if (/^\d{4}-\d{2}-\d{2}$/.test(normalizedBirthDate)) payload.birthDate = normalizedBirthDate;
+      if (normalizedCpf.length === 11) payload.cpf = normalizedCpf;
+      if (normalizedCep.length === 8) payload.cep = normalizedCep;
+
       const normalizedTitle = normalizeTitle(title);
       if (normalizedTitle) payload.title = normalizedTitle;
 

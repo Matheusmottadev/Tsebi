@@ -35,7 +35,7 @@ function generateCode(): string {
 
 function getCodeTtlMinutes(purpose: AuthPurpose): number {
   if (purpose === "password_reset") return 15;
-  if (purpose === "login_verify") return 10;
+  if (purpose === "login_verify") return 20;
   return 20;
 }
 
@@ -59,17 +59,6 @@ async function issueAuthEmailCode({
   const ttlMinutes = getCodeTtlMinutes(normalizedPurpose);
 
   const created = await withTransaction(async (client: DbClient) => {
-    await client.query(
-      `
-      UPDATE auth_email_codes
-      SET consumed_at = NOW()
-      WHERE email = $1
-        AND purpose = $2
-        AND consumed_at IS NULL
-      `,
-      [normalizedEmail, normalizedPurpose]
-    );
-
     const result = await client.query(
       `
       INSERT INTO auth_email_codes (user_id, email, purpose, code_hash, expires_at)
@@ -117,13 +106,14 @@ async function consumeAuthEmailCode({
       FROM auth_email_codes
       WHERE email = $1
         AND purpose = $2
+        AND code_hash = $3
         AND consumed_at IS NULL
         AND expires_at > NOW()
       ORDER BY created_at DESC
       LIMIT 1
       FOR UPDATE
       `,
-      [normalizedEmail, normalizedPurpose]
+      [normalizedEmail, normalizedPurpose, hashCode(normalizedCode)]
     );
 
     if (result.rowCount === 0) {
@@ -136,13 +126,7 @@ async function consumeAuthEmailCode({
       email?: string;
       purpose?: AuthPurpose;
       expires_at?: string | null;
-      code_hash?: string;
     };
-    const expectedHash = String(row.code_hash || "").trim();
-    const actualHash = hashCode(normalizedCode);
-    if (!expectedHash || actualHash !== expectedHash) {
-      return { ok: false, error: "INVALID_OR_EXPIRED_CODE" };
-    }
 
     await client.query(
       `
