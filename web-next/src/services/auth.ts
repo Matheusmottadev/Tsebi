@@ -96,6 +96,17 @@ export interface BasicOkResponse {
   ok: true;
 }
 
+export interface GoogleAuthConfigResponse {
+  ok: true;
+  enabled: boolean;
+  clientId: string;
+}
+
+export interface GoogleLoginPayload {
+  idToken: string;
+  nonce?: string;
+}
+
 export interface FavoritesResponse {
   favorites: string[];
 }
@@ -218,6 +229,22 @@ export async function resendLoginCode(payload: EmailPayload): Promise<AuthCodeCh
  */
 export async function resendAccountVerificationCode(payload: EmailPayload): Promise<ResendAccountCodeResponse> {
   return post<ResendAccountCodeResponse>("/api/auth/email/resend-account-code", payload);
+}
+
+/**
+ * GET /api/auth/google/config
+ * Auth: public.
+ */
+export async function getGoogleAuthConfig(): Promise<GoogleAuthConfigResponse> {
+  return get<GoogleAuthConfigResponse>("/api/auth/google/config");
+}
+
+/**
+ * POST /api/auth/google
+ * Auth: public (creates session on success).
+ */
+export async function loginWithGoogle(payload: GoogleLoginPayload): Promise<AuthUserResponse> {
+  return post<AuthUserResponse>("/api/auth/google", payload);
 }
 
 /**

@@ -4,11 +4,14 @@ import Link from "next/link";
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { HttpError } from "@/lib/http";
-import { login, startEmailVerification, verifyEmailCode } from "@/services/auth";
+import { getGoogleAuthConfig, login, loginWithGoogle, startEmailVerification, verifyEmailCode } from "@/services/auth";
 
 type AuthState = "email" | "code" | "password";
 
 const FALLBACK_RETURN_URL = "/account";
+const GOOGLE_STATE_KEY = "tsebi-google-oauth-state";
+const GOOGLE_NONCE_KEY = "tsebi-google-oauth-nonce";
+const GOOGLE_RETURN_URL_KEY = "tsebi-google-return-url";
 
 function normalizeEmail(value: string): string {
   return String(value || "").trim().toLowerCase();
@@ -66,6 +69,17 @@ function resolveReturnUrl(raw: string): string {
   }
 }
 
+function randomToken(size = 24): string {
+  const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+  const values = new Uint8Array(size);
+  window.crypto.getRandomValues(values);
+  let token = "";
+  for (let index = 0; index < values.length; index += 1) {
+    token += alphabet[values[index] % alphabet.length];
+  }
+  return token;
+}
+
 export function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -78,6 +92,8 @@ export function LoginForm() {
   const [isPasswordVisible, setIsPasswordVisible] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isGoogleSubmitting, setIsGoogleSubmitting] = useState(false);
+  const [googleLoginAvailable, setGoogleLoginAvailable] = useState(false);
   const [isResendingCode, setIsResendingCode] = useState(false);
   const [resendRemaining, setResendRemaining] = useState(0);
   const [devCodeHint, setDevCodeHint] = useState("");
@@ -96,10 +112,111 @@ export function LoginForm() {
     router.push(`/recuperar-senha-codigo?${params.toString()}`);
   }
 
-  function finishLogin(): void {
-    const returnUrl = resolveReturnUrl(String(searchParams.get("returnUrl") || ""));
+  function finishLogin(overrideReturnUrl?: string): void {
+    const returnUrl = resolveReturnUrl(overrideReturnUrl ?? String(searchParams.get("returnUrl") || ""));
     router.push(returnUrl);
     router.refresh();
+  }
+
+  async function syncGoogleAvailability(): Promise<void> {
+    try {
+      const config = await getGoogleAuthConfig();
+      setGoogleLoginAvailable(Boolean(config.enabled && config.clientId));
+    } catch {
+      setGoogleLoginAvailable(false);
+    }
+  }
+
+  async function beginGoogleLogin(): Promise<void> {
+    setErrorMessage("");
+    if (!googleLoginAvailable) {
+      setErrorMessage("Login com Google indisponivel no momento.");
+      return;
+    }
+
+    setIsGoogleSubmitting(true);
+    try {
+      const config = await getGoogleAuthConfig();
+      if (!config.enabled || !config.clientId) {
+        setGoogleLoginAvailable(false);
+        setErrorMessage("Login com Google indisponivel no momento.");
+        return;
+      }
+
+      const state = randomToken();
+      const nonce = randomToken();
+      const returnUrl = resolveReturnUrl(String(searchParams.get("returnUrl") || ""));
+
+      try {
+        sessionStorage.setItem(GOOGLE_STATE_KEY, state);
+        sessionStorage.setItem(GOOGLE_NONCE_KEY, nonce);
+        sessionStorage.setItem(GOOGLE_RETURN_URL_KEY, returnUrl);
+      } catch {}
+
+      const callbackUrl = new URL(window.location.origin + window.location.pathname);
+      callbackUrl.searchParams.set("google", "1");
+
+      const oauthUrl = new URL("https://accounts.google.com/o/oauth2/v2/auth");
+      oauthUrl.searchParams.set("client_id", config.clientId);
+      oauthUrl.searchParams.set("redirect_uri", callbackUrl.toString());
+      oauthUrl.searchParams.set("response_type", "id_token");
+      oauthUrl.searchParams.set("scope", "openid email profile");
+      oauthUrl.searchParams.set("prompt", "select_account");
+      oauthUrl.searchParams.set("state", state);
+      oauthUrl.searchParams.set("nonce", nonce);
+
+      window.location.href = oauthUrl.toString();
+    } catch {
+      setGoogleLoginAvailable(false);
+      setErrorMessage("Login com Google indisponivel no momento.");
+    } finally {
+      setIsGoogleSubmitting(false);
+    }
+  }
+
+  async function completeGoogleLoginFromHash(): Promise<void> {
+    const hash = String(window.location.hash || "").replace(/^#/, "");
+    if (!hash) return;
+
+    const hashParams = new URLSearchParams(hash);
+    const idToken = String(hashParams.get("id_token") || "").trim();
+    if (!idToken) return;
+
+    const stateFromHash = String(hashParams.get("state") || "").trim();
+
+    let expectedState = "";
+    let expectedNonce = "";
+    let storedReturnUrl = "";
+    try {
+      expectedState = String(sessionStorage.getItem(GOOGLE_STATE_KEY) || "");
+      expectedNonce = String(sessionStorage.getItem(GOOGLE_NONCE_KEY) || "");
+      storedReturnUrl = String(sessionStorage.getItem(GOOGLE_RETURN_URL_KEY) || "");
+      sessionStorage.removeItem(GOOGLE_STATE_KEY);
+      sessionStorage.removeItem(GOOGLE_NONCE_KEY);
+      sessionStorage.removeItem(GOOGLE_RETURN_URL_KEY);
+    } catch {}
+
+    history.replaceState({}, "", `${window.location.pathname}${window.location.search}`);
+
+    if (!stateFromHash || !expectedState || stateFromHash !== expectedState) {
+      setErrorMessage("Falha ao validar login Google.");
+      return;
+    }
+
+    setIsGoogleSubmitting(true);
+    try {
+      const response = await loginWithGoogle({ idToken, nonce: expectedNonce });
+      if (!response?.ok || !response?.user) {
+        setErrorMessage("Não foi possível concluir o login com Google.");
+        return;
+      }
+
+      finishLogin(storedReturnUrl || undefined);
+    } catch {
+      setErrorMessage("Não foi possível concluir o login com Google.");
+    } finally {
+      setIsGoogleSubmitting(false);
+    }
   }
 
   useEffect(() => {
@@ -114,6 +231,11 @@ export function LoginForm() {
 
     return () => window.clearInterval(timerId);
   }, [authState, resendRemaining]);
+
+  useEffect(() => {
+    syncGoogleAvailability();
+    completeGoogleLoginFromHash();
+  }, []);
 
   function setState(nextState: AuthState): void {
     setAuthState(nextState);
@@ -482,9 +604,10 @@ export function LoginForm() {
             id="googleBtn"
             className="btn-outline auth-btn"
             type="button"
-            onClick={() => setErrorMessage("Login com Google indisponivel no momento.")}
+            onClick={beginGoogleLogin}
+            disabled={isGoogleSubmitting || !googleLoginAvailable}
           >
-            Continuar com Google
+            {isGoogleSubmitting ? "Conectando..." : "Continuar com Google"}
           </button>
           <button
             id="passkeyBtn"
