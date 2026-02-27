@@ -1,18 +1,18 @@
 const store = window.TsebiUserStore;
 
 const productCatalog = [
-  { id: "genesis-bomber", name: "Jaqueta bomber em couro italiano com forro em seda", priceLabel: "R$ 5.900", image: "images/produtos/sug5.jpeg" },
-  { id: "genesis-tailored", name: "CalÁa de alfaiataria em sarja premium estruturada", priceLabel: "R$ 2.200", image: "images/produtos/sug6.jpeg" },
-  { id: "origem-shirt", name: "Camisa em algod„o croata de trama nobre", priceLabel: "R$ 1.600", image: "images/produtos/sug7.jpeg" },
-  { id: "origem-skirt", name: "Saia estruturada em l√£ fria de acabamento impec√°vel", priceLabel: "R$ 2.450", image: "images/produtos/sug2.jpeg" },
-  { id: "atelier-bag", name: "Bolsa em couro natural com ferragens banhadas", priceLabel: "R$ 4.800", image: "images/produtos/sug2.jpeg" },
-  { id: "atelier-heels", name: "Scarpin em couro envernizado de salto esculpido", priceLabel: "R$ 3.200", image: "images/produtos/sug2.jpeg" },
-  { id: "flux-trench", name: "Trench coat em gabardine com corte arquitet√¥nico", priceLabel: "R$ 3.950", image: "images/produtos/sug3.jpeg" },
-  { id: "flux-knit", name: "Malha em l„ merino de toque ultrafino", priceLabel: "R$ 1.980", image: "images/produtos/sug5.jpeg" },
-  { id: "noir-dress", name: "Vestido coluna em crepe de seda com caimento couture", priceLabel: "R$ 4.200", image: "images/produtos/sug6.jpeg" },
-  { id: "noir-sneaker", name: "TÍnis em nylon tÈcnico e couro de acabamento premium", priceLabel: "R$ 2.700", image: "images/produtos/sug7.jpeg" },
-  { id: "essence-blazer", name: "Blazer em linho premium com alfaiataria de precis√£o", priceLabel: "R$ 3.350", image: "images/produtos/sug4.jpeg" },
-  { id: "essence-trousers", name: "Cal√ßa wide leg em linho premium com prega profunda", priceLabel: "R$ 2.250", image: "images/produtos/sug3.jpeg" }
+  { id: "genesis-bomber", name: "Jaqueta bomber em couro italiano com forro em seda", priceLabel: "R$ 5.900", image: "images/placeholder.jpg" },
+  { id: "genesis-tailored", name: "CalÁa de alfaiataria em sarja premium estruturada", priceLabel: "R$ 2.200", image: "images/placeholder.jpg" },
+  { id: "origem-shirt", name: "Camisa em algod„o croata de trama nobre", priceLabel: "R$ 1.600", image: "images/placeholder.jpg" },
+  { id: "origem-skirt", name: "Saia estruturada em l√£ fria de acabamento impec√°vel", priceLabel: "R$ 2.450", image: "images/placeholder.jpg" },
+  { id: "atelier-bag", name: "Bolsa em couro natural com ferragens banhadas", priceLabel: "R$ 4.800", image: "images/placeholder.jpg" },
+  { id: "atelier-heels", name: "Scarpin em couro envernizado de salto esculpido", priceLabel: "R$ 3.200", image: "images/placeholder.jpg" },
+  { id: "flux-trench", name: "Trench coat em gabardine com corte arquitet√¥nico", priceLabel: "R$ 3.950", image: "images/placeholder.jpg" },
+  { id: "flux-knit", name: "Malha em l„ merino de toque ultrafino", priceLabel: "R$ 1.980", image: "images/placeholder.jpg" },
+  { id: "noir-dress", name: "Vestido coluna em crepe de seda com caimento couture", priceLabel: "R$ 4.200", image: "images/placeholder.jpg" },
+  { id: "noir-sneaker", name: "TÍnis em nylon tÈcnico e couro de acabamento premium", priceLabel: "R$ 2.700", image: "images/placeholder.jpg" },
+  { id: "essence-blazer", name: "Blazer em linho premium com alfaiataria de precis√£o", priceLabel: "R$ 3.350", image: "images/placeholder.jpg" },
+  { id: "essence-trousers", name: "Cal√ßa wide leg em linho premium com prega profunda", priceLabel: "R$ 2.250", image: "images/placeholder.jpg" }
 ];
 
 const steps = {

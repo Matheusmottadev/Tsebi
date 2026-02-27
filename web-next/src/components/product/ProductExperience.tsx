@@ -39,7 +39,6 @@ function buildGalleryImages(product: Product, recommendations: Product[]): strin
     ...normalizeImageList(anyProduct.images),
     ...normalizeImageList(anyProduct.gallery),
     ...normalizeImageList(anyProduct.media),
-    ...recommendations.map((item) => String(item.image || "").trim()).filter(Boolean),
     ...fallbackGalleryPool,
   ].filter(Boolean);
 

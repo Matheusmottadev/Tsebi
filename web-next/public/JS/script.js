@@ -7,10 +7,10 @@ const messages = [
   "Produção em pequena escala. Qualidade em cada detalhe."
 ];
 const searchTopPieces = [
-  { id: "origem-skirt", href: "produto.html?id=origem-skirt", src: "images/produtos/sug2.jpeg", alt: "Sabrina charmosa", tag: "NOVO", name: "Sabrina charmosa" },
-  { id: "origem-shirt", href: "produto.html?id=origem-shirt", src: "images/produtos/sug3.jpeg", alt: "Sabrina linda", tag: "NOVO", name: "Sabrina linda" },
-  { id: "genesis-tailored", href: "produto.html?id=genesis-tailored", src: "images/produtos/sug4.jpeg", alt: "Sabrina maravilhosa", tag: "NOVO", name: "Sabrina maravilhosa" },
-  { id: "genesis-bomber", href: "produto.html?id=genesis-bomber", src: "images/produtos/sug1.jpeg", alt: "Sabrina incrível", tag: "NOVO", name: "Sabrina incrível" }
+  { id: "origem-skirt", href: "produto.html?id=origem-skirt", src: "images/placeholder.jpg", alt: "Sabrina charmosa", tag: "NOVO", name: "Sabrina charmosa" },
+  { id: "origem-shirt", href: "produto.html?id=origem-shirt", src: "images/placeholder.jpg", alt: "Sabrina linda", tag: "NOVO", name: "Sabrina linda" },
+  { id: "genesis-tailored", href: "produto.html?id=genesis-tailored", src: "images/placeholder.jpg", alt: "Sabrina maravilhosa", tag: "NOVO", name: "Sabrina maravilhosa" },
+  { id: "genesis-bomber", href: "produto.html?id=genesis-bomber", src: "images/placeholder.jpg", alt: "Sabrina incrível", tag: "NOVO", name: "Sabrina incrível" }
 ];
 const prelaunchActionCards = [
   {
@@ -571,14 +571,14 @@ function ensureSearchExperience(searchOverlay, searchInput) {
       plainEntry.maxStock = stock;
       plainEntry.priceLabel = safeProduct.priceLabel || plainEntry.priceLabel || "R$ 0,00";
       plainEntry.name = safeProduct.name || plainEntry.name || productId;
-      plainEntry.image = safeProduct.image || plainEntry.image || "images/produtos/sug1.jpeg";
+      plainEntry.image = safeProduct.image || plainEntry.image || "images/placeholder.jpg";
     } else {
       cartItems.push({
         key: productId,
         id: productId,
         name: safeProduct.name || productId,
         priceLabel: safeProduct.priceLabel || "R$ 0,00",
-        image: safeProduct.image || "images/produtos/sug1.jpeg",
+        image: safeProduct.image || "images/placeholder.jpg",
         color: "-",
         size: "-",
         maxStock: stock,
@@ -983,30 +983,30 @@ function initCategorySwitch() {
   const contentEn = {
     featured: {
       feminino: [
-        { src: "images/produtos/sug2.jpeg", alt: "Structured cool wool skirt", title: "Structured cool wool skirt", href: "produto.html?id=origem-skirt" },
-        { src: "images/produtos/sug4.jpeg", alt: "Premium tailored trousers", title: "Premium tailored trousers", href: "produto.html?id=genesis-tailored" },
-        { src: "images/produtos/sug2.jpeg", alt: "Patent leather pumps", title: "Patent leather pumps", href: "produto.html?id=atelier-heels" },
-        { src: "images/produtos/sug4.jpeg", alt: "Premium linen blazer", title: "Premium linen blazer", href: "produto.html?id=essence-blazer" }
+        { src: "images/placeholder.jpg", alt: "Structured cool wool skirt", title: "Structured cool wool skirt", href: "produto.html?id=origem-skirt" },
+        { src: "images/placeholder.jpg", alt: "Premium tailored trousers", title: "Premium tailored trousers", href: "produto.html?id=genesis-tailored" },
+        { src: "images/placeholder.jpg", alt: "Patent leather pumps", title: "Patent leather pumps", href: "produto.html?id=atelier-heels" },
+        { src: "images/placeholder.jpg", alt: "Premium linen blazer", title: "Premium linen blazer", href: "produto.html?id=essence-blazer" }
       ],
       masculino: [
-        { src: "images/produtos/sug3.jpeg", alt: "Croatian cotton shirt", title: "Croatian cotton shirt", href: "produto.html?id=origem-shirt" },
-        { src: "images/produtos/sug1.jpeg", alt: "Italian leather bomber jacket", title: "Italian leather bomber jacket", href: "produto.html?id=genesis-bomber" },
-        { src: "images/produtos/sug1.jpeg", alt: "Premium technical sneaker", title: "Premium technical sneaker", href: "produto.html?id=noir-sneaker" },
-        { src: "images/produtos/sug3.jpeg", alt: "Gabardine trench coat", title: "Gabardine trench coat", href: "produto.html?id=flux-trench" }
+        { src: "images/placeholder.jpg", alt: "Croatian cotton shirt", title: "Croatian cotton shirt", href: "produto.html?id=origem-shirt" },
+        { src: "images/placeholder.jpg", alt: "Italian leather bomber jacket", title: "Italian leather bomber jacket", href: "produto.html?id=genesis-bomber" },
+        { src: "images/placeholder.jpg", alt: "Premium technical sneaker", title: "Premium technical sneaker", href: "produto.html?id=noir-sneaker" },
+        { src: "images/placeholder.jpg", alt: "Gabardine trench coat", title: "Gabardine trench coat", href: "produto.html?id=flux-trench" }
       ]
     },
     popular: {
       feminino: [
-        { src: "images/produtos/sug1.jpeg", alt: "Most clicked piece 1", title: "", href: "produto.html?id=origem-skirt" },
-        { src: "images/produtos/sug2.jpeg", alt: "Most clicked piece 2", title: "", href: "produto.html?id=genesis-tailored" },
-        { src: "images/produtos/sug3.jpeg", alt: "Most clicked piece 3", title: "", href: "produto.html?id=atelier-heels" },
-        { src: "images/produtos/sug4.jpeg", alt: "Most clicked piece 4", title: "", href: "produto.html?id=essence-blazer" }
+        { src: "images/placeholder.jpg", alt: "Most clicked piece 1", title: "", href: "produto.html?id=origem-skirt" },
+        { src: "images/placeholder.jpg", alt: "Most clicked piece 2", title: "", href: "produto.html?id=genesis-tailored" },
+        { src: "images/placeholder.jpg", alt: "Most clicked piece 3", title: "", href: "produto.html?id=atelier-heels" },
+        { src: "images/placeholder.jpg", alt: "Most clicked piece 4", title: "", href: "produto.html?id=essence-blazer" }
       ],
       masculino: [
-        { src: "images/produtos/sug3.jpeg", alt: "Most clicked piece 1", title: "", href: "produto.html?id=origem-shirt" },
-        { src: "images/produtos/sug1.jpeg", alt: "Most clicked piece 2", title: "", href: "produto.html?id=genesis-bomber" },
-        { src: "images/produtos/sug2.jpeg", alt: "Most clicked piece 3", title: "", href: "produto.html?id=noir-sneaker" },
-        { src: "images/produtos/sug4.jpeg", alt: "Most clicked piece 4", title: "", href: "produto.html?id=flux-trench" }
+        { src: "images/placeholder.jpg", alt: "Most clicked piece 1", title: "", href: "produto.html?id=origem-shirt" },
+        { src: "images/placeholder.jpg", alt: "Most clicked piece 2", title: "", href: "produto.html?id=genesis-bomber" },
+        { src: "images/placeholder.jpg", alt: "Most clicked piece 3", title: "", href: "produto.html?id=noir-sneaker" },
+        { src: "images/placeholder.jpg", alt: "Most clicked piece 4", title: "", href: "produto.html?id=flux-trench" }
       ]
     }
   };
@@ -1014,30 +1014,30 @@ function initCategorySwitch() {
   const contentPt = {
     featured: {
       feminino: [
-        { src: "images/produtos/sug2.jpeg", alt: "Saia estruturada em lã fria", title: "Saia estruturada em lã fria", href: "produto.html?id=origem-skirt" },
-        { src: "images/produtos/sug4.jpeg", alt: "Calça de alfaiataria em sarja premium", title: "Calça de alfaiataria premium", href: "produto.html?id=genesis-tailored" },
-        { src: "images/produtos/sug2.jpeg", alt: "Scarpin em couro envernizado", title: "Scarpin em couro envernizado", href: "produto.html?id=atelier-heels" },
-        { src: "images/produtos/sug4.jpeg", alt: "Blazer em linho premium", title: "Blazer em linho premium", href: "produto.html?id=essence-blazer" }
+        { src: "images/placeholder.jpg", alt: "Saia estruturada em lã fria", title: "Saia estruturada em lã fria", href: "produto.html?id=origem-skirt" },
+        { src: "images/placeholder.jpg", alt: "Calça de alfaiataria em sarja premium", title: "Calça de alfaiataria premium", href: "produto.html?id=genesis-tailored" },
+        { src: "images/placeholder.jpg", alt: "Scarpin em couro envernizado", title: "Scarpin em couro envernizado", href: "produto.html?id=atelier-heels" },
+        { src: "images/placeholder.jpg", alt: "Blazer em linho premium", title: "Blazer em linho premium", href: "produto.html?id=essence-blazer" }
       ],
       masculino: [
-        { src: "images/produtos/sug3.jpeg", alt: "Camisa em algodão croata", title: "Camisa em algodão croata", href: "produto.html?id=origem-shirt" },
-        { src: "images/produtos/sug1.jpeg", alt: "Jaqueta bomber em couro italiano", title: "Jaqueta bomber em couro italiano", href: "produto.html?id=genesis-bomber" },
-        { src: "images/produtos/sug1.jpeg", alt: "Tênis em nylon técnico e couro", title: "Tênis em nylon técnico premium", href: "produto.html?id=noir-sneaker" },
-        { src: "images/produtos/sug3.jpeg", alt: "Trench coat em gabardine", title: "Trench coat em gabardine", href: "produto.html?id=flux-trench" }
+        { src: "images/placeholder.jpg", alt: "Camisa em algodão croata", title: "Camisa em algodão croata", href: "produto.html?id=origem-shirt" },
+        { src: "images/placeholder.jpg", alt: "Jaqueta bomber em couro italiano", title: "Jaqueta bomber em couro italiano", href: "produto.html?id=genesis-bomber" },
+        { src: "images/placeholder.jpg", alt: "Tênis em nylon técnico e couro", title: "Tênis em nylon técnico premium", href: "produto.html?id=noir-sneaker" },
+        { src: "images/placeholder.jpg", alt: "Trench coat em gabardine", title: "Trench coat em gabardine", href: "produto.html?id=flux-trench" }
       ]
     },
     popular: {
       feminino: [
-        { src: "images/produtos/sug1.jpeg", alt: "Peça mais clicada 1", title: "", href: "produto.html?id=origem-skirt" },
-        { src: "images/produtos/sug2.jpeg", alt: "Peça mais clicada 2", title: "", href: "produto.html?id=genesis-tailored" },
-        { src: "images/produtos/sug3.jpeg", alt: "Peça mais clicada 3", title: "", href: "produto.html?id=atelier-heels" },
-        { src: "images/produtos/sug4.jpeg", alt: "Peça mais clicada 4", title: "", href: "produto.html?id=essence-blazer" }
+        { src: "images/placeholder.jpg", alt: "Peça mais clicada 1", title: "", href: "produto.html?id=origem-skirt" },
+        { src: "images/placeholder.jpg", alt: "Peça mais clicada 2", title: "", href: "produto.html?id=genesis-tailored" },
+        { src: "images/placeholder.jpg", alt: "Peça mais clicada 3", title: "", href: "produto.html?id=atelier-heels" },
+        { src: "images/placeholder.jpg", alt: "Peça mais clicada 4", title: "", href: "produto.html?id=essence-blazer" }
       ],
       masculino: [
-        { src: "images/produtos/sug3.jpeg", alt: "Peça mais clicada 1", title: "", href: "produto.html?id=origem-shirt" },
-        { src: "images/produtos/sug1.jpeg", alt: "Peça mais clicada 2", title: "", href: "produto.html?id=genesis-bomber" },
-        { src: "images/produtos/sug2.jpeg", alt: "Peça mais clicada 3", title: "", href: "produto.html?id=noir-sneaker" },
-        { src: "images/produtos/sug4.jpeg", alt: "Peça mais clicada 4", title: "", href: "produto.html?id=flux-trench" }
+        { src: "images/placeholder.jpg", alt: "Peça mais clicada 1", title: "", href: "produto.html?id=origem-shirt" },
+        { src: "images/placeholder.jpg", alt: "Peça mais clicada 2", title: "", href: "produto.html?id=genesis-bomber" },
+        { src: "images/placeholder.jpg", alt: "Peça mais clicada 3", title: "", href: "produto.html?id=noir-sneaker" },
+        { src: "images/placeholder.jpg", alt: "Peça mais clicada 4", title: "", href: "produto.html?id=flux-trench" }
       ]
     }
   };

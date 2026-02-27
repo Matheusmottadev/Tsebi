@@ -1,4 +1,4 @@
-﻿(() => {
+(() => {
 if (window.__TSEBI_CART_BOOTED__) {
   return;
 }
@@ -9,7 +9,7 @@ const LEGACY_CART_KEYS = ["tsebi-cart", "cart"];
 const SHIPPING_KEY_BASE = "tsebi-checkout-shipping-v2";
 const SHIPPING_KEY_LEGACY = "tsebi-checkout-shipping-v1";
 const userStore = window.TsebiUserStore;
-const GUEST_CHECKOUT_MESSAGE = "Finalize como visitante. Sua conta pode ser ativada apÃ³s a compra.";
+const GUEST_CHECKOUT_MESSAGE = "Finalize como visitante. Sua conta pode ser ativada após a compra.";
 const CEP_LOOKUP_DEBOUNCE_MS = 450;
 const cepLookupCache = new Map();
 let cepLookupTimeoutId = 0;
@@ -177,7 +177,7 @@ function readCart() {
           id,
           name: String(item.name || item.title || id),
           priceLabel,
-          image: String(item.image || item.img || "images/produtos/sug1.jpeg"),
+          image: String(item.image || item.img || "images/placeholder.jpg"),
           color: String(item.color || "-"),
           size: String(item.size || "-"),
           maxStock: Math.max(1, Number(item.maxStock || 99)),
@@ -301,13 +301,13 @@ const COLOR_SWATCH_MAP = {
   laranja: "#d67a2e",
   roxo: "#6e4c8f",
   lilas: "#a08cc6",
-  "lilÃ¡s": "#a08cc6",
+  "lilás": "#a08cc6",
   lilac: "#a08cc6",
   dourado: "#b08a2e",
   prata: "#b1b3b8",
   "off white": "#f5f2ea",
   unico: "#d3d3d3",
-  "Ãºnico": "#d3d3d3"
+  "único": "#d3d3d3"
 };
 
 function resolveColorSwatch(colorName) {
@@ -330,7 +330,7 @@ function getInstallmentsTotal() {
 function updateInstallmentsPreview(isCard) {
   if (!dom.installmentsPreview) return;
   if (!isCard) {
-    dom.installmentsPreview.textContent = "Parcelamento disponÃ­vel apenas para pagamentos com cartÃ£o.";
+    dom.installmentsPreview.textContent = "Parcelamento disponível apenas para pagamentos com cartão.";
     return;
   }
 
@@ -650,12 +650,12 @@ async function applyAccessCode(rawCode, { silent = false } = {}) {
   if (!normalized) {
     clearAccessCode({ clearInput: false });
     updateSummary();
-    if (!silent) setAccessCodeFeedback("Informe um código de acesso válido.", "error");
+    if (!silent) setAccessCodeFeedback("Informe um c�digo de acesso v�lido.", "error");
     return false;
   }
 
   if (dom.applyAccessCodeBtn) dom.applyAccessCodeBtn.disabled = true;
-  if (!silent) setAccessCodeFeedback("Validando código de acesso...");
+  if (!silent) setAccessCodeFeedback("Validando c�digo de acesso...");
 
   try {
     const result = await apiRequest("/api/discount-codes/apply", {
@@ -673,7 +673,7 @@ async function applyAccessCode(rawCode, { silent = false } = {}) {
     if (dom.accessCodeInput) dom.accessCodeInput.value = checkoutState.cart.discountCode;
     updateSummary();
     invalidatePaymentSession();
-    if (!silent) setAccessCodeFeedback("Código de acesso aplicado com sucesso.");
+    if (!silent) setAccessCodeFeedback("C�digo de acesso aplicado com sucesso.");
     return true;
   } catch (error) {
     clearAccessCode({ clearInput: false });
@@ -681,11 +681,11 @@ async function applyAccessCode(rawCode, { silent = false } = {}) {
     invalidatePaymentSession();
     if (!silent) {
       const code = String(error?.code || error?.message || "");
-      if (code.includes("NOT_FOUND")) setAccessCodeFeedback("Código de acesso não encontrado.", "error");
-      else if (code.includes("INACTIVE")) setAccessCodeFeedback("Código de acesso inativo.", "error");
-      else if (code.includes("NOT_AVAILABLE_NOW")) setAccessCodeFeedback("Código fora do período de validade.", "error");
-      else if (code.includes("NOT_APPLICABLE")) setAccessCodeFeedback("Código não aplicável para este carrinho.", "error");
-      else setAccessCodeFeedback("Não foi possível aplicar o código de acesso.", "error");
+      if (code.includes("NOT_FOUND")) setAccessCodeFeedback("C�digo de acesso n�o encontrado.", "error");
+      else if (code.includes("INACTIVE")) setAccessCodeFeedback("C�digo de acesso inativo.", "error");
+      else if (code.includes("NOT_AVAILABLE_NOW")) setAccessCodeFeedback("C�digo fora do per�odo de validade.", "error");
+      else if (code.includes("NOT_APPLICABLE")) setAccessCodeFeedback("C�digo n�o aplic�vel para este carrinho.", "error");
+      else setAccessCodeFeedback("N�o foi poss�vel aplicar o c�digo de acesso.", "error");
     }
     return false;
   } finally {
@@ -756,7 +756,7 @@ function renderCartItems() {
 
   validItems.forEach((item) => {
     const safeName = sanitizeDisplayText(item?.name || "Produto");
-    const safeImage = String(item?.image || "images/produtos/sug1.jpeg");
+    const safeImage = String(item?.image || "images/placeholder.jpg");
     const safeColor = String(item?.color || "-");
     const safeSize = String(item?.size || "-");
     const safePriceLabel = String(item?.priceLabel || "R$ 0,00");
@@ -958,7 +958,7 @@ function renderCheckoutAuthCta() {
   if (!dom.checkoutAuthCta) return;
   const user = userStore?.getCurrentUser?.() || null;
   if (user) {
-    dom.checkoutAuthCta.textContent = `VocÃª estÃ¡ comprando como ${user.email}.`;
+    dom.checkoutAuthCta.textContent = `Você está comprando como ${user.email}.`;
     return;
   }
   dom.checkoutAuthCta.textContent = GUEST_CHECKOUT_MESSAGE;
@@ -1439,7 +1439,7 @@ async function ensurePaymentElementReady() {
 
   const items = getServerItemsPayload();
   if (items.length === 0) {
-    setCheckoutStatus("Seu carrinho estÃ¡ vazio.", "error");
+    setCheckoutStatus("Seu carrinho está vazio.", "error");
     return;
   }
 
@@ -1504,7 +1504,7 @@ async function ensurePaymentElementReady() {
 
     const paymentIntentClientSecret = String(order?.clientSecret || order?.paymentIntentClientSecret || "").trim();
     if (!order || !order.orderId || !paymentIntentClientSecret) {
-      throw new Error("NÃ£o foi possÃ­vel iniciar a sessÃ£o de pagamento.");
+      throw new Error("Não foi possível iniciar a sessão de pagamento.");
     }
 
     const appearance = {
@@ -1683,7 +1683,7 @@ async function handleCheckoutSubmit() {
     });
 
     if (result.error) {
-      setCheckoutStatus(result.error.message || "NÃ£o foi possÃ­vel confirmar o pagamento.", "error");
+      setCheckoutStatus(result.error.message || "Não foi possível confirmar o pagamento.", "error");
       return;
     }
 
@@ -1699,7 +1699,7 @@ async function handleCheckoutSubmit() {
 
     window.location.href = `payment-result.html?orderId=${encodeURIComponent(checkoutState.payment.orderId)}&orderNumber=${encodeURIComponent(orderNumber || "")}&email=${encodeURIComponent(checkoutEmail || "")}`;
   } catch (error) {
-    setCheckoutStatus(error.message || "NÃ£o foi possÃ­vel finalizar seu pagamento.", "error");
+    setCheckoutStatus(error.message || "Não foi possível finalizar seu pagamento.", "error");
   } finally {
     setProcessingState(false);
   }
@@ -1712,7 +1712,7 @@ async function initStripe() {
     const config = await apiRequest("/api/config", { method: "GET" });
     checkoutState.config = config;
     if (!config.stripePublishableKey) {
-      setCheckoutStatus("Checkout indisponÃ­vel no momento.", "error");
+      setCheckoutStatus("Checkout indisponível no momento.", "error");
       setButtonDisabled(dom.checkoutButton, true);
       return;
     }
@@ -1723,7 +1723,7 @@ async function initStripe() {
       ensurePaymentElementReady();
     }
   } catch {
-    setCheckoutStatus("NÃ£o foi possÃ­vel iniciar o pagamento.", "error");
+    setCheckoutStatus("Não foi possível iniciar o pagamento.", "error");
     setButtonDisabled(dom.checkoutButton, true);
   }
 }

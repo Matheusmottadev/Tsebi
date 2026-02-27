@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -54,90 +54,90 @@ const COLLECTION_PLACEHOLDER = "/images/placeholder.jpg";
 const HOMEPAGE_CATEGORIES = [
   {
     href: "/categoria/feminino",
-    image: "/images/produtos/sug1.jpeg",
-    secondaryImage: "/images/produtos/sug5.jpeg",
-    fallbackImage: "/images/produtos/sug1.jpeg",
+    image: "/images/placeholder.jpg",
+    secondaryImage: "/images/placeholder.jpg",
+    fallbackImage: "/images/placeholder.jpg",
     alt: "Categoria Feminino",
     label: "Feminino",
   },
   {
     href: "/categoria/masculino",
-    image: "/images/produtos/sug2.jpeg",
-    secondaryImage: "/images/produtos/sug6.jpeg",
-    fallbackImage: "/images/produtos/sug2.jpeg",
+    image: "/images/placeholder.jpg",
+    secondaryImage: "/images/placeholder.jpg",
+    fallbackImage: "/images/placeholder.jpg",
     alt: "Categoria Masculino",
     label: "Masculino",
   },
   {
     href: "/categoria/carteiras-masculinas",
-    image: "/images/produtos/sug3.jpeg",
-    secondaryImage: "/images/produtos/sug7.jpeg",
-    fallbackImage: "/images/produtos/sug3.jpeg",
+    image: "/images/placeholder.jpg",
+    secondaryImage: "/images/placeholder.jpg",
+    fallbackImage: "/images/placeholder.jpg",
     alt: "Categoria Carteiras Masculinas",
     label: "Carteiras Masculinas",
   },
   {
     href: "/categoria/vestidos",
-    image: "/images/produtos/sug4.jpeg",
-    secondaryImage: "/images/produtos/sug1.jpeg",
-    fallbackImage: "/images/produtos/sug4.jpeg",
+    image: "/images/placeholder.jpg",
+    secondaryImage: "/images/placeholder.jpg",
+    fallbackImage: "/images/placeholder.jpg",
     alt: "Categoria Vestidos",
     label: "Vestidos",
   },
   {
     href: "/categoria/calcas",
-    image: "/images/produtos/sug5.jpeg",
-    secondaryImage: "/images/produtos/sug2.jpeg",
-    fallbackImage: "/images/produtos/sug1.jpeg",
+    image: "/images/placeholder.jpg",
+    secondaryImage: "/images/placeholder.jpg",
+    fallbackImage: "/images/placeholder.jpg",
     alt: "Categoria Calcas",
     label: "Calcas",
   },
   {
     href: "/categoria/carteiras-femininas",
-    image: "/images/produtos/sug6.jpeg",
-    secondaryImage: "/images/produtos/sug3.jpeg",
-    fallbackImage: "/images/produtos/sug2.jpeg",
+    image: "/images/placeholder.jpg",
+    secondaryImage: "/images/placeholder.jpg",
+    fallbackImage: "/images/placeholder.jpg",
     alt: "Categoria Carteiras Femininas",
     label: "Carteiras Femininas",
   },
   {
     href: "/categoria/jaquetas",
-    image: "/images/produtos/sug7.jpeg",
-    secondaryImage: "/images/produtos/sug4.jpeg",
-    fallbackImage: "/images/produtos/sug3.jpeg",
+    image: "/images/placeholder.jpg",
+    secondaryImage: "/images/placeholder.jpg",
+    fallbackImage: "/images/placeholder.jpg",
     alt: "Categoria Jaquetas",
     label: "Jaquetas",
   },
   {
     href: "/categoria/acessorios",
-    image: "/images/produtos/sug3.jpeg",
-    secondaryImage: "/images/produtos/sug5.jpeg",
-    fallbackImage: "/images/produtos/sug4.jpeg",
+    image: "/images/placeholder.jpg",
+    secondaryImage: "/images/placeholder.jpg",
+    fallbackImage: "/images/placeholder.jpg",
     alt: "Categoria Acessorios",
     label: "Acessorios",
   },
 ] as const;
 
 const FALLBACK_POPULAR_PRODUCTS: HomeProductCard[] = [
-  { id: "origem-skirt", sku: "origem-skirt", name: "Origem Skirt", image: "/images/produtos/sug1.jpeg", secondaryImage: "/images/produtos/sug5.jpeg" },
-  { id: "genesis-tailored", sku: "genesis-tailored", name: "Genesis Tailored", image: "/images/produtos/sug2.jpeg", secondaryImage: "/images/produtos/sug6.jpeg" },
-  { id: "atelier-heels", sku: "atelier-heels", name: "Atelier Heels", image: "/images/produtos/sug3.jpeg", secondaryImage: "/images/produtos/sug7.jpeg" },
-  { id: "essence-blazer", sku: "essence-blazer", name: "Essence Blazer", image: "/images/produtos/sug4.jpeg", secondaryImage: "/images/produtos/sug1.jpeg" },
-  { id: "noir-dress", sku: "noir-dress", name: "Noir Dress", image: "/images/produtos/sug6.jpeg", secondaryImage: "/images/produtos/sug3.jpeg" },
+  { id: "origem-skirt", sku: "origem-skirt", name: "Origem Skirt", image: "/images/placeholder.jpg", secondaryImage: "/images/placeholder.jpg" },
+  { id: "genesis-tailored", sku: "genesis-tailored", name: "Genesis Tailored", image: "/images/placeholder.jpg", secondaryImage: "/images/placeholder.jpg" },
+  { id: "atelier-heels", sku: "atelier-heels", name: "Atelier Heels", image: "/images/placeholder.jpg", secondaryImage: "/images/placeholder.jpg" },
+  { id: "essence-blazer", sku: "essence-blazer", name: "Essence Blazer", image: "/images/placeholder.jpg", secondaryImage: "/images/placeholder.jpg" },
+  { id: "noir-dress", sku: "noir-dress", name: "Noir Dress", image: "/images/placeholder.jpg", secondaryImage: "/images/placeholder.jpg" },
 ];
 
 const FALLBACK_SEARCH_PIECES: SearchPiece[] = [
-  { id: "origem-skirt", sku: "origem-skirt", name: "Sabrina charmosa", image: "/images/produtos/sug2.jpeg", secondaryImage: "/images/produtos/sug5.jpeg", href: "/product/origem-skirt" },
-  { id: "origem-shirt", sku: "origem-shirt", name: "Sabrina linda", image: "/images/produtos/sug3.jpeg", secondaryImage: "/images/produtos/sug6.jpeg", href: "/product/origem-shirt" },
+  { id: "origem-skirt", sku: "origem-skirt", name: "Sabrina charmosa", image: "/images/placeholder.jpg", secondaryImage: "/images/placeholder.jpg", href: "/product/origem-skirt" },
+  { id: "origem-shirt", sku: "origem-shirt", name: "Sabrina linda", image: "/images/placeholder.jpg", secondaryImage: "/images/placeholder.jpg", href: "/product/origem-shirt" },
   {
     id: "genesis-tailored",
     sku: "genesis-tailored",
     name: "Sabrina maravilhosa",
-    image: "/images/produtos/sug4.jpeg",
-    secondaryImage: "/images/produtos/sug7.jpeg",
+    image: "/images/placeholder.jpg",
+    secondaryImage: "/images/placeholder.jpg",
     href: "/product/genesis-tailored",
   },
-  { id: "genesis-bomber", sku: "genesis-bomber", name: "Sabrina incrivel", image: "/images/produtos/sug1.jpeg", secondaryImage: "/images/produtos/sug2.jpeg", href: "/product/genesis-bomber" },
+  { id: "genesis-bomber", sku: "genesis-bomber", name: "Sabrina incrivel", image: "/images/placeholder.jpg", secondaryImage: "/images/placeholder.jpg", href: "/product/genesis-bomber" },
 ];
 
 function normalizeProducts(products: Product[]): Product[] {

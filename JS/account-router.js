@@ -160,9 +160,9 @@
     if (!items.length) return '<p class="conta-muted">Nenhum item para mostrar no momento.</p>';
     return `<div class="conta-mini-grid">${items.map((item) => {
       const id = String(item.id || item.sku || "").trim();
-      const image = String(item.imageUrl || item.image_url || "images/produtos/sug1.jpeg").trim();
+      const image = String(item.imageUrl || item.image_url || "images/placeholder.jpg").trim();
       const href = id ? `produto.html?id=${encodeURIComponent(id)}` : "#";
-      return `<a class="conta-mini-item" href="${escapeHtml(href)}"><img src="${escapeHtml(image)}" alt="${escapeHtml(item.name || "Produto")}" loading="lazy" decoding="async" onerror="this.onerror=null;this.src='images/produtos/sug1.jpeg';" /><strong>${escapeHtml(item.name || "Produto")}</strong></a>`;
+      return `<a class="conta-mini-item" href="${escapeHtml(href)}"><img src="${escapeHtml(image)}" alt="${escapeHtml(item.name || "Produto")}" loading="lazy" decoding="async" onerror="this.onerror=null;this.src='images/placeholder.jpg';" /><strong>${escapeHtml(item.name || "Produto")}</strong></a>`;
     }).join("")}</div>`;
   }
 

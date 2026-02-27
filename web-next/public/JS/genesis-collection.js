@@ -13,7 +13,7 @@
         en: "Italian leather bomber jacket with silk lining"
       },
       priceLabel: "R$ 5.900",
-      image: "images/produtos/sug1.jpeg",
+      image: "images/placeholder.jpg",
       href: "produto.html?id=genesis-bomber"
     },
     {
@@ -25,7 +25,7 @@
         en: "Premium structured tailored twill trousers"
       },
       priceLabel: "R$ 2.200",
-      image: "images/produtos/sug4.jpeg",
+      image: "images/placeholder.jpg",
       href: "produto.html?id=genesis-tailored"
     },
     {
@@ -37,7 +37,7 @@
         en: "Patent leather pumps with sculpted heel"
       },
       priceLabel: "R$ 3.200",
-      image: "images/produtos/sug2.jpeg",
+      image: "images/placeholder.jpg",
       href: "produto.html?id=atelier-heels"
     },
     {
@@ -49,7 +49,7 @@
         en: "Ultrafine merino wool knitwear"
       },
       priceLabel: "R$ 1.980",
-      image: "images/produtos/sug4.jpeg",
+      image: "images/placeholder.jpg",
       href: "produto.html?id=flux-knit"
     },
     {
@@ -61,7 +61,7 @@
         en: "Silk crepe column dress with couture drape"
       },
       priceLabel: "R$ 4.200",
-      image: "images/produtos/sug2.jpeg",
+      image: "images/placeholder.jpg",
       href: "produto.html?id=noir-dress"
     },
     {
@@ -73,7 +73,7 @@
         en: "Premium linen wide-leg trousers with deep pleat"
       },
       priceLabel: "R$ 2.250",
-      image: "images/produtos/sug3.jpeg",
+      image: "images/placeholder.jpg",
       href: "produto.html?id=essence-trousers"
     }
   ];
@@ -261,7 +261,7 @@
             },
             priceLabel: String(item.priceLabel || ""),
             stock: Number(item.stock ?? item.stock_qty ?? 0),
-            image: String(item.image || "images/produtos/sug1.jpeg"),
+            image: String(item.image || "images/placeholder.jpg"),
             href: String(item.href || `produto.html?id=${encodeURIComponent(String(item.id || "").trim())}`)
           };
         })

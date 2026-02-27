@@ -1,4 +1,4 @@
-Ôªø(function initAccountExtraSections() {
+(function initAccountExtraSections() {
   const PRIVATE_CARE_KEY = 'tsebi-private-care-v1';
   const PRIVATE_PREFS_KEY = 'tsebi-private-care-prefs-v1';
   const REPAIRS_KEY = 'tsebi-repairs-v1';
@@ -50,12 +50,12 @@
     if (value === 'canceled') return 'Cancelado';
     if (value === 'failed') return 'Falhou';
     if (value === 'refunded') return 'Reembolsado';
-    return 'Em an√°lise';
+    return 'Em an·lise';
   }
 
   function statusTone(status) {
     const value = String(status || '').toLowerCase();
-    if (['confirmado', 'conclu√≠do', 'finalizado', 'aprovado'].includes(value)) return 'ok';
+    if (['confirmado', 'concluÌdo', 'finalizado', 'aprovado'].includes(value)) return 'ok';
     if (['cancelado', 'rejeitado'].includes(value)) return 'bad';
     return 'neutral';
   }
@@ -98,13 +98,13 @@
       const list = getHistory().slice(0, 5);
       if (!historyMount) return;
       if (!list.length) {
-        historyMount.innerHTML = '<p class="conta-muted">Voc√™ n√£o tem nenhum Atendimento Privado em breve.</p>';
+        historyMount.innerHTML = '<p class="conta-muted">VocÍ n„o tem nenhum Atendimento Privado em breve.</p>';
         return;
       }
       historyMount.innerHTML = list
         .map((item) => {
           const tone = statusTone(item.status);
-          return `<article class="history-item"><div class="history-item-head"><strong>${escapeHtml(formatDateBR(item.date || item.createdAt))}</strong><span class="status-chip ${tone}">${escapeHtml(item.status || 'Pendente')}</span></div><p class="conta-muted">${escapeHtml(item.channel || '-')} ‚Ä¢ ${escapeHtml(item.subject || 'Assunto')}</p><button type="button" class="btn-outline history-detail-btn" data-history-detail="${escapeHtml(item.id)}">Ver detalhes</button><div class="history-item-detail" id="history-detail-${escapeHtml(item.id)}" hidden><p class="conta-muted">${escapeHtml(item.message || 'Sem mensagem.')}</p><p class="conta-muted">Hor√°rio: ${escapeHtml(item.time || '-')}</p></div></article>`;
+          return `<article class="history-item"><div class="history-item-head"><strong>${escapeHtml(formatDateBR(item.date || item.createdAt))}</strong><span class="status-chip ${tone}">${escapeHtml(item.status || 'Pendente')}</span></div><p class="conta-muted">${escapeHtml(item.channel || '-')} ï ${escapeHtml(item.subject || 'Assunto')}</p><button type="button" class="btn-outline history-detail-btn" data-history-detail="${escapeHtml(item.id)}">Ver detalhes</button><div class="history-item-detail" id="history-detail-${escapeHtml(item.id)}" hidden><p class="conta-muted">${escapeHtml(item.message || 'Sem mensagem.')}</p><p class="conta-muted">Hor·rio: ${escapeHtml(item.time || '-')}</p></div></article>`;
         })
         .join('');
 
@@ -144,7 +144,7 @@
         createdAt: new Date().toISOString()
       });
       saveHistory(list.slice(0, 50));
-      if (feedback) feedback.textContent = 'Solicita√ß√£o registrada com sucesso.';
+      if (feedback) feedback.textContent = 'SolicitaÁ„o registrada com sucesso.';
       form.reset();
       renderHistory();
     });
@@ -172,7 +172,7 @@
     favoriteItems.forEach((item) => {
       String(item.name || '')
         .toLowerCase()
-        .split(/[^a-zA-Z√Ä-√ø0-9]+/)
+        .split(/[^a-zA-Z¿-ˇ0-9]+/)
         .filter((word) => word.length > 3)
         .forEach((word) => favoriteWords.add(word));
     });
@@ -197,13 +197,13 @@
     function productCard(item, note) {
       const id = String(item.id || item.sku || '').trim();
       const href = id ? `produto.html?id=${encodeURIComponent(id)}` : '#';
-      const image = String(item.imageUrl || item.image_url || 'images/produtos/sug1.jpeg').trim();
-      return `<article class="wishlist-item-card"><img src="${escapeHtml(image)}" alt="${escapeHtml(item.name || 'Produto')}" loading="lazy" decoding="async" onerror="this.onerror=null;this.src='images/produtos/sug1.jpeg';" /><h3>${escapeHtml(item.name || 'Produto')}</h3><p>${escapeHtml(formatCurrencyBRL(item.priceCents || item.price_cents || item.price || 0, item.currency || 'brl'))}</p>${note ? `<span class="tiny-badge">${escapeHtml(note)}</span>` : ''}<a class="btn-outline" href="${escapeHtml(href)}">Ver produto</a></article>`;
+      const image = String(item.imageUrl || item.image_url || 'images/placeholder.jpg').trim();
+      return `<article class="wishlist-item-card"><img src="${escapeHtml(image)}" alt="${escapeHtml(item.name || 'Produto')}" loading="lazy" decoding="async" onerror="this.onerror=null;this.src='images/placeholder.jpg';" /><h3>${escapeHtml(item.name || 'Produto')}</h3><p>${escapeHtml(formatCurrencyBRL(item.priceCents || item.price_cents || item.price || 0, item.currency || 'brl'))}</p>${note ? `<span class="tiny-badge">${escapeHtml(note)}</span>` : ''}<a class="btn-outline" href="${escapeHtml(href)}">Ver produto</a></article>`;
     }
 
     function render() {
       if (!favorites.length) {
-        grid.innerHTML = '<div class="orders-empty"><p>Nenhuma base de favoritos encontrada.</p><a class="btn-primary" href="index.html">Explorar cole√ß√£o</a></div>';
+        grid.innerHTML = '<div class="orders-empty"><p>Nenhuma base de favoritos encontrada.</p><a class="btn-primary" href="index.html">Explorar coleÁ„o</a></div>';
         if (loadMoreBtn) loadMoreBtn.hidden = true;
       } else {
         grid.innerHTML = recommended
@@ -323,7 +323,7 @@
       if (topCategoryEl) topCategoryEl.textContent = dominantCategory(items);
 
       if (!items.length) {
-        grid.innerHTML = '<div class="orders-empty"><p>Sua Lista de Desejos est√° vazia.</p><a class="btn-primary" href="index.html">Explorar pe√ßas</a></div>';
+        grid.innerHTML = '<div class="orders-empty"><p>Sua Lista de Desejos est· vazia.</p><a class="btn-primary" href="index.html">Explorar peÁas</a></div>';
         return;
       }
 
@@ -331,8 +331,8 @@
         .map((item) => {
           const id = String(item.id || item.sku || '').trim();
           const href = id ? `produto.html?id=${encodeURIComponent(id)}` : '#';
-          const image = String(item.imageUrl || item.image_url || 'images/produtos/sug1.jpeg').trim();
-          return `<article class="wishlist-item-card"><img src="${escapeHtml(image)}" alt="${escapeHtml(item.name || 'Produto')}" loading="lazy" decoding="async" onerror="this.onerror=null;this.src='images/produtos/sug1.jpeg';" /><h3>${escapeHtml(item.name || 'Produto')}</h3><p>${escapeHtml(formatCurrencyBRL(item.priceCents || item.price_cents || 0, item.currency || 'brl'))}</p><div class="wishlist-actions"><a class="btn-outline" href="${escapeHtml(href)}">Ver produto</a><button type="button" class="link-btn" data-remove-favorite="${escapeHtml(id)}">Remover</button></div></article>`;
+          const image = String(item.imageUrl || item.image_url || 'images/placeholder.jpg').trim();
+          return `<article class="wishlist-item-card"><img src="${escapeHtml(image)}" alt="${escapeHtml(item.name || 'Produto')}" loading="lazy" decoding="async" onerror="this.onerror=null;this.src='images/placeholder.jpg';" /><h3>${escapeHtml(item.name || 'Produto')}</h3><p>${escapeHtml(formatCurrencyBRL(item.priceCents || item.price_cents || 0, item.currency || 'brl'))}</p><div class="wishlist-actions"><a class="btn-outline" href="${escapeHtml(href)}">Ver produto</a><button type="button" class="link-btn" data-remove-favorite="${escapeHtml(id)}">Remover</button></div></article>`;
         })
         .join('');
 
@@ -352,12 +352,12 @@
 
     document.getElementById('wishlistShareBtn')?.addEventListener('click', async () => {
       const ids = getFavorites();
-      const text = ids.length ? `Minha lista Tsebi: ${ids.join(', ')}` : 'Minha lista Tsebi est√° vazia.';
+      const text = ids.length ? `Minha lista Tsebi: ${ids.join(', ')}` : 'Minha lista Tsebi est· vazia.';
       try {
         await navigator.clipboard.writeText(text);
-        if (feedback) feedback.textContent = 'Lista copiada para a √°rea de transfer√™ncia.';
+        if (feedback) feedback.textContent = 'Lista copiada para a ·rea de transferÍncia.';
       } catch {
-        if (feedback) feedback.textContent = 'N√£o foi poss√≠vel copiar agora.';
+        if (feedback) feedback.textContent = 'N„o foi possÌvel copiar agora.';
       }
     });
 
@@ -399,7 +399,7 @@
       const options = ['<option value="">Selecionar produto</option>']
         .concat(unique.map((name) => `<option value="${escapeHtml(name)}">${escapeHtml(name)}</option>`));
       if (!unique.length) {
-        options.push('<option value="Produto da cole√ß√£o">Produto da cole√ß√£o</option>');
+        options.push('<option value="Produto da coleÁ„o">Produto da coleÁ„o</option>');
       }
       productSelect.innerHTML = options.join('');
     }
@@ -414,7 +414,7 @@
       historyMount.innerHTML = list
         .map((item) => {
           const tone = statusTone(item.status);
-          return `<article class="history-item"><div class="history-item-head"><strong>${escapeHtml(item.protocol)}</strong><span class="status-chip ${tone}">${escapeHtml(item.status)}</span></div><p class="conta-muted">${escapeHtml(formatDateBR(item.createdAt))} ‚Ä¢ ${escapeHtml(item.product || 'Produto')}</p><button type="button" class="btn-outline history-detail-btn" data-repair-detail="${escapeHtml(item.id)}">Ver detalhes</button><div class="history-item-detail" id="repair-detail-${escapeHtml(item.id)}" hidden><p class="conta-muted">${escapeHtml(item.reason || '-')}</p><p class="conta-muted">${escapeHtml(item.description || 'Sem descri√ß√£o.')}</p></div></article>`;
+          return `<article class="history-item"><div class="history-item-head"><strong>${escapeHtml(item.protocol)}</strong><span class="status-chip ${tone}">${escapeHtml(item.status)}</span></div><p class="conta-muted">${escapeHtml(formatDateBR(item.createdAt))} ï ${escapeHtml(item.product || 'Produto')}</p><button type="button" class="btn-outline history-detail-btn" data-repair-detail="${escapeHtml(item.id)}">Ver detalhes</button><div class="history-item-detail" id="repair-detail-${escapeHtml(item.id)}" hidden><p class="conta-muted">${escapeHtml(item.reason || '-')}</p><p class="conta-muted">${escapeHtml(item.description || 'Sem descriÁ„o.')}</p></div></article>`;
         })
         .join('');
 
@@ -430,7 +430,7 @@
 
     form?.addEventListener('submit', (event) => {
       event.preventDefault();
-      const product = document.getElementById('repairProduct')?.value || 'Produto da cole√ß√£o';
+      const product = document.getElementById('repairProduct')?.value || 'Produto da coleÁ„o';
       const reason = document.getElementById('repairReason')?.value || 'Ajuste';
       const description = document.getElementById('repairDescription')?.value || '';
       const list = getHistory();
@@ -440,12 +440,12 @@
         product,
         reason,
         description,
-        status: 'Em an√°lise',
+        status: 'Em an·lise',
         createdAt: new Date().toISOString()
       });
       saveHistory(list.slice(0, 50));
       form.reset();
-      if (feedback) feedback.textContent = 'Solicita√ß√£o de reparo enviada com sucesso.';
+      if (feedback) feedback.textContent = 'SolicitaÁ„o de reparo enviada com sucesso.';
       renderHistory();
     });
 

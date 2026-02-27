@@ -36,13 +36,13 @@ async function loadProductById(id) {
 }
 
 const galleryPool = [
-  "images/produtos/sug1.jpeg",
-  "images/produtos/sug2.jpeg",
-  "images/produtos/sug3.jpeg",
-  "images/produtos/sug4.jpeg",
-  "images/produtos/sug5.jpeg",
-  "images/produtos/sug6.jpeg",
-  "images/produtos/sug7.jpeg"
+  "images/placeholder.jpg",
+  "images/placeholder.jpg",
+  "images/placeholder.jpg",
+  "images/placeholder.jpg",
+  "images/placeholder.jpg",
+  "images/placeholder.jpg",
+  "images/placeholder.jpg"
 ];
 
 const cartKey = "tsebi-cart-v1";

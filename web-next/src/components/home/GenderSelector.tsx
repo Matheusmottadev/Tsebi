@@ -28,7 +28,7 @@ function matchesGender(productGender: string, selected: GenderTab): boolean {
 
 function resolveImageSrc(value: string): string {
   const raw = String(value || "").trim();
-  if (!raw) return "/images/produtos/sug1.jpeg";
+  if (!raw) return "/images/placeholder.jpg";
   if (/^https?:\/\//i.test(raw)) return raw;
   if (raw.startsWith("/")) return raw;
   return `/${raw.replace(/^\.?\//, "")}`;
@@ -153,7 +153,7 @@ export function GenderSelector() {
                         onError={(event) => {
                           const element = event.currentTarget;
                           element.onerror = null;
-                          element.src = pair.primary || "/images/produtos/sug1.jpeg";
+                          element.src = pair.primary || "/images/placeholder.jpg";
                         }}
                       />
                     </div>

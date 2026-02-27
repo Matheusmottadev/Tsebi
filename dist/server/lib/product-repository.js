@@ -1,7 +1,7 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 const { query } = require("./db");
-const DEFAULT_IMAGE = "images/produtos/sug1.jpeg";
+const DEFAULT_IMAGE = "images/placeholder.jpg";
 const PRODUCT_METADATA = {
     "genesis-bomber": {
         collection: "Gênesis",
@@ -10,7 +10,7 @@ const PRODUCT_METADATA = {
         sizes: ["P", "M", "G"],
         colors: ["Vermelho", "Areia"],
         gender: "Unissex",
-        image: "images/produtos/sug5.jpeg",
+        image: "images/placeholder.jpg",
         nameEn: "Italian leather bomber jacket with silk lining"
     },
     "genesis-tailored": {
@@ -20,7 +20,7 @@ const PRODUCT_METADATA = {
         sizes: ["36", "38", "40", "42"],
         colors: ["Grafite", "Preto"],
         gender: "Feminino",
-        image: "images/produtos/sug6.jpeg",
+        image: "images/placeholder.jpg",
         nameEn: "Premium structured tailored twill pants"
     },
     "origem-shirt": {
@@ -30,7 +30,7 @@ const PRODUCT_METADATA = {
         sizes: ["P", "M", "G", "GG"],
         colors: ["Branco", "Azul"],
         gender: "Masculino",
-        image: "images/produtos/sug7.jpeg",
+        image: "images/placeholder.jpg",
         nameEn: "Croatian cotton shirt with noble weave"
     },
     "origem-skirt": {
@@ -40,7 +40,7 @@ const PRODUCT_METADATA = {
         sizes: ["36", "38", "40"],
         colors: ["Preto", "Marfim"],
         gender: "Feminino",
-        image: "images/produtos/sug1.jpeg",
+        image: "images/placeholder.jpg",
         nameEn: "Structured cool wool skirt with impeccable finish"
     },
     "atelier-bag": {
@@ -50,7 +50,7 @@ const PRODUCT_METADATA = {
         sizes: ["Único"],
         colors: ["Caramelo", "Preto"],
         gender: "Unissex",
-        image: "images/produtos/sug2.jpeg",
+        image: "images/placeholder.jpg",
         nameEn: "Natural leather bag with plated hardware"
     },
     "atelier-heels": {
@@ -60,7 +60,7 @@ const PRODUCT_METADATA = {
         sizes: ["35", "36", "37", "38", "39"],
         colors: ["Preto", "Vinho"],
         gender: "Feminino",
-        image: "images/produtos/sug3.jpeg",
+        image: "images/placeholder.jpg",
         nameEn: "Patent leather pumps with sculpted heel"
     },
     "flux-trench": {
@@ -70,7 +70,7 @@ const PRODUCT_METADATA = {
         sizes: ["P", "M", "G"],
         colors: ["Areia", "Oliva"],
         gender: "Unissex",
-        image: "images/produtos/sug4.jpeg",
+        image: "images/placeholder.jpg",
         nameEn: "Gabardine trench coat with architectural cut"
     },
     "flux-knit": {
@@ -80,7 +80,7 @@ const PRODUCT_METADATA = {
         sizes: ["P", "M", "G", "GG"],
         colors: ["Off white", "Cinza"],
         gender: "Masculino",
-        image: "images/produtos/sug5.jpeg",
+        image: "images/placeholder.jpg",
         nameEn: "Ultrafine merino wool knitwear"
     },
     "noir-dress": {
@@ -90,7 +90,7 @@ const PRODUCT_METADATA = {
         sizes: ["36", "38", "40", "42"],
         colors: ["Preto"],
         gender: "Feminino",
-        image: "images/produtos/sug6.jpeg",
+        image: "images/placeholder.jpg",
         nameEn: "Silk crepe column dress with couture drape"
     },
     "noir-sneaker": {
@@ -100,7 +100,7 @@ const PRODUCT_METADATA = {
         sizes: ["37", "38", "39", "40", "41", "42"],
         colors: ["Preto", "Branco"],
         gender: "Unissex",
-        image: "images/produtos/sug7.jpeg",
+        image: "images/placeholder.jpg",
         nameEn: "Technical nylon and premium-finish leather sneaker"
     },
     "essence-blazer": {
@@ -110,7 +110,7 @@ const PRODUCT_METADATA = {
         sizes: ["P", "M", "G"],
         colors: ["Marfim", "Bege"],
         gender: "Feminino",
-        image: "images/produtos/sug3.jpeg",
+        image: "images/placeholder.jpg",
         nameEn: "Premium linen blazer with precision tailoring"
     },
     "essence-trousers": {
@@ -120,7 +120,7 @@ const PRODUCT_METADATA = {
         sizes: ["36", "38", "40", "42", "44"],
         colors: ["Marfim", "Areia"],
         gender: "Feminino",
-        image: "images/produtos/sug4.jpeg",
+        image: "images/placeholder.jpg",
         nameEn: "Premium linen wide-leg trousers with deep pleat"
     }
 };
