@@ -1771,7 +1771,7 @@ html.no-scroll{
   box-shadow: none;
 }
 
-.new-drop-media img{
+.collection-drop .new-drop-media img{
   width: 76.6%;
   height: 100%;
   object-fit: contain;
@@ -1877,7 +1877,7 @@ html.no-scroll{
     height: 78vh;
   }
 
-  .new-drop-media img{
+  .collection-drop .new-drop-media img{
     transform: rotate(-90deg);
   }
 

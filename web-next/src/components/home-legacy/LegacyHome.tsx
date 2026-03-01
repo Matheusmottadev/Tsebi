@@ -48,7 +48,8 @@ const SEARCH_CHIPS = [
 ];
 
 const COLLECTION_VIDEO = "https://media.tsebi.com.br/31377-386628887.mp4";
-const COLLECTION_IMAGE = "/images/legacy/home/collection.jpg";
+const COLLECTION_IMAGE_PRIMARY = "/images/collection.jpg";
+const COLLECTION_IMAGE_FALLBACK = "/images/legacy/home/collection.jpg";
 const COLLECTION_PLACEHOLDER = "/images/hero.jpg";
 const HOMEPAGE_PICTURE_IMAGE = "/images/Homepagepicture.jpg";
 const HOMEPAGE_PICTURE_FALLBACK = "/images/hero.jpg";
@@ -738,7 +739,7 @@ export function LegacyHome({ products }: LegacyHomeProps) {
 
       <GenderShowcase products={safeProducts} />
 
-      <section className="new-drop" aria-label="Nova Coleção em video">
+      <section className="new-drop collection-drop" aria-label="Nova Coleção em video">
         <div className="new-drop-inner">
           <div className="new-drop-media">
             {collectionMediaMode === "video" ? (
@@ -763,10 +764,15 @@ export function LegacyHome({ products }: LegacyHomeProps) {
               // eslint-disable-next-line @next/next/no-img-element
               <img
                 className="new-drop-video"
-                src={collectionMediaMode === "image" ? COLLECTION_IMAGE : COLLECTION_PLACEHOLDER}
+                src={collectionMediaMode === "image" ? COLLECTION_IMAGE_PRIMARY : COLLECTION_PLACEHOLDER}
                 alt="Nova Coleção"
                 onError={(event) => {
                   const element = event.currentTarget;
+                  const currentSrc = element.getAttribute("src") || "";
+                  if (currentSrc.endsWith(COLLECTION_IMAGE_PRIMARY)) {
+                    element.src = COLLECTION_IMAGE_FALLBACK;
+                    return;
+                  }
                   element.onerror = null;
                   setCollectionMediaMode("fallback");
                   element.src = COLLECTION_PLACEHOLDER;
