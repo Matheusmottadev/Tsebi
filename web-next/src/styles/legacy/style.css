@@ -1895,6 +1895,14 @@ html.no-scroll{
   margin: 0;
 }
 
+.homepage-picture-drop{
+  width: 100vw;
+  max-width: none;
+  margin-left: calc(50% - 50vw);
+  margin-right: calc(50% - 50vw);
+  padding: 0;
+}
+
 .homepage-picture-drop .new-drop-media .homepage-picture-image{
   width: 100vw !important;
   min-width: 100vw;
