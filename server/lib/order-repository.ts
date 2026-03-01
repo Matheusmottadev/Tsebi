@@ -360,6 +360,7 @@ async function insertOrderItems(client: DbClient, orderId: string, items: OrderI
 }
 
 async function createOrder(payload: CreateOrderPayload): Promise<Order | null> {
+  await ensureOrderSchema();
   return withTransaction(async (client) => {
     const generatedOrderId = crypto.randomUUID();
     const generatedOrderNumber = `PED-${String(generatedOrderId).replace(/-/g, "").slice(0, 10).toUpperCase()}`;
