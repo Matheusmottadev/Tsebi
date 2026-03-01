@@ -384,6 +384,9 @@ function buildPayload(
     items: items.map((item) => ({
       id: item.productId,
       qty: item.qty,
+      color: item.variant.color || null,
+      size: item.variant.size || null,
+      variantKey: item.variant.color && item.variant.size ? `${item.variant.color}__${item.variant.size}` : null,
     })),
     shipping: {
       firstName,
@@ -472,14 +475,13 @@ export function CheckoutClient() {
   const [shippingRecommendationById, setShippingRecommendationById] = useState<Record<string, ShippingRecommendation>>({});
   const [isCompanyPaidShipping, setIsCompanyPaidShipping] = useState(false);
   const [isLoadingShippingQuotes, setIsLoadingShippingQuotes] = useState(false);
-  const [isLoadingAccount, setIsLoadingAccount] = useState(true);
   const [savedAddressFingerprints, setSavedAddressFingerprints] = useState<Set<string>>(new Set());
   const [isSavingAddress, setIsSavingAddress] = useState(false);
   const [isDraftLoaded, setIsDraftLoaded] = useState(false);
   const phoneNumberInputRef = useRef<HTMLInputElement | null>(null);
 
   const [touchedFields, setTouchedFields] = useState<Partial<Record<RequiredCheckoutField, boolean>>>({});
-  const requiresGuestEmail = !accountEmail && !isLoadingAccount;
+  const requiresGuestEmail = !accountEmail;
   const checkoutEmail = normalizeEmail(accountEmail || form.guestEmail);
 
   const fieldErrors = useMemo(
@@ -598,9 +600,6 @@ export function CheckoutClient() {
         setAccountAddresses([]);
         setSelectedSavedAddressId("");
         setSavedAddressFingerprints(new Set());
-      } finally {
-        if (!isMounted) return;
-        setIsLoadingAccount(false);
       }
     }
 
@@ -613,11 +612,10 @@ export function CheckoutClient() {
   const gateError = useMemo(() => {
     if (!checkoutEnabled) return "Checkout desativado no momento.";
     if (!hasHydrated) return "Carregando carrinho...";
-    if (isLoadingAccount) return "Carregando conta...";
     if (itemCount <= 0) return "Seu carrinho esta vazio.";
     if (!stripeConfigured) return "Stripe não configurado.";
     return "";
-  }, [checkoutEnabled, hasHydrated, isLoadingAccount, itemCount, stripeConfigured]);
+  }, [checkoutEnabled, hasHydrated, itemCount, stripeConfigured]);
 
   function assertCheckoutReady() {
     if (!checkoutEnabled) throw new CheckoutValidationError("Checkout desativado.");

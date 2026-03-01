@@ -1,4 +1,4 @@
-﻿import { api } from "../api.js";
+import { api } from "../api.js";
 import { toast } from "../ui/toast.js";
 import { confirmDiff } from "../ui/modalConfirmDiff.js";
 import { renderPagination, renderTable } from "../ui/table.js";
@@ -14,7 +14,7 @@ function escapeHtml(value) {
 
 function formatDate(value) {
   const date = new Date(String(value || ""));
-  if (Number.isNaN(date.getTime())) return "â€”";
+  if (Number.isNaN(date.getTime())) return "—;
   return date.toLocaleString("pt-BR");
 }
 
@@ -49,12 +49,12 @@ function titleField({ key = "title", value = "nao_informar" } = {}) {
   const current = normalizeTitle(value);
   return `
     <label class="label">
-      <span>TÃ­tulo</span>
+      <span>Título</span>
       <select class="field" data-key="${escapeHtml(key)}">
         <option value="sr" ${current === "sr" ? "selected" : ""}>Sr.</option>
         <option value="sra" ${current === "sra" ? "selected" : ""}>Sra.</option>
         <option value="srta" ${current === "srta" ? "selected" : ""}>Srta.</option>
-        <option value="nao_informar" ${current === "nao_informar" ? "selected" : ""}>Prefiro nÃ£o responder</option>
+        <option value="nao_informar" ${current === "nao_informar" ? "selected" : ""}>Prefiro não responder</option>
       </select>
     </label>
   `;
@@ -97,10 +97,10 @@ export function createUsersPage({ mount, drawer, getStatusFilter }) {
     const table = renderTable({
       columns: [
         {
-          label: "UsuÃ¡rio",
+          label: "Usuário",
           render: (u) => {
             const prefix = titlePrefix(u.title);
-            const safeName = String(u.name || "â€”");
+            const safeName = String(u.name || "—);
             const displayName = prefix ? `${prefix} ${safeName}` : safeName;
             return `<div style="display:flex;align-items:center;gap:10px;">
               <div class="avatar">${escapeHtml(initials(u.name || u.email))}</div>
@@ -111,10 +111,10 @@ export function createUsersPage({ mount, drawer, getStatusFilter }) {
             </div>`;
           }
         },
-        { label: "Email", render: (u) => `<div>${escapeHtml(u.email || "â€”")}</div>` },
-        { label: "Telefone", render: (u) => `<div>${escapeHtml(u.phone || "â€”")}</div>` },
+        { label: "Email", render: (u) => `<div>${escapeHtml(u.email || "—)}</div>` },
+        { label: "Telefone", render: (u) => `<div>${escapeHtml(u.phone || "—)}</div>` },
         { label: "Status", render: (u) => statusPill(u.status) },
-        { label: "Ãšltimo login", render: (u) => `<div>${escapeHtml(formatDate(u.lastLoginAt))}</div>` },
+        { label: "Último login", render: (u) => `<div>${escapeHtml(formatDate(u.lastLoginAt))}</div>` },
         { label: "Criado em", render: (u) => `<div>${escapeHtml(formatDate(u.createdAt))}</div>` }
       ],
       rows: state.rows,
@@ -174,7 +174,7 @@ export function createUsersPage({ mount, drawer, getStatusFilter }) {
     const data = await api(`/api/admin/users/${encodeURIComponent(userId)}`);
     const user = data?.user || null;
     if (!user) {
-      toast("UsuÃ¡rio nÃ£o encontrado.", { tone: "error" });
+      toast("Usuário não encontrado.", { tone: "error" });
       return;
     }
 
@@ -204,20 +204,20 @@ export function createUsersPage({ mount, drawer, getStatusFilter }) {
         </div>
         <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:12px;">
           <button type="button" class="btn btn-ghost" data-action="cancel">Cancelar</button>
-          <button type="button" class="btn" data-action="save">Salvar alteraÃ§Ãµes</button>
+          <button type="button" class="btn" data-action="save">Salvar alterações</button>
         </div>
       </div>
 
       <div class="section danger-zone">
         <h3>Danger zone</h3>
         <div style="display:grid;gap:10px;">
-          <button type="button" class="btn btn-ghost" data-action="logout-sessions">Invalidar sessÃµes</button>
-          <button type="button" class="btn btn-ghost" data-action="temp-password">Gerar senha temporÃ¡ria</button>
+          <button type="button" class="btn btn-ghost" data-action="logout-sessions">Invalidar sessões</button>
+          <button type="button" class="btn btn-ghost" data-action="temp-password">Gerar senha temporária</button>
           <button type="button" class="btn btn-danger" data-action="disable-login">Apagar login (desativar)</button>
-          <button type="button" class="btn btn-danger" data-action="delete-user">Excluir usuÃ¡rio</button>
+          <button type="button" class="btn btn-danger" data-action="delete-user">Excluir usuário</button>
         </div>
         <p style="color:var(--muted);font-size:13px;margin:10px 0 0;">
-          AÃ§Ãµes crÃ­ticas exigem confirmaÃ§Ã£o e sÃ£o auditadas.
+          Ações críticas exigem confirmação e são auditadas.
         </p>
       </div>
     `;
@@ -239,12 +239,12 @@ export function createUsersPage({ mount, drawer, getStatusFilter }) {
       });
 
       if (Object.keys(patch).length === 0) {
-        toast("Nenhuma alteraÃ§Ã£o para salvar.", { tone: "info" });
+        toast("Nenhuma alteração para salvar.", { tone: "info" });
         return;
       }
 
       const diffs = buildDiff(original, { ...original, ...patch }, {
-        title: "TÃ­tulo",
+        title: "Título",
         name: "Nome",
         email: "Email",
         phone: "Telefone",
@@ -254,7 +254,7 @@ export function createUsersPage({ mount, drawer, getStatusFilter }) {
       });
 
       const ok = await confirmDiff({
-        title: "Confirmar alteraÃ§Ãµes",
+        title: "Confirmar alterações",
         message: "Revise o antes/depois antes de salvar.",
         diffs,
         tone: "ok"
@@ -262,47 +262,47 @@ export function createUsersPage({ mount, drawer, getStatusFilter }) {
       if (!ok) return;
 
       await api(`/api/admin/users/${encodeURIComponent(userId)}`, { method: "PATCH", json: patch });
-      toast("UsuÃ¡rio atualizado.", { tone: "success" });
+      toast("Usuário atualizado.", { tone: "success" });
       drawer.close();
       await reload();
     }
 
     async function handleLogoutSessions() {
       const ok = await confirmDiff({
-        title: "Invalidar sessÃµes",
-        message: "Isso vai desconectar o usuÃ¡rio em todos os dispositivos.",
-        diffs: [{ field: "AÃ§Ã£o", before: "â€”", after: "Invalidar sessÃµes" }],
+        title: "Invalidar sessões",
+        message: "Isso vai desconectar o usuário em todos os dispositivos.",
+        diffs: [{ field: "Ação", before: "—, after: "Invalidar sessões" }],
         tone: "danger"
       });
       if (!ok) return;
       await api(`/api/admin/users/${encodeURIComponent(userId)}/logout`, { method: "POST", json: {} });
-      toast("SessÃµes invalidadas.", { tone: "success" });
+      toast("Sessões invalidadas.", { tone: "success" });
     }
 
     async function handleTempPassword() {
       const ok = await confirmDiff({
-        title: "Senha temporÃ¡ria",
-        message: "A senha temporÃ¡ria serÃ¡ mostrada apenas uma vez.",
-        diffs: [{ field: "AÃ§Ã£o", before: "â€”", after: "Gerar senha temporÃ¡ria" }],
+        title: "Senha temporária",
+        message: "A senha temporária será mostrada apenas uma vez.",
+        diffs: [{ field: "Ação", before: "—, after: "Gerar senha temporária" }],
         tone: "danger"
       });
       if (!ok) return;
       const result = await api(`/api/admin/users/${encodeURIComponent(userId)}/temp-password`, { method: "POST", json: {} });
       const tempPassword = String(result?.tempPassword || "");
       await confirmDiff({
-        title: "Senha temporÃ¡ria (mostrar uma vez)",
-        message: "Copie e envie ao usuÃ¡rio por um canal seguro.",
-        diffs: [{ field: "Senha", before: "â€”", after: tempPassword }],
+        title: "Senha temporária (mostrar uma vez)",
+        message: "Copie e envie ao usuário por um canal seguro.",
+        diffs: [{ field: "Senha", before: "—, after: tempPassword }],
         tone: "ok"
       });
-      toast("Senha temporÃ¡ria gerada.", { tone: "success" });
+      toast("Senha temporária gerada.", { tone: "success" });
     }
 
     async function handleDisableLogin() {
       const ok = await confirmDiff({
         title: "Apagar login",
         message: "Isso desativa o login e remove as credenciais.",
-        diffs: [{ field: "AÃ§Ã£o", before: "â€”", after: "Desativar login" }],
+        diffs: [{ field: "Ação", before: "—, after: "Desativar login" }],
         tone: "danger"
       });
       if (!ok) return;
@@ -314,14 +314,14 @@ export function createUsersPage({ mount, drawer, getStatusFilter }) {
 
     async function handleDeleteUser() {
       const ok = await confirmDiff({
-        title: "Excluir usuÃ¡rio",
-        message: "Isso remove o usuÃ¡rio do banco. Esta aÃ§Ã£o pode ser revertida pela auditoria dentro do perÃ­odo permitido.",
-        diffs: [{ field: "AÃ§Ã£o", before: "â€”", after: "Excluir usuÃ¡rio" }],
+        title: "Excluir usuário",
+        message: "Isso remove o usuário do banco. Esta ação pode ser revertida pela auditoria dentro do período permitido.",
+        diffs: [{ field: "Ação", before: "—, after: "Excluir usuário" }],
         tone: "danger"
       });
       if (!ok) return;
       await api(`/api/admin/users/${encodeURIComponent(userId)}`, { method: "DELETE" });
-      toast("UsuÃ¡rio excluÃ­do.", { tone: "success" });
+      toast("Usuário excluído.", { tone: "success" });
       drawer.close();
       await reload();
     }
@@ -343,7 +343,7 @@ export function createUsersPage({ mount, drawer, getStatusFilter }) {
     });
 
     drawer.open({
-      titleText: `UsuÃ¡rio â€¢ ${user.email || user.id}`,
+      titleText: `Usuário • ${user.email || user.id}`,
       content: root
     });
   }
@@ -353,8 +353,8 @@ export function createUsersPage({ mount, drawer, getStatusFilter }) {
       await load();
       render();
     } catch (error) {
-      toast(`Falha ao carregar usuÃ¡rios: ${error?.code || error?.message || "REQUEST_FAILED"}`, { tone: "error" });
-      mount.innerHTML = `<div style="padding:14px;color:var(--muted);">Falha ao carregar usuÃ¡rios.</div>`;
+      toast(`Falha ao carregar usuários: ${error?.code || error?.message || "REQUEST_FAILED"}`, { tone: "error" });
+      mount.innerHTML = `<div style="padding:14px;color:var(--muted);">Falha ao carregar usuários.</div>`;
     }
   }
 
@@ -371,13 +371,13 @@ export function createUsersPage({ mount, drawer, getStatusFilter }) {
       const root = document.createElement("div");
       root.innerHTML = `
         <div class="section">
-          <h3>Novo usuÃ¡rio</h3>
+          <h3>Novo usuário</h3>
           <div class="form-grid">
             ${titleField({ key: "title", value: "nao_informar" })}
             <label class="label full"><span>Nome</span><input class="field" data-key="name" type="text" /></label>
             <label class="label full"><span>Email</span><input class="field" data-key="email" type="email" /></label>
             <label class="label full"><span>Telefone</span><input class="field" data-key="phone" type="text" /></label>
-            <label class="label full"><span>Senha temporÃ¡ria</span><input class="field" data-key="password" type="text" /></label>
+            <label class="label full"><span>Senha temporária</span><input class="field" data-key="password" type="text" /></label>
             <label class="label"><span>Nascimento</span><input class="field" data-key="birthDate" type="date" /></label>
             <label class="label"><span>CPF</span><input class="field" data-key="cpf" type="text" /></label>
             <label class="label"><span>CEP</span><input class="field" data-key="cep" type="text" /></label>
@@ -409,15 +409,15 @@ export function createUsersPage({ mount, drawer, getStatusFilter }) {
 
         try {
           await api("/api/admin/users", { method: "POST", json: payload });
-          toast("UsuÃ¡rio cadastrado.", { tone: "success" });
+          toast("Usuário cadastrado.", { tone: "success" });
           drawer.close();
           await reload();
         } catch (error) {
-          toast(`Falha ao cadastrar usuÃ¡rio: ${error?.code || error?.message || "REQUEST_FAILED"}`, { tone: "error" });
+          toast(`Falha ao cadastrar usuário: ${error?.code || error?.message || "REQUEST_FAILED"}`, { tone: "error" });
         }
       });
 
-      drawer.open({ titleText: "UsuÃ¡rios â€¢ cadastrar", content: root });
+      drawer.open({ titleText: "Usuários • cadastrar", content: root });
     }
   };
 }

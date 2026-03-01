@@ -52,6 +52,9 @@ export interface ListTrackingOrdersResponse {
 export interface CheckoutItemInput {
   id: string;
   qty: number;
+  color?: string | null;
+  size?: string | null;
+  variantKey?: string | null;
 }
 
 export interface CheckoutShippingInput {

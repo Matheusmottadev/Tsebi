@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { buildVariantSnapshot, getProductVariantOptions } from "@/lib/cart/cartItem";
+import { buildVariantSnapshot, getProductVariantOptions, getVariantStockQty } from "@/lib/cart/cartItem";
 import { useCartStore } from "@/lib/cart/cartStore";
 import { Price } from "@/components/Price";
 import type { Product } from "@/types";
@@ -29,10 +29,15 @@ export function ProductPurchasePanel({ product }: ProductPurchasePanelProps) {
   const colorRequired = colors.length > 0;
   const sizeRequired = sizes.length > 0;
   const variantSelected = (!colorRequired || Boolean(selectedColor)) && (!sizeRequired || Boolean(selectedSize));
+  const selectedVariantStock = useMemo(
+    () => getVariantStockQty(product, { color: selectedColor || null, size: selectedSize || null }),
+    [product, selectedColor, selectedSize]
+  );
 
-  const canAdd = hasVariantChoices ? variantSelected : true;
+  const canAdd = hasVariantChoices ? variantSelected && selectedVariantStock > 0 : selectedVariantStock > 0;
 
   const handleAddToCart = () => {
+    if (!canAdd) return;
     clearError();
     const variant = buildVariantSnapshot({
       color: selectedColor || null,
@@ -119,7 +124,9 @@ export function ProductPurchasePanel({ product }: ProductPurchasePanelProps) {
       </div>
 
       {message ? <p className={styles.message}>{message}</p> : null}
-      {!canAdd ? <p className={styles.hint}>Select required options before adding to cart.</p> : null}
+      {hasVariantChoices && !variantSelected ? <p className={styles.hint}>Select required options before adding to cart.</p> : null}
+      {canAdd ? <p className={styles.hint}>In stock: {selectedVariantStock}</p> : null}
+      {variantSelected && selectedVariantStock <= 0 ? <p className={styles.hint}>Selected variant is out of stock.</p> : null}
     </>
   );
 }

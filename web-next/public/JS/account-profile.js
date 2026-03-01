@@ -1,4 +1,4 @@
-﻿window.initProfileSection = function initProfileSection(options = {}) {
+window.initProfileSection = function initProfileSection(options = {}) {
   const store = window.TsebiUserStore;
   const profileForm = document.getElementById("profileForm");
   const profileTitle = document.getElementById("profileTitle");
@@ -44,7 +44,7 @@
   });
 
   const monthLabels = [
-    "Janeiro", "Fevereiro", "MarÃ§o", "Abril", "Maio", "Junho",
+    "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
     "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"
   ];
 
@@ -278,7 +278,7 @@
       const article = document.createElement("article");
       article.className = "address-card";
       article.innerHTML = `
-        <strong>${String(address?.label || address?.fullName || "EndereÃ§o")}</strong>
+        <strong>${String(address?.label || address?.fullName || "Endereço")}</strong>
         <p>${String(address?.street || "")}, ${String(address?.number || "")}</p>
         <p>${String(address?.district || "")} - ${String(address?.city || "")}/${String(address?.state || "")}</p>
         <p>CEP ${String(address?.cep || "")}</p>
@@ -556,19 +556,19 @@
     let valid = true;
 
     if (!data.title) {
-      setError("profileTitle", "Campo obrigatÃ³rio");
+      setError("profileTitle", "Campo obrigatório");
       valid = false;
     }
     if (data.firstName.length < 2) {
-      setError("profileFirstName", "Campo obrigatÃ³rio");
+      setError("profileFirstName", "Campo obrigatório");
       valid = false;
     }
     if (data.lastName.length < 2) {
-      setError("profileLastName", "Campo obrigatÃ³rio");
+      setError("profileLastName", "Campo obrigatório");
       valid = false;
     }
     if (!data.country) {
-      setError("profileCountry", "Campo obrigatÃ³rio");
+      setError("profileCountry", "Campo obrigatório");
       valid = false;
     }
 
@@ -583,10 +583,10 @@
 
       const result = await saveProfile(data);
       if (!result?.ok) {
-        showToast(result?.error || "NÃ£o foi possÃ­vel salvar");
+        showToast(result?.error || "Não foi possível salvar");
         return;
       }
-      showToast("InformaÃ§Ãµes salvas");
+      showToast("Informações salvas");
     });
 
     const prefMap = {
@@ -635,7 +635,7 @@
 
     passwordForm?.addEventListener("submit", (event) => {
       event.preventDefault();
-      showToast("TODO: integraÃ§Ã£o para alteraÃ§Ã£o de senha");
+      showToast("TODO: integração para alteração de senha");
       if (passwordModal) passwordModal.hidden = true;
       if (passwordForm) passwordForm.reset();
     });
@@ -710,7 +710,7 @@
           street: "Rua Exemplo",
           number: "123",
           district: "Centro",
-          city: "SÃ£o Paulo",
+          city: "São Paulo",
           state: "SP",
           cep: "01000-000"
         }

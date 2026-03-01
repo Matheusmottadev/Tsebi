@@ -140,7 +140,10 @@ const paymentIntentSchema = z.object({
     .array(
       z.object({
         id: z.string().trim().min(1),
-        qty: z.coerce.number().int().min(1).max(999)
+        qty: z.coerce.number().int().min(1).max(999),
+        color: z.string().trim().max(80).optional().default(""),
+        size: z.string().trim().max(80).optional().default(""),
+        variantKey: z.string().trim().max(180).optional().default("")
       })
     )
     .min(1),
@@ -197,11 +200,34 @@ function normalizeAndAggregateItems(rawItems: any) {
     const id = item && typeof item.id === "string" ? item.id.trim() : "";
     const qtyRaw = item ? Number(item.qty) : 0;
     const qty = Number.isInteger(qtyRaw) ? qtyRaw : Math.floor(qtyRaw);
+    const color = String(item?.color || "").trim();
+    const size = String(item?.size || "").trim();
+    const rawVariantKey = String(item?.variantKey || "").trim();
+    const variantKey =
+      rawVariantKey && rawVariantKey.includes("__")
+        ? rawVariantKey
+        : color && size
+          ? `${color}__${size}`
+          : "";
     if (!id || qty <= 0) return;
-    byId.set(id, (byId.get(id) || 0) + qty);
+
+    const aggregateKey = `${id}::${variantKey || "base"}`;
+    const existing = byId.get(aggregateKey);
+    if (existing) {
+      existing.qty += qty;
+      return;
+    }
+
+    byId.set(aggregateKey, {
+      id,
+      qty,
+      color: color || null,
+      size: size || null,
+      variantKey: variantKey || null
+    });
   });
 
-  return Array.from(byId.entries()).map(([id, qty]: any) => ({ id, qty }));
+  return Array.from(byId.values());
 }
 
 function normalizeShipping(rawShipping: any) {
@@ -302,10 +328,11 @@ function normalizeItemsForComparison(items: any) {
     .map((item: any) => ({
       id: String(item?.id || "").trim(),
       qty: Math.max(1, Number(item?.qty || 0)),
-      unitAmount: Math.max(0, Number(item?.unitAmount || 0))
+      unitAmount: Math.max(0, Number(item?.unitAmount || 0)),
+      variantKey: String(item?.variantKey || "").trim()
     }))
     .filter((item: any) => item.id)
-    .sort((a: any, b: any) => a.id.localeCompare(b.id));
+    .sort((a: any, b: any) => `${a.id}|${a.variantKey}`.localeCompare(`${b.id}|${b.variantKey}`));
 }
 
 function normalizeNewsletterPhone(value: any) {
@@ -420,7 +447,14 @@ function areSameItemSet(a: any, b: any) {
     const left = a[index];
     const right = b[index];
     if (!right) return false;
-    if (left.id !== right.id || left.qty !== right.qty || left.unitAmount !== right.unitAmount) return false;
+    if (
+      left.id !== right.id ||
+      left.qty !== right.qty ||
+      left.unitAmount !== right.unitAmount ||
+      String(left.variantKey || "") !== String(right.variantKey || "")
+    ) {
+      return false;
+    }
   }
   return true;
 }
@@ -611,7 +645,7 @@ async function fetchOrderWithItemsInTx(client: any, orderId: any) {
   const order = orderResult.rows[0];
   const itemsResult = await client.query(
     `
-    SELECT product_sku, product_id, name, qty, price_cents, currency
+    SELECT product_sku, product_id, name, qty, price_cents, currency, variant_color, variant_size, variant_key
     FROM order_items
     WHERE order_id = $1
     `,
@@ -627,7 +661,10 @@ async function fetchOrderWithItemsInTx(client: any, orderId: any) {
       name: item.name,
       qty: Number(item.qty || 0),
       unitAmount: Number(item.price_cents || 0),
-      currency: item.currency
+      currency: item.currency,
+      variantColor: item.variant_color || null,
+      variantSize: item.variant_size || null,
+      variantKey: item.variant_key || null
     }))
   };
 }

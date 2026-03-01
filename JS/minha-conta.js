@@ -398,7 +398,7 @@ function renderUser(user) {
   const name = String(user?.name || "Cliente");
   const firstName = name.split(/\s+/)[0] || "Cliente";
   const prefix = formatTitlePrefix(user?.title);
-  if (titleEl) titleEl.textContent = prefix ? `Ol·, ${prefix} ${firstName}` : `Ol·, ${firstName}`;
+  if (titleEl) titleEl.textContent = prefix ? `Ol√£, ${prefix} ${firstName}` : `Ol√£, ${firstName}`;
   if (emailEl) emailEl.textContent = user?.email || "";
 
   if (profileTitleInput) profileTitleInput.value = normalizeTitle(user?.title) || "nao_informar";
@@ -496,7 +496,7 @@ function renderFavorites() {
   favoritesGrid.innerHTML = "";
   favoritesSummary.textContent = uniqueIds.length
     ? `${uniqueIds.length} item(ns) salvos na sua lista de favoritos.`
-    : "Suas peÁas salvas para comprar depois.";
+    : "Suas pe√ßas salvas para comprar depois.";
 
   if (!favoriteItems.length) {
     favoritesEmpty.hidden = false;

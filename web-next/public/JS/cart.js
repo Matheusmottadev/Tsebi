@@ -650,12 +650,12 @@ async function applyAccessCode(rawCode, { silent = false } = {}) {
   if (!normalized) {
     clearAccessCode({ clearInput: false });
     updateSummary();
-    if (!silent) setAccessCodeFeedback("Informe um c骴igo de acesso v醠ido.", "error");
+    if (!silent) setAccessCodeFeedback("Informe um c贸digo de acesso v谩lido.", "error");
     return false;
   }
 
   if (dom.applyAccessCodeBtn) dom.applyAccessCodeBtn.disabled = true;
-  if (!silent) setAccessCodeFeedback("Validando c骴igo de acesso...");
+  if (!silent) setAccessCodeFeedback("Validando c贸digo de acesso...");
 
   try {
     const result = await apiRequest("/api/discount-codes/apply", {
@@ -673,7 +673,7 @@ async function applyAccessCode(rawCode, { silent = false } = {}) {
     if (dom.accessCodeInput) dom.accessCodeInput.value = checkoutState.cart.discountCode;
     updateSummary();
     invalidatePaymentSession();
-    if (!silent) setAccessCodeFeedback("C骴igo de acesso aplicado com sucesso.");
+    if (!silent) setAccessCodeFeedback("C贸digo de acesso aplicado com sucesso.");
     return true;
   } catch (error) {
     clearAccessCode({ clearInput: false });
@@ -681,11 +681,11 @@ async function applyAccessCode(rawCode, { silent = false } = {}) {
     invalidatePaymentSession();
     if (!silent) {
       const code = String(error?.code || error?.message || "");
-      if (code.includes("NOT_FOUND")) setAccessCodeFeedback("C骴igo de acesso n鉶 encontrado.", "error");
-      else if (code.includes("INACTIVE")) setAccessCodeFeedback("C骴igo de acesso inativo.", "error");
-      else if (code.includes("NOT_AVAILABLE_NOW")) setAccessCodeFeedback("C骴igo fora do per韔do de validade.", "error");
-      else if (code.includes("NOT_APPLICABLE")) setAccessCodeFeedback("C骴igo n鉶 aplic醰el para este carrinho.", "error");
-      else setAccessCodeFeedback("N鉶 foi poss韛el aplicar o c骴igo de acesso.", "error");
+      if (code.includes("NOT_FOUND")) setAccessCodeFeedback("C贸digo de acesso n茫o encontrado.", "error");
+      else if (code.includes("INACTIVE")) setAccessCodeFeedback("C贸digo de acesso inativo.", "error");
+      else if (code.includes("NOT_AVAILABLE_NOW")) setAccessCodeFeedback("C贸digo fora do per铆odo de validade.", "error");
+      else if (code.includes("NOT_APPLICABLE")) setAccessCodeFeedback("C贸digo n茫o aplic谩vel para este carrinho.", "error");
+      else setAccessCodeFeedback("N茫o foi poss铆vel aplicar o c贸digo de acesso.", "error");
     }
     return false;
   } finally {
@@ -1978,6 +1978,7 @@ async function init() {
 
 init();
 })();
+
 
 
 

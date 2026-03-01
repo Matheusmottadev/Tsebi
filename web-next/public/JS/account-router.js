@@ -370,7 +370,7 @@
     const activeStore = resolveStore();
     if (!activeStore) {
       showAuthGate();
-      setAuthFeedback("NÃ£o foi possÃ­vel iniciar sua sessÃ£o agora. Tente novamente.", true);
+      setAuthFeedback("Não foi possível iniciar sua sessão agora. Tente novamente.", true);
       return;
     }
 
@@ -428,7 +428,7 @@
     const activeStore = resolveStore();
     if (!activeStore) {
       showAuthGate();
-      setAuthFeedback("NÃ£o foi possÃ­vel carregar o login agora. Atualize a pÃ¡gina e tente novamente.", true);
+      setAuthFeedback("Não foi possível carregar o login agora. Atualize a página e tente novamente.", true);
       return;
     }
 
@@ -480,7 +480,7 @@
     const activeStore = resolveStore();
     if (!activeStore) {
       if (authSubmit) authSubmit.disabled = false;
-      setAuthFeedback("NÃ£o foi possÃ­vel iniciar o login agora. Atualize a pÃ¡gina e tente novamente.", true);
+      setAuthFeedback("Não foi possível iniciar o login agora. Atualize a página e tente novamente.", true);
       return;
     }
     const result = await activeStore.login({ email, password });

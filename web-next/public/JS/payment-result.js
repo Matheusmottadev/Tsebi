@@ -1,4 +1,4 @@
-﻿const POLL_INTERVAL_MS = 3000;
+const POLL_INTERVAL_MS = 3000;
 const MAX_POLL_DURATION_MS = 2 * 60 * 1000;
 const cartKey = "tsebi-cart-v1";
 const CHECKOUT_TRACKING_KEY = "tsebi-checkout-tracking";
@@ -219,12 +219,12 @@ function renderPaid(order) {
 }
 
 function renderProcessing(order, didTimeout) {
-  if (kickerEl) kickerEl.textContent = "Pedido em anÃ¡lise";
+  if (kickerEl) kickerEl.textContent = "Pedido em análise";
   if (titleEl) titleEl.textContent = "Pagamento em processamento";
   if (messageEl) {
     messageEl.textContent = didTimeout
-      ? "Ainda nÃ£o recebemos a confirmaÃ§Ã£o final. VocÃª pode atualizar o status ou falar com o suporte."
-      : "Seu pagamento foi iniciado e pode levar alguns minutos para confirmaÃ§Ã£o automÃ¡tica.";
+      ? "Ainda não recebemos a confirmação final. Você pode atualizar o status ou falar com o suporte."
+      : "Seu pagamento foi iniciado e pode levar alguns minutos para confirmação automática.";
   }
   renderSummary(order);
   setActionsVisibility({
@@ -249,11 +249,11 @@ function renderProcessing(order, didTimeout) {
 
 function renderFailed(order) {
   clearPolling();
-  if (kickerEl) kickerEl.textContent = "Pedido nÃ£o concluÃ­do";
-  if (titleEl) titleEl.textContent = "Pagamento nÃ£o aprovado";
+  if (kickerEl) kickerEl.textContent = "Pedido não concluído";
+  if (titleEl) titleEl.textContent = "Pagamento não aprovado";
   if (messageEl) {
     messageEl.textContent =
-      "NÃ£o foi possÃ­vel confirmar este pagamento. VocÃª pode tentar novamente ou falar com nosso suporte.";
+      "Não foi possível confirmar este pagamento. Você pode tentar novamente ou falar com nosso suporte.";
   }
   renderSummary(order);
   setActionsVisibility({
@@ -273,7 +273,7 @@ function renderCanceled(order) {
   if (kickerEl) kickerEl.textContent = "Pedido cancelado";
   if (titleEl) titleEl.textContent = "Compra cancelada";
   if (messageEl) {
-    messageEl.textContent = "Seu pagamento foi cancelado. Se quiser, vocÃª pode reiniciar a compra.";
+    messageEl.textContent = "Seu pagamento foi cancelado. Se quiser, você pode reiniciar a compra.";
   }
   renderSummary(order);
   setActionsVisibility({
@@ -311,10 +311,10 @@ function renderRefunded(order) {
 function renderFatal(message) {
   clearPolling();
   if (kickerEl) kickerEl.textContent = "Pedido";
-  if (titleEl) titleEl.textContent = "NÃ£o foi possÃ­vel consultar o pagamento";
+  if (titleEl) titleEl.textContent = "Não foi possível consultar o pagamento";
   if (messageEl) {
     messageEl.textContent =
-      message || "Verifique sua conexÃ£o e tente atualizar o status em alguns segundos.";
+      message || "Verifique sua conexão e tente atualizar o status em alguns segundos.";
   }
   if (summaryEl) summaryEl.hidden = true;
   setActionsVisibility({
@@ -390,7 +390,7 @@ function normalizeFetchedOrder(raw = null) {
 
 async function refreshOrderStatus({ keepLoader = false } = {}) {
   if (!currentOrderId && !currentOrderNumber) {
-    renderFatal("Pedido nÃ£o encontrado na URL. Volte ao carrinho e tente novamente.");
+    renderFatal("Pedido não encontrado na URL. Volte ao carrinho e tente novamente.");
     return;
   }
   if (!keepLoader) showLoader();
@@ -413,7 +413,7 @@ async function refreshOrderStatus({ keepLoader = false } = {}) {
     }
 
     if (!order) {
-      throw new Error("NÃ£o foi possÃ­vel localizar o pedido.");
+      throw new Error("Não foi possível localizar o pedido.");
     }
 
     currentOrderId = String(order.id || currentOrderId || "").trim();

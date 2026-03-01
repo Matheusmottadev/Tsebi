@@ -25,6 +25,9 @@ export type OrderItemInput = {
   qty: number;
   unitAmount: number;
   currency?: string;
+  variantColor?: string | null;
+  variantSize?: string | null;
+  variantKey?: string | null;
 };
 
 export type CreateOrderPayload = {
@@ -56,6 +59,9 @@ export type OrderItem = {
   qty: number;
   unitAmount: number;
   currency: string;
+  variantColor: string | null;
+  variantSize: string | null;
+  variantKey: string | null;
 };
 
 export type Order = {
@@ -155,6 +161,9 @@ type OrderItemRow = JsonRecord & {
   qty?: number;
   price_cents?: number;
   currency?: string;
+  variant_color?: string | null;
+  variant_size?: string | null;
+  variant_key?: string | null;
 };
 
 type OrderPatch = {
@@ -215,6 +224,12 @@ async function ensureOrderSchema(): Promise<void> {
           ADD COLUMN IF NOT EXISTS last_tracking_update TIMESTAMPTZ,
           ADD COLUMN IF NOT EXISTS shipped_at TIMESTAMPTZ,
           ADD COLUMN IF NOT EXISTS delivered_at TIMESTAMPTZ;
+      `);
+      await query(`
+        ALTER TABLE order_items
+          ADD COLUMN IF NOT EXISTS variant_color TEXT,
+          ADD COLUMN IF NOT EXISTS variant_size TEXT,
+          ADD COLUMN IF NOT EXISTS variant_key TEXT;
       `);
     })().catch((error: unknown) => {
       orderSchemaPromise = null;
@@ -279,7 +294,10 @@ function mapOrderItemRow(row: OrderItemRow): OrderItem {
     name: String(row.name || row.product_sku || row.product_id || ""),
     qty: Number(row.qty || 0),
     unitAmount: Number(row.price_cents || 0),
-    currency: String(row.currency || "brl")
+    currency: String(row.currency || "brl"),
+    variantColor: row.variant_color || null,
+    variantSize: row.variant_size || null,
+    variantKey: row.variant_key || null
   };
 }
 
@@ -288,7 +306,7 @@ async function listItemsByOrderIds(orderIds: string[]): Promise<Map<string, Orde
 
   const result = await query<OrderItemRow>(
     `
-    SELECT order_id, product_sku, product_id, name, qty, price_cents, currency
+    SELECT order_id, product_sku, product_id, name, qty, price_cents, currency, variant_color, variant_size, variant_key
     FROM order_items
     WHERE order_id = ANY($1::uuid[])
     ORDER BY id ASC
@@ -320,9 +338,9 @@ async function insertOrderItems(client: DbClient, orderId: string, items: OrderI
     await client.query(
       `
       INSERT INTO order_items (
-        order_id, product_id, product_sku, name, qty, price_cents, currency
+        order_id, product_id, product_sku, name, qty, price_cents, currency, variant_color, variant_size, variant_key
       ) VALUES (
-        $1, $2::uuid, $3, $4, $5, $6, $7
+        $1, $2::uuid, $3, $4, $5, $6, $7, $8, $9, $10
       )
       `,
       [
@@ -332,7 +350,10 @@ async function insertOrderItems(client: DbClient, orderId: string, items: OrderI
         String(item.name || sku),
         Math.max(1, Number(item.qty || 1)),
         Math.max(0, Number(item.unitAmount || 0)),
-        String(item.currency || "brl").toLowerCase()
+        String(item.currency || "brl").toLowerCase(),
+        item.variantColor ? String(item.variantColor).trim() : null,
+        item.variantSize ? String(item.variantSize).trim() : null,
+        item.variantKey ? String(item.variantKey).trim() : null
       ]
     );
   }
@@ -395,7 +416,7 @@ async function createOrder(payload: CreateOrderPayload): Promise<Order | null> {
     }
 
     const itemResult = await client.query<OrderItemRow>(
-      `SELECT order_id, product_sku, product_id, name, qty, price_cents, currency FROM order_items WHERE order_id = $1`,
+      `SELECT order_id, product_sku, product_id, name, qty, price_cents, currency, variant_color, variant_size, variant_key FROM order_items WHERE order_id = $1`,
       [orderRow.id]
     );
 
@@ -484,7 +505,7 @@ async function updateOrder(orderId: string, patch: Partial<OrderPatch>): Promise
   if (!row) return null;
 
   const itemResult = await query<OrderItemRow>(
-    `SELECT order_id, product_sku, product_id, name, qty, price_cents, currency FROM order_items WHERE order_id = $1`,
+    `SELECT order_id, product_sku, product_id, name, qty, price_cents, currency, variant_color, variant_size, variant_key FROM order_items WHERE order_id = $1`,
     [row.id]
   );
 
@@ -500,7 +521,7 @@ async function findOrderById(orderId: string): Promise<Order | null> {
   if (!row) return null;
 
   const itemResult = await query<OrderItemRow>(
-    `SELECT order_id, product_sku, product_id, name, qty, price_cents, currency FROM order_items WHERE order_id = $1`,
+    `SELECT order_id, product_sku, product_id, name, qty, price_cents, currency, variant_color, variant_size, variant_key FROM order_items WHERE order_id = $1`,
     [row.id]
   );
 
@@ -531,7 +552,7 @@ async function findOrderByPaymentIntentId(paymentIntentId: string): Promise<Orde
   if (!row) return null;
 
   const itemResult = await query<OrderItemRow>(
-    `SELECT order_id, product_sku, product_id, name, qty, price_cents, currency FROM order_items WHERE order_id = $1`,
+    `SELECT order_id, product_sku, product_id, name, qty, price_cents, currency, variant_color, variant_size, variant_key FROM order_items WHERE order_id = $1`,
     [row.id]
   );
 

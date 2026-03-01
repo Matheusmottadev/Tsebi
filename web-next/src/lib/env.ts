@@ -59,13 +59,13 @@ export function isApiConfigured(): boolean {
   return Boolean(String(process.env.NEXT_PUBLIC_API_BASE_URL || "").trim());
 }
 
-function parseBooleanFlag(value: string | undefined): boolean {
-  const normalized = String(value || "")
+export function isCheckoutEnabled(): boolean {
+  const normalized = String(process.env.NEXT_PUBLIC_CHECKOUT_ENABLED || "")
     .trim()
     .toLowerCase();
-  return normalized === "1" || normalized === "true" || normalized === "yes" || normalized === "on";
-}
 
-export function isCheckoutEnabled(): boolean {
-  return parseBooleanFlag(process.env.NEXT_PUBLIC_CHECKOUT_ENABLED);
+  if (!normalized) return true;
+  if (["0", "false", "no", "off"].includes(normalized)) return false;
+  if (["1", "true", "yes", "on"].includes(normalized)) return true;
+  return true;
 }

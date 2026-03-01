@@ -953,7 +953,9 @@ describe("Express critical API flows", () => {
     expect([200, 201]).toContain(response.status);
     expect(typeof response.body.clientSecret).toBe("string");
     expect(response.body.clientSecret.length).toBeGreaterThan(10);
-    expect(state.lastCheckAvailabilityInput).toEqual([{ id: "sku-1", qty: 2 }]);
+    expect(state.lastCheckAvailabilityInput).toEqual([
+      { id: "sku-1", qty: 2, color: null, size: null, variantKey: null },
+    ]);
   });
 
   it("POST /api/stripe/webhook verifies signature and ignores duplicate stripe_event_id", async () => {

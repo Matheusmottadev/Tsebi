@@ -21,6 +21,9 @@ export interface OrderItem {
   qty: number;
   unitAmount: number;
   currency: string;
+  variantColor?: string | null;
+  variantSize?: string | null;
+  variantKey?: string | null;
 }
 
 export interface OrderStockIssue {

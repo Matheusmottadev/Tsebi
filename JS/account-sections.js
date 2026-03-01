@@ -50,12 +50,12 @@
     if (value === 'canceled') return 'Cancelado';
     if (value === 'failed') return 'Falhou';
     if (value === 'refunded') return 'Reembolsado';
-    return 'Em análise';
+    return 'Em an?lise';
   }
 
   function statusTone(status) {
     const value = String(status || '').toLowerCase();
-    if (['confirmado', 'concluído', 'finalizado', 'aprovado'].includes(value)) return 'ok';
+    if (['confirmado', 'conclu?do', 'finalizado', 'aprovado'].includes(value)) return 'ok';
     if (['cancelado', 'rejeitado'].includes(value)) return 'bad';
     return 'neutral';
   }
@@ -98,13 +98,13 @@
       const list = getHistory().slice(0, 5);
       if (!historyMount) return;
       if (!list.length) {
-        historyMount.innerHTML = '<p class="conta-muted">Você não tem nenhum Atendimento Privado em breve.</p>';
+        historyMount.innerHTML = '<p class="conta-muted">Voc? n?o tem nenhum Atendimento Privado em breve.</p>';
         return;
       }
       historyMount.innerHTML = list
         .map((item) => {
           const tone = statusTone(item.status);
-          return `<article class="history-item"><div class="history-item-head"><strong>${escapeHtml(formatDateBR(item.date || item.createdAt))}</strong><span class="status-chip ${tone}">${escapeHtml(item.status || 'Pendente')}</span></div><p class="conta-muted">${escapeHtml(item.channel || '-')} • ${escapeHtml(item.subject || 'Assunto')}</p><button type="button" class="btn-outline history-detail-btn" data-history-detail="${escapeHtml(item.id)}">Ver detalhes</button><div class="history-item-detail" id="history-detail-${escapeHtml(item.id)}" hidden><p class="conta-muted">${escapeHtml(item.message || 'Sem mensagem.')}</p><p class="conta-muted">Horário: ${escapeHtml(item.time || '-')}</p></div></article>`;
+          return `<article class="history-item"><div class="history-item-head"><strong>${escapeHtml(formatDateBR(item.date || item.createdAt))}</strong><span class="status-chip ${tone}">${escapeHtml(item.status || 'Pendente')}</span></div><p class="conta-muted">${escapeHtml(item.channel || '-')} ? ${escapeHtml(item.subject || 'Assunto')}</p><button type="button" class="btn-outline history-detail-btn" data-history-detail="${escapeHtml(item.id)}">Ver detalhes</button><div class="history-item-detail" id="history-detail-${escapeHtml(item.id)}" hidden><p class="conta-muted">${escapeHtml(item.message || 'Sem mensagem.')}</p><p class="conta-muted">Hor?rio: ${escapeHtml(item.time || '-')}</p></div></article>`;
         })
         .join('');
 
@@ -144,7 +144,7 @@
         createdAt: new Date().toISOString()
       });
       saveHistory(list.slice(0, 50));
-      if (feedback) feedback.textContent = 'Solicitação registrada com sucesso.';
+      if (feedback) feedback.textContent = 'Solicita??o registrada com sucesso.';
       form.reset();
       renderHistory();
     });
@@ -172,7 +172,7 @@
     favoriteItems.forEach((item) => {
       String(item.name || '')
         .toLowerCase()
-        .split(/[^a-zA-ZÀ-ÿ0-9]+/)
+        .split(/[^a-zA-Z?-?0-9]+/)
         .filter((word) => word.length > 3)
         .forEach((word) => favoriteWords.add(word));
     });
@@ -203,7 +203,7 @@
 
     function render() {
       if (!favorites.length) {
-        grid.innerHTML = '<div class="orders-empty"><p>Nenhuma base de favoritos encontrada.</p><a class="btn-primary" href="index.html">Explorar coleção</a></div>';
+        grid.innerHTML = '<div class="orders-empty"><p>Nenhuma base de favoritos encontrada.</p><a class="btn-primary" href="index.html">Explorar cole??o</a></div>';
         if (loadMoreBtn) loadMoreBtn.hidden = true;
       } else {
         grid.innerHTML = recommended
@@ -323,7 +323,7 @@
       if (topCategoryEl) topCategoryEl.textContent = dominantCategory(items);
 
       if (!items.length) {
-        grid.innerHTML = '<div class="orders-empty"><p>Sua Lista de Desejos está vazia.</p><a class="btn-primary" href="index.html">Explorar peças</a></div>';
+        grid.innerHTML = '<div class="orders-empty"><p>Sua Lista de Desejos est? vazia.</p><a class="btn-primary" href="index.html">Explorar pe?as</a></div>';
         return;
       }
 
@@ -352,12 +352,12 @@
 
     document.getElementById('wishlistShareBtn')?.addEventListener('click', async () => {
       const ids = getFavorites();
-      const text = ids.length ? `Minha lista Tsebi: ${ids.join(', ')}` : 'Minha lista Tsebi está vazia.';
+      const text = ids.length ? `Minha lista Tsebi: ${ids.join(', ')}` : 'Minha lista Tsebi est? vazia.';
       try {
         await navigator.clipboard.writeText(text);
-        if (feedback) feedback.textContent = 'Lista copiada para a área de transferência.';
+        if (feedback) feedback.textContent = 'Lista copiada para a ?rea de transfer?ncia.';
       } catch {
-        if (feedback) feedback.textContent = 'Não foi possível copiar agora.';
+        if (feedback) feedback.textContent = 'N?o foi poss?vel copiar agora.';
       }
     });
 
@@ -399,7 +399,7 @@
       const options = ['<option value="">Selecionar produto</option>']
         .concat(unique.map((name) => `<option value="${escapeHtml(name)}">${escapeHtml(name)}</option>`));
       if (!unique.length) {
-        options.push('<option value="Produto da coleção">Produto da coleção</option>');
+        options.push('<option value="Produto da cole??o">Produto da cole??o</option>');
       }
       productSelect.innerHTML = options.join('');
     }
@@ -414,7 +414,7 @@
       historyMount.innerHTML = list
         .map((item) => {
           const tone = statusTone(item.status);
-          return `<article class="history-item"><div class="history-item-head"><strong>${escapeHtml(item.protocol)}</strong><span class="status-chip ${tone}">${escapeHtml(item.status)}</span></div><p class="conta-muted">${escapeHtml(formatDateBR(item.createdAt))} • ${escapeHtml(item.product || 'Produto')}</p><button type="button" class="btn-outline history-detail-btn" data-repair-detail="${escapeHtml(item.id)}">Ver detalhes</button><div class="history-item-detail" id="repair-detail-${escapeHtml(item.id)}" hidden><p class="conta-muted">${escapeHtml(item.reason || '-')}</p><p class="conta-muted">${escapeHtml(item.description || 'Sem descrição.')}</p></div></article>`;
+          return `<article class="history-item"><div class="history-item-head"><strong>${escapeHtml(item.protocol)}</strong><span class="status-chip ${tone}">${escapeHtml(item.status)}</span></div><p class="conta-muted">${escapeHtml(formatDateBR(item.createdAt))} ? ${escapeHtml(item.product || 'Produto')}</p><button type="button" class="btn-outline history-detail-btn" data-repair-detail="${escapeHtml(item.id)}">Ver detalhes</button><div class="history-item-detail" id="repair-detail-${escapeHtml(item.id)}" hidden><p class="conta-muted">${escapeHtml(item.reason || '-')}</p><p class="conta-muted">${escapeHtml(item.description || 'Sem descri??o.')}</p></div></article>`;
         })
         .join('');
 
@@ -430,7 +430,7 @@
 
     form?.addEventListener('submit', (event) => {
       event.preventDefault();
-      const product = document.getElementById('repairProduct')?.value || 'Produto da coleção';
+      const product = document.getElementById('repairProduct')?.value || 'Produto da cole??o';
       const reason = document.getElementById('repairReason')?.value || 'Ajuste';
       const description = document.getElementById('repairDescription')?.value || '';
       const list = getHistory();
@@ -440,12 +440,12 @@
         product,
         reason,
         description,
-        status: 'Em análise',
+        status: 'Em an?lise',
         createdAt: new Date().toISOString()
       });
       saveHistory(list.slice(0, 50));
       form.reset();
-      if (feedback) feedback.textContent = 'Solicitação de reparo enviada com sucesso.';
+      if (feedback) feedback.textContent = 'Solicita??o de reparo enviada com sucesso.';
       renderHistory();
     });
 
