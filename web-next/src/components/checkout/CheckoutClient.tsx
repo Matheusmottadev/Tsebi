@@ -479,6 +479,7 @@ export function CheckoutClient() {
   const [savedAddressFingerprints, setSavedAddressFingerprints] = useState<Set<string>>(new Set());
   const [isSavingAddress, setIsSavingAddress] = useState(false);
   const [isDraftLoaded, setIsDraftLoaded] = useState(false);
+  const [hasAutoAttemptedIntent, setHasAutoAttemptedIntent] = useState(false);
   const phoneNumberInputRef = useRef<HTMLInputElement | null>(null);
 
   const [touchedFields, setTouchedFields] = useState<Partial<Record<RequiredCheckoutField, boolean>>>({});
@@ -998,6 +999,7 @@ export function CheckoutClient() {
     }
 
     markStepCompleted("payment", true);
+    setHasAutoAttemptedIntent(true);
     const ok = await ensurePaymentIntent();
     if (!ok) return;
     setActiveStep("payment");
@@ -1006,9 +1008,22 @@ export function CheckoutClient() {
   useEffect(() => {
     if (activeStep !== "payment") return;
     if (!completed.address || !completed.delivery) return;
-    if (isCreatingIntent || intent?.clientSecret) return;
+    if (isCreatingIntent || intent?.clientSecret || hasAutoAttemptedIntent) return;
+    setHasAutoAttemptedIntent(true);
     ensurePaymentIntent().catch(() => {});
-  }, [activeStep, completed.address, completed.delivery, isCreatingIntent, intent?.clientSecret]);
+  }, [activeStep, completed.address, completed.delivery, hasAutoAttemptedIntent, isCreatingIntent, intent?.clientSecret]);
+
+  useEffect(() => {
+    if (activeStep !== "payment") {
+      setHasAutoAttemptedIntent(false);
+      return;
+    }
+    if (!completed.address || !completed.delivery) {
+      setHasAutoAttemptedIntent(false);
+      return;
+    }
+    if (intent?.clientSecret) return;
+  }, [activeStep, completed.address, completed.delivery, intent?.clientSecret]);
 
   async function handleSummaryPay() {
     await handlePaymentConfirm();

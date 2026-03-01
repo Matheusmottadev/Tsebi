@@ -130,6 +130,18 @@ export interface CreatePaymentIntentPayload {
   shippingAddress?: CheckoutShippingAddressInput;
 }
 
+function withRequestTimeout(timeoutMs = 20000): {
+  signal: AbortSignal;
+  cleanup: () => void;
+} {
+  const controller = new AbortController();
+  const timer = window.setTimeout(() => controller.abort(), timeoutMs);
+  return {
+    signal: controller.signal,
+    cleanup: () => window.clearTimeout(timer),
+  };
+}
+
 /**
  * GET /api/my/orders
  * Auth: required.
@@ -172,7 +184,17 @@ export async function getOrderTracking(orderId: string): Promise<OrderTrackingOr
  * Note: mutation endpoint exists for checkout flow; do not auto-trigger in demo UI.
  */
 export async function createPaymentIntent(payload: CreatePaymentIntentPayload): Promise<PaymentIntentResponse> {
-  return post<PaymentIntentResponse>("/api/orders/payment-intent", payload);
+  const { signal, cleanup } = withRequestTimeout(25000);
+  try {
+    return await post<PaymentIntentResponse>("/api/orders/payment-intent", payload, { signal });
+  } catch (error) {
+    if (error instanceof DOMException && error.name === "AbortError") {
+      throw new Error("Tempo limite ao iniciar pagamento. Verifique as chaves Stripe e tente novamente.");
+    }
+    throw error;
+  } finally {
+    cleanup();
+  }
 }
 
 /**
