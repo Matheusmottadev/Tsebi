@@ -628,8 +628,8 @@ export function CheckoutClient() {
     if (!checkoutEnabled) return "Checkout desativado no momento.";
     if (!hasHydrated) return "Carregando carrinho...";
     if (itemCount <= 0) return "Seu carrinho esta vazio.";
-    if (stripeLoading) return "Carregando Stripe...";
-    if (!stripeConfigured) return "Stripe não configurado.";
+    if (stripeLoading) return "Carregando pagamento...";
+    if (!stripeConfigured) return "Pagamento indisponivel.";
     return "";
   }, [checkoutEnabled, hasHydrated, itemCount, stripeConfigured, stripeLoading]);
 
@@ -637,8 +637,8 @@ export function CheckoutClient() {
     if (!checkoutEnabled) throw new CheckoutValidationError("Checkout desativado.");
     if (!hasHydrated) throw new CheckoutValidationError("Carrinho ainda carregando.");
     if (itemCount <= 0) throw new CheckoutValidationError("Carrinho vazio.");
-    if (stripeLoading) throw new CheckoutValidationError("Stripe ainda carregando.");
-    if (!stripeConfigured) throw new CheckoutValidationError("Stripe não configurado.");
+    if (stripeLoading) throw new CheckoutValidationError("Pagamento ainda carregando.");
+    if (!stripeConfigured) throw new CheckoutValidationError("Pagamento indisponivel.");
   }
 
   function handleInputChange(event: ChangeEvent<HTMLInputElement>) {
@@ -1025,12 +1025,6 @@ export function CheckoutClient() {
     if (intent?.clientSecret) return;
   }, [activeStep, completed.address, completed.delivery, intent?.clientSecret]);
 
-  async function handleSummaryPay() {
-    await handlePaymentConfirm();
-    const secureBox = document.getElementById("checkout-secure-payment");
-    if (secureBox) secureBox.scrollIntoView({ behavior: "smooth", block: "start" });
-  }
-
   const elementsOptions = useMemo(
     () => (intent ? { clientSecret: intent.clientSecret, appearance: { theme: "stripe" as const } } : undefined),
     [intent]
@@ -1371,30 +1365,24 @@ export function CheckoutClient() {
 
             {activeStep === "payment" ? (
               <div className={styles.paymentWrap}>
-                <p className={styles.stepHint}>Pagamento seguro com Stripe</p>
+                <p className={styles.stepHint}>Pagamento seguro</p>
                 {stripeLoading ? <p className={styles.stepHint}>Carregando metodos de pagamento...</p> : null}
                 {!stripeLoading && !stripeConfigured ? (
                   <p className={styles.stepHint}>
-                    Stripe indisponivel. Verifique STRIPE_PUBLISHABLE_KEY no backend e/ou NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY.
+                    Pagamento indisponivel no momento.
                   </p>
                 ) : null}
 
-                <div className={styles.stepFooterAction}>
-                  <button type="button" className={styles.primaryAction} onClick={handlePaymentConfirm} disabled={isCreatingIntent}>
-                    {isCreatingIntent ? "Preparando pagamento..." : "Confirmar forma de pagamento"}
-                  </button>
-                </div>
-
                 {intent?.clientSecret && stripePromise ? (
                   <div id="checkout-secure-payment" className={styles.securePaymentBox}>
-                    <h3>Confirmacao segura</h3>
-                    <p>Finalize seu pagamento com Stripe.</p>
+                    <h3>Confirmacao</h3>
+                    <p>Finalize seu pagamento.</p>
                     <Elements stripe={stripePromise} options={elementsOptions}>
                       <CheckoutPaymentForm
                         orderId={intent.orderId}
                         customerEmail={intent.customerEmail || checkoutEmail}
                         paymentMethodOrder={stripePaymentMethodOrder}
-                        submitLabel="Pagar com Stripe"
+                        submitLabel="Confirmar"
                       />
                     </Elements>
                   </div>
@@ -1402,7 +1390,7 @@ export function CheckoutClient() {
               </div>
             ) : (
               <div className={styles.summaryContent}>
-                <p>Pagamento via Stripe</p>
+                <p>Pagamento</p>
               </div>
             )}
           </section>
@@ -1432,9 +1420,7 @@ export function CheckoutClient() {
             <p className={styles.termsText}>
               Ao fazer seu pedido, Você concorda com nossos Termos e condições e Política de Privacidade.
             </p>
-            <button type="button" className={styles.productReplicaButton} onClick={handleSummaryPay} disabled={isCreatingIntent}>
-              {isCreatingIntent ? "Preparando pagamento..." : "Pagar com Stripe"}
-            </button>
+            {isCreatingIntent ? <p className={styles.stepHint}>Preparando pagamento...</p> : null}
           </div>
         </aside>
       </div>
