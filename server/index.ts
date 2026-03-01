@@ -53,6 +53,7 @@ const isVercelRuntime =
 const stripeSecretKey = process.env.STRIPE_SECRET_KEY || "";
 const stripePublishableKey = process.env.STRIPE_PUBLISHABLE_KEY || "";
 const stripeWebhookSecret = process.env.STRIPE_WEBHOOK_SECRET || "";
+const stripeCheckoutPaymentMethodTypes = ["card", "boleto"];
 const posthogPublicKey = process.env.POSTHOG_PUBLIC_KEY || "";
 const posthogHost = process.env.POSTHOG_HOST || "";
 const cspReportOnly = (() => {
@@ -517,6 +518,11 @@ async function getReusablePaymentIntentClientSecret(order: any, expectedAmount: 
   const status = String(intent?.status || "").toLowerCase();
   const amount = Number(intent?.amount || 0);
   if (amount !== Math.max(0, Number(expectedAmount || 0))) return null;
+  const paymentMethodTypes = Array.isArray(intent?.payment_method_types)
+    ? intent.payment_method_types.map((entry: any) => String(entry || "").trim().toLowerCase()).filter(Boolean)
+    : [];
+  const hasDisallowedType = paymentMethodTypes.some((type: string) => !stripeCheckoutPaymentMethodTypes.includes(type));
+  if (hasDisallowedType) return null;
 
   if (
     status === "requires_payment_method" ||
@@ -528,9 +534,7 @@ async function getReusablePaymentIntentClientSecret(order: any, expectedAmount: 
     if (!clientSecret) return null;
     return {
       clientSecret,
-      paymentMethodTypes: Array.isArray(intent?.payment_method_types)
-        ? intent.payment_method_types.map((entry: any) => String(entry || "").trim().toLowerCase()).filter(Boolean)
-        : []
+      paymentMethodTypes
     };
   }
 
@@ -1498,14 +1502,12 @@ app.post(
   const paymentIntentParams: any = {
     amount: Math.max(0, Number(order?.amount || orderAmount)),
     currency,
+    payment_method_types: stripeCheckoutPaymentMethodTypes,
     metadata: {
       orderId: String(order.id || ""),
       orderNumber: String(order.orderNumber || ""),
       userId: String(checkoutUser?.id || ""),
       checkoutMode
-    },
-    automatic_payment_methods: {
-      enabled: true
     }
   };
 

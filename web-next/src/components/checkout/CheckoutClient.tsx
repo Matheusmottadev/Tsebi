@@ -13,7 +13,7 @@ import type { CreatePaymentIntentPayload, ShippingQuote } from "@/services/order
 import type { Address } from "@/types";
 import styles from "./CheckoutClient.module.css";
 
-type PaymentMethodChoice = "apple_pay" | "google_pay" | "card" | "boleto" | "pix";
+type PaymentMethodChoice = "apple_pay" | "google_pay" | "card" | "boleto";
 type CheckoutStep = "address" | "delivery" | "payment";
 
 type CheckoutFormState = {
@@ -430,9 +430,8 @@ function buildPayload(
   return payload;
 }
 
-function buildStripePaymentMethodOrder(selectedMethod: PaymentMethodChoice, includePix: boolean): string[] {
+function buildStripePaymentMethodOrder(selectedMethod: PaymentMethodChoice): string[] {
   const base: string[] = ["apple_pay", "google_pay", "card", "boleto"];
-  if (includePix) base.push("pix");
   const ordered = [selectedMethod, ...base];
   const unique: string[] = [];
   const seen = new Set<string>();
@@ -500,15 +499,7 @@ export function CheckoutClient() {
   const selectedCompanyPaidByStore = Boolean(isCompanyPaidShipping && selectedShippingTag === "free");
   const shippingCents = selectedCompanyPaidByStore ? 0 : Math.max(0, Number(selectedShippingQuote?.priceCents || 0));
   const totalCents = Math.max(0, subtotal + shippingCents);
-  const stripeSupportsPix = useMemo(() => {
-    const paymentTypes = Array.isArray(intent?.paymentMethodTypes) ? intent.paymentMethodTypes : [];
-    if (!paymentTypes.length) return true;
-    return paymentTypes.some((method) => String(method || "").trim().toLowerCase() === "pix");
-  }, [intent]);
-  const stripePaymentMethodOrder = useMemo(
-    () => buildStripePaymentMethodOrder("apple_pay", stripeSupportsPix),
-    [stripeSupportsPix]
-  );
+  const stripePaymentMethodOrder = useMemo(() => buildStripePaymentMethodOrder("apple_pay"), []);
 
   useEffect(() => {
     try {
@@ -987,6 +978,13 @@ export function CheckoutClient() {
     setActiveStep("payment");
   }
 
+  useEffect(() => {
+    if (activeStep !== "payment") return;
+    if (!completed.address || !completed.delivery) return;
+    if (isCreatingIntent || intent?.clientSecret) return;
+    ensurePaymentIntent().catch(() => {});
+  }, [activeStep, completed.address, completed.delivery, isCreatingIntent, intent?.clientSecret]);
+
   async function handleSummaryPay() {
     await handlePaymentConfirm();
     const secureBox = document.getElementById("checkout-secure-payment");
@@ -1334,6 +1332,7 @@ export function CheckoutClient() {
             {activeStep === "payment" ? (
               <div className={styles.paymentWrap}>
                 <p className={styles.stepHint}>Pagamento seguro com Stripe</p>
+                {!stripeConfigured ? <p className={styles.stepHint}>Stripe indisponivel no frontend (NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY).</p> : null}
 
                 <div className={styles.stepFooterAction}>
                   <button type="button" className={styles.primaryAction} onClick={handlePaymentConfirm} disabled={isCreatingIntent}>
