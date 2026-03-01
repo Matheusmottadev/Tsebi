@@ -149,6 +149,10 @@ export function CheckoutPaymentForm({
           onReady={() => {
             setPaymentElementReady(true);
           }}
+          onLoadError={() => {
+            setPaymentElementReady(false);
+            setErrorMessage("Nao foi possivel carregar os metodos de pagamento. Atualize a pagina e tente novamente.");
+          }}
           onChange={handlePaymentElementChange}
         />
       </div>

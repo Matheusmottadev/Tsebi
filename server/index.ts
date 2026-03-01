@@ -945,26 +945,61 @@ app.use(
           "'self'",
           "'unsafe-inline'",
           "https://js.stripe.com",
+          "https://m.stripe.network",
+          "https://checkout.stripe.com",
+          "https://*.stripe.com",
+          "https://www.google.com",
+          "https://www.gstatic.com",
           "https://www.googletagmanager.com",
           "https://www.google-analytics.com",
+          "https://ssl.google-analytics.com",
           "https://accounts.google.com",
-          "https://www.gstatic.com"
+          "https://www.google.com/recaptcha/"
         ],
-        styleSrc: ["'self'", "'unsafe-inline'", "https:"],
-        imgSrc: ["'self'", "data:", "blob:", "https:"],
-        fontSrc: ["'self'", "data:", "https:"],
+        styleSrc: ["'self'", "'unsafe-inline'", "https:", "https://fonts.googleapis.com"],
+        imgSrc: [
+          "'self'",
+          "data:",
+          "blob:",
+          "https:",
+          "https://www.google-analytics.com",
+          "https://stats.g.doubleclick.net",
+          "https://*.googleusercontent.com",
+          "https://*.gstatic.com"
+        ],
+        fontSrc: ["'self'", "data:", "https:", "https://fonts.gstatic.com"],
         connectSrc: [
           "'self'",
           "https://api.stripe.com",
           "https://r.stripe.com",
+          "https://m.stripe.network",
+          "https://q.stripe.com",
+          "https://checkout.stripe.com",
+          "https://*.stripe.com",
+          "https://www.googletagmanager.com",
           "https://www.google-analytics.com",
+          "https://region1.google-analytics.com",
+          "https://stats.g.doubleclick.net",
+          "https://www.google.com",
+          "https://www.gstatic.com",
           "https://oauth2.googleapis.com",
           "https://accounts.google.com",
+          "https://viacep.com.br",
           "https://us.i.posthog.com",
+          "https://*.i.posthog.com",
           "https://*.posthog.com"
         ],
-        frameSrc: ["'self'", "https://js.stripe.com", "https://hooks.stripe.com", "https://accounts.google.com"],
-        mediaSrc: ["'self'", "data:", "blob:", "https:"],
+        frameSrc: [
+          "'self'",
+          "https://js.stripe.com",
+          "https://hooks.stripe.com",
+          "https://checkout.stripe.com",
+          "https://*.stripe.com",
+          "https://accounts.google.com",
+          "https://www.google.com"
+        ],
+        workerSrc: ["'self'", "blob:", "https://js.stripe.com", "https://*.stripe.com"],
+        mediaSrc: ["'self'", "data:", "blob:", "https:", "https://media.tsebi.com.br"],
         formAction: ["'self'"],
         upgradeInsecureRequests: []
       }
@@ -1021,7 +1056,9 @@ app.use(express.json());
 app.use(
   "/images",
   express.static(path.resolve(process.cwd(), "images"), {
-    fallthrough: false
+    fallthrough: false,
+    maxAge: "30d",
+    immutable: true
   })
 );
 

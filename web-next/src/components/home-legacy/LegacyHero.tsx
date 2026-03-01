@@ -22,7 +22,8 @@ export function LegacyHero() {
           muted
           loop
           playsInline
-          preload="auto"
+          preload="metadata"
+          poster={HERO_IMAGE}
           onError={() => setMediaMode("image")}
         >
           <source src={HERO_VIDEO} type="video/mp4" />

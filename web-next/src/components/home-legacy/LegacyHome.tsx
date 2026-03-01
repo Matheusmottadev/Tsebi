@@ -749,7 +749,8 @@ export function LegacyHome({ products }: LegacyHomeProps) {
                 muted
                 loop
                 playsInline
-                preload="auto"
+                preload="metadata"
+                poster={COLLECTION_IMAGE_PRIMARY}
                 onCanPlay={() => setIsCollectionVideoReady(true)}
                 onLoadedData={() => setIsCollectionVideoReady(true)}
                 onPlaying={() => setIsCollectionVideoReady(true)}
@@ -845,8 +846,9 @@ export function LegacyHome({ products }: LegacyHomeProps) {
               className="homepage-picture-image"
               src={HOMEPAGE_PICTURE_IMAGE}
               alt="Imagem de destaque da homepage"
-              loading="lazy"
+              loading="eager"
               decoding="async"
+              fetchPriority="high"
               onError={(event) => {
                 const element = event.currentTarget;
                 const currentSrc = element.getAttribute("src") || "";
