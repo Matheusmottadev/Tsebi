@@ -2,11 +2,12 @@
 
 import { ChangeEvent, FocusEvent, useEffect, useMemo, useRef, useState } from "react";
 import { Elements } from "@stripe/react-stripe-js";
+import type { Stripe } from "@stripe/stripe-js";
 import { Price } from "@/components/Price";
 import { CheckoutPaymentForm } from "@/components/checkout/CheckoutPaymentForm";
 import { cartSelectors, useCartStore } from "@/lib/cart/cartStore";
 import { isCheckoutEnabled } from "@/lib/env";
-import { hasStripePublishableKey, stripePromise } from "@/lib/stripe";
+import { resolveStripePromise } from "@/lib/stripe";
 import { addAddress, getMe } from "@/services/auth";
 import { createPaymentIntent, quoteShipping } from "@/services/orders";
 import type { CreatePaymentIntentPayload, ShippingQuote } from "@/services/orders";
@@ -446,7 +447,8 @@ function buildStripePaymentMethodOrder(selectedMethod: PaymentMethodChoice): str
 
 export function CheckoutClient() {
   const checkoutEnabled = isCheckoutEnabled();
-  const stripeConfigured = hasStripePublishableKey();
+  const [stripePromise, setStripePromise] = useState<Promise<Stripe | null> | null>(null);
+  const [stripeStatus, setStripeStatus] = useState<"loading" | "ready" | "missing">("loading");
 
   const hasHydrated = useCartStore(cartSelectors.hasHydrated);
   const items = useCartStore(cartSelectors.items);
@@ -500,6 +502,27 @@ export function CheckoutClient() {
   const shippingCents = selectedCompanyPaidByStore ? 0 : Math.max(0, Number(selectedShippingQuote?.priceCents || 0));
   const totalCents = Math.max(0, subtotal + shippingCents);
   const stripePaymentMethodOrder = useMemo(() => buildStripePaymentMethodOrder("apple_pay"), []);
+  const stripeConfigured = stripeStatus === "ready";
+  const stripeLoading = stripeStatus === "loading";
+
+  useEffect(() => {
+    let isMounted = true;
+    const promise = resolveStripePromise();
+    setStripePromise(promise);
+    promise
+      .then((instance) => {
+        if (!isMounted) return;
+        setStripeStatus(instance ? "ready" : "missing");
+      })
+      .catch(() => {
+        if (!isMounted) return;
+        setStripeStatus("missing");
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   useEffect(() => {
     try {
@@ -604,14 +627,16 @@ export function CheckoutClient() {
     if (!checkoutEnabled) return "Checkout desativado no momento.";
     if (!hasHydrated) return "Carregando carrinho...";
     if (itemCount <= 0) return "Seu carrinho esta vazio.";
+    if (stripeLoading) return "Carregando Stripe...";
     if (!stripeConfigured) return "Stripe não configurado.";
     return "";
-  }, [checkoutEnabled, hasHydrated, itemCount, stripeConfigured]);
+  }, [checkoutEnabled, hasHydrated, itemCount, stripeConfigured, stripeLoading]);
 
   function assertCheckoutReady() {
     if (!checkoutEnabled) throw new CheckoutValidationError("Checkout desativado.");
     if (!hasHydrated) throw new CheckoutValidationError("Carrinho ainda carregando.");
     if (itemCount <= 0) throw new CheckoutValidationError("Carrinho vazio.");
+    if (stripeLoading) throw new CheckoutValidationError("Stripe ainda carregando.");
     if (!stripeConfigured) throw new CheckoutValidationError("Stripe não configurado.");
   }
 
@@ -1332,7 +1357,12 @@ export function CheckoutClient() {
             {activeStep === "payment" ? (
               <div className={styles.paymentWrap}>
                 <p className={styles.stepHint}>Pagamento seguro com Stripe</p>
-                {!stripeConfigured ? <p className={styles.stepHint}>Stripe indisponivel no frontend (NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY).</p> : null}
+                {stripeLoading ? <p className={styles.stepHint}>Carregando metodos de pagamento...</p> : null}
+                {!stripeLoading && !stripeConfigured ? (
+                  <p className={styles.stepHint}>
+                    Stripe indisponivel. Verifique STRIPE_PUBLISHABLE_KEY no backend e/ou NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY.
+                  </p>
+                ) : null}
 
                 <div className={styles.stepFooterAction}>
                   <button type="button" className={styles.primaryAction} onClick={handlePaymentConfirm} disabled={isCreatingIntent}>
@@ -1340,7 +1370,7 @@ export function CheckoutClient() {
                   </button>
                 </div>
 
-                {intent?.clientSecret ? (
+                {intent?.clientSecret && stripePromise ? (
                   <div id="checkout-secure-payment" className={styles.securePaymentBox}>
                     <h3>Confirmacao segura</h3>
                     <p>Finalize seu pagamento com Stripe.</p>
