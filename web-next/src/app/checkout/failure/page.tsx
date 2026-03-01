@@ -26,7 +26,7 @@ export default function CheckoutFailurePage() {
     if (message) params.set("message", message);
     if (orderId) params.set("orderId", orderId);
     if (orderEmail) params.set("email", orderEmail);
-    return `/payment-result?${params.toString()}`;
+    return `/legacy/pages/payment-result.html?${params.toString()}`;
   }, [message, orderEmail, orderId]);
 
   return (

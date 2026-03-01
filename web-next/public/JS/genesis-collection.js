@@ -1,4 +1,4 @@
-(() => {
+﻿(() => {
   // Para atualizar no futuro:
   // 1) Adicione/remova itens no array `genesisItems`.
   // 2) Para nova categoria, basta usar uma nova `categoryKey`.
@@ -13,31 +13,31 @@
         en: "Italian leather bomber jacket with silk lining"
       },
       priceLabel: "R$ 5.900",
-      image: "images/placeholder.jpg",
+      image: "images/placeholderreal.webp",
       href: "produto.html?id=genesis-bomber"
     },
     {
       id: "genesis-tailored",
       categoryKey: "trousers",
-      categoryLabel: { pt: "Calças", en: "Trousers" },
+      categoryLabel: { pt: "CalÃ§as", en: "Trousers" },
       name: {
-        pt: "Calça de alfaiataria em sarja premium estruturada",
+        pt: "CalÃ§a de alfaiataria em sarja premium estruturada",
         en: "Premium structured tailored twill trousers"
       },
       priceLabel: "R$ 2.200",
-      image: "images/placeholder.jpg",
+      image: "images/placeholderreal.webp",
       href: "produto.html?id=genesis-tailored"
     },
     {
       id: "atelier-heels",
       categoryKey: "footwear",
-      categoryLabel: { pt: "Calçados", en: "Footwear" },
+      categoryLabel: { pt: "CalÃ§ados", en: "Footwear" },
       name: {
         pt: "Scarpin em couro envernizado de salto esculpido",
         en: "Patent leather pumps with sculpted heel"
       },
       priceLabel: "R$ 3.200",
-      image: "images/placeholder.jpg",
+      image: "images/placeholderreal.webp",
       href: "produto.html?id=atelier-heels"
     },
     {
@@ -45,11 +45,11 @@
       categoryKey: "knitwear",
       categoryLabel: { pt: "Malhas", en: "Knitwear" },
       name: {
-        pt: "Malha em lã merino de toque ultrafino",
+        pt: "Malha em lÃ£ merino de toque ultrafino",
         en: "Ultrafine merino wool knitwear"
       },
       priceLabel: "R$ 1.980",
-      image: "images/placeholder.jpg",
+      image: "images/placeholderreal.webp",
       href: "produto.html?id=flux-knit"
     },
     {
@@ -61,19 +61,19 @@
         en: "Silk crepe column dress with couture drape"
       },
       priceLabel: "R$ 4.200",
-      image: "images/placeholder.jpg",
+      image: "images/placeholderreal.webp",
       href: "produto.html?id=noir-dress"
     },
     {
       id: "essence-trousers",
       categoryKey: "trousers",
-      categoryLabel: { pt: "Calças", en: "Trousers" },
+      categoryLabel: { pt: "CalÃ§as", en: "Trousers" },
       name: {
-        pt: "Calça wide leg em linho premium com prega profunda",
+        pt: "CalÃ§a wide leg em linho premium com prega profunda",
         en: "Premium linen wide-leg trousers with deep pleat"
       },
       priceLabel: "R$ 2.250",
-      image: "images/placeholder.jpg",
+      image: "images/placeholderreal.webp",
       href: "produto.html?id=essence-trousers"
     }
   ];
@@ -111,12 +111,12 @@
   function toCategoryLabel(category, key) {
     const normalized = normalizeText(category);
     if (key === "jackets") return { pt: "Jaquetas", en: "Jackets" };
-    if (key === "trousers") return { pt: "Calças", en: "Trousers" };
-    if (key === "footwear") return { pt: "Calçados", en: "Footwear" };
+    if (key === "trousers") return { pt: "CalÃ§as", en: "Trousers" };
+    if (key === "footwear") return { pt: "CalÃ§ados", en: "Footwear" };
     if (key === "knitwear") return { pt: "Malhas", en: "Knitwear" };
     if (key === "dresses") return { pt: "Vestidos", en: "Dresses" };
     if (normalized) return { pt: category, en: category };
-    return { pt: "Coleção", en: "Collection" };
+    return { pt: "ColeÃ§Ã£o", en: "Collection" };
   }
 
   let genesisItems = [...fallbackGenesisItems];
@@ -129,7 +129,7 @@
 
   const lang = localStorage.getItem("tsebi-site-language") === "en" ? "en" : "pt";
   const allLabel = lang === "en" ? "All categories" : "Todas as categorias";
-  const emptyLabel = lang === "en" ? "No items found in this category." : "Nenhuma peça encontrada nessa categoria.";
+  const emptyLabel = lang === "en" ? "No items found in this category." : "Nenhuma peÃ§a encontrada nessa categoria.";
 
   let categories = [];
 
@@ -261,7 +261,7 @@
             },
             priceLabel: String(item.priceLabel || ""),
             stock: Number(item.stock ?? item.stock_qty ?? 0),
-            image: String(item.image || "images/placeholder.jpg"),
+            image: String(item.image || "images/placeholderreal.webp"),
             href: String(item.href || `produto.html?id=${encodeURIComponent(String(item.id || "").trim())}`)
           };
         })
@@ -283,3 +283,4 @@
     render();
   });
 })();
+

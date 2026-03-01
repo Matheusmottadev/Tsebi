@@ -17,11 +17,11 @@ export default function CheckoutSuccessPage() {
     return String(searchParams.get("email") || "").trim().toLowerCase();
   }, []);
   const paymentResultHref = useMemo(() => {
-    if (!orderId && !orderEmail) return "/payment-result";
+    if (!orderId && !orderEmail) return "/legacy/pages/payment-result.html";
     const params = new URLSearchParams();
     if (orderId) params.set("orderId", orderId);
     if (orderEmail) params.set("email", orderEmail);
-    return `/payment-result?${params.toString()}`;
+    return `/legacy/pages/payment-result.html?${params.toString()}`;
   }, [orderId, orderEmail]);
   const hasHydrated = useCartStore(cartSelectors.hasHydrated);
   const clear = useCartStore((state) => state.clear);

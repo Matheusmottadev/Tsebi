@@ -8,6 +8,8 @@
   max-width: 1240px;
   margin: 0 auto;
   padding: 40px 24px 72px;
+  display: flex;
+  justify-content: center;
 }
 
 .card {
@@ -19,6 +21,7 @@
   flex-direction: column;
   gap: 10px;
   max-width: 680px;
+  width: 100%;
 }
 
 .kicker {

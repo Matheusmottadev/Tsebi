@@ -5,7 +5,7 @@ import { useState } from "react";
 
 const HERO_VIDEO = "/videos/legacy/hero.mp4";
 const HERO_IMAGE = "/images/legacy/home/hero.jpg";
-const HERO_PLACEHOLDER = "/images/placeholder.jpg";
+const HERO_PLACEHOLDER = "/images/placeholderreal.webp";
 
 type HeroMediaMode = "video" | "image" | "fallback";
 
@@ -54,4 +54,5 @@ export function LegacyHero() {
     </section>
   );
 }
+
 

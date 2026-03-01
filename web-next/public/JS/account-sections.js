@@ -1,4 +1,4 @@
-(function initAccountExtraSections() {
+﻿(function initAccountExtraSections() {
   const PRIVATE_CARE_KEY = 'tsebi-private-care-v1';
   const PRIVATE_PREFS_KEY = 'tsebi-private-care-prefs-v1';
   const REPAIRS_KEY = 'tsebi-repairs-v1';
@@ -249,8 +249,8 @@
     function productCard(item, note) {
       const id = String(item.id || item.sku || '').trim();
       const href = id ? `/produto?id=${encodeURIComponent(id)}` : '#';
-      const image = String(item.imageUrl || item.image_url || '/images/placeholder.jpg').trim();
-      return `<article class="wishlist-item-card"><img src="${escapeHtml(image)}" alt="${escapeHtml(item.name || 'Produto')}" loading="lazy" decoding="async" onerror="this.onerror=null;this.src='/images/placeholder.jpg';" /><h3>${escapeHtml(item.name || 'Produto')}</h3><p>${escapeHtml(formatCurrencyBRL(item.priceCents || item.price_cents || item.price || 0, item.currency || 'brl'))}</p>${note ? `<span class="tiny-badge">${escapeHtml(note)}</span>` : ''}<a class="btn-outline" href="${escapeHtml(href)}">Ver produto</a></article>`;
+      const image = String(item.imageUrl || item.image_url || '/images/placeholderreal.webp').trim();
+      return `<article class="wishlist-item-card"><img src="${escapeHtml(image)}" alt="${escapeHtml(item.name || 'Produto')}" loading="lazy" decoding="async" onerror="this.onerror=null;this.src='/images/placeholderreal.webp';" /><h3>${escapeHtml(item.name || 'Produto')}</h3><p>${escapeHtml(formatCurrencyBRL(item.priceCents || item.price_cents || item.price || 0, item.currency || 'brl'))}</p>${note ? `<span class="tiny-badge">${escapeHtml(note)}</span>` : ''}<a class="btn-outline" href="${escapeHtml(href)}">Ver produto</a></article>`;
     }
 
     function render() {
@@ -383,8 +383,8 @@
         .map((item) => {
           const id = String(item.id || item.sku || '').trim();
           const href = id ? `/produto?id=${encodeURIComponent(id)}` : '#';
-          const image = String(item.imageUrl || item.image_url || '/images/placeholder.jpg').trim();
-          return `<article class="wishlist-item-card"><img src="${escapeHtml(image)}" alt="${escapeHtml(item.name || 'Produto')}" loading="lazy" decoding="async" onerror="this.onerror=null;this.src='/images/placeholder.jpg';" /><h3>${escapeHtml(item.name || 'Produto')}</h3><p>${escapeHtml(formatCurrencyBRL(item.priceCents || item.price_cents || 0, item.currency || 'brl'))}</p><div class="wishlist-actions"><a class="btn-outline" href="${escapeHtml(href)}">Ver produto</a><button type="button" class="link-btn" data-remove-favorite="${escapeHtml(id)}">Remover</button></div></article>`;
+          const image = String(item.imageUrl || item.image_url || '/images/placeholderreal.webp').trim();
+          return `<article class="wishlist-item-card"><img src="${escapeHtml(image)}" alt="${escapeHtml(item.name || 'Produto')}" loading="lazy" decoding="async" onerror="this.onerror=null;this.src='/images/placeholderreal.webp';" /><h3>${escapeHtml(item.name || 'Produto')}</h3><p>${escapeHtml(formatCurrencyBRL(item.priceCents || item.price_cents || 0, item.currency || 'brl'))}</p><div class="wishlist-actions"><a class="btn-outline" href="${escapeHtml(href)}">Ver produto</a><button type="button" class="link-btn" data-remove-favorite="${escapeHtml(id)}">Remover</button></div></article>`;
         })
         .join('');
 
@@ -542,3 +542,4 @@
     loadFromBackend().then(renderHistory).catch(renderHistory);
   };
 })();
+

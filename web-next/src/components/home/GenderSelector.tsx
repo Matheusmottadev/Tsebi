@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
@@ -28,7 +28,7 @@ function matchesGender(productGender: string, selected: GenderTab): boolean {
 
 function resolveImageSrc(value: string): string {
   const raw = String(value || "").trim();
-  if (!raw) return "/images/placeholder.jpg";
+  if (!raw) return "/images/placeholderreal.webp";
   if (/^https?:\/\//i.test(raw)) return raw;
   if (raw.startsWith("/")) return raw;
   return `/${raw.replace(/^\.?\//, "")}`;
@@ -98,7 +98,7 @@ export function GenderSelector() {
   }, [products, selectedGender]);
 
   return (
-    <section className="category-switch" aria-label="Seleção por gênero">
+    <section className="category-switch" aria-label="SeleÃ§Ã£o por gÃªnero">
       <div className="category-intro">
         <p>Explore as pecas em destaque por genero.</p>
         <div className="category-tabs" role="tablist" aria-label="Selecionar genero">
@@ -125,7 +125,7 @@ export function GenderSelector() {
 
       <div className="category-grid">
         {isLoading ? <p className="genesis-empty">Carregando produtos...</p> : null}
-        {!isLoading && hasError ? <p className="genesis-empty">Não foi possível carregar os produtos agora.</p> : null}
+        {!isLoading && hasError ? <p className="genesis-empty">NÃ£o foi possÃ­vel carregar os produtos agora.</p> : null}
         {!isLoading && !hasError && filteredProducts.length === 0 ? (
           <p className="genesis-empty">Nenhum produto encontrado para este genero.</p>
         ) : null}
@@ -153,7 +153,7 @@ export function GenderSelector() {
                         onError={(event) => {
                           const element = event.currentTarget;
                           element.onerror = null;
-                          element.src = pair.primary || "/images/placeholder.jpg";
+                          element.src = pair.primary || "/images/placeholderreal.webp";
                         }}
                       />
                     </div>
@@ -167,3 +167,4 @@ export function GenderSelector() {
     </section>
   );
 }
+

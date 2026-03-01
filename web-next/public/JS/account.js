@@ -1,18 +1,18 @@
-const store = window.TsebiUserStore;
+﻿const store = window.TsebiUserStore;
 
 const productCatalog = [
-  { id: "genesis-bomber", name: "Jaqueta bomber em couro italiano com forro em seda", priceLabel: "R$ 5.900", image: "images/placeholder.jpg" },
-  { id: "genesis-tailored", name: "Calça de alfaiataria em sarja premium estruturada", priceLabel: "R$ 2.200", image: "images/placeholder.jpg" },
-  { id: "origem-shirt", name: "Camisa em algodão croata de trama nobre", priceLabel: "R$ 1.600", image: "images/placeholder.jpg" },
-  { id: "origem-skirt", name: "Saia estruturada em lã fria de acabamento impecável", priceLabel: "R$ 2.450", image: "images/placeholder.jpg" },
-  { id: "atelier-bag", name: "Bolsa em couro natural com ferragens banhadas", priceLabel: "R$ 4.800", image: "images/placeholder.jpg" },
-  { id: "atelier-heels", name: "Scarpin em couro envernizado de salto esculpido", priceLabel: "R$ 3.200", image: "images/placeholder.jpg" },
-  { id: "flux-trench", name: "Trench coat em gabardine com corte arquitetônico", priceLabel: "R$ 3.950", image: "images/placeholder.jpg" },
-  { id: "flux-knit", name: "Malha em lã merino de toque ultrafino", priceLabel: "R$ 1.980", image: "images/placeholder.jpg" },
-  { id: "noir-dress", name: "Vestido coluna em crepe de seda com caimento couture", priceLabel: "R$ 4.200", image: "images/placeholder.jpg" },
-  { id: "noir-sneaker", name: "Tênis em nylon técnico e couro de acabamento premium", priceLabel: "R$ 2.700", image: "images/placeholder.jpg" },
-  { id: "essence-blazer", name: "Blazer em linho premium com alfaiataria de precisão", priceLabel: "R$ 3.350", image: "images/placeholder.jpg" },
-  { id: "essence-trousers", name: "Calça wide leg em linho premium com prega profunda", priceLabel: "R$ 2.250", image: "images/placeholder.jpg" }
+  { id: "genesis-bomber", name: "Jaqueta bomber em couro italiano com forro em seda", priceLabel: "R$ 5.900", image: "images/placeholderreal.webp" },
+  { id: "genesis-tailored", name: "CalÃ§a de alfaiataria em sarja premium estruturada", priceLabel: "R$ 2.200", image: "images/placeholderreal.webp" },
+  { id: "origem-shirt", name: "Camisa em algodÃ£o croata de trama nobre", priceLabel: "R$ 1.600", image: "images/placeholderreal.webp" },
+  { id: "origem-skirt", name: "Saia estruturada em lÃ£ fria de acabamento impecÃ¡vel", priceLabel: "R$ 2.450", image: "images/placeholderreal.webp" },
+  { id: "atelier-bag", name: "Bolsa em couro natural com ferragens banhadas", priceLabel: "R$ 4.800", image: "images/placeholderreal.webp" },
+  { id: "atelier-heels", name: "Scarpin em couro envernizado de salto esculpido", priceLabel: "R$ 3.200", image: "images/placeholderreal.webp" },
+  { id: "flux-trench", name: "Trench coat em gabardine com corte arquitetÃ´nico", priceLabel: "R$ 3.950", image: "images/placeholderreal.webp" },
+  { id: "flux-knit", name: "Malha em lÃ£ merino de toque ultrafino", priceLabel: "R$ 1.980", image: "images/placeholderreal.webp" },
+  { id: "noir-dress", name: "Vestido coluna em crepe de seda com caimento couture", priceLabel: "R$ 4.200", image: "images/placeholderreal.webp" },
+  { id: "noir-sneaker", name: "TÃªnis em nylon tÃ©cnico e couro de acabamento premium", priceLabel: "R$ 2.700", image: "images/placeholderreal.webp" },
+  { id: "essence-blazer", name: "Blazer em linho premium com alfaiataria de precisÃ£o", priceLabel: "R$ 3.350", image: "images/placeholderreal.webp" },
+  { id: "essence-trousers", name: "CalÃ§a wide leg em linho premium com prega profunda", priceLabel: "R$ 2.250", image: "images/placeholderreal.webp" }
 ];
 
 const steps = {
@@ -190,7 +190,7 @@ function renderFavorites() {
         <a class="account-fav-link" href="produto.html?id=${encodeURIComponent(item.id)}">
           <img src="${item.image}" alt="${item.name}" loading="lazy" decoding="async" />
         </a>
-        <button class="product-favorite-btn is-active account-fav-remove" type="button" data-remove-favorite="${item.id}" aria-label="Remover dos favoritos">♥</button>
+        <button class="product-favorite-btn is-active account-fav-remove" type="button" data-remove-favorite="${item.id}" aria-label="Remover dos favoritos">â™¥</button>
       </div>
       <a class="account-fav-link" href="produto.html?id=${encodeURIComponent(item.id)}">
         <h4>${item.name}</h4>
@@ -221,7 +221,7 @@ function renderLoggedState() {
   const user = store?.getCurrentUser?.();
   if (!user) return false;
   const firstName = String(user.firstName || user.name || "").split(" ")[0] || "Cliente";
-  if (loggedTitle) loggedTitle.textContent = `Olá, ${firstName}`;
+  if (loggedTitle) loggedTitle.textContent = `OlÃ¡, ${firstName}`;
   if (loggedEmail) loggedEmail.textContent = user.email || "";
   fillMyData(user);
   setEditMode(false);
@@ -236,7 +236,7 @@ function handleEmailCheck(event) {
   event.preventDefault();
   typedEmail = normalizeEmail(emailInput?.value || "");
   if (!typedEmail || !typedEmail.includes("@")) {
-    setFeedback("Insira um e-mail válido.", "is-error");
+    setFeedback("Insira um e-mail vÃ¡lido.", "is-error");
     return;
   }
 
@@ -266,11 +266,11 @@ async function handleLogin(event) {
   const password = String(loginPasswordInput?.value || "");
   const result = await store.login({ email: typedEmail, password });
   if (!result.ok) {
-    setFeedback(result.error || "Não foi possível entrar.", "is-error");
+    setFeedback(result.error || "NÃ£o foi possÃ­vel entrar.", "is-error");
     return;
   }
   if (result.stage === "password_reset_required") {
-    setFeedback(`Senha temporária detectada. Enviamos um código para ${typedEmail}.`, "is-error");
+    setFeedback(`Senha temporÃ¡ria detectada. Enviamos um cÃ³digo para ${typedEmail}.`, "is-error");
     window.setTimeout(() => {
       window.location.href = buildResetCodeUrl(typedEmail, 60);
     }, 600);
@@ -299,7 +299,7 @@ function handleRegister(event) {
   });
 
   if (!created.ok) {
-    setFeedback(created.error || "Não foi possível criar sua conta.", "is-error");
+    setFeedback(created.error || "NÃ£o foi possÃ­vel criar sua conta.", "is-error");
     return;
   }
 
@@ -325,7 +325,7 @@ function getSafeBackTarget() {
 }
 
 if (!store) {
-  setFeedback("Sistema de conta indisponível.", "is-error");
+  setFeedback("Sistema de conta indisponÃ­vel.", "is-error");
 } else if (!renderLoggedState()) {
   showStep("email");
 }
@@ -393,7 +393,7 @@ accountDataEditForm?.addEventListener("submit", (event) => {
   const birthDate = String(accountEditBirthDate?.value || "").trim();
 
   if (firstName.length < 2 || lastName.length < 2) {
-    setFeedback("Nome e sobrenome são obrigatórios.", "is-error");
+    setFeedback("Nome e sobrenome sÃ£o obrigatÃ³rios.", "is-error");
     return;
   }
 
@@ -405,7 +405,7 @@ accountDataEditForm?.addEventListener("submit", (event) => {
   });
 
   if (!result || !result.ok) {
-    setFeedback(result?.error || "Não foi possível salvar seus dados.", "is-error");
+    setFeedback(result?.error || "NÃ£o foi possÃ­vel salvar seus dados.", "is-error");
     return;
   }
 
@@ -435,3 +435,4 @@ accountPageBack?.addEventListener("click", () => {
   }
   window.location.href = "index.html";
 });
+

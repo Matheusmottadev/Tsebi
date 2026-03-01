@@ -1,4 +1,4 @@
-export {};
+﻿export {};
 type JsonRecord = Record<string, unknown>;
 
 type QueryResult<TRow extends JsonRecord> = {
@@ -10,7 +10,7 @@ const { query } = require("./db") as {
   query: <TRow extends JsonRecord = JsonRecord>(text: string, params?: unknown[]) => Promise<QueryResult<TRow>>;
 };
 
-const DEFAULT_IMAGE = "images/placeholder.jpg";
+const DEFAULT_IMAGE = "images/placeholderreal.webp";
 const STOREFRONT_DEFAULT_PRICE_CENTS = 100;
 
 export type VariantStockMap = Record<string, number>;
@@ -103,69 +103,69 @@ export type Product = {
 
 const PRODUCT_METADATA: Record<string, ProductStaticMetadata> = {
   "genesis-bomber": {
-    collection: "Gênesis",
+    collection: "GÃªnesis",
     category: "Jaquetas",
-    material: "Couro e lã",
+    material: "Couro e lÃ£",
     sizes: ["P", "M", "G"],
     colors: ["Vermelho", "Areia"],
     gender: "Unissex",
-    image: "images/placeholder.jpg",
-    secondaryImage: "images/placeholder.jpg",
+    image: "images/placeholderreal.webp",
+    secondaryImage: "images/placeholderreal.webp",
     nameEn: "Italian leather bomber jacket with silk lining"
   },
   "genesis-tailored": {
-    collection: "Gênesis",
-    category: "Calças",
+    collection: "GÃªnesis",
+    category: "CalÃ§as",
     material: "Sarja premium",
     sizes: ["36", "38", "40", "42"],
     colors: ["Grafite", "Preto"],
     gender: "Feminino",
-    image: "images/placeholder.jpg",
-    secondaryImage: "images/placeholder.jpg",
+    image: "images/placeholderreal.webp",
+    secondaryImage: "images/placeholderreal.webp",
     nameEn: "Premium structured tailored twill pants"
   },
   "origem-shirt": {
     collection: "Alicerce",
     category: "Camisas",
-    material: "Algodão egípcio",
+    material: "AlgodÃ£o egÃ­pcio",
     sizes: ["P", "M", "G", "GG"],
     colors: ["Branco", "Azul"],
     gender: "Masculino",
-    image: "images/placeholder.jpg",
-    secondaryImage: "images/placeholder.jpg",
+    image: "images/placeholderreal.webp",
+    secondaryImage: "images/placeholderreal.webp",
     nameEn: "Croatian cotton shirt with noble weave"
   },
   "origem-skirt": {
     collection: "Alicerce",
     category: "Saias",
-    material: "Lã fria",
+    material: "LÃ£ fria",
     sizes: ["36", "38", "40"],
     colors: ["Preto", "Marfim"],
     gender: "Feminino",
-    image: "images/placeholder.jpg",
-    secondaryImage: "images/placeholder.jpg",
+    image: "images/placeholderreal.webp",
+    secondaryImage: "images/placeholderreal.webp",
     nameEn: "Structured cool wool skirt with impeccable finish"
   },
   "atelier-bag": {
     collection: "Alicerce",
     category: "Bolsas",
     material: "Couro natural",
-    sizes: ["Único"],
+    sizes: ["Ãšnico"],
     colors: ["Caramelo", "Preto"],
     gender: "Unissex",
-    image: "images/placeholder.jpg",
-    secondaryImage: "images/placeholder.jpg",
+    image: "images/placeholderreal.webp",
+    secondaryImage: "images/placeholderreal.webp",
     nameEn: "Natural leather bag with plated hardware"
   },
   "atelier-heels": {
-    collection: "Gênesis",
-    category: "Calçados",
+    collection: "GÃªnesis",
+    category: "CalÃ§ados",
     material: "Couro envernizado",
     sizes: ["35", "36", "37", "38", "39"],
     colors: ["Preto", "Vinho"],
     gender: "Feminino",
-    image: "images/placeholder.jpg",
-    secondaryImage: "images/placeholder.jpg",
+    image: "images/placeholderreal.webp",
+    secondaryImage: "images/placeholderreal.webp",
     nameEn: "Patent leather pumps with sculpted heel"
   },
   "flux-trench": {
@@ -175,41 +175,41 @@ const PRODUCT_METADATA: Record<string, ProductStaticMetadata> = {
     sizes: ["P", "M", "G"],
     colors: ["Areia", "Oliva"],
     gender: "Unissex",
-    image: "images/placeholder.jpg",
-    secondaryImage: "images/placeholder.jpg",
+    image: "images/placeholderreal.webp",
+    secondaryImage: "images/placeholderreal.webp",
     nameEn: "Gabardine trench coat with architectural cut"
   },
   "flux-knit": {
-    collection: "Gênesis",
+    collection: "GÃªnesis",
     category: "Malhas",
-    material: "Lã merino",
+    material: "LÃ£ merino",
     sizes: ["P", "M", "G", "GG"],
     colors: ["Off white", "Cinza"],
     gender: "Masculino",
-    image: "images/placeholder.jpg",
-    secondaryImage: "images/placeholder.jpg",
+    image: "images/placeholderreal.webp",
+    secondaryImage: "images/placeholderreal.webp",
     nameEn: "Ultrafine merino wool knitwear"
   },
   "noir-dress": {
-    collection: "Gênesis",
+    collection: "GÃªnesis",
     category: "Vestidos",
     material: "Crepe de seda",
     sizes: ["36", "38", "40", "42"],
     colors: ["Preto"],
     gender: "Feminino",
-    image: "images/placeholder.jpg",
-    secondaryImage: "images/placeholder.jpg",
+    image: "images/placeholderreal.webp",
+    secondaryImage: "images/placeholderreal.webp",
     nameEn: "Silk crepe column dress with couture drape"
   },
   "noir-sneaker": {
     collection: "Alicerce",
-    category: "Calçados",
-    material: "Nylon técnico",
+    category: "CalÃ§ados",
+    material: "Nylon tÃ©cnico",
     sizes: ["37", "38", "39", "40", "41", "42"],
     colors: ["Preto", "Branco"],
     gender: "Unissex",
-    image: "images/placeholder.jpg",
-    secondaryImage: "images/placeholder.jpg",
+    image: "images/placeholderreal.webp",
+    secondaryImage: "images/placeholderreal.webp",
     nameEn: "Technical nylon and premium-finish leather sneaker"
   },
   "essence-blazer": {
@@ -219,19 +219,19 @@ const PRODUCT_METADATA: Record<string, ProductStaticMetadata> = {
     sizes: ["P", "M", "G"],
     colors: ["Marfim", "Bege"],
     gender: "Feminino",
-    image: "images/placeholder.jpg",
-    secondaryImage: "images/placeholder.jpg",
+    image: "images/placeholderreal.webp",
+    secondaryImage: "images/placeholderreal.webp",
     nameEn: "Premium linen blazer with precision tailoring"
   },
   "essence-trousers": {
-    collection: "Gênesis",
-    category: "Calças",
+    collection: "GÃªnesis",
+    category: "CalÃ§as",
     material: "Linho premium",
     sizes: ["36", "38", "40", "42", "44"],
     colors: ["Marfim", "Areia"],
     gender: "Feminino",
-    image: "images/placeholder.jpg",
-    secondaryImage: "images/placeholder.jpg",
+    image: "images/placeholderreal.webp",
+    secondaryImage: "images/placeholderreal.webp",
     nameEn: "Premium linen wide-leg trousers with deep pleat"
   }
 };
@@ -288,8 +288,8 @@ function sanitizeVariantStockMap(value: unknown, validColors: string[] = [], val
 
 function normalizeProductMetadata(value: unknown, fallback: ProductStaticMetadata = {}): ProductMetadata {
   const raw = asRecord(value);
-  const fallbackSizes = normalizeTextList(fallback.sizes, ["Único"]);
-  const fallbackColors = normalizeTextList(fallback.colors, ["Único"]);
+  const fallbackSizes = normalizeTextList(fallback.sizes, ["Ãšnico"]);
+  const fallbackColors = normalizeTextList(fallback.colors, ["Ãšnico"]);
   const rawVariantStock = asRecord(raw.variantStock);
 
   const extractedColors: string[] = [];
@@ -307,11 +307,11 @@ function normalizeProductMetadata(value: unknown, fallback: ProductStaticMetadat
 
   let sizes = normalizeTextList(
     [...normalizeTextList(raw.sizes, []), ...normalizeTextList(extractedSizes, [])],
-    fallbackSizes.length ? fallbackSizes : ["Único"]
+    fallbackSizes.length ? fallbackSizes : ["Ãšnico"]
   );
   let colors = normalizeTextList(
     [...normalizeTextList(raw.colors, []), ...normalizeTextList(extractedColors, [])],
-    fallbackColors.length ? fallbackColors : ["Único"]
+    fallbackColors.length ? fallbackColors : ["Ãšnico"]
   );
   let variantStock = sanitizeVariantStockMap(raw.variantStock ?? raw.variant_stock, colors, sizes);
 
@@ -328,19 +328,19 @@ function normalizeProductMetadata(value: unknown, fallback: ProductStaticMetadat
   }
 
   return {
-    sizes: sizes.length ? sizes : ["Único"],
-    colors: colors.length ? colors : ["Único"],
+    sizes: sizes.length ? sizes : ["Ãšnico"],
+    colors: colors.length ? colors : ["Ãšnico"],
     variantStock
   };
 }
 
 function formatPriceLabelFromCents(priceCents: unknown): string {
-  const value = Math.max(0, Math.round(Number(priceCents || 0) / 100));
+  const value = Math.max(0, Number(priceCents || 0) / 100);
   return value.toLocaleString("pt-BR", {
     style: "currency",
     currency: "BRL",
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2
   });
 }
 
@@ -349,9 +349,9 @@ function mapProduct(row: ProductRow | null | undefined): Product {
   const staticMetadata = PRODUCT_METADATA[sku] || {};
   const metadata = normalizeProductMetadata(row?.metadata, staticMetadata);
   const metadataRecord = asRecord(row?.metadata);
-  // New storefront baseline: keep all catalog prices at R$ 1,00 until real launch pricing is published.
-  const effectivePriceCents = STOREFRONT_DEFAULT_PRICE_CENTS;
-  const priceValue = Math.round(effectivePriceCents / 100);
+  const dbPriceCents = Math.max(0, Math.round(Number(row?.price_cents || 0)));
+  const effectivePriceCents = dbPriceCents > 0 ? dbPriceCents : STOREFRONT_DEFAULT_PRICE_CENTS;
+  const priceValue = effectivePriceCents / 100;
   const dbImage = String(row?.image_url || "").trim();
   const metadataImage = String(metadataRecord.image || metadataRecord.image_url || metadataRecord.imageUrl || "").trim();
   const metadataSecondaryImage = String(
@@ -367,7 +367,7 @@ function mapProduct(row: ProductRow | null | undefined): Product {
     name: String(row?.name || sku),
     nameEn: String(staticMetadata.nameEn || row?.name || sku),
     collection: String(staticMetadata.collection || "Alicerce"),
-    category: String(staticMetadata.category || "Coleção"),
+    category: String(staticMetadata.category || "ColeÃ§Ã£o"),
     material: String(staticMetadata.material || "Material premium"),
     sizes: metadata.sizes,
     colors: metadata.colors,
@@ -881,4 +881,5 @@ module.exports = {
   deleteProductByIdentifier,
   restoreProductFromSnapshot
 };
+
 

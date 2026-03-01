@@ -75,9 +75,9 @@ function buildGalleryImages(product: Product): string[] {
   ].filter(Boolean);
 
   const unique = Array.from(new Set(images));
-  if (unique.length === 0) return ["/images/placeholder.jpg"];
+  if (unique.length === 0) return ["/images/placeholderreal.webp"];
   while (unique.length < 5) {
-    unique.push(`/images/placeholder.jpg?v=${unique.length + 1}`);
+    unique.push(`/images/placeholderreal.webp?v=${unique.length + 1}`);
   }
   return unique.slice(0, 5);
 }
@@ -103,7 +103,7 @@ function getProductMediaList(product: Product): string[] {
 
 function resolveTailoredCardImages(item: Product, fallbackPool: string[]): { primary: string; secondary: string } {
   const media = getProductMediaList(item);
-  const primary = media[0] || String(item.image || "").trim() || fallbackPool[0] || "/images/placeholder.jpg";
+  const primary = media[0] || String(item.image || "").trim() || fallbackPool[0] || "/images/placeholderreal.webp";
   const secondary =
     media.find((src) => src !== primary) ||
     fallbackPool.find((src) => src && src !== primary) ||
@@ -799,4 +799,5 @@ export function ProductExperience({ product, recommendations, imageBaseUrl }: Pr
     </div>
   );
 }
+
 
