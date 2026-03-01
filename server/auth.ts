@@ -741,13 +741,14 @@ authRouter.post("/passkey/login/options", authRateLimit, async (req: any, res: a
   const parsed = passkeyLoginOptionsSchema.safeParse(req.body || {});
   if (!parsed.success) return res.status(400).json({ error: "INVALID_INPUT" });
 
+  const genericInvalidResponse = () => res.status(401).json({ error: "INVALID_CREDENTIALS" });
   const user = await findUserByEmail(parsed.data.email);
-  if (!user) return res.status(404).json({ error: "EMAIL_NOT_FOUND" });
+  if (!user) return genericInvalidResponse();
   if (user.passwordResetRequired) return res.status(403).json({ error: "PASSWORD_RESET_REQUIRED" });
 
   const credentials = await listPasskeysByUserId(user.id);
   if (!credentials.length) {
-    return res.status(404).json({ error: "PASSKEY_NOT_FOUND" });
+    return genericInvalidResponse();
   }
 
   const options = await generateAuthenticationOptions({
@@ -989,7 +990,7 @@ authRouter.post("/email/start", authRateLimit, async (req: any, res: any) => {
 
   const email = normalizeEmail(parsed.data.email);
   const user = await findUserByEmail(email);
-  if (!user) return res.status(404).json({ error: "EMAIL_NOT_FOUND" });
+  if (!user) return res.status(200).json(buildEmailCodeResponseBase(email, "login_code_required", null));
 
   try {
     if (!user.emailVerified) {

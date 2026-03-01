@@ -55,6 +55,12 @@ const stripePublishableKey = process.env.STRIPE_PUBLISHABLE_KEY || "";
 const stripeWebhookSecret = process.env.STRIPE_WEBHOOK_SECRET || "";
 const posthogPublicKey = process.env.POSTHOG_PUBLIC_KEY || "";
 const posthogHost = process.env.POSTHOG_HOST || "";
+const cspReportOnly = (() => {
+  const raw = String(process.env.CSP_REPORT_ONLY || "").trim().toLowerCase();
+  if (raw === "1" || raw === "true") return true;
+  if (raw === "0" || raw === "false") return false;
+  return process.env.NODE_ENV !== "production";
+})();
 /** @type {import("stripe").Stripe | null} */
 const stripe = stripeSecretKey ? new Stripe(stripeSecretKey) : null;
 let melhorEnvioSyncTimer: any = null;
@@ -99,6 +105,7 @@ function parseAllowedCorsOrigins(): string[] {
 }
 
 app.set("trust proxy", 1);
+app.disable("x-powered-by");
 
 const webhookRateLimit = rateLimit({
   windowMs: 60 * 1000,
@@ -917,7 +924,7 @@ app.use(
   cors({
     origin: (requestOrigin: any, callback: any) => {
       const allowedOrigins = parseAllowedCorsOrigins();
-      if (!requestOrigin) return callback(null, true);
+      if (!requestOrigin) return callback(null, false);
       if (allowedOrigins.includes(String(requestOrigin))) return callback(null, true);
       return callback(null, false);
     },
@@ -926,7 +933,42 @@ app.use(
 );
 app.use(
   helmet({
-    contentSecurityPolicy: false
+    contentSecurityPolicy: {
+      useDefaults: true,
+      reportOnly: cspReportOnly,
+      directives: {
+        defaultSrc: ["'self'"],
+        baseUri: ["'self'"],
+        objectSrc: ["'none'"],
+        frameAncestors: ["'self'"],
+        scriptSrc: [
+          "'self'",
+          "'unsafe-inline'",
+          "https://js.stripe.com",
+          "https://www.googletagmanager.com",
+          "https://www.google-analytics.com",
+          "https://accounts.google.com",
+          "https://www.gstatic.com"
+        ],
+        styleSrc: ["'self'", "'unsafe-inline'", "https:"],
+        imgSrc: ["'self'", "data:", "blob:", "https:"],
+        fontSrc: ["'self'", "data:", "https:"],
+        connectSrc: [
+          "'self'",
+          "https://api.stripe.com",
+          "https://r.stripe.com",
+          "https://www.google-analytics.com",
+          "https://oauth2.googleapis.com",
+          "https://accounts.google.com",
+          "https://us.i.posthog.com",
+          "https://*.posthog.com"
+        ],
+        frameSrc: ["'self'", "https://js.stripe.com", "https://hooks.stripe.com", "https://accounts.google.com"],
+        mediaSrc: ["'self'", "data:", "blob:", "https:"],
+        formAction: ["'self'"],
+        upgradeInsecureRequests: []
+      }
+    }
   })
 );
 app.use(compression());

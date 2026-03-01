@@ -313,6 +313,19 @@
         .trim();
     }
 
+    function escapeHtml(value) {
+      return String(value || "")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#39;");
+    }
+
+    function escapeRegExp(value) {
+      return String(value || "").replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    }
+
     const stopwords = new Set([
       "a","o","e","de","da","do","das","dos","para","por","em","no","na","nos","nas","um","uma","uns","umas",
       "com","sem","que","como","onde","qual","quais","quando","quanto","quanta","quanto","sao","são","se","ao","aos"
@@ -345,13 +358,21 @@
     }
 
     function highlight(text, tokens) {
-      if (!tokens.length) return text;
-      let output = text;
-      tokens.forEach((token) => {
-        if (!token) return;
-        const re = new RegExp(`(${token})`, "ig");
-        output = output.replace(re, "<mark>$1</mark>");
+      const source = String(text || "");
+      const uniqueTokens = Array.from(
+        new Set(tokens.map((token) => String(token || "").trim()).filter(Boolean))
+      );
+      if (!uniqueTokens.length) return escapeHtml(source);
+      const re = new RegExp(`(${uniqueTokens.map(escapeRegExp).join("|")})`, "ig");
+      let output = "";
+      let lastIndex = 0;
+      source.replace(re, (match, _group, offset) => {
+        output += escapeHtml(source.slice(lastIndex, offset));
+        output += `<mark>${escapeHtml(match)}</mark>`;
+        lastIndex = offset + match.length;
+        return match;
       });
+      output += escapeHtml(source.slice(lastIndex));
       return output;
     }
 
@@ -376,7 +397,9 @@
         const section = document.createElement("section");
         section.className = "faq-category";
         section.id = categoryId;
-        section.innerHTML = `<h2>${category.category}</h2>`;
+        const heading = document.createElement("h2");
+        heading.textContent = String(category.category || "");
+        section.appendChild(heading);
 
         const list = document.createElement("div");
         list.className = "faq-list";
@@ -386,11 +409,13 @@
           const item = document.createElement("details");
           item.className = "faq-item";
           item.id = itemId;
+          const safeQuestion = escapeHtml(q.question);
+          const safeAnswer = escapeHtml(q.answer);
           item.innerHTML = `
             <summary>
-              <span class="faq-question-text" data-question="${q.question}">${q.question}</span>
+              <span class="faq-question-text" data-question="${safeQuestion}">${safeQuestion}</span>
             </summary>
-            <p class="faq-answer-text" data-answer="${q.answer}">${q.answer}</p>
+            <p class="faq-answer-text" data-answer="${safeAnswer}">${safeAnswer}</p>
           `;
 
           const searchText = normalizeText(
@@ -441,8 +466,8 @@
             entry.element.open = false;
             const qEl = entry.element.querySelector(".faq-question-text");
             const aEl = entry.element.querySelector(".faq-answer-text");
-            if (qEl) qEl.innerHTML = qEl.dataset.question || qEl.textContent || "";
-            if (aEl) aEl.innerHTML = aEl.dataset.answer || aEl.textContent || "";
+            if (qEl) qEl.textContent = qEl.dataset.question || qEl.textContent || "";
+            if (aEl) aEl.textContent = aEl.dataset.answer || aEl.textContent || "";
           });
           categories.forEach((section) => {
             section.hidden = false;
@@ -480,11 +505,19 @@
           const aEl = entry.element.querySelector(".faq-answer-text");
           if (qEl) {
             const base = qEl.dataset.question || qEl.textContent || "";
-            qEl.innerHTML = matchedIds.has(entry.id) ? highlight(base, expandedTokens) : base;
+            if (matchedIds.has(entry.id)) {
+              qEl.innerHTML = highlight(base, expandedTokens);
+            } else {
+              qEl.textContent = base;
+            }
           }
           if (aEl) {
             const base = aEl.dataset.answer || aEl.textContent || "";
-            aEl.innerHTML = matchedIds.has(entry.id) ? highlight(base, expandedTokens) : base;
+            if (matchedIds.has(entry.id)) {
+              aEl.innerHTML = highlight(base, expandedTokens);
+            } else {
+              aEl.textContent = base;
+            }
           }
         });
 
@@ -500,14 +533,14 @@
         if (searchTags) {
           searchTags.innerHTML = expandedTokens
             .slice(0, 6)
-            .map((token) => `<span class="faq-tag">${token}</span>`)
+            .map((token) => `<span class="faq-tag">${escapeHtml(token)}</span>`)
             .join("");
           searchTags.setAttribute("aria-hidden", expandedTokens.length ? "false" : "true");
         }
 
         if (searchResults) {
           if (!scored.length) {
-            searchResults.innerHTML = `<div class="faq-search-empty">Nenhum resultado para "${raw}".</div>`;
+            searchResults.innerHTML = `<div class="faq-search-empty">Nenhum resultado para "${escapeHtml(raw)}".</div>`;
           } else {
             searchResults.innerHTML = `
               <ul>
@@ -518,7 +551,7 @@
                       <li>
                         <a href="#${entry.id}">
                           <span class="result-question">${highlight(entry.question, expandedTokens)}</span>
-                          <span class="result-meta">${entry.category}</span>
+                          <span class="result-meta">${escapeHtml(entry.category)}</span>
                         </a>
                       </li>
                     `;
