@@ -5,7 +5,8 @@
 }
 
 .topSearchBar {
-  padding: 22px 22px 10px;
+  margin-top: 22px;
+  padding: 18px 22px 10px;
   border-bottom: 1px solid #cfcfcf;
   display: flex;
   align-items: center;
@@ -62,7 +63,7 @@
 
 .sidebar {
   border-right: 1px solid #cfcfcf;
-  padding: 44px 22px 24px;
+  padding: 72px 22px 24px;
   background: #efefef;
 }
 
@@ -309,7 +310,7 @@
   .sidebar {
     border-right: none;
     border-bottom: 1px solid #cfcfcf;
-    padding-top: 20px;
+    padding-top: 28px;
   }
 
   .grid {
@@ -319,6 +320,7 @@
 
 @media (max-width: 620px) {
   .topSearchBar {
+    margin-top: 14px;
     padding: 14px;
     align-items: flex-start;
   }

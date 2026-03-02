@@ -496,7 +496,6 @@ export function LegacyHome({ products }: LegacyHomeProps) {
   const submitSearchPage = useCallback(() => {
     const normalized = String(searchQuery || "").trim();
     if (normalized.length < 2) return;
-    setIsSearchOpen(false);
     router.push(`/search?q=${encodeURIComponent(normalized)}`);
   }, [router, searchQuery]);
 
