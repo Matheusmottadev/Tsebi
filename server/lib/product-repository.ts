@@ -525,6 +525,71 @@ function buildSearchHaystack(product: Product): {
   return { sku, name, category, collection, material, gender, colors, sizes, all };
 }
 
+function matchesStrictSearch(product: Product, query: string, tokens: string[]): boolean {
+  const normalizedQuery = foldText(query);
+  if (!normalizedQuery) return true;
+
+  const h = buildSearchHaystack(product);
+  const strictFields = [h.name, h.category, h.sku];
+
+  if (strictFields.some((field) => field.includes(normalizedQuery))) return true;
+  if (!tokens.length) return false;
+
+  return tokens.every((token) => strictFields.some((field) => field.includes(token)));
+}
+
+const PRODUCT_TYPE_TOKENS = new Set([
+  "calca",
+  "calcas",
+  "camisa",
+  "camisas",
+  "camiseta",
+  "camisetas",
+  "jaqueta",
+  "jaquetas",
+  "blazer",
+  "blazers",
+  "saia",
+  "saias",
+  "vestido",
+  "vestidos",
+  "tenis",
+  "sapato",
+  "sapatos",
+  "bolsa",
+  "bolsas",
+  "acessorio",
+  "acessorios",
+  "casaco",
+  "casacos"
+]);
+
+function hasProductTypeIntent(query: string, tokens: string[]): boolean {
+  const normalizedQuery = foldText(query);
+  if (PRODUCT_TYPE_TOKENS.has(normalizedQuery)) return true;
+  return tokens.some((token) => PRODUCT_TYPE_TOKENS.has(token));
+}
+
+function matchesFlexibleAttributesSearch(product: Product, query: string, tokens: string[]): boolean {
+  const normalizedQuery = foldText(query);
+  if (!normalizedQuery) return true;
+
+  const h = buildSearchHaystack(product);
+  const broadFields = [h.name, h.category, h.sku, h.collection, h.material, h.gender, ...h.colors, ...h.sizes];
+
+  if (broadFields.some((field) => field.includes(normalizedQuery))) return true;
+  if (!tokens.length) return false;
+
+  return tokens.every((token) => broadFields.some((field) => field.includes(token)));
+}
+
+function matchesStorefrontSearch(product: Product, query: string, tokens: string[]): boolean {
+  if (hasProductTypeIntent(query, tokens)) {
+    return matchesStrictSearch(product, query, tokens);
+  }
+  return matchesFlexibleAttributesSearch(product, query, tokens);
+}
+
 function scoreProductSearch(product: Product, query: string, tokens: string[]): number {
   const normalizedQuery = foldText(query);
   if (!normalizedQuery) return 0;
@@ -697,7 +762,7 @@ async function searchStorefrontSuggestions({
   const tokens = tokenizeSearch(normalized);
   const suggestedProducts = activeProducts
     .map((product) => ({ product, score: scoreProductSearch(product, normalized, tokens) }))
-    .filter((entry) => entry.score > 0)
+    .filter((entry) => entry.score > 0 && matchesStorefrontSearch(entry.product, normalized, tokens))
     .sort((a, b) => b.score - a.score)
     .slice(0, safeLimit)
     .map((entry) => mapSuggestionProduct(entry.product));
@@ -738,7 +803,7 @@ async function searchStorefrontProducts({
   const scored = normalizedQuery
     ? filtered
         .map((product) => ({ product, score: scoreProductSearch(product, normalizedQuery, tokens) }))
-        .filter((entry) => entry.score > 0)
+        .filter((entry) => entry.score > 0 && matchesStorefrontSearch(entry.product, normalizedQuery, tokens))
     : filtered.map((product) => ({ product, score: 0 }));
 
   scored.sort((a, b) => {

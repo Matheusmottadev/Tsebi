@@ -62,7 +62,7 @@
 
 .sidebar {
   border-right: 1px solid #cfcfcf;
-  padding: 20px 22px 24px;
+  padding: 44px 22px 24px;
   background: #efefef;
 }
 
@@ -73,10 +73,11 @@
 }
 
 .genderButton {
-  min-height: 40px;
+  min-height: 36px;
   border: 1px solid #9c9c9c;
   background: transparent;
-  font-size: 14px;
+  font-size: 12px;
+  letter-spacing: 0.02em;
   cursor: pointer;
 }
 
@@ -87,41 +88,42 @@
 }
 
 .sidebarGroup {
-  margin-top: 24px;
+  margin-top: 18px;
   display: grid;
-  gap: 8px;
+  gap: 6px;
 }
 
 .quickTerm {
   border: none;
   background: transparent;
   text-align: left;
-  min-height: 42px;
+  min-height: 30px;
   border-bottom: 1px solid #d8d8d8;
-  font-size: 33px;
+  font-size: 22px;
+  line-height: 1.12;
   font-family: var(--font-playfair), serif;
   cursor: pointer;
 }
 
 .filterGroup {
-  margin-top: 14px;
+  margin-top: 12px;
 }
 
 .filterLabel {
   display: block;
-  margin-bottom: 6px;
-  font-size: 13px;
+  margin-bottom: 5px;
+  font-size: 11px;
   letter-spacing: 0.08em;
   text-transform: uppercase;
 }
 
 .filterSelect {
   width: 100%;
-  min-height: 38px;
+  min-height: 34px;
   border: 1px solid #b9b9b9;
   background: #fff;
   padding: 0 10px;
-  font-size: 14px;
+  font-size: 12px;
 }
 
 .contentArea {
@@ -307,6 +309,7 @@
   .sidebar {
     border-right: none;
     border-bottom: 1px solid #cfcfcf;
+    padding-top: 20px;
   }
 
   .grid {
@@ -341,7 +344,7 @@
   }
 
   .quickTerm {
-    font-size: 24px;
+    font-size: 18px;
   }
 
   .grid {

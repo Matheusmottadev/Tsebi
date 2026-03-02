@@ -28,7 +28,7 @@ type SearchPiece = {
   href: string;
 };
 
-type CollectionMediaMode = "video" | "image" | "fallback";
+type CollectionMediaMode = "video" | "fallback";
 
 const TOP_MESSAGES = [
   "Nova Coleção Genesis",
@@ -50,8 +50,6 @@ const SEARCH_CHIPS = [
 ];
 
 const COLLECTION_VIDEO = "https://media.tsebi.com.br/31377-386628887.mp4";
-const COLLECTION_IMAGE_PRIMARY = "/images/collection.jpg";
-const COLLECTION_IMAGE_FALLBACK = "/images/legacy/home/collection.jpg";
 const COLLECTION_PLACEHOLDER = "/images/hero.jpg";
 const HOMEPAGE_PICTURE_IMAGE = "/images/Homepagepicture.jpg";
 const HOMEPAGE_PICTURE_FALLBACK = "/images/hero.jpg";
@@ -434,7 +432,7 @@ export function LegacyHome({ products }: LegacyHomeProps) {
     if (isCollectionVideoReady) return;
 
     const fallbackTimer = window.setTimeout(() => {
-      setCollectionMediaMode("image");
+      setCollectionMediaMode("fallback");
     }, 4500);
 
     return () => {
@@ -1013,35 +1011,18 @@ export function LegacyHome({ products }: LegacyHomeProps) {
                 loop
                 playsInline
                 preload="metadata"
-                poster={COLLECTION_IMAGE_PRIMARY}
                 onCanPlay={() => setIsCollectionVideoReady(true)}
                 onLoadedData={() => setIsCollectionVideoReady(true)}
                 onPlaying={() => setIsCollectionVideoReady(true)}
                 onError={() => {
                   setIsCollectionVideoReady(false);
-                  setCollectionMediaMode("image");
+                  setCollectionMediaMode("fallback");
                 }}
               >
                 <source src={COLLECTION_VIDEO} type="video/mp4" />
               </video>
             ) : (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                className="new-drop-video"
-                src={collectionMediaMode === "image" ? COLLECTION_IMAGE_PRIMARY : COLLECTION_PLACEHOLDER}
-                alt="Nova Coleção"
-                onError={(event) => {
-                  const element = event.currentTarget;
-                  const currentSrc = element.getAttribute("src") || "";
-                  if (currentSrc.endsWith(COLLECTION_IMAGE_PRIMARY)) {
-                    element.src = COLLECTION_IMAGE_FALLBACK;
-                    return;
-                  }
-                  element.onerror = null;
-                  setCollectionMediaMode("fallback");
-                  element.src = COLLECTION_PLACEHOLDER;
-                }}
-              />
+              <div className="new-drop-video-fallback" role="img" aria-label="Video da nova colecao indisponivel no momento" />
             )}
           </div>
           <h2>Coleção Alicerce</h2>
