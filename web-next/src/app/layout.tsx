@@ -1,6 +1,7 @@
 ﻿import type { Metadata } from "next";
 import { Montserrat, Playfair_Display } from "next/font/google";
 import { LayoutChrome } from "@/components/LayoutChrome";
+import { CookieConsentBar } from "@/components/CookieConsentBar";
 import "./globals.css";
 import "@/styles/legacy/design-tokens.css";
 import "@/styles/legacy/primitives.css";
@@ -110,6 +111,7 @@ export default function RootLayout({
     <html lang="pt-BR">
       <body className={`${montserrat.variable} ${playfairDisplay.variable}`}>
         <LayoutChrome>{children}</LayoutChrome>
+        <CookieConsentBar />
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{

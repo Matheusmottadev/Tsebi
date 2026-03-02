@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { SearchClient } from "@/app/search/SearchClient";
 
 export const metadata: Metadata = {
   title: "Buscar | TSEBI",
@@ -12,6 +13,13 @@ export const metadata: Metadata = {
   },
 };
 
-export default function SearchPage() {
-  return <main style={{ minHeight: "100vh", background: "#fff" }} aria-label="Pagina de busca" />;
+type SearchPageProps = {
+  searchParams?: {
+    q?: string;
+  };
+};
+
+export default function SearchPage({ searchParams }: SearchPageProps) {
+  const initialQuery = String(searchParams?.q || "").trim();
+  return <SearchClient initialQuery={initialQuery} />;
 }

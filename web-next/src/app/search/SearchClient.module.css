@@ -1,0 +1,350 @@
+.page {
+  min-height: 100vh;
+  background: #efefef;
+  color: #111;
+}
+
+.topSearchBar {
+  padding: 22px 22px 10px;
+  border-bottom: 1px solid #cfcfcf;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.topSearchForm {
+  flex: 1;
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.topSearchInput {
+  flex: 1;
+  border: none;
+  background: transparent;
+  border-bottom: 1px solid #8f8f8f;
+  min-height: 50px;
+  font-size: 40px;
+  line-height: 1;
+  font-family: var(--font-playfair), serif;
+  letter-spacing: 0.01em;
+  outline: none;
+  color: #111;
+}
+
+.topSearchSubmit {
+  min-height: 40px;
+  border: 1px solid #111;
+  background: #111;
+  color: #fff;
+  padding: 0 16px;
+  font-size: 12px;
+  letter-spacing: 0.1em;
+  cursor: pointer;
+}
+
+.closeLink {
+  min-width: 84px;
+  text-align: right;
+  color: #111;
+  font-size: 18px;
+  letter-spacing: 0.08em;
+  text-decoration: none;
+}
+
+.layout {
+  display: grid;
+  grid-template-columns: 360px minmax(0, 1fr);
+  gap: 0;
+}
+
+.sidebar {
+  border-right: 1px solid #cfcfcf;
+  padding: 20px 22px 24px;
+  background: #efefef;
+}
+
+.genderRow {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.genderButton {
+  min-height: 40px;
+  border: 1px solid #9c9c9c;
+  background: transparent;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.genderButtonActive {
+  border-color: #111;
+  background: #111;
+  color: #fff;
+}
+
+.sidebarGroup {
+  margin-top: 24px;
+  display: grid;
+  gap: 8px;
+}
+
+.quickTerm {
+  border: none;
+  background: transparent;
+  text-align: left;
+  min-height: 42px;
+  border-bottom: 1px solid #d8d8d8;
+  font-size: 33px;
+  font-family: var(--font-playfair), serif;
+  cursor: pointer;
+}
+
+.filterGroup {
+  margin-top: 14px;
+}
+
+.filterLabel {
+  display: block;
+  margin-bottom: 6px;
+  font-size: 13px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.filterSelect {
+  width: 100%;
+  min-height: 38px;
+  border: 1px solid #b9b9b9;
+  background: #fff;
+  padding: 0 10px;
+  font-size: 14px;
+}
+
+.contentArea {
+  padding: 22px;
+}
+
+.didYouMean {
+  margin: 0 0 14px;
+  font-size: 14px;
+}
+
+.didYouMeanButton {
+  border: none;
+  background: transparent;
+  font-size: 14px;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.notice {
+  border: 1px solid #d2b48c;
+  background: #f7efe2;
+  color: #513f22;
+  padding: 10px 12px;
+  margin-bottom: 14px;
+}
+
+.resultsSection {
+  display: grid;
+  gap: 12px;
+}
+
+.meta {
+  font-size: 14px;
+  color: #555;
+}
+
+.empty {
+  font-size: 15px;
+  color: #666;
+  margin: 6px 0 0;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 18px;
+}
+
+.card {
+  background: transparent;
+}
+
+.cardMedia {
+  display: block;
+  position: relative;
+  aspect-ratio: 4 / 5;
+  background: #e6e6e6;
+  overflow: hidden;
+}
+
+.image {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: opacity 220ms ease;
+}
+
+.imagePrimary { opacity: 1; }
+.imageSecondary { opacity: 0; }
+
+.cardMedia:hover .imagePrimary,
+.cardMedia:focus-visible .imagePrimary {
+  opacity: 0;
+}
+
+.cardMedia:hover .imageSecondary,
+.cardMedia:focus-visible .imageSecondary {
+  opacity: 1;
+}
+
+.stockBadge {
+  position: absolute;
+  left: 10px;
+  top: 10px;
+  z-index: 2;
+  padding: 6px 9px;
+  background: rgba(20, 20, 20, 0.88);
+  color: #fff;
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.cardBody {
+  padding: 8px 2px 0;
+}
+
+.title {
+  margin: 0;
+  font-size: 20px;
+  line-height: 1.35;
+  font-family: var(--font-playfair), serif;
+}
+
+.price {
+  margin: 6px 0 0;
+  font-size: 26px;
+  line-height: 1.1;
+  font-family: var(--font-playfair), serif;
+}
+
+.carouselSection {
+  margin-top: 30px;
+}
+
+.carouselSection h2 {
+  margin: 0 0 12px;
+  font-size: 24px;
+  font-family: var(--font-playfair), serif;
+}
+
+.carouselTrack {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(180px, 240px);
+  gap: 12px;
+  overflow-x: auto;
+  padding-bottom: 8px;
+}
+
+.carouselCard {
+  border: 1px solid #d9d9d9;
+  background: #fff;
+  text-decoration: none;
+  color: inherit;
+}
+
+.carouselMedia {
+  aspect-ratio: 4 / 5;
+  background: #ececec;
+}
+
+.carouselImage {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.carouselBody {
+  padding: 9px;
+}
+
+.carouselTitle {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.4;
+}
+
+.carouselMeta {
+  margin: 4px 0 0;
+  font-size: 12px;
+  color: #666;
+}
+
+@media (max-width: 1100px) {
+  .layout {
+    grid-template-columns: 300px minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 900px) {
+  .topSearchInput {
+    font-size: 28px;
+  }
+
+  .layout {
+    grid-template-columns: 1fr;
+  }
+
+  .sidebar {
+    border-right: none;
+    border-bottom: 1px solid #cfcfcf;
+  }
+
+  .grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 620px) {
+  .topSearchBar {
+    padding: 14px;
+    align-items: flex-start;
+  }
+
+  .topSearchForm {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .topSearchInput {
+    font-size: 24px;
+    min-height: 42px;
+  }
+
+  .closeLink {
+    min-width: 56px;
+    font-size: 14px;
+  }
+
+  .contentArea,
+  .sidebar {
+    padding: 14px;
+  }
+
+  .quickTerm {
+    font-size: 24px;
+  }
+
+  .grid {
+    grid-template-columns: 1fr;
+  }
+}

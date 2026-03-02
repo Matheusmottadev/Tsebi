@@ -1,6 +1,7 @@
 ﻿"use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { Product } from "@/types";
 import { GenderShowcase } from "@/components/home-legacy/GenderShowcase";
@@ -192,6 +193,7 @@ function mapProductToSearchPiece(product: HomeProductCard): SearchPiece | null {
 }
 
 export function LegacyHome({ products }: LegacyHomeProps) {
+  const router = useRouter();
   const hasHydrated = useCartStore(cartSelectors.hasHydrated);
   const itemCount = useCartStore(cartSelectors.itemCount);
   const displayCount = hasHydrated ? itemCount : 0;
@@ -492,6 +494,13 @@ export function LegacyHome({ products }: LegacyHomeProps) {
     if (!input) return;
     input.focus();
   }, [searchQuery]);
+
+  const submitSearchPage = useCallback(() => {
+    const normalized = String(searchQuery || "").trim();
+    if (normalized.length < 2) return;
+    setIsSearchOpen(false);
+    router.push(`/search?q=${encodeURIComponent(normalized)}`);
+  }, [router, searchQuery]);
 
   useEffect(() => {
     if (!isSearchOpen) return;
@@ -842,6 +851,11 @@ export function LegacyHome({ products }: LegacyHomeProps) {
               placeholder="O que Você esta buscando?"
               value={searchQuery}
               onChange={(event) => setSearchQuery(event.target.value)}
+              onKeyDown={(event) => {
+                if (event.key !== "Enter") return;
+                event.preventDefault();
+                submitSearchPage();
+              }}
             />
           </div>
           {searchSuggestions.length > 0 ? (
@@ -892,6 +906,15 @@ export function LegacyHome({ products }: LegacyHomeProps) {
                 </button>
               ))}
             </div>
+            <button
+              type="button"
+              className="chip"
+              onClick={submitSearchPage}
+              disabled={String(searchQuery || "").trim().length < 2}
+              aria-label="Ver todos os resultados"
+            >
+              VER TODOS OS RESULTADOS
+            </button>
           </section>
 
           <section className="search-section">
