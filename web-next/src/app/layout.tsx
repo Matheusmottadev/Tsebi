@@ -42,7 +42,7 @@ export const metadata: Metadata = {
   },
   applicationName: "Tsebi Brasil",
   description:
-    "Tsebi Brasil: moda autoral com coleções exclusivas, design contemporâneo e acabamento premium.",
+    "Tsebi Brasil: moda autoral com coleÃ§Ãµes exclusivas, design contemporÃ¢neo e acabamento premium.",
   keywords: [
     "tsebi",
     "tsebi brasil",
@@ -50,7 +50,7 @@ export const metadata: Metadata = {
     "moda masculina",
     "roupas premium",
     "alfaiataria",
-    "Coleção Genesis",
+    "ColeÃ§Ã£o Genesis",
     "ecommerce de moda",
   ],
   metadataBase: resolveMetadataBaseUrl(),
@@ -63,7 +63,7 @@ export const metadata: Metadata = {
     type: "website",
     title: "Tsebi Brasil",
     description:
-      "Tsebi Brasil: moda autoral com coleções exclusivas, design contemporâneo e acabamento premium.",
+      "Tsebi Brasil: moda autoral com coleÃ§Ãµes exclusivas, design contemporÃ¢neo e acabamento premium.",
     url: "/",
     siteName: "Tsebi Brasil",
     images: [
@@ -76,7 +76,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "Tsebi Brasil",
     description:
-      "Tsebi Brasil: moda autoral com coleções exclusivas, design contemporâneo e acabamento premium.",
+      "Tsebi Brasil: moda autoral com coleÃ§Ãµes exclusivas, design contemporÃ¢neo e acabamento premium.",
     images: ["/images/Gazelalogo.png"],
   },
   icons: {

@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
 import { SearchClient } from "@/app/search/SearchClient";
 
 export const metadata: Metadata = {
@@ -21,5 +22,9 @@ type SearchPageProps = {
 
 export default function SearchPage({ searchParams }: SearchPageProps) {
   const initialQuery = String(searchParams?.q || "").trim();
-  return <SearchClient initialQuery={initialQuery} />;
+  return (
+    <Suspense fallback={null}>
+      <SearchClient initialQuery={initialQuery} />
+    </Suspense>
+  );
 }
