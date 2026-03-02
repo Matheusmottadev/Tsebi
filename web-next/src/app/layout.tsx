@@ -1,7 +1,9 @@
-ï»¿import type { Metadata } from "next";
+import type { Metadata } from "next";
 import { Montserrat, Playfair_Display } from "next/font/google";
+import Script from "next/script";
 import { LayoutChrome } from "@/components/LayoutChrome";
 import { CookieConsentBar } from "@/components/CookieConsentBar";
+import { TrackingScripts } from "@/components/TrackingScripts";
 import "./globals.css";
 import "@/styles/legacy/design-tokens.css";
 import "@/styles/legacy/primitives.css";
@@ -40,7 +42,7 @@ export const metadata: Metadata = {
   },
   applicationName: "Tsebi Brasil",
   description:
-    "Tsebi Brasil: moda autoral com coleÃ§Ãµes exclusivas, design contemporÃ¢neo e acabamento premium.",
+    "Tsebi Brasil: moda autoral com coleções exclusivas, design contemporâneo e acabamento premium.",
   keywords: [
     "tsebi",
     "tsebi brasil",
@@ -48,7 +50,7 @@ export const metadata: Metadata = {
     "moda masculina",
     "roupas premium",
     "alfaiataria",
-    "ColeÃ§Ã£o Genesis",
+    "Coleção Genesis",
     "ecommerce de moda",
   ],
   metadataBase: resolveMetadataBaseUrl(),
@@ -61,7 +63,7 @@ export const metadata: Metadata = {
     type: "website",
     title: "Tsebi Brasil",
     description:
-      "Tsebi Brasil: moda autoral com coleÃ§Ãµes exclusivas, design contemporÃ¢neo e acabamento premium.",
+      "Tsebi Brasil: moda autoral com coleções exclusivas, design contemporâneo e acabamento premium.",
     url: "/",
     siteName: "Tsebi Brasil",
     images: [
@@ -74,7 +76,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "Tsebi Brasil",
     description:
-      "Tsebi Brasil: moda autoral com coleÃ§Ãµes exclusivas, design contemporÃ¢neo e acabamento premium.",
+      "Tsebi Brasil: moda autoral com coleções exclusivas, design contemporâneo e acabamento premium.",
     images: ["/images/Gazelalogo.png"],
   },
   icons: {
@@ -110,6 +112,24 @@ export default function RootLayout({
   return (
     <html lang="pt-BR">
       <body className={`${montserrat.variable} ${playfairDisplay.variable}`}>
+        <Script id="google-consent-default" strategy="beforeInteractive">
+          {`
+            window.dataLayer = window.dataLayer || [];
+            function gtag(){window.dataLayer.push(arguments);}
+            window.gtag = window.gtag || gtag;
+            gtag('consent', 'default', {
+              ad_storage: 'denied',
+              ad_user_data: 'denied',
+              ad_personalization: 'denied',
+              analytics_storage: 'denied',
+              functionality_storage: 'granted',
+              personalization_storage: 'denied',
+              security_storage: 'granted',
+              wait_for_update: 500
+            });
+          `}
+        </Script>
+        <TrackingScripts />
         <LayoutChrome>{children}</LayoutChrome>
         <CookieConsentBar />
         <script
@@ -122,4 +142,3 @@ export default function RootLayout({
     </html>
   );
 }
-

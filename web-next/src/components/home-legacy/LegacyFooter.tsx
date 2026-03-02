@@ -103,10 +103,13 @@ export function LegacyFooter({ variant = "dark" }: LegacyFooterProps) {
           <Link href="/nossa-historia">A Tsebi</Link>
           <Link href="/processos">Processos</Link>
           <Link href="/processos">Sustentabilidade</Link>
+        </section>
+
+        <section className="footer-column">
+          <h3>TRABALHE CONOSCO</h3>
+          <Link href="/loading-careers">Trabalhe conosco</Link>
           <Link href="/carreiras">Carreiras</Link>
           <Link href="/candidatura">Candidatura</Link>
-          <Link href="/loading-careers">Trabalhe conosco</Link>
-          <Link href="/loading-studio">Studio</Link>
         </section>
 
         <section className="footer-column">
@@ -114,7 +117,7 @@ export function LegacyFooter({ variant = "dark" }: LegacyFooterProps) {
           <Link href="/aviso-legal">Aviso legal</Link>
           <Link href="/Política-privacidade">Política de Privacidade</Link>
           <Link href="/cookie-policy">Política de cookies</Link>
-          <Link href="/cookie-policy">Configuracoes de cookies</Link>
+          <a href="#" data-cookie-settings-trigger="true">Configuracoes de cookies</a>
           <Link href="/aviso-legal">Termos de venda</Link>
         </section>
       </div>
