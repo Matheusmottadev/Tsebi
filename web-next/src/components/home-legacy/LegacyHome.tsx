@@ -661,16 +661,6 @@ export function LegacyHome({ products }: LegacyHomeProps) {
               <span />
             </button>
 
-            <button
-              className="search-box-trigger"
-              id="openSearch"
-              type="button"
-              aria-label="Abrir busca"
-              onClick={openSearchOverlay}
-            >
-              <span className="search-box-label">O que Você esta buscando?</span>
-              <span className="search-box-icon">?</span>
-            </button>
           </div>
 
           <h1 className="logo">

@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
 import { cartSelectors, useCartStore } from "@/lib/cart/cartStore";
 import { getMe } from "@/services/auth";
 
@@ -16,7 +16,6 @@ const TOP_MESSAGES = [
 ];
 
 export function SiteHeader() {
-  const router = useRouter();
   const pathname = usePathname();
   const isProductPage = pathname === "/product" || String(pathname || "").startsWith("/product/");
   const hasHydrated = useCartStore(cartSelectors.hasHydrated);
@@ -27,7 +26,6 @@ export function SiteHeader() {
   const [messageClass, setMessageClass] = useState("slide-right");
   const [messageKey, setMessageKey] = useState(0);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [isHeaderHidden, setIsHeaderHidden] = useState(false);
   const [isHeaderForcedHidden, setIsHeaderForcedHidden] = useState(false);
   const headerMenuRef = useRef<HTMLElement | null>(null);
@@ -119,15 +117,6 @@ export function SiteHeader() {
   }, [isMenuOpen]);
 
   useEffect(() => {
-    document.body.classList.toggle("no-scroll", isSearchOpen);
-    document.documentElement.classList.toggle("no-scroll", isSearchOpen);
-    return () => {
-      document.body.classList.remove("no-scroll");
-      document.documentElement.classList.remove("no-scroll");
-    };
-  }, [isSearchOpen]);
-
-  useEffect(() => {
     if (!isMenuOpen) return;
 
     const onDocumentClick = (event: MouseEvent) => {
@@ -146,7 +135,6 @@ export function SiteHeader() {
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key !== "Escape") return;
       setIsMenuOpen(false);
-      setIsSearchOpen(false);
     };
 
     window.addEventListener("keydown", onKeyDown);
@@ -169,7 +157,7 @@ export function SiteHeader() {
       const delta = currentY - lastScrollYRef.current;
       lastScrollYRef.current = currentY;
 
-      if (isMenuOpen || isSearchOpen) {
+      if (isMenuOpen) {
         setIsHeaderHidden(false);
         return;
       }
@@ -197,14 +185,14 @@ export function SiteHeader() {
     return () => {
       window.removeEventListener("scroll", onScroll);
     };
-  }, [isHeaderForcedHidden, isMenuOpen, isSearchOpen, pathname, isProductPage]);
+  }, [isHeaderForcedHidden, isMenuOpen, pathname, isProductPage]);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
     if (!isProductPage) return;
 
     const onProductMediaDirection = (event: Event) => {
-      if (isMenuOpen || isSearchOpen) return;
+      if (isMenuOpen) return;
       const customEvent = event as CustomEvent<{ hidden?: boolean }>;
       const hidden = Boolean(customEvent.detail?.hidden);
       setIsHeaderHidden(hidden);
@@ -216,7 +204,7 @@ export function SiteHeader() {
     return () => {
       window.removeEventListener("product-media-scroll-direction", onProductMediaDirection as EventListener);
     };
-  }, [isMenuOpen, isSearchOpen, isProductPage]);
+  }, [isMenuOpen, isProductPage]);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -239,12 +227,6 @@ export function SiteHeader() {
   }, [isProductPage]);
 
   const cartCountBadge = displayCount > 0 ? String(displayCount) : undefined;
-
-  function goToSearchPage(): void {
-    setIsMenuOpen(false);
-    setIsSearchOpen(false);
-    router.push("/search");
-  }
 
   return (
     <>
@@ -286,7 +268,6 @@ export function SiteHeader() {
               ref={menuButtonRef}
               aria-label="Abrir menu"
               onClick={() => {
-                setIsSearchOpen(false);
                 setIsMenuOpen(true);
               }}
             >
@@ -294,31 +275,6 @@ export function SiteHeader() {
               <span></span>
               <span></span>
             </button>
-            {isProductPage ? (
-              <button
-                className="product-search-trigger"
-                id="openSearch"
-                type="button"
-                aria-label="Abrir busca"
-                onClick={goToSearchPage}
-              >
-                <svg viewBox="0 0 24 24" aria-hidden="true">
-                  <circle cx="11" cy="11" r="6.5" />
-                  <path d="M16 16L21 21" />
-                </svg>
-              </button>
-            ) : (
-              <button
-                className="search-box-trigger"
-                id="openSearch"
-                type="button"
-                aria-label="Abrir busca"
-                onClick={goToSearchPage}
-              >
-                <span className="search-box-label">O que Você esta buscando?</span>
-                <span className="search-box-icon">&#8985;</span>
-              </button>
-            )}
           </div>
 
           <h1 className="logo">

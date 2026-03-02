@@ -1,30 +1,5 @@
-import type { Metadata } from "next";
-import { Suspense } from "react";
-import { SearchClient } from "@/app/search/SearchClient";
+import { redirect } from "next/navigation";
 
-export const metadata: Metadata = {
-  title: "Buscar | TSEBI",
-  description: "Busca de produtos Tsebi.",
-  robots: {
-    index: false,
-    follow: false,
-  },
-  alternates: {
-    canonical: "/search",
-  },
-};
-
-type SearchPageProps = {
-  searchParams?: {
-    q?: string;
-  };
-};
-
-export default function SearchPage({ searchParams }: SearchPageProps) {
-  const initialQuery = String(searchParams?.q || "").trim();
-  return (
-    <Suspense fallback={null}>
-      <SearchClient initialQuery={initialQuery} />
-    </Suspense>
-  );
+export default function SearchPage() {
+  redirect("/products");
 }
