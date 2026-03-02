@@ -630,6 +630,23 @@ body.menu-open {
   object-fit: cover;
 }
 
+.hero-image-base {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.hero > video.hero-video {
+  opacity: 0;
+  transition: opacity 0.22s ease;
+}
+
+.hero > video.hero-video.is-ready {
+  opacity: 1;
+}
+
 .hero::after {
   content: "";
   position: absolute;

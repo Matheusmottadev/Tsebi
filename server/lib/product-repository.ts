@@ -30,6 +30,17 @@ export type SearchAdminProductsOptions = {
   pageSize?: number;
 };
 
+export type SearchStorefrontProductsOptions = {
+  query?: string;
+  page?: number;
+  limit?: number;
+  category?: string;
+  collection?: string;
+  gender?: string;
+  inStock?: boolean;
+  sort?: "relevance" | "newest" | "price_asc" | "price_desc";
+};
+
 export type ProductWritePayload = {
   sku?: string;
   name?: string;
@@ -458,6 +469,164 @@ async function listProducts(): Promise<Product[]> {
   return result.rows.map(mapProduct);
 }
 
+function foldText(value: unknown): string {
+  return String(value || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .trim();
+}
+
+function tokenizeSearch(value: string): string[] {
+  const seen = new Set<string>();
+  const tokens: string[] = [];
+  foldText(value)
+    .split(/[^a-z0-9]+/g)
+    .map((item) => item.trim())
+    .filter((item) => item.length >= 2)
+    .forEach((item) => {
+      if (seen.has(item)) return;
+      seen.add(item);
+      tokens.push(item);
+    });
+  return tokens;
+}
+
+function buildSearchHaystack(product: Product): {
+  sku: string;
+  name: string;
+  category: string;
+  collection: string;
+  material: string;
+  gender: string;
+  colors: string[];
+  sizes: string[];
+  all: string;
+} {
+  const sku = foldText(product.sku);
+  const name = foldText(product.name);
+  const category = foldText(product.category);
+  const collection = foldText(product.collection);
+  const material = foldText(product.material);
+  const gender = foldText(product.gender);
+  const colors = (Array.isArray(product.colors) ? product.colors : []).map((item) => foldText(item)).filter(Boolean);
+  const sizes = (Array.isArray(product.sizes) ? product.sizes : []).map((item) => foldText(item)).filter(Boolean);
+  const all = [sku, name, category, collection, material, gender, ...colors, ...sizes].filter(Boolean).join(" ");
+  return { sku, name, category, collection, material, gender, colors, sizes, all };
+}
+
+function scoreProductSearch(product: Product, query: string, tokens: string[]): number {
+  const normalizedQuery = foldText(query);
+  if (!normalizedQuery) return 0;
+
+  const h = buildSearchHaystack(product);
+  let score = 0;
+
+  if (h.sku === normalizedQuery) score += 200;
+  if (h.name === normalizedQuery) score += 170;
+  if (h.sku.startsWith(normalizedQuery)) score += 130;
+  if (h.name.startsWith(normalizedQuery)) score += 120;
+  if (h.name.includes(normalizedQuery)) score += 80;
+  if (h.sku.includes(normalizedQuery)) score += 60;
+  if (h.category.includes(normalizedQuery)) score += 36;
+  if (h.collection.includes(normalizedQuery)) score += 32;
+  if (h.material.includes(normalizedQuery)) score += 24;
+  if (h.gender.includes(normalizedQuery)) score += 16;
+  if (h.colors.some((item) => item.includes(normalizedQuery))) score += 24;
+  if (h.sizes.some((item) => item.includes(normalizedQuery))) score += 12;
+
+  let tokenMatches = 0;
+  tokens.forEach((token) => {
+    const inNamePrefix = h.name.startsWith(token);
+    const inSkuPrefix = h.sku.startsWith(token);
+    const inAll = h.all.includes(token);
+
+    if (inNamePrefix) {
+      score += 45;
+      tokenMatches += 1;
+      return;
+    }
+    if (inSkuPrefix) {
+      score += 35;
+      tokenMatches += 1;
+      return;
+    }
+    if (inAll) {
+      score += 18;
+      tokenMatches += 1;
+    }
+  });
+
+  if (tokens.length > 1 && tokenMatches === tokens.length) {
+    score += 32;
+  } else if (tokens.length > 1 && tokenMatches > 0) {
+    score += 8;
+  }
+
+  if (product.stock > 0) score += 4;
+  return score;
+}
+
+async function searchStorefrontProducts({
+  query: q = "",
+  page = 1,
+  limit = 8,
+  category = "",
+  collection = "",
+  gender = "",
+  inStock = false,
+  sort = "relevance"
+}: SearchStorefrontProductsOptions = {}): Promise<{ rows: Product[]; total: number; page: number; limit: number }> {
+  const normalizedQuery = String(q || "").trim();
+  const safePage = Math.max(1, Number(page) || 1);
+  const safeLimit = Math.max(1, Math.min(24, Number(limit) || 8));
+  const offset = (safePage - 1) * safeLimit;
+
+  const products = await listProducts();
+  const normalizedCategory = foldText(category);
+  const normalizedCollection = foldText(collection);
+  const normalizedGender = foldText(gender);
+  const tokens = tokenizeSearch(normalizedQuery);
+
+  const filtered = products.filter((product) => {
+    if (!product || product.active === false) return false;
+    if (inStock && Number(product.stock || 0) <= 0) return false;
+    if (normalizedCategory && foldText(product.category) !== normalizedCategory) return false;
+    if (normalizedCollection && foldText(product.collection) !== normalizedCollection) return false;
+    if (normalizedGender && foldText(product.gender) !== normalizedGender) return false;
+    return true;
+  });
+
+  const scored = normalizedQuery
+    ? filtered
+        .map((product) => ({ product, score: scoreProductSearch(product, normalizedQuery, tokens) }))
+        .filter((entry) => entry.score > 0)
+    : filtered.map((product) => ({ product, score: 0 }));
+
+  scored.sort((a, b) => {
+    if (sort === "price_asc") return a.product.priceValue - b.product.priceValue;
+    if (sort === "price_desc") return b.product.priceValue - a.product.priceValue;
+    if (sort === "newest") {
+      const aTime = new Date(a.product.createdAt || 0).getTime();
+      const bTime = new Date(b.product.createdAt || 0).getTime();
+      return bTime - aTime;
+    }
+
+    if (b.score !== a.score) return b.score - a.score;
+    if (b.product.stock !== a.product.stock) return b.product.stock - a.product.stock;
+    const aTime = new Date(a.product.createdAt || 0).getTime();
+    const bTime = new Date(b.product.createdAt || 0).getTime();
+    return bTime - aTime;
+  });
+
+  return {
+    rows: scored.slice(offset, offset + safeLimit).map((entry) => entry.product),
+    total: scored.length,
+    page: safePage,
+    limit: safeLimit
+  };
+}
+
 async function listAdminProducts({ limit = 200, offset = 0, search = "", includeInactive = true }: ListAdminProductsOptions = {}): Promise<Product[]> {
   const safeLimit = Math.max(1, Math.min(500, Number(limit) || 200));
   const safeOffset = Math.max(0, Number(offset) || 0);
@@ -871,6 +1040,7 @@ async function restoreProductFromSnapshot(snapshotInput: JsonRecord = {}): Promi
 
 module.exports = {
   listProducts,
+  searchStorefrontProducts,
   listAdminProducts,
   searchAdminProducts,
   getProductByIdentifier,

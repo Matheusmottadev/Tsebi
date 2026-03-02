@@ -26,8 +26,7 @@ const {
   listOrdersByUserId
 } = require("./lib/order-repository");
 const { notifyOrderConfirmed, notifyPaymentApproved } = require("./lib/order-notification-service");
-const { listProducts, getProductByIdentifier } = require("./lib/product-repository");
-const { searchProducts: searchProductsTypesense } = require("./lib/typesense-search");
+const { listProducts, getProductByIdentifier, searchStorefrontProducts } = require("./lib/product-repository");
 const { checkAvailability, commitStock } = require("./lib/inventory-repository");
 const { evaluateAccessCode } = require("./lib/access-code-repository");
 const { withTransaction } = require("./lib/db");
@@ -1087,78 +1086,45 @@ app.get("/api/products", async (req: any, res: any) => {
   }
 });
 
-function scoreSearchMatch(product: any, queryText: string): number {
-  const sku = String(product?.sku || "").trim().toLowerCase();
-  const name = String(product?.name || "").trim().toLowerCase();
-  const category = String(product?.category || "").trim().toLowerCase();
-  const collection = String(product?.collection || "").trim().toLowerCase();
-  const material = String(product?.material || "").trim().toLowerCase();
-  const colors = Array.isArray(product?.colors) ? product.colors.map((item: any) => String(item || "").trim().toLowerCase()) : [];
-  const sizes = Array.isArray(product?.sizes) ? product.sizes.map((item: any) => String(item || "").trim().toLowerCase()) : [];
-
-  let score = 0;
-  if (sku === queryText) score += 120;
-  if (name === queryText) score += 100;
-  if (sku.startsWith(queryText)) score += 90;
-  if (name.startsWith(queryText)) score += 80;
-  if (name.includes(queryText)) score += 45;
-  if (sku.includes(queryText)) score += 35;
-  if (category.includes(queryText)) score += 22;
-  if (collection.includes(queryText)) score += 18;
-  if (material.includes(queryText)) score += 15;
-  if (colors.some((item: string) => item.includes(queryText))) score += 12;
-  if (sizes.some((item: string) => item.includes(queryText))) score += 10;
-  if (product?.stock > 0) score += 3;
-  return score;
-}
-
 app.get("/api/products/search", async (req: any, res: any) => {
   try {
     const queryText = String(req.query.q || req.query.query || "").trim();
     const page = Math.max(1, Number(req.query.page || 1) || 1);
     const limit = Math.max(1, Math.min(24, Number(req.query.limit || 8) || 8));
+    const category = String(req.query.category || "").trim();
+    const collection = String(req.query.collection || "").trim();
+    const gender = String(req.query.gender || "").trim();
+    const sortRaw = String(req.query.sort || "relevance").trim().toLowerCase();
+    const sort =
+      sortRaw === "newest" || sortRaw === "price_asc" || sortRaw === "price_desc" ? sortRaw : "relevance";
+    const inStockRaw = String(req.query.inStock || req.query.in_stock || "").trim().toLowerCase();
+    const inStock = inStockRaw === "1" || inStockRaw === "true" || inStockRaw === "yes";
 
-    if (!queryText) {
+    const hasFilter =
+      Boolean(category) || Boolean(collection) || Boolean(gender) || inStock || sort !== "relevance";
+
+    if (!queryText && !hasFilter) {
       return res.json({ query: "", page, limit, source: "none", found: 0, products: [] });
     }
 
-    const products = await listProducts();
-    const bySku = new Map(products.map((item: any) => [String(item.sku || item.id || "").trim(), item]));
-
-    try {
-      const typesense = await searchProductsTypesense({ query: queryText, page, perPage: limit });
-      if (typesense.enabled) {
-        const ranked = typesense.ids
-          .map((id: string) => bySku.get(id))
-          .filter((item: any) => Boolean(item) && item.active !== false);
-
-        return res.json({
-          query: queryText,
-          page,
-          limit,
-          source: "typesense",
-          found: typesense.found,
-          products: ranked
-        });
-      }
-    } catch {}
-
-    const normalized = queryText.toLowerCase();
-    const rankedFallback = products
-      .filter((product: any) => product && product.active !== false)
-      .map((product: any) => ({ product, score: scoreSearchMatch(product, normalized) }))
-      .filter((entry: any) => entry.score > 0)
-      .sort((a: any, b: any) => b.score - a.score)
-      .slice((page - 1) * limit, page * limit)
-      .map((entry: any) => entry.product);
+    const result = await searchStorefrontProducts({
+      query: queryText,
+      page,
+      limit,
+      category,
+      collection,
+      gender,
+      inStock,
+      sort
+    });
 
     return res.json({
       query: queryText,
       page,
       limit,
       source: "postgres",
-      found: rankedFallback.length,
-      products: rankedFallback
+      found: result.total,
+      products: result.rows
     });
   } catch {
     return res.status(500).json({ error: "SEARCH_FAILED" });
