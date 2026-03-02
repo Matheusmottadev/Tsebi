@@ -20,6 +20,7 @@
     "typecheck:web": "npm --prefix web-next run typecheck",
     "build:web": "npm --prefix web-next run build",
     "migrate": "node scripts/run-migrations.js",
+    "typesense:sync": "tsx scripts/sync-typesense-products.ts",
     "migrate:json": "node scripts/migrate-json-to-db.js",
     "launch:prelaunch": "node scripts/set-launch-mode.js prelaunch",
     "launch:live": "node scripts/set-launch-mode.js launch"

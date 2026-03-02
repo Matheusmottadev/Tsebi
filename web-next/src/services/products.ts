@@ -18,6 +18,11 @@ export interface ProductRecommendationsResponse {
   recommendations: Product[];
 }
 
+export interface SearchProductsParams {
+  limit?: number;
+  page?: number;
+}
+
 function buildRecentProductsPath(ids: string[]): string {
   const validIds = ids.map((id) => String(id || "").trim()).filter(Boolean);
   const params = new URLSearchParams();
@@ -36,6 +41,25 @@ export async function listProducts(params: ListProductsParams = {}): Promise<Pro
     return Array.isArray(response.products) ? response.products : [];
   }
   return get<Product[]>("/api/products");
+}
+
+/**
+ * GET /api/products/search
+ * Auth: public.
+ */
+export async function searchProducts(query: string, params: SearchProductsParams = {}): Promise<Product[]> {
+  const normalized = String(query || "").trim();
+  if (!normalized) return [];
+
+  const limit = Math.max(1, Math.min(24, Number(params.limit || 8) || 8));
+  const page = Math.max(1, Number(params.page || 1) || 1);
+  const search = new URLSearchParams();
+  search.set("q", normalized);
+  search.set("limit", String(limit));
+  search.set("page", String(page));
+
+  const response = await get<{ products?: Product[] }>(`/api/products/search?${search.toString()}`);
+  return Array.isArray(response?.products) ? response.products : [];
 }
 
 /**
