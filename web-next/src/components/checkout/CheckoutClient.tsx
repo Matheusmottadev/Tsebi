@@ -10,7 +10,9 @@ import { isCheckoutEnabled } from "@/lib/env";
 import { resolveStripePromise } from "@/lib/stripe";
 import { addAddress, getMe } from "@/services/auth";
 import { createPaymentIntent, quoteShipping } from "@/services/orders";
+import { listProducts } from "@/services/products";
 import type { CreatePaymentIntentPayload, ShippingQuote } from "@/services/orders";
+import type { CartItem } from "@/types";
 import type { Address } from "@/types";
 import styles from "./CheckoutClient.module.css";
 
@@ -454,6 +456,7 @@ export function CheckoutClient() {
   const items = useCartStore(cartSelectors.items);
   const subtotal = useCartStore(cartSelectors.subtotal);
   const currency = useCartStore(cartSelectors.currency) || "brl";
+  const replaceCartItems = useCartStore((state) => state.replaceItems);
 
   const [form, setForm] = useState<CheckoutFormState>(INITIAL_FORM);
   const [activeStep, setActiveStep] = useState<CheckoutStep>("address");
@@ -950,11 +953,15 @@ export function CheckoutClient() {
 
     try {
       assertCheckoutReady();
+      const syncedItems = await syncCartWithCatalog();
+      if (syncedItems.length <= 0) {
+        throw new CheckoutValidationError("Seu carrinho está vazio.");
+      }
       if (!selectedShippingQuote) {
         throw new CheckoutValidationError("Selecione um frete para continuar.");
       }
       const payload = buildPayload(
-        items,
+        syncedItems,
         form,
         selectedShippingQuote,
         checkoutEmail,
@@ -983,6 +990,65 @@ export function CheckoutClient() {
       return false;
     } finally {
       setIsCreatingIntent(false);
+    }
+  }
+
+  async function syncCartWithCatalog(): Promise<CartItem[]> {
+    try {
+      const catalog = await listProducts();
+      const byId = new Map<string, (typeof catalog)[number]>();
+      catalog.forEach((product) => {
+        const id = String(product.id || "").trim();
+        const sku = String(product.sku || "").trim();
+        if (id) byId.set(id, product);
+        if (sku) byId.set(sku, product);
+      });
+
+      let hasChanges = false;
+      let removedOutOfStock = false;
+      const nextItems: CartItem[] = [];
+
+      items.forEach((item) => {
+        const key = String(item.productId || "").trim();
+        const product = byId.get(key);
+        if (!product) {
+          nextItems.push(item);
+          return;
+        }
+
+        const stock = Math.max(0, Number(product.stock || 0));
+        if (stock <= 0) {
+          hasChanges = true;
+          removedOutOfStock = true;
+          return;
+        }
+
+        const nextUnitAmount = Math.max(0, Number(product.unitAmount || 0));
+        const nextQty = Math.max(1, Math.min(Math.max(1, Number(item.qty || 1)), stock));
+
+        if (nextUnitAmount !== Number(item.unitAmount || 0) || nextQty !== Number(item.qty || 0)) {
+          hasChanges = true;
+        }
+
+        nextItems.push({
+          ...item,
+          unitAmount: nextUnitAmount,
+          qty: nextQty,
+        });
+      });
+
+      if (hasChanges) {
+        replaceCartItems(nextItems, currency);
+        const messages: string[] = ["Atualizamos seu carrinho com preço/estoque atuais."];
+        if (removedOutOfStock) {
+          messages.push("Alguns itens foram removidos por falta de estoque.");
+        }
+        setErrorMessage(messages.join(" "));
+      }
+
+      return nextItems;
+    } catch {
+      return items;
     }
   }
 

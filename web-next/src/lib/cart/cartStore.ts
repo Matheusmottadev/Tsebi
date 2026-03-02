@@ -33,6 +33,7 @@ export type CartStore = {
   addItem: (options: AddItemOptions) => AddItemResult;
   removeItem: (options: RemoveItemOptions) => void;
   setQty: (options: SetQtyOptions) => void;
+  replaceItems: (items: CartItem[], currency?: string | null) => void;
   clear: () => void;
 };
 
@@ -177,6 +178,18 @@ export const useCartStore = create<CartStore>((set, get) => ({
     const nextCurrency = nextItems[0]?.currency || null;
     persistSnapshot(nextItems, nextCurrency);
     set({ items: nextItems, currency: nextCurrency, lastError: null });
+  },
+
+  replaceItems: (items, currency = null) => {
+    const normalizedItems = Array.isArray(items) ? items : [];
+    const nextCurrency = normalizedItems[0]?.currency || currency || null;
+    if (normalizedItems.length === 0) {
+      clearCartSnapshot();
+      set({ items: [], currency: null, lastError: null });
+      return;
+    }
+    persistSnapshot(normalizedItems, nextCurrency);
+    set({ items: normalizedItems, currency: nextCurrency, lastError: null });
   },
 
   clear: () => {

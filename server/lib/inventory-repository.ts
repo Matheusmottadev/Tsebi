@@ -49,6 +49,8 @@ type ResolvedItem = {
   variantKey: string | null;
 };
 
+const CHECKOUT_DEFAULT_ITEM_PRICE_CENTS = 100;
+
 const { query, withTransaction } = require("./db") as {
   query: <TRow extends JsonRecord = JsonRecord>(text: string, params?: unknown[]) => Promise<DbResult<TRow>>;
   withTransaction: <T>(work: (client: DbClient) => Promise<T>) => Promise<T>;
@@ -202,7 +204,7 @@ async function checkAvailability(orderItems: unknown): Promise<{ ok: boolean; is
       id: product.sku,
       name: product.name,
       qty: item.qty,
-      unitAmount: Number(product.price_cents || 0),
+      unitAmount: CHECKOUT_DEFAULT_ITEM_PRICE_CENTS,
       currency: String(product.currency || "brl").toLowerCase(),
       variantColor: item.variantColor || null,
       variantSize: item.variantSize || null,

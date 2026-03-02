@@ -1161,9 +1161,9 @@ html.no-scroll{
 
 /* painel central com rolagem */
 .search-panel{
-  max-width: 1200px;
+  max-width: 1360px;
   margin: 0 auto;
-  padding: 110px 40px 60px;
+  padding: 110px 56px 72px;
   height: 100vh;
   overflow-y: auto;
   overflow-x: hidden;
@@ -1199,9 +1199,10 @@ html.no-scroll{
 }
 
 .search-section h3{
-  font-size: 14px;
-  letter-spacing: 1px;
-  margin-bottom: 18px;
+  font-size: 13px;
+  letter-spacing: 1.4px;
+  margin-bottom: 20px;
+  font-weight: 500;
 }
 
 /* chips */
@@ -1225,28 +1226,33 @@ html.no-scroll{
 .top-grid{
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 26px;
+  gap: 28px;
 }
 
 .top-card{
   text-decoration: none;
   color: #000;
   display: block;
+  min-width: 0;
 }
 
 .top-media{
   position: relative;
-  aspect-ratio: 3/4;
+  aspect-ratio: 4/5;
+  border-radius: 10px;
+  overflow: hidden;
+  background: #f2f2f2;
 }
 
 .top-img{
   position: absolute;
   inset: 0;
   width: 100%;
+  height: 100%;
   border-radius: 8px;
   object-fit: cover;
   display: block;
-  background: #f3f3f3;
+  background: #f2f2f2;
   transition: opacity .22s ease, transform .22s ease;
 }
 
@@ -1265,10 +1271,11 @@ html.no-scroll{
 
 
 .top-meta{
-  margin-top: 10px;
+  margin-top: 12px;
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 6px;
+  min-height: 62px;
 }
 
 .tag{
@@ -1277,8 +1284,71 @@ html.no-scroll{
 }
 
 .name{
-  font-size: 13px;
-  letter-spacing: .5px;
+  font-size: 17px;
+  letter-spacing: .2px;
+  line-height: 1.26;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.search-curated-section{
+  margin-top: 34px;
+  padding-top: 10px;
+  border-top: 1px solid #ededed;
+}
+
+.search-curated-grid{
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.search-mini-card{
+  display: grid;
+  grid-template-columns: 86px minmax(0, 1fr);
+  gap: 12px;
+  align-items: center;
+  border: 1px solid #ececec;
+  background: #fff;
+  border-radius: 10px;
+  padding: 8px;
+  text-decoration: none;
+  color: #111;
+  transition: border-color .2s ease, transform .2s ease;
+}
+
+.search-mini-card:hover{
+  border-color: #111;
+  transform: translateY(-2px);
+}
+
+.search-mini-media{
+  width: 86px;
+  height: 108px;
+  border-radius: 8px;
+  overflow: hidden;
+  background: #f2f2f2;
+}
+
+.search-mini-img{
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.search-mini-meta{
+  min-width: 0;
+  display: grid;
+  gap: 4px;
+}
+
+.search-mini-meta .tag{
+  font-size: 10px;
+  letter-spacing: 1.2px;
+  text-transform: uppercase;
 }
 
 .prelaunch-action-card{
@@ -1319,6 +1389,7 @@ html.no-scroll{
 @media (max-width: 980px){
   :root { --header-height: 72px; }
   .top-grid{ grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .search-curated-grid{ grid-template-columns: repeat(2, minmax(0, 1fr)); }
   header{ padding: 14px 20px 12px; }
   .search-box-trigger { min-width: 250px; height: 46px; }
   .search-box-label { font-size: 14px; }
@@ -1533,6 +1604,7 @@ html.no-scroll{
 @media (max-width: 520px){
   :root { --header-height: 64px; }
   .top-grid{ grid-template-columns: 1fr; }
+  .search-curated-grid{ grid-template-columns: 1fr; }
   .header-row {
     grid-template-columns: auto 1fr auto;
     gap: 10px;
@@ -1588,6 +1660,8 @@ html.no-scroll{
     margin-bottom: 6px;
   }
   .search-panel{ padding: 100px 20px 40px; }
+  .search-mini-card{ grid-template-columns: 74px minmax(0, 1fr); }
+  .search-mini-media{ width: 74px; height: 94px; }
   .search-label{ display: none; }
   .search-trigger{
     width: 54px;

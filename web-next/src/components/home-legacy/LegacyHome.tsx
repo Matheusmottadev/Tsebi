@@ -228,6 +228,30 @@ export function LegacyHome({ products }: LegacyHomeProps) {
     return mapped.length > 0 ? mapped : FALLBACK_SEARCH_PIECES;
   }, [safeProducts]);
 
+  const searchCuratedPieces = useMemo<SearchPiece[]>(() => {
+    if (safeProducts.length === 0) {
+      return [...FALLBACK_SEARCH_PIECES, ...FALLBACK_SEARCH_PIECES].slice(0, 8);
+    }
+
+    const mapped: SearchPiece[] = [];
+    for (const product of safeProducts.slice(4, 12)) {
+      const href = resolveProductHref(product);
+      if (!href) continue;
+      const pair = buildHoverImagePair(product);
+      mapped.push({
+        id: String(product.id || product.sku),
+        sku: String(product.sku || product.id),
+        name: String(product.name || "Produto TSEBI"),
+        image: pair.primary || resolveProductImageSrc(product),
+        secondaryImage: pair.secondary || resolveProductImageSrc(product),
+        href,
+      });
+    }
+
+    if (mapped.length >= 4) return mapped;
+    return [...mapped, ...searchTopPieces].slice(0, 8);
+  }, [safeProducts, searchTopPieces]);
+
   const animateArrow = useCallback((direction: "left" | "right") => {
     const button = direction === "right" ? rightArrowRef.current : leftArrowRef.current;
     if (!button || typeof button.animate !== "function") return;
@@ -725,6 +749,35 @@ export function LegacyHome({ products }: LegacyHomeProps) {
                   </div>
                   <div className="top-meta">
                     <span className="tag">NOVO</span>
+                    <span className="name">{piece.name}</span>
+                  </div>
+                </Link>
+              ))}
+            </div>
+          </section>
+
+          <section className="search-section search-curated-section">
+            <h3>SELEÇÃO CURADA</h3>
+            <div className="search-curated-grid">
+              {searchCuratedPieces.map((piece, index) => (
+                <Link key={`curated-${piece.id}-${index}`} className="search-mini-card" href={piece.href} onClick={() => setIsSearchOpen(false)}>
+                  <div className="search-mini-media">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      className="search-mini-img"
+                      loading="lazy"
+                      decoding="async"
+                      src={piece.image}
+                      alt={piece.name}
+                      onError={(event) => {
+                        const element = event.currentTarget;
+                        element.onerror = null;
+                        element.src = COLLECTION_PLACEHOLDER;
+                      }}
+                    />
+                  </div>
+                  <div className="search-mini-meta">
+                    <span className="tag">TSEBI</span>
                     <span className="name">{piece.name}</span>
                   </div>
                 </Link>

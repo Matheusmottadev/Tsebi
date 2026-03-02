@@ -349,8 +349,7 @@ function mapProduct(row: ProductRow | null | undefined): Product {
   const staticMetadata = PRODUCT_METADATA[sku] || {};
   const metadata = normalizeProductMetadata(row?.metadata, staticMetadata);
   const metadataRecord = asRecord(row?.metadata);
-  const dbPriceCents = Math.max(0, Math.round(Number(row?.price_cents || 0)));
-  const effectivePriceCents = dbPriceCents > 0 ? dbPriceCents : STOREFRONT_DEFAULT_PRICE_CENTS;
+  const effectivePriceCents = STOREFRONT_DEFAULT_PRICE_CENTS;
   const priceValue = effectivePriceCents / 100;
   const dbImage = String(row?.image_url || "").trim();
   const metadataImage = String(metadataRecord.image || metadataRecord.image_url || metadataRecord.imageUrl || "").trim();
