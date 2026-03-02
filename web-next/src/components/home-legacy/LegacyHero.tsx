@@ -1,24 +1,39 @@
 ﻿"use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useRef, useState } from "react";
 
 const HERO_VIDEO = "/videos/legacy/hero.mp4";
 const HERO_IMAGE = "/images/legacy/home/hero.jpg";
 
 export function LegacyHero() {
   const [hasVideoError, setHasVideoError] = useState(false);
+  const [isVideoReady, setIsVideoReady] = useState(false);
+  const heroVideoRef = useRef<HTMLVideoElement | null>(null);
 
   return (
     <section className="hero">
       {!hasVideoError ? (
         <video
-          className="hero-video"
+          ref={heroVideoRef}
+          className={`hero-video${isVideoReady ? " is-ready" : ""}`}
           autoPlay
           muted
           loop
           playsInline
           preload="auto"
+          onLoadedMetadata={() => {
+            const element = heroVideoRef.current;
+            if (!element) return;
+            if (Number.isFinite(element.duration) && element.duration > 0.2) {
+              try {
+                element.currentTime = 0.12;
+              } catch {
+                // no-op
+              }
+            }
+          }}
+          onPlaying={() => setIsVideoReady(true)}
           onError={() => {
             setHasVideoError(true);
           }}

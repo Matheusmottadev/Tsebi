@@ -4,11 +4,6 @@ const session = require("express-session") as typeof import("express-session");
 const pgSessionFactory = require("connect-pg-simple");
 const { getPool } = require("./lib/db");
 
-const nodeEnv = String(process.env.NODE_ENV || "").trim().toLowerCase();
-const isProduction = process.env.NODE_ENV === "production";
-const isLocalDevelopment = nodeEnv === "development";
-const sessionName = process.env.SESSION_COOKIE_NAME || "tsebi.sid";
-const sessionSecret = String(process.env.SESSION_SECRET || "").trim();
 const defaultSessionSecret = "dev-change-this-session-secret";
 
 function parseIntegerEnv(value: string | undefined, fallback: number): number {
@@ -39,6 +34,12 @@ function createSessionStore(): Store {
 }
 
 function createSessionMiddleware() {
+  const nodeEnv = String(process.env.NODE_ENV || "").trim().toLowerCase();
+  const isProduction = nodeEnv === "production";
+  const isLocalDevelopment = nodeEnv === "development" || nodeEnv === "";
+  const sessionName = process.env.SESSION_COOKIE_NAME || "tsebi.sid";
+  const sessionSecret = String(process.env.SESSION_SECRET || "").trim();
+
   const hasStrongSessionSecret =
     Boolean(sessionSecret) && sessionSecret !== defaultSessionSecret && sessionSecret.length >= 32;
 
