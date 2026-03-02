@@ -598,7 +598,6 @@ export function LegacyHome({ products }: LegacyHomeProps) {
       position,
       source: "overlay_search"
     }).catch(() => {});
-    setIsSearchOpen(false);
   }, [searchQuery]);
 
   useEffect(() => {
@@ -822,9 +821,6 @@ export function LegacyHome({ products }: LegacyHomeProps) {
         className={`search-overlay ${isSearchOpen ? "is-open" : ""}`}
         id="searchOverlay"
         aria-hidden={!isSearchOpen}
-        onClick={(event) => {
-          if (event.target === event.currentTarget) closeSearchOverlay();
-        }}
       >
         <button
           className="search-close"

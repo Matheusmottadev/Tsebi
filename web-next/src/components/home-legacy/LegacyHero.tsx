@@ -6,10 +6,8 @@ import { useState } from "react";
 const HERO_VIDEO = "/videos/legacy/hero.mp4";
 const HERO_IMAGE = "/images/legacy/home/hero.jpg";
 
-type HeroMediaMode = "video" | "image" | "fallback";
-
 export function LegacyHero() {
-  const [mediaMode, setMediaMode] = useState<HeroMediaMode>("video");
+  const [hasVideoError, setHasVideoError] = useState(false);
   const [isVideoReady, setIsVideoReady] = useState(false);
   const isDev = process.env.NODE_ENV !== "production";
 
@@ -26,7 +24,7 @@ export function LegacyHero() {
         fetchPriority="high"
       />
 
-      {mediaMode === "video" ? (
+      {!hasVideoError ? (
         <video
           className={`hero-video${isVideoReady ? " is-ready" : ""}`}
           autoPlay
@@ -34,31 +32,19 @@ export function LegacyHero() {
           loop
           playsInline
           preload="metadata"
-          poster={HERO_IMAGE}
+          style={{ opacity: isVideoReady ? 1 : 0 }}
+          onCanPlay={() => setIsVideoReady(true)}
           onLoadedData={() => setIsVideoReady(true)}
           onError={() => {
             setIsVideoReady(false);
-            setMediaMode("image");
+            setHasVideoError(true);
           }}
         >
           <source src={HERO_VIDEO} type="video/mp4" />
         </video>
-      ) : (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img
-          className="hero-video"
-          src={HERO_IMAGE}
-          alt="Coleção Genesis"
-          onError={(event) => {
-            const element = event.currentTarget;
-            element.onerror = null;
-            setMediaMode("fallback");
-            element.style.display = "none";
-          }}
-        />
-      )}
+      ) : null}
 
-      {isDev ? <div className="legacy-dev-badge">hero: {mediaMode}</div> : null}
+      {isDev ? <div className="legacy-dev-badge">hero: {hasVideoError ? "image" : isVideoReady ? "video" : "loading"}</div> : null}
 
       <div className="hero-text">
         <h2>Coleção Genesis</h2>

@@ -1157,6 +1157,11 @@ html.no-scroll{
   overflow: hidden;
 }
 
+body.no-scroll .home-header,
+body.no-scroll .top-bar{
+  pointer-events: none;
+}
+
 .search-close{
   position: fixed;
   top: 26px;
