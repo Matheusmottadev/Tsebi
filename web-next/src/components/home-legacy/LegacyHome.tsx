@@ -9,7 +9,7 @@ import { LegacyHero } from "@/components/home-legacy/LegacyHero";
 import { NewsletterPopup } from "@/components/home-legacy/NewsletterPopup";
 import { cartSelectors, useCartStore } from "@/lib/cart/cartStore";
 import { getMe } from "@/services/auth";
-import { searchProducts } from "@/services/products";
+import { searchProductsDetailed, trackSearchEvent } from "@/services/products";
 import { buildHoverImagePair } from "@/lib/product-media";
 
 type LegacyHomeProps = {
@@ -177,6 +177,20 @@ function resolveProductImageSrc(product: HomeProductCard): string {
   return `/${clean}`;
 }
 
+function mapProductToSearchPiece(product: HomeProductCard): SearchPiece | null {
+  const href = resolveProductHref(product);
+  if (!href) return null;
+  const pair = buildHoverImagePair(product);
+  return {
+    id: String(product.id || product.sku),
+    sku: String(product.sku || product.id),
+    name: String(product.name || "Produto TSEBI"),
+    image: pair.primary || resolveProductImageSrc(product),
+    secondaryImage: pair.secondary || resolveProductImageSrc(product),
+    href
+  };
+}
+
 export function LegacyHome({ products }: LegacyHomeProps) {
   const hasHydrated = useCartStore(cartSelectors.hasHydrated);
   const itemCount = useCartStore(cartSelectors.itemCount);
@@ -191,6 +205,9 @@ export function LegacyHome({ products }: LegacyHomeProps) {
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<SearchPiece[]>([]);
+  const [searchSuggestions, setSearchSuggestions] = useState<string[]>([]);
+  const [didYouMeanQuery, setDidYouMeanQuery] = useState<string | null>(null);
+  const [zeroResultCurated, setZeroResultCurated] = useState<SearchPiece[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const [hasSearchRequest, setHasSearchRequest] = useState(false);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -203,6 +220,7 @@ export function LegacyHome({ products }: LegacyHomeProps) {
   const openMenuButtonRef = useRef<HTMLButtonElement | null>(null);
   const headerMenuRef = useRef<HTMLElement | null>(null);
   const searchInputRef = useRef<HTMLInputElement | null>(null);
+  const lastTrackedZeroQueryRef = useRef<string>("");
 
   const safeProducts = useMemo(() => normalizeProducts(products), [products]);
   const currentMessage = useMemo(() => TOP_MESSAGES[messageIndex] || TOP_MESSAGES[0], [messageIndex]);
@@ -431,6 +449,9 @@ export function LegacyHome({ products }: LegacyHomeProps) {
     setIsSearchOpen(false);
     setSearchQuery("");
     setSearchResults([]);
+    setSearchSuggestions([]);
+    setDidYouMeanQuery(null);
+    setZeroResultCurated([]);
     setIsSearching(false);
     setHasSearchRequest(false);
   }, []);
@@ -460,11 +481,17 @@ export function LegacyHome({ products }: LegacyHomeProps) {
   );
 
   const handleSearchChipClick = useCallback((label: string) => {
+    void trackSearchEvent({
+      type: "suggestion_click",
+      query: String(searchQuery || "").trim(),
+      suggestion: String(label || "").trim(),
+      source: "search_chip"
+    }).catch(() => {});
     setSearchQuery(String(label || "").trim());
     const input = searchInputRef.current;
     if (!input) return;
     input.focus();
-  }, []);
+  }, [searchQuery]);
 
   useEffect(() => {
     if (!isSearchOpen) return;
@@ -472,6 +499,9 @@ export function LegacyHome({ products }: LegacyHomeProps) {
     const normalized = String(searchQuery || "").trim();
     if (normalized.length < 2) {
       setSearchResults([]);
+      setSearchSuggestions([]);
+      setDidYouMeanQuery(null);
+      setZeroResultCurated([]);
       setIsSearching(false);
       setHasSearchRequest(false);
       return;
@@ -481,28 +511,40 @@ export function LegacyHome({ products }: LegacyHomeProps) {
     const timer = window.setTimeout(async () => {
       setIsSearching(true);
       try {
-        const products = await searchProducts(normalized, { limit: 8, page: 1 });
+        const response = await searchProductsDetailed(normalized, { limit: 8, page: 1, sort: "relevance", inStock: true });
         if (canceled) return;
-        const mapped = products
-          .map((product) => {
-            const href = resolveProductHref(product);
-            if (!href) return null;
-            const pair = buildHoverImagePair(product);
-            return {
-              id: String(product.id || product.sku),
-              sku: String(product.sku || product.id),
-              name: String(product.name || "Produto TSEBI"),
-              image: pair.primary || resolveProductImageSrc(product),
-              secondaryImage: pair.secondary || resolveProductImageSrc(product),
-              href
-            } as SearchPiece;
-          })
+        const mapped = response.products.map((product) => mapProductToSearchPiece(product)).filter(Boolean) as SearchPiece[];
+        const curated = (response.curatedProducts || [])
+          .map((product) => mapProductToSearchPiece(product))
           .filter(Boolean) as SearchPiece[];
 
         setSearchResults(mapped);
+        setSearchSuggestions(Array.isArray(response.suggestions) ? response.suggestions.slice(0, 6) : []);
+        setDidYouMeanQuery(response.suggestedQuery ? String(response.suggestedQuery) : null);
+        setZeroResultCurated(curated);
+
+        void trackSearchEvent({
+          type: "search_view",
+          query: normalized,
+          resultsCount: mapped.length,
+          source: "overlay_search"
+        }).catch(() => {});
+
+        if (mapped.length === 0 && lastTrackedZeroQueryRef.current !== normalized) {
+          lastTrackedZeroQueryRef.current = normalized;
+          void trackSearchEvent({
+            type: "zero_result",
+            query: normalized,
+            resultsCount: 0,
+            source: "overlay_search"
+          }).catch(() => {});
+        }
       } catch {
         if (canceled) return;
         setSearchResults([]);
+        setSearchSuggestions([]);
+        setDidYouMeanQuery(null);
+        setZeroResultCurated([]);
       } finally {
         if (canceled) return;
         setHasSearchRequest(true);
@@ -522,12 +564,42 @@ export function LegacyHome({ products }: LegacyHomeProps) {
     return searchResults;
   }, [searchQuery, searchResults, searchTopPieces]);
 
+  const zeroStateToRender = useMemo(() => {
+    if (zeroResultCurated.length > 0) return zeroResultCurated;
+    return searchCuratedPieces.slice(0, 8);
+  }, [zeroResultCurated, searchCuratedPieces]);
+
   const searchSectionTitle = useMemo(() => {
     const normalized = String(searchQuery || "").trim();
     if (normalized.length < 2) return "PRINCIPAIS PEÇAS";
     if (isSearching) return "BUSCANDO...";
     return "RESULTADOS";
   }, [searchQuery, isSearching]);
+
+  const handleDidYouMeanClick = useCallback((value: string) => {
+    const normalized = String(value || "").trim();
+    if (!normalized) return;
+    void trackSearchEvent({
+      type: "did_you_mean_click",
+      query: String(searchQuery || "").trim(),
+      suggestion: normalized,
+      source: "overlay_search"
+    }).catch(() => {});
+    setSearchQuery(normalized);
+    const input = searchInputRef.current;
+    if (input) input.focus();
+  }, [searchQuery]);
+
+  const handleResultClick = useCallback((piece: SearchPiece, position: number) => {
+    void trackSearchEvent({
+      type: "result_click",
+      query: String(searchQuery || "").trim(),
+      productSku: piece.sku,
+      position,
+      source: "overlay_search"
+    }).catch(() => {});
+    setIsSearchOpen(false);
+  }, [searchQuery]);
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -776,6 +848,44 @@ export function LegacyHome({ products }: LegacyHomeProps) {
               onChange={(event) => setSearchQuery(event.target.value)}
             />
           </div>
+          {searchSuggestions.length > 0 ? (
+            <div className="search-inline-suggestions" aria-label="Sugestoes de busca">
+              {searchSuggestions.map((suggestion, index) => (
+                <button
+                  key={`${suggestion}-${index}`}
+                  type="button"
+                  className="search-inline-suggestion"
+                  onClick={() => {
+                    void trackSearchEvent({
+                      type: "suggestion_click",
+                      query: String(searchQuery || "").trim(),
+                      suggestion,
+                      position: index,
+                      source: "overlay_suggestions"
+                    }).catch(() => {});
+                    setSearchQuery(suggestion);
+                    const input = searchInputRef.current;
+                    if (input) input.focus();
+                  }}
+                >
+                  {suggestion}
+                </button>
+              ))}
+            </div>
+          ) : null}
+          {didYouMeanQuery && !isSearching ? (
+            <p className="search-did-you-mean">
+              Você quis dizer{" "}
+              <button
+                type="button"
+                className="search-did-you-mean-btn"
+                onClick={() => handleDidYouMeanClick(didYouMeanQuery)}
+              >
+                {didYouMeanQuery}
+              </button>
+              ?
+            </p>
+          ) : null}
 
           <section className="search-section">
             <h3>SUGESTÕES</h3>
@@ -791,8 +901,8 @@ export function LegacyHome({ products }: LegacyHomeProps) {
           <section className="search-section">
             <h3>{searchSectionTitle}</h3>
             <div className="top-grid">
-              {searchResultsToRender.map((piece) => (
-                <Link key={piece.id} className="top-card" href={piece.href} onClick={() => setIsSearchOpen(false)}>
+              {searchResultsToRender.map((piece, index) => (
+                <Link key={piece.id} className="top-card" href={piece.href} onClick={() => handleResultClick(piece, index)}>
                   <div className="top-media">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img
@@ -834,10 +944,14 @@ export function LegacyHome({ products }: LegacyHomeProps) {
           </section>
 
           <section className="search-section search-curated-section">
-            <h3>SELEÇÃO CURADA</h3>
+            <h3>
+              {!isSearching && hasSearchRequest && searchResultsToRender.length === 0
+                ? "NOSSAS ESCOLHAS PARA VOCÊ"
+                : "SELEÇÃO CURADA"}
+            </h3>
             <div className="search-curated-grid">
-              {searchCuratedPieces.map((piece, index) => (
-                <Link key={`curated-${piece.id}-${index}`} className="search-mini-card" href={piece.href} onClick={() => setIsSearchOpen(false)}>
+              {zeroStateToRender.map((piece, index) => (
+                <Link key={`curated-${piece.id}-${index}`} className="search-mini-card" href={piece.href} onClick={() => handleResultClick(piece, index)}>
                   <div className="search-mini-media">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img

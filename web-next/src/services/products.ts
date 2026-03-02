@@ -1,4 +1,4 @@
-import { get, HttpError } from "@/lib/http";
+import { get, HttpError, post } from "@/lib/http";
 import type { Product } from "@/types";
 
 /*
@@ -21,6 +21,41 @@ export interface ProductRecommendationsResponse {
 export interface SearchProductsParams {
   limit?: number;
   page?: number;
+  category?: string;
+  collection?: string;
+  gender?: string;
+  inStock?: boolean;
+  sort?: "relevance" | "newest" | "price_asc" | "price_desc";
+}
+
+export interface SearchProductsResponse {
+  query: string;
+  page: number;
+  limit: number;
+  source: string;
+  found: number;
+  products: Product[];
+  suggestions?: string[];
+  suggestedQuery?: string | null;
+  curatedProducts?: Product[];
+}
+
+export interface SearchSuggestionsResponse {
+  query: string;
+  suggestions: string[];
+  suggestedQuery: string | null;
+  curatedProducts: Product[];
+}
+
+export interface SearchEventPayload {
+  type: "search_view" | "suggestion_click" | "result_click" | "did_you_mean_click" | "zero_result";
+  query?: string;
+  suggestion?: string;
+  productSku?: string;
+  position?: number;
+  resultsCount?: number;
+  pagePath?: string;
+  source?: string;
 }
 
 function buildRecentProductsPath(ids: string[]): string {
@@ -48,8 +83,22 @@ export async function listProducts(params: ListProductsParams = {}): Promise<Pro
  * Auth: public.
  */
 export async function searchProducts(query: string, params: SearchProductsParams = {}): Promise<Product[]> {
+  const result = await searchProductsDetailed(query, params);
+  return result.products;
+}
+
+/**
+ * GET /api/products/search
+ * Auth: public.
+ */
+export async function searchProductsDetailed(
+  query: string,
+  params: SearchProductsParams = {}
+): Promise<SearchProductsResponse> {
   const normalized = String(query || "").trim();
-  if (!normalized) return [];
+  if (!normalized) {
+    return { query: "", page: 1, limit: 8, source: "none", found: 0, products: [], suggestions: [], suggestedQuery: null, curatedProducts: [] };
+  }
 
   const limit = Math.max(1, Math.min(24, Number(params.limit || 8) || 8));
   const page = Math.max(1, Number(params.page || 1) || 1);
@@ -57,9 +106,57 @@ export async function searchProducts(query: string, params: SearchProductsParams
   search.set("q", normalized);
   search.set("limit", String(limit));
   search.set("page", String(page));
+  if (params.category) search.set("category", String(params.category));
+  if (params.collection) search.set("collection", String(params.collection));
+  if (params.gender) search.set("gender", String(params.gender));
+  if (typeof params.inStock === "boolean") search.set("inStock", params.inStock ? "true" : "false");
+  if (params.sort) search.set("sort", params.sort);
 
-  const response = await get<{ products?: Product[] }>(`/api/products/search?${search.toString()}`);
-  return Array.isArray(response?.products) ? response.products : [];
+  const response = await get<SearchProductsResponse>(`/api/products/search?${search.toString()}`);
+  return {
+    query: String(response?.query || normalized),
+    page: Math.max(1, Number(response?.page || page) || page),
+    limit: Math.max(1, Number(response?.limit || limit) || limit),
+    source: String(response?.source || "postgres"),
+    found: Math.max(0, Number(response?.found || 0) || 0),
+    products: Array.isArray(response?.products) ? response.products : [],
+    suggestions: Array.isArray(response?.suggestions) ? response.suggestions : [],
+    suggestedQuery: response?.suggestedQuery ? String(response.suggestedQuery) : null,
+    curatedProducts: Array.isArray(response?.curatedProducts) ? response.curatedProducts : []
+  };
+}
+
+/**
+ * GET /api/products/search/suggestions
+ * Auth: public.
+ */
+export async function searchProductSuggestions(query: string, limit = 8): Promise<SearchSuggestionsResponse> {
+  const normalized = String(query || "").trim();
+  if (normalized.length < 2) {
+    return { query: normalized, suggestions: [], suggestedQuery: null, curatedProducts: [] };
+  }
+  const safeLimit = Math.max(1, Math.min(12, Number(limit) || 8));
+  const search = new URLSearchParams();
+  search.set("q", normalized);
+  search.set("limit", String(safeLimit));
+  const response = await get<SearchSuggestionsResponse>(`/api/products/search/suggestions?${search.toString()}`);
+  return {
+    query: String(response?.query || normalized),
+    suggestions: Array.isArray(response?.suggestions) ? response.suggestions : [],
+    suggestedQuery: response?.suggestedQuery ? String(response.suggestedQuery) : null,
+    curatedProducts: Array.isArray(response?.curatedProducts) ? response.curatedProducts : []
+  };
+}
+
+/**
+ * POST /api/products/search/events
+ * Auth: public.
+ */
+export async function trackSearchEvent(payload: SearchEventPayload): Promise<void> {
+  await post<{ ok: boolean }>("/api/products/search/events", {
+    ...payload,
+    pagePath: payload.pagePath || (typeof window !== "undefined" ? window.location.pathname : "")
+  });
 }
 
 /**

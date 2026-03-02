@@ -26,10 +26,16 @@ const {
   listOrdersByUserId
 } = require("./lib/order-repository");
 const { notifyOrderConfirmed, notifyPaymentApproved } = require("./lib/order-notification-service");
-const { listProducts, getProductByIdentifier, searchStorefrontProducts } = require("./lib/product-repository");
+const {
+  listProducts,
+  getProductByIdentifier,
+  searchStorefrontProducts,
+  searchStorefrontSuggestions
+} = require("./lib/product-repository");
 const { checkAvailability, commitStock } = require("./lib/inventory-repository");
 const { evaluateAccessCode } = require("./lib/access-code-repository");
 const { withTransaction } = require("./lib/db");
+const { logProductSearchEvent } = require("./lib/search-telemetry-repository");
 const { shippingRouter } = require("../src/routes/shipping.routes");
 const { adminShippingRouter } = require("../src/routes/admin.shipping.routes");
 const { adminWhatsAppRouter } = require("../src/routes/admin.whatsapp.routes");
@@ -132,12 +138,43 @@ const newsletterSubscribeRateLimit = rateLimit({
   message: { error: "TOO_MANY_REQUESTS" }
 });
 
+const productSearchEventsRateLimit = rateLimit({
+  windowMs: 60 * 1000,
+  max: 90,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: "TOO_MANY_REQUESTS" }
+});
+
+const productSearchSuggestionsRateLimit = rateLimit({
+  windowMs: 60 * 1000,
+  max: 120,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: "TOO_MANY_REQUESTS" }
+});
+
 const newsletterSubscribeSchema = z.object({
   email: z.string().trim().email(),
   phone: z.string().trim().max(32).optional().default(""),
   source: z.string().trim().max(80).optional().default(""),
   page: z.string().trim().max(200).optional().default(""),
   consent: z.coerce.boolean().optional().default(false)
+});
+
+const productSearchEventSchema = z.object({
+  type: z
+    .string()
+    .trim()
+    .toLowerCase()
+    .refine((value: string) => ["search_view", "suggestion_click", "result_click", "did_you_mean_click", "zero_result"].includes(value)),
+  query: z.string().trim().max(160).optional().default(""),
+  suggestion: z.string().trim().max(160).optional().default(""),
+  productSku: z.string().trim().max(80).optional().default(""),
+  position: z.coerce.number().int().min(0).max(500).optional(),
+  resultsCount: z.coerce.number().int().min(0).max(5000).optional(),
+  pagePath: z.string().trim().max(240).optional().default(""),
+  source: z.string().trim().max(80).optional().default("storefront_search")
 });
 
 const paymentIntentSchema = z.object({
@@ -1107,16 +1144,19 @@ app.get("/api/products/search", async (req: any, res: any) => {
       return res.json({ query: "", page, limit, source: "none", found: 0, products: [] });
     }
 
-    const result = await searchStorefrontProducts({
-      query: queryText,
-      page,
-      limit,
-      category,
-      collection,
-      gender,
-      inStock,
-      sort
-    });
+    const [result, assist] = await Promise.all([
+      searchStorefrontProducts({
+        query: queryText,
+        page,
+        limit,
+        category,
+        collection,
+        gender,
+        inStock,
+        sort
+      }),
+      searchStorefrontSuggestions({ query: queryText, limit: 8 })
+    ]);
 
     return res.json({
       query: queryText,
@@ -1124,10 +1164,50 @@ app.get("/api/products/search", async (req: any, res: any) => {
       limit,
       source: "postgres",
       found: result.total,
-      products: result.rows
+      products: result.rows,
+      suggestions: assist.terms,
+      suggestedQuery: assist.didYouMean,
+      curatedProducts: assist.products
     });
   } catch {
     return res.status(500).json({ error: "SEARCH_FAILED" });
+  }
+});
+
+app.get("/api/products/search/suggestions", productSearchSuggestionsRateLimit, async (req: any, res: any) => {
+  try {
+    const queryText = String(req.query.q || req.query.query || "").trim();
+    const limit = Math.max(1, Math.min(12, Number(req.query.limit || 8) || 8));
+    if (queryText.length < 2) {
+      return res.json({ query: queryText, suggestions: [], curatedProducts: [], suggestedQuery: null });
+    }
+    const assist = await searchStorefrontSuggestions({ query: queryText, limit });
+    return res.json({
+      query: queryText,
+      suggestions: assist.terms,
+      curatedProducts: assist.products,
+      suggestedQuery: assist.didYouMean
+    });
+  } catch {
+    return res.status(500).json({ error: "SEARCH_SUGGESTIONS_FAILED" });
+  }
+});
+
+app.post("/api/products/search/events", productSearchEventsRateLimit, async (req: any, res: any) => {
+  const parsed = productSearchEventSchema.safeParse(req.body || {});
+  if (!parsed.success) {
+    return res.status(400).json({ ok: false, error: "INVALID_INPUT" });
+  }
+
+  try {
+    await logProductSearchEvent({
+      ...parsed.data,
+      userAgent: String(req.headers["user-agent"] || ""),
+      ipAddress: String(req.ip || "")
+    });
+    return res.status(201).json({ ok: true });
+  } catch {
+    return res.status(500).json({ ok: false, error: "SEARCH_EVENT_FAILED" });
   }
 });
 

@@ -41,6 +41,16 @@ export type SearchStorefrontProductsOptions = {
   sort?: "relevance" | "newest" | "price_asc" | "price_desc";
 };
 
+export type SearchSuggestionProduct = Pick<
+  Product,
+  "id" | "sku" | "name" | "image" | "secondaryImage" | "category" | "collection" | "stock" | "active"
+>;
+
+export type SearchStorefrontSuggestionsOptions = {
+  query?: string;
+  limit?: number;
+};
+
 export type ProductWritePayload = {
   sku?: string;
   name?: string;
@@ -567,6 +577,134 @@ function scoreProductSearch(product: Product, query: string, tokens: string[]): 
   return score;
 }
 
+function uniqueTextList(values: string[]): string[] {
+  const seen = new Set<string>();
+  const output: string[] = [];
+  values.forEach((value) => {
+    const normalized = String(value || "").trim();
+    if (!normalized) return;
+    const key = foldText(normalized);
+    if (!key || seen.has(key)) return;
+    seen.add(key);
+    output.push(normalized);
+  });
+  return output;
+}
+
+function levenshteinDistance(a: string, b: string): number {
+  const left = foldText(a);
+  const right = foldText(b);
+  if (left === right) return 0;
+  if (!left.length) return right.length;
+  if (!right.length) return left.length;
+
+  const rows = left.length + 1;
+  const cols = right.length + 1;
+  const dp = Array.from({ length: rows }, () => new Array<number>(cols).fill(0));
+
+  for (let i = 0; i < rows; i += 1) dp[i][0] = i;
+  for (let j = 0; j < cols; j += 1) dp[0][j] = j;
+
+  for (let i = 1; i < rows; i += 1) {
+    for (let j = 1; j < cols; j += 1) {
+      const cost = left[i - 1] === right[j - 1] ? 0 : 1;
+      dp[i][j] = Math.min(
+        dp[i - 1][j] + 1,
+        dp[i][j - 1] + 1,
+        dp[i - 1][j - 1] + cost
+      );
+    }
+  }
+  return dp[rows - 1][cols - 1];
+}
+
+function extractSearchDictionary(products: Product[]): string[] {
+  const terms: string[] = [];
+  products.forEach((product) => {
+    terms.push(product.name, product.sku, product.category, product.collection, product.material, product.gender);
+    (Array.isArray(product.colors) ? product.colors : []).forEach((item) => terms.push(String(item || "")));
+    (Array.isArray(product.sizes) ? product.sizes : []).forEach((item) => terms.push(String(item || "")));
+  });
+  return uniqueTextList(terms);
+}
+
+function resolveDidYouMean(query: string, dictionary: string[]): string | null {
+  const normalized = foldText(query);
+  if (!normalized || normalized.length < 3) return null;
+
+  let bestTerm = "";
+  let bestDistance = Number.POSITIVE_INFINITY;
+  dictionary.forEach((term) => {
+    const folded = foldText(term);
+    if (!folded || folded === normalized) return;
+    const distance = levenshteinDistance(normalized, folded);
+    const maxAllowed = Math.max(1, Math.floor(Math.min(3, folded.length * 0.34)));
+    if (distance > maxAllowed) return;
+    if (distance < bestDistance) {
+      bestDistance = distance;
+      bestTerm = term;
+    }
+  });
+  return bestTerm || null;
+}
+
+function mapSuggestionProduct(product: Product): SearchSuggestionProduct {
+  return {
+    id: product.id,
+    sku: product.sku,
+    name: product.name,
+    image: product.image,
+    secondaryImage: product.secondaryImage,
+    category: product.category,
+    collection: product.collection,
+    stock: product.stock,
+    active: product.active
+  };
+}
+
+async function searchStorefrontSuggestions({
+  query: q = "",
+  limit = 8
+}: SearchStorefrontSuggestionsOptions = {}): Promise<{
+  terms: string[];
+  didYouMean: string | null;
+  products: SearchSuggestionProduct[];
+}> {
+  const normalized = String(q || "").trim();
+  const safeLimit = Math.max(1, Math.min(12, Number(limit) || 8));
+  if (normalized.length < 2) return { terms: [], didYouMean: null, products: [] };
+
+  const products = await listProducts();
+  const activeProducts = products.filter((item) => item && item.active !== false);
+  const foldedQuery = foldText(normalized);
+  const dictionary = extractSearchDictionary(activeProducts);
+
+  const terms = dictionary
+    .map((term) => {
+      const folded = foldText(term);
+      let score = 0;
+      if (folded === foldedQuery) score += 120;
+      if (folded.startsWith(foldedQuery)) score += 80;
+      if (folded.includes(foldedQuery)) score += 42;
+      return { term, score };
+    })
+    .filter((entry) => entry.score > 0)
+    .sort((a, b) => b.score - a.score || a.term.localeCompare(b.term))
+    .slice(0, safeLimit)
+    .map((entry) => entry.term);
+
+  const didYouMean = resolveDidYouMean(normalized, dictionary);
+  const tokens = tokenizeSearch(normalized);
+  const suggestedProducts = activeProducts
+    .map((product) => ({ product, score: scoreProductSearch(product, normalized, tokens) }))
+    .filter((entry) => entry.score > 0)
+    .sort((a, b) => b.score - a.score)
+    .slice(0, safeLimit)
+    .map((entry) => mapSuggestionProduct(entry.product));
+
+  return { terms, didYouMean, products: suggestedProducts };
+}
+
 async function searchStorefrontProducts({
   query: q = "",
   page = 1,
@@ -1041,6 +1179,7 @@ async function restoreProductFromSnapshot(snapshotInput: JsonRecord = {}): Promi
 module.exports = {
   listProducts,
   searchStorefrontProducts,
+  searchStorefrontSuggestions,
   listAdminProducts,
   searchAdminProducts,
   getProductByIdentifier,

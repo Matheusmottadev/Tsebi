@@ -1210,6 +1210,46 @@ html.no-scroll{
   letter-spacing: .5px;
 }
 
+.search-inline-suggestions{
+  margin-top: 10px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.search-inline-suggestion{
+  border: 1px solid #dcdcdc;
+  background: #fff;
+  padding: 6px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  letter-spacing: .5px;
+  cursor: pointer;
+  transition: border-color .2s ease, transform .2s ease;
+}
+
+.search-inline-suggestion:hover{
+  border-color: #111;
+  transform: translateY(-1px);
+}
+
+.search-did-you-mean{
+  margin-top: 10px;
+  font-size: 13px;
+  color: #575757;
+}
+
+.search-did-you-mean-btn{
+  border: none;
+  background: transparent;
+  color: #111;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  cursor: pointer;
+  font-size: 13px;
+  font-family: inherit;
+}
+
 /* sections */
 .search-section{
   margin-top: 55px;
