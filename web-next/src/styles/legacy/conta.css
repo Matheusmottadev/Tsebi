@@ -594,6 +594,17 @@ nav.conta-subnav {
   display: grid;
   grid-template-columns: repeat(6, minmax(0, 1fr));
   gap: 8px;
+  position: relative;
+}
+
+.order-timeline::before {
+  content: "";
+  position: absolute;
+  left: calc(100% / 12);
+  right: calc(100% / 12);
+  top: 10px;
+  height: 1px;
+  background: #d9d9d9;
 }
 
 .order-timeline-step {
@@ -601,6 +612,8 @@ nav.conta-subnav {
   justify-items: center;
   gap: 6px;
   text-align: center;
+  position: relative;
+  z-index: 1;
 }
 
 .order-timeline-dot {
@@ -939,6 +952,10 @@ nav.conta-subnav {
   .order-timeline {
     grid-template-columns: repeat(2, minmax(0, 1fr));
     row-gap: 14px;
+  }
+
+  .order-timeline::before {
+    content: none;
   }
 }
 

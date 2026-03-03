@@ -972,6 +972,7 @@ export function LegacyHome({ products }: LegacyHomeProps) {
                   submitSearchPage();
                 }}
               />
+            </div>
             <div className="tsebi-search-categories" aria-label="Categorias de busca">
               {SEARCH_CATEGORIES.map((category) => (
                 <button
@@ -995,7 +996,6 @@ export function LegacyHome({ products }: LegacyHomeProps) {
               title="Recomendado para você"
               limit={6}
             />
-            </div>
           </div>
         </section>
       </div>
