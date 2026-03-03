@@ -49,7 +49,7 @@ type ResolvedItem = {
   variantKey: string | null;
 };
 
-const CHECKOUT_DEFAULT_ITEM_PRICE_CENTS = 100;
+const CHECKOUT_DEFAULT_ITEM_PRICE_CENTS = 500;
 
 const { query, withTransaction } = require("./db") as {
   query: <TRow extends JsonRecord = JsonRecord>(text: string, params?: unknown[]) => Promise<DbResult<TRow>>;

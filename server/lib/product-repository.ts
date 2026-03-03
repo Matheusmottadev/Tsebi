@@ -11,7 +11,7 @@ const { query } = require("./db") as {
 };
 
 const DEFAULT_IMAGE = "images/placeholderreal.webp";
-const STOREFRONT_DEFAULT_PRICE_CENTS = 100;
+const STOREFRONT_DEFAULT_PRICE_CENTS = 500;
 
 export type VariantStockMap = Record<string, number>;
 
