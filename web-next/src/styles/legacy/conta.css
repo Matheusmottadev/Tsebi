@@ -588,6 +588,7 @@ nav.conta-subnav {
 }
 
 .order-timeline {
+  --timeline-dot-size: 12px;
   list-style: none;
   margin: 4px 0 0;
   padding: 0;
@@ -602,7 +603,8 @@ nav.conta-subnav {
   position: absolute;
   left: calc(100% / 12);
   right: calc(100% / 12);
-  top: 10px;
+  top: calc(var(--timeline-dot-size) / 2);
+  transform: translateY(-50%);
   height: 1px;
   background: #d9d9d9;
 }
@@ -617,8 +619,8 @@ nav.conta-subnav {
 }
 
 .order-timeline-dot {
-  width: 12px;
-  height: 12px;
+  width: var(--timeline-dot-size);
+  height: var(--timeline-dot-size);
   border-radius: 999px;
   border: 1px solid #cfcfcf;
   background: #f3f3f3;
