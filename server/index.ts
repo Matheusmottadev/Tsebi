@@ -427,6 +427,7 @@ async function sendMetaCapiEvent(payload: {
   };
   if (metaConfig.testEventCode) {
     body.test_event_code = metaConfig.testEventCode;
+    console.log("[meta] using_test_event_code", true);
   }
 
   const endpoint = `https://graph.facebook.com/${encodeURIComponent(metaConfig.apiVersion)}/${encodeURIComponent(
@@ -437,6 +438,7 @@ async function sendMetaCapiEvent(payload: {
     event_name: String(payload.eventName || "").trim(),
     value: normalizedValue,
     currency: normalizedCurrency,
+    using_test_event_code: Boolean(metaConfig.testEventCode),
     content_ids_count: Array.isArray(payload.contentIds) ? payload.contentIds.filter(Boolean).length : 0,
     contents_count: Array.isArray(payload.contents) ? payload.contents.length : 0,
     endpoint
