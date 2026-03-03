@@ -56,7 +56,7 @@ const SEARCH_CHIPS = [
 ];
 
 
-const SEARCH_CATEGORIES = ["Feminino", "Masculino", "CalÃ§as", "Camisas", "Blazers", "Bolsas"] as const;
+const SEARCH_CATEGORIES = ["Feminino", "Masculino", "Calças", "Camisas", "Blazers", "Bolsas"] as const;
 const COLLECTION_VIDEO = "https://media.tsebi.com.br/31377-386628887.mp4";
 const COLLECTION_PLACEHOLDER = "/images/hero.jpg";
 const HOMEPAGE_PICTURE_IMAGE = "/images/Homepagepicture.jpg";

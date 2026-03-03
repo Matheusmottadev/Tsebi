@@ -5367,6 +5367,7 @@ body:not(.home-page) .home-header.product-mode .product-search-trigger svg {
 .tsebi-search-input{
   width: 100%;
   height: 56px;
+  line-height: 56px;
   border: 1px solid #111;
   border-radius: 999px;
   font-family: 'Montserrat', Arial, sans-serif;
@@ -5382,9 +5383,10 @@ body:not(.home-page) .home-header.product-mode .product-search-trigger svg {
 .tsebi-search-placeholder{
   position: absolute;
   inset: 0;
+  width: 100%;
   z-index: 2;
   pointer-events: none;
-  display: inline-flex;
+  display: flex;
   align-items: center;
   justify-content: center;
   text-align: center;
@@ -5470,6 +5472,7 @@ body:not(.home-page) .home-header.product-mode .product-search-trigger svg {
 
   .tsebi-search-input{
     height: 52px;
+    line-height: 52px;
     font-size: 12px;
   }
 
