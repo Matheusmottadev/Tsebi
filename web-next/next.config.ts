@@ -56,6 +56,21 @@ const nextConfig: NextConfig = {
   },
   async redirects() {
     return [
+      {
+        source: "/payment-result",
+        destination: "/",
+        permanent: false,
+      },
+      {
+        source: "/payment-result.html",
+        destination: "/",
+        permanent: false,
+      },
+      {
+        source: "/legacy/pages/payment-result.html",
+        destination: "/",
+        permanent: false,
+      },
       ...migratedHtmlRedirects.map((entry) => ({
         ...entry,
         permanent: true,

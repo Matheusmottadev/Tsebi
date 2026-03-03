@@ -1678,9 +1678,7 @@ async function handleCheckoutSubmit() {
         ""
     ).trim();
     const orderNumber = String(checkoutState.payment.orderNumber || "").trim();
-    const returnUrl = `${window.location.origin}/payment-result.html?orderId=${encodeURIComponent(
-      checkoutState.payment.orderId
-    )}&orderNumber=${encodeURIComponent(orderNumber)}&email=${encodeURIComponent(checkoutEmail)}`;
+    const returnUrl = `${window.location.origin}/`;
 
     const billingName = getBillingName();
     const result = await checkoutState.stripe.instance.confirmPayment({
@@ -1711,7 +1709,7 @@ async function handleCheckoutSubmit() {
       email: checkoutEmail || ""
     });
 
-    window.location.href = `payment-result.html?orderId=${encodeURIComponent(checkoutState.payment.orderId)}&orderNumber=${encodeURIComponent(orderNumber || "")}&email=${encodeURIComponent(checkoutEmail || "")}`;
+    window.location.href = "/";
   } catch (error) {
     setCheckoutStatus(error.message || "Não foi possível finalizar seu pagamento.", "error");
   } finally {

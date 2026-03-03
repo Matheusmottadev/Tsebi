@@ -1,4 +1,8 @@
-﻿const POLL_INTERVAL_MS = 3000;
+﻿if (typeof window !== "undefined") {
+  window.location.replace("/");
+}
+
+const POLL_INTERVAL_MS = 3000;
 const MAX_POLL_DURATION_MS = 2 * 60 * 1000;
 const cartKey = "tsebi-cart-v1";
 const CHECKOUT_TRACKING_KEY = "tsebi-checkout-tracking";
@@ -575,5 +579,7 @@ async function init() {
 
 window.addEventListener("beforeunload", clearPolling);
 init();
+
+
 
 
