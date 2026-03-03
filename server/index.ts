@@ -322,6 +322,7 @@ async function sendMetaCapiEvent(payload: {
   eventId: string;
   eventTime?: number;
   actionSource?: string;
+  eventSourceUrl?: string;
   email?: string;
   currency?: string;
   value?: number;
@@ -346,7 +347,7 @@ async function sendMetaCapiEvent(payload: {
         event_time: Number.isFinite(eventTime) && eventTime > 0 ? eventTime : Math.floor(Date.now() / 1000),
         event_id: String(payload.eventId || "").trim(),
         action_source: String(payload.actionSource || "website").trim() || "website",
-        event_source_url: appBaseUrl,
+        event_source_url: String(payload.eventSourceUrl || "").trim() || appBaseUrl,
         user_data: {
           em: email ? [sha256Lower(email)] : undefined,
           client_ip_address: String(payload.ipAddress || "").trim() || undefined,
@@ -372,11 +373,16 @@ async function sendMetaCapiEvent(payload: {
     }
   );
 
+  const responseBody = await response.text().catch(() => "");
   if (!response.ok) {
-    const text = await response.text().catch(() => "");
-    return { ok: false, reason: text || "META_CAPI_FAILED" };
+    return {
+      ok: false,
+      status: Number(response.status || 0),
+      responseBody,
+      reason: responseBody || "META_CAPI_FAILED"
+    };
   }
-  return { ok: true };
+  return { ok: true, status: Number(response.status || 0), responseBody };
 }
 
 function normalizeAndAggregateItems(rawItems: any) {
@@ -864,7 +870,13 @@ async function fetchOrderWithItemsInTx(client: any, orderId: any) {
  * @param {import("stripe").Stripe.Event} event
  * @returns {Promise<void>}
  */
-async function processWebhookEvent(event: any) {
+async function processWebhookEvent(
+  event: any,
+  requestContext: {
+    ipAddress?: string;
+    userAgent?: string;
+  } = {}
+) {
   const stripeObject = event.data?.object || null;
   if (!stripeObject) {
     logStripeLifecycle("webhook_ignored", {
@@ -910,6 +922,8 @@ async function processWebhookEvent(event: any) {
     currency: string;
     value: number;
     externalId: string;
+    orderId: string;
+    amountCents: number;
   }> = [];
 
   await withTransaction(async (client: any) => {
@@ -989,17 +1003,8 @@ async function processWebhookEvent(event: any) {
       webhookContext.outcome = "order_updated";
       webhookContext.statusFrom = previousStatus;
       webhookContext.statusTo = "paid";
-      const catalog = await listProducts().catch(() => []);
-      const categoryFromOrder =
-        Array.isArray(order.items) && order.items.length > 0
-          ? String(
-              (Array.isArray(catalog) ? catalog : []).find(
-                (product: any) =>
-                  String(product.sku || product.id || "").trim() === String(order.items[0]?.id || "").trim()
-              )?.category || ""
-            ).trim()
-          : "";
       const webhookMetaEventId = String(stripeObject?.metadata?.event_id || "").trim() || `purchase_${String(order.id || "")}`;
+      const amountCents = Math.max(0, Number((order as any)?.amount || 0));
       const orderForMeta = order as any;
       pendingMetaCapiEvents.push({
         eventName: "Purchase",
@@ -1008,8 +1013,10 @@ async function processWebhookEvent(event: any) {
         currency: String(Array.isArray(order.items) && order.items[0]?.currency ? order.items[0].currency : "BRL")
           .trim()
           .toUpperCase(),
-        value: Math.max(0, Number(orderForMeta?.amount || 0)) / 100,
-        externalId: String(order.userId || "").trim()
+        value: amountCents / 100,
+        externalId: String(order.userId || "").trim(),
+        orderId: String(order.id || ""),
+        amountCents
       });
       pendingBehaviorEvents.push({
         eventName: "purchase",
@@ -1022,7 +1029,7 @@ async function processWebhookEvent(event: any) {
               .slice(0, 3)
               .join(",")
           : "",
-        category: categoryFromOrder,
+        category: "",
         price: Array.isArray(order.items)
           ? order.items.reduce((sum: number, item: any) => sum + Math.max(0, Number(item.unitAmount || 0) * Math.max(1, Number(item.qty || 1))), 0)
           : 0,
@@ -1157,18 +1164,48 @@ async function processWebhookEvent(event: any) {
     }
   }
 
+  // Block (2): recommendation / behavior analytics must never stop webhook completion.
+  for (const trackedEvent of pendingBehaviorEvents) {
+    try {
+      await logBehaviorEvent({
+        ...trackedEvent,
+        userAgent: requestContext.userAgent || "stripe-webhook",
+        ipAddress: requestContext.ipAddress || "127.0.0.1"
+      });
+    } catch (error: any) {
+      logStripeLifecycle("webhook_behavior_event_failed", {
+        webhookEventId: webhookContext.webhookEventId,
+        orderId: webhookContext.orderId,
+        reason: toSafeErrorMessage(error)
+      });
+    }
+  }
+
+  // Block (3): Meta CAPI must run independently from analytics/recommendations.
   for (const capiEvent of pendingMetaCapiEvents) {
     try {
+      const tokenPresent = Boolean(String(process.env.META_CAPI_TOKEN || "").trim());
+      const pixelId = String(process.env.META_PIXEL_ID || process.env.NEXT_PUBLIC_META_PIXEL_ID || "").trim();
+      console.log("[meta] token_present", tokenPresent);
+      console.log("[meta] pixel_id", pixelId);
+      console.log("[meta] sending Purchase", {
+        orderId: capiEvent.orderId,
+        amountCents: capiEvent.amountCents
+      });
+
       const result = await sendMetaCapiEvent({
         eventName: capiEvent.eventName,
         eventId: capiEvent.eventId,
         email: capiEvent.email,
         currency: capiEvent.currency,
         value: capiEvent.value,
-        ipAddress: "127.0.0.1",
-        userAgent: "stripe-webhook",
+        ipAddress: requestContext.ipAddress || "127.0.0.1",
+        userAgent: requestContext.userAgent || "stripe-webhook",
+        eventSourceUrl: "https://www.tsebi.com.br/checkout/success",
         externalId: capiEvent.externalId
       });
+      console.log("[meta] response_status", Number((result as any)?.status || 0));
+      console.log("[meta] response_body", String((result as any)?.responseBody || ""));
       if (!result?.ok) {
         logStripeLifecycle("webhook_meta_capi_failed", {
           webhookEventId: webhookContext.webhookEventId,
@@ -1178,22 +1215,6 @@ async function processWebhookEvent(event: any) {
       }
     } catch (error: any) {
       logStripeLifecycle("webhook_meta_capi_failed", {
-        webhookEventId: webhookContext.webhookEventId,
-        orderId: webhookContext.orderId,
-        reason: toSafeErrorMessage(error)
-      });
-    }
-  }
-
-  for (const trackedEvent of pendingBehaviorEvents) {
-    try {
-      await logBehaviorEvent({
-        ...trackedEvent,
-        userAgent: "stripe-webhook",
-        ipAddress: "127.0.0.1"
-      });
-    } catch (error: any) {
-      logStripeLifecycle("webhook_behavior_event_failed", {
         webhookEventId: webhookContext.webhookEventId,
         orderId: webhookContext.orderId,
         reason: toSafeErrorMessage(error)
@@ -1335,7 +1356,13 @@ app.post(
     }
 
     try {
-      await processWebhookEvent(event);
+      const requestIpRaw = String(req.headers["x-forwarded-for"] || req.ip || "").split(",")[0] || "";
+      const requestIp = String(requestIpRaw || "").trim() || "127.0.0.1";
+      const requestUserAgent = String(req.headers["user-agent"] || "").trim() || "stripe-webhook";
+      await processWebhookEvent(event, {
+        ipAddress: requestIp,
+        userAgent: requestUserAgent
+      });
       return res.json({ received: true });
     } catch (error: any) {
       logStripeLifecycle("webhook_processing_failed", {

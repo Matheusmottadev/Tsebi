@@ -216,6 +216,8 @@ async function upsertAffinity(
   delta: number
 ) {
   if (!affinityKey || !Number.isFinite(delta) || delta === 0) return;
+  const safeDelta = Number(delta.toFixed(2));
+  if (!Number.isFinite(safeDelta) || safeDelta === 0) return;
   await client.query(
     `
     INSERT INTO user_affinity (actor_key, user_id, anon_id, affinity_key, score, updated_at)
@@ -227,7 +229,7 @@ async function upsertAffinity(
       anon_id = COALESCE(EXCLUDED.anon_id, user_affinity.anon_id),
       updated_at = NOW()
     `,
-    [actorKey, userId || null, anonId || null, affinityKey, delta]
+    [actorKey, userId || null, anonId || null, affinityKey, safeDelta]
   );
 }
 
