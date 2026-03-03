@@ -133,7 +133,14 @@ function resolveTimelineStatus(order) {
   if (orderStatus === "canceled" || orderStatus === "refunded" || orderStatus === "failed") {
     return "CANCELED";
   }
-  return String(order?.currentStatus || "").toUpperCase();
+  const currentStatus = String(order?.currentStatus || "").trim().toUpperCase();
+  if (currentStatus === "DELIVERED") return "DELIVERED";
+  if (currentStatus === "OUT_FOR_DELIVERY") return "OUT_FOR_DELIVERY";
+  if (currentStatus === "IN_TRANSIT" || currentStatus === "SHIPPED") return "IN_TRANSIT";
+  if (currentStatus === "PROCESSING" || currentStatus === "ORDER_CONFIRMED") return "PROCESSING";
+  if (orderStatus === "paid" || orderStatus === "processing") return "PROCESSING";
+  if (currentStatus === "ORDER_PLACED" || currentStatus === "PENDING_PAYMENT") return "ORDER_PLACED";
+  return "ORDER_PLACED";
 }
 
 function formatOrderDate(dateValue) {

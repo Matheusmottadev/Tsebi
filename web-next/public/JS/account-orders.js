@@ -55,9 +55,11 @@
     if (raw === "OUT_FOR_DELIVERY") return "OUT_FOR_DELIVERY";
     if (raw === "IN_TRANSIT" || raw === "SHIPPED") return "IN_TRANSIT";
     if (raw === "PROCESSING" || raw === "ORDER_CONFIRMED") return "CONFIRMED";
-    if (raw === "ORDER_PLACED" || raw === "PENDING_PAYMENT") return "RECEIVED";
 
+    // Quando o pagamento ja foi aprovado, o pedido deve ficar pelo menos em confirmado.
     if (paymentStatus === "paid" || paymentStatus === "processing") return "CONFIRMED";
+
+    if (raw === "ORDER_PLACED" || raw === "PENDING_PAYMENT") return "RECEIVED";
     if (paymentStatus === "pending_payment") return "RECEIVED";
     return "RECEIVED";
   }

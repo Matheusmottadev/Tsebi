@@ -515,6 +515,7 @@ export function SiteHeader() {
                   submitSearch();
                 }}
               />
+            </div>
             <div className="tsebi-search-categories" aria-label="Categorias de busca">
               {SEARCH_CATEGORIES.map((category) => (
                 <button
@@ -537,7 +538,6 @@ export function SiteHeader() {
               title="Recomendado para voce"
               limit={6}
             />
-            </div>
           </div>
         </section>
       </div>
