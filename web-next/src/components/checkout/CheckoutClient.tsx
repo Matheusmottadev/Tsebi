@@ -1,6 +1,6 @@
 ﻿"use client";
 
-import { ChangeEvent, FocusEvent, useEffect, useMemo, useRef, useState } from "react";
+import { ChangeEvent, FocusEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Elements } from "@stripe/react-stripe-js";
 import type { Stripe } from "@stripe/stripe-js";
 import { Price } from "@/components/Price";
@@ -366,7 +366,8 @@ function buildPayload(
   form: CheckoutFormState,
   selectedShippingQuote: ShippingQuote,
   checkoutEmail: string,
-  companyPaidByStore: boolean
+  companyPaidByStore: boolean,
+  metaEventId: string
 ): CreatePaymentIntentPayload {
   const firstName = String(form.firstName || "").trim();
   const lastName = String(form.lastName || "").trim();
@@ -385,6 +386,7 @@ function buildPayload(
   const payload: CreatePaymentIntentPayload = {
     paymentMethod: "automatic",
     installments: 1,
+    metaEventId: String(metaEventId || "").trim(),
     items: items.map((item) => ({
       id: item.productId,
       qty: item.qty,
@@ -510,6 +512,13 @@ export function CheckoutClient() {
   const stripeConfigured = stripeStatus === "ready";
   const stripeLoading = stripeStatus === "loading";
   const hasTrackedBeginCheckoutRef = useRef(false);
+  const beginCheckoutEventIdRef = useRef("");
+  const getBeginCheckoutEventId = useCallback(() => {
+    if (!beginCheckoutEventIdRef.current) {
+      beginCheckoutEventIdRef.current = crypto.randomUUID();
+    }
+    return beginCheckoutEventIdRef.current;
+  }, []);
 
   useEffect(() => {
     if (hasTrackedBeginCheckoutRef.current) return;
@@ -517,6 +526,7 @@ export function CheckoutClient() {
     hasTrackedBeginCheckoutRef.current = true;
     void trackCommerceEvent({
       eventName: "begin_checkout",
+      eventId: getBeginCheckoutEventId(),
       anonId: getOrCreateAnonId(),
       productId: items
         .map((item) => String(item.productId || "").trim())
@@ -534,7 +544,7 @@ export function CheckoutClient() {
         email: checkoutEmail,
       },
     });
-  }, [hasHydrated, itemCount, items, totalCents, currency, checkoutEmail]);
+  }, [currency, checkoutEmail, getBeginCheckoutEventId, hasHydrated, itemCount, items, totalCents]);
 
   useEffect(() => {
     let isMounted = true;
@@ -992,7 +1002,8 @@ export function CheckoutClient() {
         form,
         selectedShippingQuote,
         checkoutEmail,
-        selectedCompanyPaidByStore
+        selectedCompanyPaidByStore,
+        getBeginCheckoutEventId()
       );
       const result = await createPaymentIntent(payload);
       const clientSecret = String(result.clientSecret || result.paymentIntentClientSecret || "").trim();

@@ -203,6 +203,7 @@ const paymentIntentSchema = z.object({
   paymentMethod: z.string().trim().optional().default("automatic"),
   discountCode: z.string().trim().max(40).optional().default(""),
   installments: z.coerce.number().int().min(1).max(6).optional().default(1),
+  metaEventId: z.string().trim().max(120).optional().default(""),
   items: z
     .array(
       z.object({
@@ -298,6 +299,85 @@ const identifySchema = z.object({
   anon_id: z.string().trim().min(6).max(160),
   user_id: z.string().trim().min(6).max(120)
 });
+
+const metaCapiEventSchema = z.object({
+  event_name: z.string().trim().min(1).max(80),
+  event_id: z.string().trim().min(6).max(160),
+  event_time: z.coerce.number().int().positive().optional(),
+  action_source: z.string().trim().max(40).optional().default("website"),
+  email: z.string().trim().email().optional().or(z.literal("")).default(""),
+  currency: z.string().trim().max(12).optional().default("BRL"),
+  value: z.coerce.number().min(0).optional().default(0)
+});
+
+function sha256Lower(value: any) {
+  return crypto
+    .createHash("sha256")
+    .update(String(value || "").trim().toLowerCase())
+    .digest("hex");
+}
+
+async function sendMetaCapiEvent(payload: {
+  eventName: string;
+  eventId: string;
+  eventTime?: number;
+  actionSource?: string;
+  email?: string;
+  currency?: string;
+  value?: number;
+  ipAddress?: string;
+  userAgent?: string;
+  fbp?: string;
+  fbc?: string;
+  externalId?: string;
+}) {
+  const token = String(process.env.META_CAPI_TOKEN || "").trim();
+  const pixelId = String(process.env.META_PIXEL_ID || process.env.NEXT_PUBLIC_META_PIXEL_ID || "").trim();
+  const appBaseUrl = String(process.env.APP_BASE_URL || "https://www.tsebi.com.br").trim().replace(/\/+$/, "");
+  if (!token || !pixelId) return { ok: false, reason: "META_NOT_CONFIGURED" };
+
+  const eventTime = Number(payload.eventTime || Math.floor(Date.now() / 1000));
+  const email = normalizeEmail(payload.email || "");
+  const externalId = String(payload.externalId || "").trim();
+  const body = {
+    data: [
+      {
+        event_name: String(payload.eventName || "").trim(),
+        event_time: Number.isFinite(eventTime) && eventTime > 0 ? eventTime : Math.floor(Date.now() / 1000),
+        event_id: String(payload.eventId || "").trim(),
+        action_source: String(payload.actionSource || "website").trim() || "website",
+        event_source_url: appBaseUrl,
+        user_data: {
+          em: email ? [sha256Lower(email)] : undefined,
+          client_ip_address: String(payload.ipAddress || "").trim() || undefined,
+          client_user_agent: String(payload.userAgent || "").trim() || undefined,
+          fbp: String(payload.fbp || "").trim() || undefined,
+          fbc: String(payload.fbc || "").trim() || undefined,
+          external_id: externalId ? sha256Lower(externalId) : undefined
+        },
+        custom_data: {
+          currency: String(payload.currency || "BRL").trim().toUpperCase(),
+          value: Math.max(0, Number(payload.value || 0))
+        }
+      }
+    ]
+  };
+
+  const response = await fetch(
+    `https://graph.facebook.com/v18.0/${encodeURIComponent(pixelId)}/events?access_token=${encodeURIComponent(token)}`,
+    {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(body)
+    }
+  );
+
+  if (!response.ok) {
+    const text = await response.text().catch(() => "");
+    return { ok: false, reason: text || "META_CAPI_FAILED" };
+  }
+  return { ok: true };
+}
 
 function normalizeAndAggregateItems(rawItems: any) {
   if (!Array.isArray(rawItems)) return [];
@@ -911,8 +991,10 @@ async function processWebhookEvent(event: any) {
               )?.category || ""
             ).trim()
           : "";
+      const webhookMetaEventId = String(stripeObject?.metadata?.event_id || "").trim() || `purchase_${String(order.id || "")}`;
       pendingBehaviorEvents.push({
         eventName: "purchase",
+        eventId: webhookMetaEventId,
         userId: String(order.userId || ""),
         productId: Array.isArray(order.items)
           ? order.items
@@ -1354,6 +1436,39 @@ app.post("/api/events", behaviorEventsRateLimit, async (req: any, res: any) => {
     return res.status(201).json({ ok: true, actorKey: result.actorKey, eventId: result.eventId });
   } catch {
     return res.status(500).json({ ok: false, error: "EVENT_TRACKING_FAILED" });
+  }
+});
+
+app.post("/api/meta/capi", behaviorEventsRateLimit, async (req: any, res: any) => {
+  const parsed = metaCapiEventSchema.safeParse(req.body || {});
+  if (!parsed.success) {
+    return res.status(400).json({ ok: false, error: "INVALID_INPUT" });
+  }
+
+  try {
+    const payload = parsed.data;
+    const ipAddress = String(req.headers["x-forwarded-for"] || req.ip || "").split(",")[0].trim();
+    const userAgent = String(req.headers["user-agent"] || "").trim();
+    const result = await sendMetaCapiEvent({
+      eventName: payload.event_name,
+      eventId: payload.event_id,
+      eventTime: payload.event_time || undefined,
+      actionSource: payload.action_source,
+      email: payload.email || "",
+      currency: payload.currency || "BRL",
+      value: payload.value || 0,
+      ipAddress,
+      userAgent,
+      fbp: String(req.headers["x-fbp"] || "").trim(),
+      fbc: String(req.headers["x-fbc"] || "").trim(),
+      externalId: String(req.session?.userId || req.body?.user_id || "").trim()
+    });
+    if (!result.ok) {
+      return res.status(502).json({ ok: false, error: "META_CAPI_FAILED", reason: result.reason || "" });
+    }
+    return res.status(201).json({ ok: true });
+  } catch {
+    return res.status(500).json({ ok: false, error: "META_CAPI_FAILED" });
   }
 });
 
@@ -1888,6 +2003,7 @@ app.post(
 
   const orderAmount = Math.max(0, itemsAmount + shippingAmount - discountAmount);
   const ticketBucket = priceBucketFromCents(orderAmount);
+  const checkoutMetaEventId = String(parsed.data.metaEventId || "").trim() || crypto.randomUUID();
   const topCategories = Array.from(
     new Set(
       availability.resolvedItems
@@ -1996,6 +2112,7 @@ app.post(
 
   logBehaviorEvent({
     eventName: "begin_checkout",
+    eventId: checkoutMetaEventId,
     userId: String(checkoutUser?.id || ""),
     productId: availability.resolvedItems.map((item: any) => String(item.id || item.sku || "").trim()).filter(Boolean).slice(0, 3).join(","),
     category: topCategories[0] || "",
@@ -2024,6 +2141,7 @@ app.post(
       orderId: String(order.id || ""),
       orderNumber: String(order.orderNumber || ""),
       userId: String(checkoutUser?.id || ""),
+      event_id: checkoutMetaEventId,
       checkoutMode,
       top_categories: topCategories.join("|").slice(0, 180),
       ticket_bucket: ticketBucket || "",

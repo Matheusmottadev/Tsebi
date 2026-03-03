@@ -2,7 +2,6 @@
 
 import Link from "next/link";
 import { useEffect, useMemo } from "react";
-import { getOrCreateAnonId, trackCommerceEvent } from "@/lib/analytics";
 import { cartSelectors, useCartStore } from "@/lib/cart/cartStore";
 import styles from "./page.module.css";
 
@@ -31,22 +30,6 @@ export default function CheckoutSuccessPage() {
     if (!hasHydrated) return;
     clear();
   }, [hasHydrated, clear]);
-
-  useEffect(() => {
-    if (!orderId) return;
-    void trackCommerceEvent({
-      eventName: "purchase",
-      eventId: `purchase_${orderId}`,
-      anonId: getOrCreateAnonId(),
-      productId: "",
-      category: "",
-      price: 0,
-      currency: "brl",
-      source: "checkout_success_page",
-      attributes: { order_id: orderId },
-      meta: { email: orderEmail },
-    });
-  }, [orderId, orderEmail]);
 
   return (
     <div className={styles.page}>

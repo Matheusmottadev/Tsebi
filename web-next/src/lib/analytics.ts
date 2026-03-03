@@ -58,11 +58,11 @@ function mapMetaEventName(name: CommerceEventName): string {
   if (name === "search") return "Search";
   if (name === "add_to_cart") return "AddToCart";
   if (name === "begin_checkout") return "InitiateCheckout";
-  if (name === "purchase") return "Purchase";
   return "CustomEvent";
 }
 
 function trackMetaPixel(name: CommerceEventName, payload: CommerceEventPayload) {
+  if (name === "purchase") return;
   if (typeof window === "undefined") return;
   const fbq = (window as Window & { fbq?: (...args: unknown[]) => void }).fbq;
   if (typeof fbq !== "function") return;

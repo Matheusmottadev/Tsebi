@@ -124,6 +124,7 @@ export interface CreatePaymentIntentPayload {
   paymentMethod?: PaymentMethod;
   discountCode?: string;
   installments?: number;
+  metaEventId?: string;
   items: CheckoutItemInput[];
   shipping?: CheckoutShippingInput | null;
   customer?: CheckoutCustomerInput;
