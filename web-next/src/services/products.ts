@@ -202,9 +202,12 @@ export async function getPersonalizedProducts(
 
   const response = await get<PersonalizedProductsResponse>(`/api/recommendations?${search.toString()}`);
   return {
-    title: String(response?.title || "Seleção personalizada"),
+    title: String(response?.title || "Selecao personalizada"),
     source: response?.source === "best_sellers" ? "best_sellers" : "personalized",
+    placement: response?.placement ? String(response.placement) : undefined,
+    actorKey: response?.actorKey ? String(response.actorKey) : undefined,
     products: Array.isArray(response?.products) ? response.products : [],
+    items: Array.isArray(response?.items) ? response.items : undefined,
   };
 }
 

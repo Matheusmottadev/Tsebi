@@ -8,6 +8,7 @@ import { GenderShowcase } from "@/components/home-legacy/GenderShowcase";
 import { LegacyFooter } from "@/components/home-legacy/LegacyFooter";
 import { LegacyHero } from "@/components/home-legacy/LegacyHero";
 import { NewsletterPopup } from "@/components/home-legacy/NewsletterPopup";
+import { SearchOverlayRecommendations } from "@/components/SearchOverlayRecommendations";
 import { cartSelectors, useCartStore } from "@/lib/cart/cartStore";
 import {
   trackRecommendationCategoryVisit,
@@ -987,6 +988,13 @@ export function LegacyHome({ products }: LegacyHomeProps) {
                 </button>
               ))}
             </div>
+            <SearchOverlayRecommendations
+              isOpen={isSearchOpen}
+              query={searchQuery}
+              placement="search_overlay_legacy"
+              title="Recomendado para voce"
+              limit={6}
+            />
             </div>
           </div>
         </section>

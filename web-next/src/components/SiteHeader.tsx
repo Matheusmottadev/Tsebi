@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { cartSelectors, useCartStore } from "@/lib/cart/cartStore";
 import { startSearchPlaceholderRotator } from "@/lib/searchPlaceholderRotator";
+import { SearchOverlayRecommendations } from "@/components/SearchOverlayRecommendations";
 import { getMe } from "@/services/auth";
 
 const TOP_MESSAGES = [
@@ -529,6 +530,13 @@ export function SiteHeader() {
                 </button>
               ))}
             </div>
+            <SearchOverlayRecommendations
+              isOpen={isSearchOpen}
+              query={searchQuery}
+              placement="search_overlay_header"
+              title="Recomendado para voce"
+              limit={6}
+            />
             </div>
           </div>
         </section>
