@@ -269,6 +269,7 @@ function publicUser(user: User) {
     title: user.title || "",
     name: user.name,
     email: user.email,
+    phone: user.phone || "",
     emailVerified: Boolean(user.emailVerified),
     emailVerifiedAt: user.emailVerifiedAt || null,
     birthDate: user.birthDate || "",

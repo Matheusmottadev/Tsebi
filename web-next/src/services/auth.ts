@@ -16,6 +16,7 @@ Endpoint mapping used in this file:
 - POST /api/auth/email/resend-account-code
 - POST /api/auth/login/verify-code
 - GET /api/my/addresses
+- GET /api/my/checkout-prefill
 - POST /api/my/addresses
 - PUT /api/my/addresses/:addressId
 - DELETE /api/my/addresses/:addressId
@@ -34,6 +35,17 @@ export type AuthFlowStage =
 export interface AuthMeResponse {
   authenticated: boolean;
   user: PublicUser | null;
+}
+
+export interface CheckoutPrefillResponse {
+  phone: string;
+  cpf: string;
+  fullName: string;
+  sources?: {
+    phone?: string;
+    cpf?: string;
+    fullName?: string;
+  };
 }
 
 export interface LoginPayload {
@@ -253,6 +265,14 @@ export async function loginWithGoogle(payload: GoogleLoginPayload): Promise<Auth
  */
 export async function listAddresses(): Promise<AddressBook> {
   return get<AddressBook>("/api/my/addresses");
+}
+
+/**
+ * GET /api/my/checkout-prefill
+ * Auth: required.
+ */
+export async function getCheckoutPrefill(options?: HttpRequestOptions): Promise<CheckoutPrefillResponse> {
+  return get<CheckoutPrefillResponse>("/api/my/checkout-prefill", { cache: "no-store", ...options });
 }
 
 /**

@@ -9,7 +9,7 @@ import { cartSelectors, useCartStore } from "@/lib/cart/cartStore";
 import { getOrCreateAnonId, trackCommerceEvent } from "@/lib/analytics";
 import { isCheckoutEnabled } from "@/lib/env";
 import { resolveStripePromise } from "@/lib/stripe";
-import { addAddress, getMe } from "@/services/auth";
+import { addAddress, getCheckoutPrefill, getMe } from "@/services/auth";
 import { createPaymentIntent, quoteShipping } from "@/services/orders";
 import { listProducts } from "@/services/products";
 import type { CreatePaymentIntentPayload, ShippingQuote } from "@/services/orders";
@@ -133,6 +133,20 @@ function normalizePhoneDdd(value: string): string {
 
 function normalizePhoneNumber(value: string): string {
   return String(value || "").replace(/\D/g, "").slice(0, 9);
+}
+
+function splitPhoneForCheckout(value: string): { ddd: string; number: string } {
+  const digits = normalizePhone(value);
+  if (digits.length >= 10) {
+    return {
+      ddd: normalizePhoneDdd(digits.slice(0, 2)),
+      number: normalizePhoneNumber(digits.slice(2)),
+    };
+  }
+  return {
+    ddd: "",
+    number: normalizePhoneNumber(digits),
+  };
 }
 
 function normalizeCpf(value: string): string {
@@ -614,6 +628,14 @@ export function CheckoutClient() {
       try {
         const user = await getMe({ cache: "no-store" });
         if (!isMounted) return;
+        if (!user) {
+          setAccountEmail("");
+          setAccountAddresses([]);
+          setSelectedSavedAddressId("");
+          setSavedAddressFingerprints(new Set());
+          return;
+        }
+
         const normalizedUserEmail = normalizeEmail(String(user?.email || ""));
         setAccountEmail(normalizedUserEmail);
         const userAddresses = Array.isArray(user?.addresses) ? user.addresses : [];
@@ -639,16 +661,46 @@ export function CheckoutClient() {
           })))
         );
 
-        if (user?.name) {
-          const parts = String(user.name || "").trim().split(/\s+/).filter(Boolean);
-          if (parts.length > 0) {
-            setForm((current) => ({
-              ...current,
-              firstName: current.firstName || parts[0] || "",
-              lastName: current.lastName || parts.slice(1).join(" "),
-            }));
-          }
+        let prefillPhone = "";
+        let prefillCpf = "";
+        let prefillFullName = "";
+
+        try {
+          const prefill = await getCheckoutPrefill({ cache: "no-store" });
+          if (!isMounted) return;
+          prefillPhone = normalizePhone(String(prefill?.phone || ""));
+          prefillCpf = normalizeCpf(String(prefill?.cpf || ""));
+          prefillFullName = String(prefill?.fullName || "").trim();
+        } catch {
+          // Fallback para dados básicos da conta quando o endpoint de prefill não responder.
         }
+
+        const accountPhone = normalizePhone(String((user as { phone?: string })?.phone || ""));
+        const accountCpf = normalizeCpf(String(user?.cpf || ""));
+        const accountName = String(user?.name || "").trim();
+        const nameToUse = accountName || prefillFullName;
+        const phoneToUse = accountPhone || prefillPhone;
+        const cpfToUse = accountCpf || prefillCpf;
+        const phoneParts = splitPhoneForCheckout(phoneToUse);
+
+        setForm((current) => {
+          const next = { ...current };
+          if (!next.guestEmail && normalizedUserEmail) next.guestEmail = normalizedUserEmail;
+
+          if (!next.firstName && nameToUse) {
+            const parts = nameToUse.split(/\s+/).filter(Boolean);
+            if (parts.length > 0) {
+              next.firstName = parts[0] || "";
+              if (!next.lastName) next.lastName = parts.slice(1).join(" ");
+            }
+          }
+
+          if (!normalizeCpf(next.cpf) && cpfToUse) next.cpf = cpfToUse;
+          if (!normalizePhoneDdd(next.phoneDdd) && phoneParts.ddd) next.phoneDdd = phoneParts.ddd;
+          if (!normalizePhoneNumber(next.phoneNumber) && phoneParts.number) next.phoneNumber = phoneParts.number;
+
+          return next;
+        });
       } catch {
         if (!isMounted) return;
         setAccountEmail("");

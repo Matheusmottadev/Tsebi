@@ -35,6 +35,7 @@ export interface PublicUser {
   title: UserTitle;
   name: string;
   email: string;
+  phone: string;
   emailVerified: boolean;
   emailVerifiedAt: string | null;
   birthDate: string;

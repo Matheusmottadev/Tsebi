@@ -1485,6 +1485,58 @@ myRouter.put("/profile", requireAuth, async (req: any, res: any) => {
   return res.json({ user: publicUser(updated) });
 });
 
+myRouter.get("/checkout-prefill", requireAuth, async (req: any, res: any) => {
+  const user = await findUserById(req.session.userId);
+  if (!user) return res.status(404).json({ error: "USER_NOT_FOUND" });
+
+  const normalizeDigits = (value: any) => String(value || "").replace(/\D/g, "");
+  const normalizePhone = (value: any) => normalizeDigits(value).slice(0, 11);
+  const normalizeCpf = (value: any) => normalizeDigits(value).slice(0, 11);
+  const normalizeName = (value: any) => String(value || "").trim();
+
+  let historyPhone = "";
+  let historyCpf = "";
+  let historyName = "";
+
+  try {
+    const orderResult = await query(
+      `
+      SELECT shipping_json
+      FROM orders
+      WHERE lower(COALESCE(user_email, '')) = lower($1)
+      ORDER BY COALESCE(paid_at, created_at) DESC
+      LIMIT 20
+      `,
+      [normalizeEmail(user.email || "")]
+    );
+
+    for (const row of orderResult.rows || []) {
+      const shipping = row?.shipping_json && typeof row.shipping_json === "object" ? row.shipping_json : {};
+      if (!historyPhone) historyPhone = normalizePhone(shipping.phone || "");
+      if (!historyCpf) historyCpf = normalizeCpf(shipping.cpf || "");
+      if (!historyName) historyName = normalizeName(shipping.fullName || "");
+      if (historyPhone && historyCpf && historyName) break;
+    }
+  } catch {
+    // Se histórico falhar, retorna o que houver no perfil.
+  }
+
+  const phone = normalizePhone(user.phone || historyPhone || "");
+  const cpf = normalizeCpf(user.cpf || historyCpf || "");
+  const fullName = normalizeName(user.name || historyName || "");
+
+  return res.json({
+    phone,
+    cpf,
+    fullName,
+    sources: {
+      phone: normalizePhone(user.phone || "") ? "account" : historyPhone ? "orders" : "",
+      cpf: normalizeCpf(user.cpf || "") ? "account" : historyCpf ? "orders" : "",
+      fullName: normalizeName(user.name || "") ? "account" : historyName ? "orders" : ""
+    }
+  });
+});
+
 myRouter.get("/addresses", requireAuth, async (req: any, res: any) => {
   const user = await findUserById(req.session.userId);
   if (!user) return res.status(404).json({ error: "USER_NOT_FOUND" });
