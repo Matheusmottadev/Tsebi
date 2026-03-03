@@ -1,9 +1,14 @@
 import Script from "next/script";
 
-const META_PIXEL_ID = String(process.env.NEXT_PUBLIC_META_PIXEL_ID || "2086865055219865").trim();
+const META_PIXEL_ID = String(process.env.NEXT_PUBLIC_META_PIXEL_ID || "").trim();
 
 export function MetaPixelBase() {
-  if (!META_PIXEL_ID) return null;
+  if (!META_PIXEL_ID) {
+    if (process.env.NODE_ENV !== "production") {
+      console.debug("[meta-pixel] NEXT_PUBLIC_META_PIXEL_ID not set. Pixel base snippet skipped.");
+    }
+    return null;
+  }
 
   return (
     <>
@@ -18,6 +23,7 @@ export function MetaPixelBase() {
           s.parentNode.insertBefore(t,s)}(window, document,'script',
           'https://connect.facebook.net/en_US/fbevents.js');
           fbq('init', '${META_PIXEL_ID}');
+          ${process.env.NODE_ENV !== "production" ? "console.debug('[meta-pixel] base loaded', { pixelId: '" + META_PIXEL_ID + "' });" : ""}
         `}
       </Script>
       <noscript>

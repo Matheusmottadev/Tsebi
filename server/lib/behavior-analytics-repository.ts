@@ -76,7 +76,14 @@ const META_EVENT_MAP: Record<string, string> = {
 const posthogHost = String(process.env.POSTHOG_HOST || "https://us.i.posthog.com").trim();
 const posthogApiKey = String(process.env.POSTHOG_API_KEY || process.env.POSTHOG_PUBLIC_KEY || "").trim();
 const metaPixelId = String(process.env.META_PIXEL_ID || process.env.NEXT_PUBLIC_META_PIXEL_ID || "").trim();
-const metaCapiToken = String(process.env.META_CAPI_TOKEN || "").trim();
+const metaCapiToken = String(process.env.META_CAPI_ACCESS_TOKEN || process.env.META_CAPI_TOKEN || "").trim();
+const metaApiVersion = String(process.env.META_API_VERSION || "v25.0").trim() || "v25.0";
+const metaEnabledRaw = String(process.env.META_CAPI_ENABLED || "").trim().toLowerCase();
+const metaExplicitEnabled = metaEnabledRaw
+  ? metaEnabledRaw === "1" || metaEnabledRaw === "true" || metaEnabledRaw === "yes" || metaEnabledRaw === "on"
+  : null;
+const metaEnabled = metaExplicitEnabled === null ? Boolean(metaPixelId && metaCapiToken) : metaExplicitEnabled;
+const metaTestEventCode = String(process.env.META_TEST_EVENT_CODE || "").trim();
 const appBaseUrl = String(process.env.APP_BASE_URL || "https://www.tsebi.com.br").trim().replace(/\/+$/, "");
 
 const posthogClient =
@@ -177,9 +184,9 @@ function sha256(value: string): string {
 async function sendMetaConversionsEvent(input: BehaviorEventInput, eventId: string) {
   const normalizedName = normalizeText(input.eventName);
   const mapped = META_EVENT_MAP[normalizedName];
-  if (!mapped || !metaPixelId || !metaCapiToken) return;
+  if (!mapped || !metaEnabled || !metaPixelId || !metaCapiToken) return;
 
-  const payload = {
+  const payload: any = {
     data: [
       {
         event_name: mapped,
@@ -199,12 +206,18 @@ async function sendMetaConversionsEvent(input: BehaviorEventInput, eventId: stri
       },
     ],
   };
+  if (metaTestEventCode) {
+    payload.test_event_code = metaTestEventCode;
+  }
 
-  await fetch(`https://graph.facebook.com/v19.0/${encodeURIComponent(metaPixelId)}/events?access_token=${encodeURIComponent(metaCapiToken)}`, {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify(payload),
-  }).catch(() => {});
+  await fetch(
+    `https://graph.facebook.com/${encodeURIComponent(metaApiVersion)}/${encodeURIComponent(metaPixelId)}/events?access_token=${encodeURIComponent(metaCapiToken)}`,
+    {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(payload),
+    }
+  ).catch(() => {});
 }
 
 async function upsertAffinity(

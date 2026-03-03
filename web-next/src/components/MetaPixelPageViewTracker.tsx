@@ -20,6 +20,9 @@ export function MetaPixelPageViewTracker() {
     if (typeof fbq !== "function") return;
 
     fbq("track", "PageView");
+    if (process.env.NODE_ENV !== "production") {
+      console.debug("[meta-pixel] PageView tracked", { path: currentPath });
+    }
     lastTrackedPathRef.current = currentPath;
     windowWithMeta[globalKey] = currentPath;
   }, [pathname]);

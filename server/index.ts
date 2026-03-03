@@ -68,6 +68,8 @@ const stripeWebhookSecret = process.env.STRIPE_WEBHOOK_SECRET || "";
 const stripeCheckoutPaymentMethodTypes = ["card", "boleto"];
 const posthogPublicKey = process.env.POSTHOG_PUBLIC_KEY || "";
 const posthogHost = process.env.POSTHOG_HOST || "";
+const defaultMetaApiVersion = "v25.0";
+let hasLoggedMetaEnvWarning = false;
 const cspReportOnly = (() => {
   const raw = String(process.env.CSP_REPORT_ONLY || "").trim().toLowerCase();
   if (raw === "1" || raw === "true") return true;
@@ -317,6 +319,54 @@ function sha256Lower(value: any) {
     .digest("hex");
 }
 
+function parseTriStateBooleanEnv(value: any): boolean | null {
+  const raw = String(value || "").trim().toLowerCase();
+  if (!raw) return null;
+  if (raw === "1" || raw === "true" || raw === "yes" || raw === "on") return true;
+  if (raw === "0" || raw === "false" || raw === "no" || raw === "off") return false;
+  return null;
+}
+
+function parseCookieValue(rawCookie: any, key: string): string {
+  const source = String(rawCookie || "");
+  if (!source || !key) return "";
+  const entries = source.split(";");
+  for (const entry of entries) {
+    const [name, ...valueParts] = entry.split("=");
+    if (String(name || "").trim() !== key) continue;
+    try {
+      return decodeURIComponent(valueParts.join("=").trim());
+    } catch {
+      return valueParts.join("=").trim();
+    }
+  }
+  return "";
+}
+
+function resolveMetaConfig() {
+  const pixelId = String(process.env.META_PIXEL_ID || process.env.NEXT_PUBLIC_META_PIXEL_ID || "").trim();
+  const accessToken = String(process.env.META_CAPI_ACCESS_TOKEN || process.env.META_CAPI_TOKEN || "").trim();
+  const apiVersion = String(process.env.META_API_VERSION || defaultMetaApiVersion).trim() || defaultMetaApiVersion;
+  const testEventCode = String(process.env.META_TEST_EVENT_CODE || "").trim();
+  const hasCredentials = Boolean(pixelId && accessToken);
+  const explicitEnabled = parseTriStateBooleanEnv(process.env.META_CAPI_ENABLED);
+  const enabled = explicitEnabled === null ? hasCredentials : explicitEnabled;
+
+  if (enabled && !hasCredentials && !hasLoggedMetaEnvWarning) {
+    hasLoggedMetaEnvWarning = true;
+    console.warn("[meta] META_PIXEL_ID or META_CAPI_ACCESS_TOKEN missing. CAPI send skipped.");
+  }
+
+  return {
+    pixelId,
+    accessToken,
+    apiVersion,
+    testEventCode,
+    enabled: enabled && hasCredentials,
+    tokenPresent: Boolean(accessToken)
+  };
+}
+
 async function sendMetaCapiEvent(payload: {
   eventName: string;
   eventId: string;
@@ -331,16 +381,24 @@ async function sendMetaCapiEvent(payload: {
   fbp?: string;
   fbc?: string;
   externalId?: string;
+  contentIds?: string[];
+  contents?: Array<{
+    id: string;
+    quantity: number;
+    item_price: number;
+  }>;
+  orderId?: string;
 }) {
-  const token = String(process.env.META_CAPI_TOKEN || "").trim();
-  const pixelId = String(process.env.META_PIXEL_ID || process.env.NEXT_PUBLIC_META_PIXEL_ID || "").trim();
+  const metaConfig = resolveMetaConfig();
   const appBaseUrl = String(process.env.APP_BASE_URL || "https://www.tsebi.com.br").trim().replace(/\/+$/, "");
-  if (!token || !pixelId) return { ok: false, reason: "META_NOT_CONFIGURED" };
+  if (!metaConfig.enabled) return { ok: false, skipped: true, reason: "META_NOT_CONFIGURED" };
 
   const eventTime = Number(payload.eventTime || Math.floor(Date.now() / 1000));
   const email = normalizeEmail(payload.email || "");
   const externalId = String(payload.externalId || "").trim();
-  const body = {
+  const normalizedCurrency = String(payload.currency || "BRL").trim().toUpperCase() || "BRL";
+  const normalizedValue = Number(Math.max(0, Number(payload.value || 0)).toFixed(2));
+  const body: any = {
     data: [
       {
         event_name: String(payload.eventName || "").trim(),
@@ -357,23 +415,45 @@ async function sendMetaCapiEvent(payload: {
           external_id: externalId ? sha256Lower(externalId) : undefined
         },
         custom_data: {
-          currency: String(payload.currency || "BRL").trim().toUpperCase(),
-          value: Math.max(0, Number(payload.value || 0))
+          currency: normalizedCurrency,
+          value: normalizedValue,
+          order_id: String(payload.orderId || "").trim() || undefined,
+          content_type: "product",
+          content_ids: Array.isArray(payload.contentIds) ? payload.contentIds.filter(Boolean) : undefined,
+          contents: Array.isArray(payload.contents) ? payload.contents : undefined
         }
       }
     ]
   };
+  if (metaConfig.testEventCode) {
+    body.test_event_code = metaConfig.testEventCode;
+  }
 
-  const response = await fetch(
-    `https://graph.facebook.com/v18.0/${encodeURIComponent(pixelId)}/events?access_token=${encodeURIComponent(token)}`,
-    {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify(body)
-    }
-  );
+  const endpoint = `https://graph.facebook.com/${encodeURIComponent(metaConfig.apiVersion)}/${encodeURIComponent(
+    metaConfig.pixelId
+  )}/events`;
+  console.log("meta_capi_request", {
+    event_id: String(payload.eventId || "").trim(),
+    event_name: String(payload.eventName || "").trim(),
+    value: normalizedValue,
+    currency: normalizedCurrency,
+    content_ids_count: Array.isArray(payload.contentIds) ? payload.contentIds.filter(Boolean).length : 0,
+    contents_count: Array.isArray(payload.contents) ? payload.contents.length : 0,
+    endpoint
+  });
+
+  const response = await fetch(`${endpoint}?access_token=${encodeURIComponent(metaConfig.accessToken)}`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify(body)
+  });
 
   const responseBody = await response.text().catch(() => "");
+  console.log("meta_capi_response", {
+    event_id: String(payload.eventId || "").trim(),
+    status: Number(response.status || 0),
+    body: responseBody
+  });
   if (!response.ok) {
     return {
       ok: false,
@@ -851,6 +931,8 @@ async function fetchOrderWithItemsInTx(client: any, orderId: any) {
   return {
     id: order.id,
     userId: order.user_id || null,
+    userEmail: order.user_email || null,
+    totalCents: Math.max(0, Number(order.total_cents || 0)),
     status: order.status,
     stockCommitted: Boolean(order.stock_committed),
     items: itemsResult.rows.map((item: any) => ({
@@ -875,6 +957,8 @@ async function processWebhookEvent(
   requestContext: {
     ipAddress?: string;
     userAgent?: string;
+    fbp?: string;
+    fbc?: string;
   } = {}
 ) {
   const stripeObject = event.data?.object || null;
@@ -924,6 +1008,12 @@ async function processWebhookEvent(
     externalId: string;
     orderId: string;
     amountCents: number;
+    contentIds: string[];
+    contents: Array<{
+      id: string;
+      quantity: number;
+      item_price: number;
+    }>;
   }> = [];
 
   await withTransaction(async (client: any) => {
@@ -1003,9 +1093,33 @@ async function processWebhookEvent(
       webhookContext.outcome = "order_updated";
       webhookContext.statusFrom = previousStatus;
       webhookContext.statusTo = "paid";
-      const webhookMetaEventId = String(stripeObject?.metadata?.event_id || "").trim() || `purchase_${String(order.id || "")}`;
-      const amountCents = Math.max(0, Number((order as any)?.amount || 0));
+      const paymentIntent = stripeObject || {};
+      const webhookMetaEventId = paymentIntentId
+        ? `pi_${String(paymentIntentId)}_purchase`
+        : `order_${String(order.id || "")}_purchase`;
+      const amountCentsFromStripe = Math.max(
+        0,
+        Number(paymentIntent?.amount_received || paymentIntent?.amount || 0)
+      );
+      const amountCents = Math.max(0, amountCentsFromStripe || Number((order as any)?.totalCents || 0));
       const orderForMeta = order as any;
+      const orderItems = Array.isArray(order.items) ? order.items : [];
+      const contentIds = orderItems
+        .map((item: any) => String(item?.id || "").trim())
+        .filter(Boolean);
+      const contents = orderItems
+        .map((item: any) => {
+          const id = String(item?.id || "").trim();
+          const quantity = Math.max(1, Number(item?.qty || 1));
+          const itemPrice = Math.max(0, Number(item?.unitAmount || 0)) / 100;
+          if (!id) return null;
+          return {
+            id,
+            quantity,
+            item_price: Number(itemPrice.toFixed(2))
+          };
+        })
+        .filter(Boolean) as Array<{ id: string; quantity: number; item_price: number }>;
       pendingMetaCapiEvents.push({
         eventName: "Purchase",
         eventId: webhookMetaEventId,
@@ -1013,10 +1127,12 @@ async function processWebhookEvent(
         currency: String(Array.isArray(order.items) && order.items[0]?.currency ? order.items[0].currency : "BRL")
           .trim()
           .toUpperCase(),
-        value: amountCents / 100,
+        value: Number((amountCents / 100).toFixed(2)),
         externalId: String(order.userId || "").trim(),
         orderId: String(order.id || ""),
-        amountCents
+        amountCents,
+        contentIds,
+        contents
       });
       pendingBehaviorEvents.push({
         eventName: "purchase",
@@ -1184,10 +1300,9 @@ async function processWebhookEvent(
   // Block (3): Meta CAPI must run independently from analytics/recommendations.
   for (const capiEvent of pendingMetaCapiEvents) {
     try {
-      const tokenPresent = Boolean(String(process.env.META_CAPI_TOKEN || "").trim());
-      const pixelId = String(process.env.META_PIXEL_ID || process.env.NEXT_PUBLIC_META_PIXEL_ID || "").trim();
-      console.log("[meta] token_present", tokenPresent);
-      console.log("[meta] pixel_id", pixelId);
+      const metaConfig = resolveMetaConfig();
+      console.log("[meta] token_present", metaConfig.tokenPresent);
+      console.log("[meta] pixel_id", metaConfig.pixelId);
       console.log("[meta] sending Purchase", {
         orderId: capiEvent.orderId,
         amountCents: capiEvent.amountCents
@@ -1201,8 +1316,13 @@ async function processWebhookEvent(
         value: capiEvent.value,
         ipAddress: requestContext.ipAddress || "127.0.0.1",
         userAgent: requestContext.userAgent || "stripe-webhook",
+        fbp: requestContext.fbp || "",
+        fbc: requestContext.fbc || "",
         eventSourceUrl: "https://www.tsebi.com.br/checkout/success",
-        externalId: capiEvent.externalId
+        externalId: capiEvent.externalId,
+        contentIds: capiEvent.contentIds,
+        contents: capiEvent.contents,
+        orderId: capiEvent.orderId
       });
       console.log("[meta] response_status", Number((result as any)?.status || 0));
       console.log("[meta] response_body", String((result as any)?.responseBody || ""));
@@ -1210,14 +1330,16 @@ async function processWebhookEvent(
         logStripeLifecycle("webhook_meta_capi_failed", {
           webhookEventId: webhookContext.webhookEventId,
           orderId: webhookContext.orderId,
-          reason: result?.reason || "META_CAPI_FAILED"
+          reason: result?.reason || "META_CAPI_FAILED",
+          stack: ""
         });
       }
     } catch (error: any) {
       logStripeLifecycle("webhook_meta_capi_failed", {
         webhookEventId: webhookContext.webhookEventId,
         orderId: webhookContext.orderId,
-        reason: toSafeErrorMessage(error)
+        reason: toSafeErrorMessage(error),
+        stack: String(error?.stack || "")
       });
     }
   }
@@ -1359,9 +1481,12 @@ app.post(
       const requestIpRaw = String(req.headers["x-forwarded-for"] || req.ip || "").split(",")[0] || "";
       const requestIp = String(requestIpRaw || "").trim() || "127.0.0.1";
       const requestUserAgent = String(req.headers["user-agent"] || "").trim() || "stripe-webhook";
+      const requestCookies = String(req.headers.cookie || "");
       await processWebhookEvent(event, {
         ipAddress: requestIp,
-        userAgent: requestUserAgent
+        userAgent: requestUserAgent,
+        fbp: parseCookieValue(requestCookies, "_fbp"),
+        fbc: parseCookieValue(requestCookies, "_fbc")
       });
       return res.json({ received: true });
     } catch (error: any) {
