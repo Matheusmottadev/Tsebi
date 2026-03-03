@@ -1,4 +1,4 @@
-const store = window.TsebiUserStore;
+﻿const store = window.TsebiUserStore;
 
 const titleEl = document.getElementById("orderTitle");
 const subtitleEl = document.getElementById("orderSubtitle");
@@ -175,3 +175,4 @@ cancelBtn?.addEventListener("click", handleCancelOrder);
 refundBtn?.addEventListener("click", handleRefundOrder);
 
 boot();
+

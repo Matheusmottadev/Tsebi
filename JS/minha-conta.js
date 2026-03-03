@@ -1,4 +1,4 @@
-const store = window.TsebiUserStore;
+﻿const store = window.TsebiUserStore;
 
 const titleEl = document.getElementById("myAccountTitle");
 const emailEl = document.getElementById("myAccountEmail");
@@ -898,4 +898,5 @@ window.addEventListener("tsebi:auth-changed", () => {
 });
 
 boot();
+
 

@@ -121,7 +121,7 @@ const colorSwatchMap = {
   roxo: "#6e4c8f",
   purple: "#6e4c8f",
   lilas: "#a08cc6",
-  "lilÃ¡s": "#a08cc6",
+  "lilás": "#a08cc6",
   lilac: "#a08cc6",
   dourado: "#b08a2e",
   gold: "#b08a2e",
@@ -130,12 +130,12 @@ const colorSwatchMap = {
   "off white": "#f5f2ea",
   "off-white": "#f5f2ea",
   unico: "#d3d3d3",
-  "Ãºnico": "#d3d3d3",
+  "único": "#d3d3d3",
   unique: "#d3d3d3"
 };
 
 const collectionMapEn = {
-  "GÃªnesis": "Genesis",
+  "Gênesis": "Genesis",
   "Alicerce": "Alicerce"
 };
 
@@ -506,8 +506,8 @@ if (!product) {
 
   function getProductDetails(item) {
     const originByCollection = {
-      "GÃªnesis": "Desenvolvida no Brasil, com matÃ©rias-primas selecionadas de fornecedores europeus e acabamento final artesanal.",
-      "Alicerce": "Criada no Brasil com foco em alfaiataria contemporÃ¢nea, construÃ­da para uso recorrente com padrÃ£o premium."
+      "Gênesis": "Desenvolvida no Brasil, com matérias-primas selecionadas de fornecedores europeus e acabamento final artesanal.",
+      "Alicerce": "Criada no Brasil com foco em alfaiataria contemporânea, construída para uso recorrente com padrão premium."
     };
 
     if (isEnglish) {
@@ -520,10 +520,10 @@ if (!product) {
     }
 
     return {
-      origin: originByCollection[item.collection] || "PeÃ§a desenvolvida no Brasil com seleÃ§Ã£o criteriosa de materiais.",
+      origin: originByCollection[item.collection] || "Peça desenvolvida no Brasil com seleção criteriosa de materiais.",
       composition: `${item.material}.`,
       construction: "Modelagem precisa, costuras limpas e estrutura pensada para manter caimento elegante ao longo do uso.",
-      care: "Lavar a seco ou higienizaÃ§Ã£o profissional especializada. Guardar em local arejado e evitar contato com superfÃ­cies Ã¡speras."
+      care: "Lavar a seco ou higienização profissional especializada. Guardar em local arejado e evitar contato com superfícies ásperas."
     };
   }
 
@@ -586,15 +586,15 @@ if (!product) {
           "Compare your measurements with the row that best fits."
         ]
       : [
-          "MeÃ§a com fita mÃ©trica sobre roupa leve.",
+          "Meça com fita métrica sobre roupa leve.",
           "Mantenha a fita rente ao corpo, sem apertar.",
           "Compare suas medidas com a linha que melhor se aproxima."
         ];
 
-    if (sizeGuideTitle) sizeGuideTitle.textContent = `${tProductName(product)} â€¢ ${isEnglish ? "Size guide" : "Guia de medidas"}`;
+    if (sizeGuideTitle) sizeGuideTitle.textContent = `${tProductName(product)} • ${isEnglish ? "Size guide" : "Guia de medidas"}`;
     const intro = isEnglish
       ? "Measurements in centimeters. Compare with a similar piece you already own."
-      : "Medidas em centÃ­metros. Compare com uma peÃ§a semelhante que vocÃª jÃ¡ possui.";
+      : "Medidas em centímetros. Compare com uma peça semelhante que você já possui.";
     const note = isEnglish
       ? "Tip: for a looser fit, choose one size up."
       : "Dica: para um caimento mais solto, escolha um tamanho acima.";
@@ -649,7 +649,7 @@ if (!product) {
     } else {
       tableHtml = `
         <thead>
-          <tr><th>Tamanho</th><th>Busto/TÃ³rax (cm)</th><th>Cintura (cm)</th><th>Quadril (cm)</th></tr>
+          <tr><th>Tamanho</th><th>Busto/Tórax (cm)</th><th>Cintura (cm)</th><th>Quadril (cm)</th></tr>
         </thead>
         <tbody>
           ${sizes
@@ -841,7 +841,7 @@ if (!product) {
       productStockNote.textContent = "";
       productCta.disabled = true;
       productCta.classList.add("is-disabled");
-      productCta.textContent = isEnglish ? "Select variant" : "Selecionar variaÃ§Ã£o";
+      productCta.textContent = isEnglish ? "Select variant" : "Selecionar variação";
       return;
     }
 
@@ -987,7 +987,7 @@ if (!product) {
 
     if (existing) {
       if ((Number(existing.qty) || 1) >= stock) {
-          if (productStockNote) productStockNote.textContent = isEnglish ? "You have reached the stock limit for this variant in the cart." : "VocÃª jÃ¡ atingiu o limite de estoque dessa variaÃ§Ã£o no carrinho.";
+          if (productStockNote) productStockNote.textContent = isEnglish ? "You have reached the stock limit for this variant in the cart." : "Você já atingiu o limite de estoque dessa variação no carrinho.";
         return;
       }
       existing.qty = (Number(existing.qty) || 1) + 1;
@@ -1100,7 +1100,7 @@ if (!product) {
   if (productDescription) {
     productDescription.textContent = isEnglish
       ? "A high-standard piece with refined finishing and elegant presence for daily wear or special occasions."
-      : "PeÃ§a com construÃ§Ã£o de alto padrÃ£o, acabamento refinado e presenÃ§a elegante para uso diÃ¡rio ou ocasiÃµes especiais.";
+      : "Peça com construção de alto padrão, acabamento refinado e presença elegante para uso diário ou ocasiões especiais.";
   }
   if (!isSizeAvailable(selectedSize, selectedColor)) {
     selectedSize = getFirstAvailableSizeForColor(selectedColor);
@@ -1186,5 +1186,6 @@ if (!product) {
   if (productView) productView.hidden = false;
 }
 }
+
 
 

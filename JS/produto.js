@@ -1,4 +1,4 @@
-let productsCatalog = [];
+﻿let productsCatalog = [];
 
 async function loadProductsCatalog() {
   try {
@@ -251,7 +251,7 @@ function updateFavoriteButtonUI(button) {
   const productId = button?.dataset.productId || "";
   const active = isFavoriteProduct(productId);
   button.classList.toggle("is-active", active);
-  button.textContent = active ? "♥" : "♡";
+  button.textContent = active ? "â™¥" : "â™¡";
   button.setAttribute("aria-label", active ? "Remover dos favoritos" : "Adicionar aos favoritos");
 }
 
@@ -892,7 +892,7 @@ if (!product) {
       card.innerHTML = `
         <div class="product-similar-media">
           <img src="${item.image}" alt="${tProductName(item)}" loading="lazy" decoding="async" />
-          <button class="product-favorite-btn ${isFavoriteProduct(item.id) ? "is-active" : ""}" type="button" data-product-id="${item.id}" aria-label="${isFavoriteProduct(item.id) ? "Remover dos favoritos" : "Adicionar aos favoritos"}">${isFavoriteProduct(item.id) ? "♥" : "♡"}</button>
+          <button class="product-favorite-btn ${isFavoriteProduct(item.id) ? "is-active" : ""}" type="button" data-product-id="${item.id}" aria-label="${isFavoriteProduct(item.id) ? "Remover dos favoritos" : "Adicionar aos favoritos"}">${isFavoriteProduct(item.id) ? "â™¥" : "â™¡"}</button>
         </div>
         <div class="product-similar-meta">
           <p class="product-similar-collection">${String(tCollection(item.collection) || "").toUpperCase()}</p>
@@ -1186,4 +1186,5 @@ if (!product) {
   if (productView) productView.hidden = false;
 }
 }
+
 

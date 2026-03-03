@@ -1,7 +1,8 @@
-const POLL_INTERVAL_MS = 3000;
+﻿const POLL_INTERVAL_MS = 3000;
 const MAX_POLL_DURATION_MS = 2 * 60 * 1000;
 const cartKey = "tsebi-cart-v1";
 const CHECKOUT_TRACKING_KEY = "tsebi-checkout-tracking";
+const LAST_ORDER_ID_KEY = "tsebi_last_order_id";
 const LAST_ORDER_EMAIL_KEY = "tsebi_last_order_email";
 const LAST_ORDER_NUMBER_KEY = "tsebi_last_order_number";
 
@@ -113,34 +114,67 @@ function setActivationLoading(loading) {
 
 function saveTrackingContext(partial = {}) {
   try {
-    const current = JSON.parse(sessionStorage.getItem(CHECKOUT_TRACKING_KEY) || "{}");
+    const sessionCurrent = JSON.parse(sessionStorage.getItem(CHECKOUT_TRACKING_KEY) || "{}");
+    const localCurrent = JSON.parse(localStorage.getItem(CHECKOUT_TRACKING_KEY) || "{}");
+    const current = {
+      ...localCurrent,
+      ...sessionCurrent
+    };
     const next = {
       ...current,
       ...partial,
       updatedAt: new Date().toISOString()
     };
     sessionStorage.setItem(CHECKOUT_TRACKING_KEY, JSON.stringify(next));
+    localStorage.setItem(CHECKOUT_TRACKING_KEY, JSON.stringify(next));
+    const normalizedOrderId = String(next.orderId || "").trim();
     const normalizedEmail = String(next.email || "").trim().toLowerCase();
     const normalizedOrderNumber = String(next.orderNumber || "").trim();
+    if (normalizedOrderId) {
+      sessionStorage.setItem(LAST_ORDER_ID_KEY, normalizedOrderId);
+      localStorage.setItem(LAST_ORDER_ID_KEY, normalizedOrderId);
+    }
     if (normalizedEmail) sessionStorage.setItem(LAST_ORDER_EMAIL_KEY, normalizedEmail);
     if (normalizedOrderNumber) sessionStorage.setItem(LAST_ORDER_NUMBER_KEY, normalizedOrderNumber);
+    if (normalizedEmail) localStorage.setItem(LAST_ORDER_EMAIL_KEY, normalizedEmail);
+    if (normalizedOrderNumber) localStorage.setItem(LAST_ORDER_NUMBER_KEY, normalizedOrderNumber);
   } catch {}
 }
 
 function readTrackingContext() {
   try {
-    const parsed = JSON.parse(sessionStorage.getItem(CHECKOUT_TRACKING_KEY) || "{}");
-    const fallbackEmail = String(sessionStorage.getItem(LAST_ORDER_EMAIL_KEY) || "").trim().toLowerCase();
-    const fallbackOrderNumber = String(sessionStorage.getItem(LAST_ORDER_NUMBER_KEY) || "").trim();
+    const sessionParsed = JSON.parse(sessionStorage.getItem(CHECKOUT_TRACKING_KEY) || "{}");
+    const localParsed = JSON.parse(localStorage.getItem(CHECKOUT_TRACKING_KEY) || "{}");
+    const parsed = {
+      ...localParsed,
+      ...sessionParsed
+    };
+    const fallbackOrderId = String(
+      sessionStorage.getItem(LAST_ORDER_ID_KEY) || localStorage.getItem(LAST_ORDER_ID_KEY) || ""
+    ).trim();
+    const fallbackEmail = String(
+      sessionStorage.getItem(LAST_ORDER_EMAIL_KEY) || localStorage.getItem(LAST_ORDER_EMAIL_KEY) || ""
+    ).trim().toLowerCase();
+    const fallbackOrderNumber = String(
+      sessionStorage.getItem(LAST_ORDER_NUMBER_KEY) || localStorage.getItem(LAST_ORDER_NUMBER_KEY) || ""
+    ).trim();
     return {
       ...parsed,
+      orderId: String(parsed?.orderId || fallbackOrderId || "").trim(),
       email: String(parsed?.email || fallbackEmail || "").trim(),
       orderNumber: String(parsed?.orderNumber || fallbackOrderNumber || "").trim()
     };
   } catch {
     return {
-      email: String(sessionStorage.getItem(LAST_ORDER_EMAIL_KEY) || "").trim().toLowerCase(),
-      orderNumber: String(sessionStorage.getItem(LAST_ORDER_NUMBER_KEY) || "").trim()
+      orderId: String(
+        sessionStorage.getItem(LAST_ORDER_ID_KEY) || localStorage.getItem(LAST_ORDER_ID_KEY) || ""
+      ).trim(),
+      email: String(
+        sessionStorage.getItem(LAST_ORDER_EMAIL_KEY) || localStorage.getItem(LAST_ORDER_EMAIL_KEY) || ""
+      ).trim().toLowerCase(),
+      orderNumber: String(
+        sessionStorage.getItem(LAST_ORDER_NUMBER_KEY) || localStorage.getItem(LAST_ORDER_NUMBER_KEY) || ""
+      ).trim()
     };
   }
 }
@@ -541,3 +575,5 @@ async function init() {
 
 window.addEventListener("beforeunload", clearPolling);
 init();
+
+

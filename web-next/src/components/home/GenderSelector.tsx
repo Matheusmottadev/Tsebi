@@ -98,10 +98,10 @@ export function GenderSelector() {
   }, [products, selectedGender]);
 
   return (
-    <section className="category-switch" aria-label="SeleÃ§Ã£o por gÃªnero">
+    <section className="category-switch" aria-label="Seleção por gênero">
       <div className="category-intro">
-        <p>Explore as pecas em destaque por genero.</p>
-        <div className="category-tabs" role="tablist" aria-label="Selecionar genero">
+        <p>Explore as peças em destaque por gênero.</p>
+        <div className="category-tabs" role="tablist" aria-label="Selecionar gênero">
           <button
             className={`category-tab ${selectedGender === "feminino" ? "is-active" : ""}`}
             type="button"
@@ -125,9 +125,9 @@ export function GenderSelector() {
 
       <div className="category-grid">
         {isLoading ? <p className="genesis-empty">Carregando produtos...</p> : null}
-        {!isLoading && hasError ? <p className="genesis-empty">NÃ£o foi possÃ­vel carregar os produtos agora.</p> : null}
+        {!isLoading && hasError ? <p className="genesis-empty">Não foi possível carregar os produtos agora.</p> : null}
         {!isLoading && !hasError && filteredProducts.length === 0 ? (
-          <p className="genesis-empty">Nenhum produto encontrado para este genero.</p>
+          <p className="genesis-empty">Nenhum produto encontrado para este gênero.</p>
         ) : null}
 
         {!isLoading && !hasError
@@ -167,4 +167,5 @@ export function GenderSelector() {
     </section>
   );
 }
+
 

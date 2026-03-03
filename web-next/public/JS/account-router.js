@@ -153,7 +153,7 @@
     if (s === "canceled") return "Cancelado";
     if (s === "failed") return "Falhou";
     if (s === "refunded") return "Reembolsado";
-    return "Em anÃ¡lise";
+    return "Em análise";
   }
 
   function cardProducts(items) {
@@ -175,22 +175,22 @@
     if (emailEl) emailEl.textContent = String(state.user?.email || "-");
     if (ordersSummary) {
       if (!state.orders.length) {
-        ordersSummary.textContent = "NÃ£o hÃ¡ compras em aberto.";
+        ordersSummary.textContent = "Não há compras em aberto.";
       } else {
         const last = state.orders[0];
-        ordersSummary.textContent = `Ãšltimo pedido: ${orderStatus(last.status)} â€¢ ${money(last.amount, last.currency)}`;
+        ordersSummary.textContent = `Último pedido: ${orderStatus(last.status)} • ${money(last.amount, last.currency)}`;
       }
     }
     if (wishlistSummary) {
       wishlistSummary.textContent = state.favorites.length
         ? `${state.favorites.length} item(ns) salvos na sua lista.`
-        : "Sua Lista de Desejos estÃ¡ vazia.";
+        : "Sua Lista de Desejos está vazia.";
     }
     if (recommendSummary) {
       const recs = state.products.filter((p) => !state.favorites.includes(String(p.id || p.sku || ""))).slice(0, 4);
       recommendSummary.textContent = recs.length
-        ? `${recs.length} recomendaÃ§Ãµes disponÃ­veis para vocÃª.`
-        : "NÃ£o hÃ¡ nenhuma recomendaÃ§Ã£o.";
+        ? `${recs.length} recomendações disponíveis para você.`
+        : "Não há nenhuma recomendação.";
     }
   }
 
@@ -200,17 +200,17 @@
       const firstAddress = Array.isArray(state.user?.addresses) ? state.user.addresses[0] : null;
       const addressText = firstAddress
         ? `${firstAddress.street || ""}, ${firstAddress.number || ""} - ${firstAddress.city || ""}/${firstAddress.state || ""}`
-        : "NÃ£o informado";
-      state.detailCache[kind] = `<div class="conta-detail-row"><span>Telefone</span><strong>${escapeHtml(state.user?.phone || "NÃ£o informado")}</strong></div><div class="conta-detail-row"><span>EndereÃ§o</span><strong>${escapeHtml(addressText)}</strong></div><div class="conta-detail-row"><span>Data de cadastro</span><strong>${escapeHtml(String(state.user?.createdAt || "-"))}</strong></div>`;
+        : "Não informado";
+      state.detailCache[kind] = `<div class="conta-detail-row"><span>Telefone</span><strong>${escapeHtml(state.user?.phone || "Não informado")}</strong></div><div class="conta-detail-row"><span>Endereço</span><strong>${escapeHtml(addressText)}</strong></div><div class="conta-detail-row"><span>Data de cadastro</span><strong>${escapeHtml(String(state.user?.createdAt || "-"))}</strong></div>`;
       return state.detailCache[kind];
     }
     if (kind === "orders") {
-      if (!state.orders.length) return '<p class="conta-muted">NÃ£o hÃ¡ compras em aberto.</p>';
-      state.detailCache[kind] = state.orders.slice(0, 5).map((order) => `<div class="conta-detail-row"><span>Pedido #${escapeHtml(String(order.orderNumber || order.id || "").slice(0, 12))}</span><strong>${escapeHtml(orderStatus(order.status))} â€¢ ${escapeHtml(money(order.amount, order.currency))}</strong></div>`).join("");
+      if (!state.orders.length) return '<p class="conta-muted">Não há compras em aberto.</p>';
+      state.detailCache[kind] = state.orders.slice(0, 5).map((order) => `<div class="conta-detail-row"><span>Pedido #${escapeHtml(String(order.orderNumber || order.id || "").slice(0, 12))}</span><strong>${escapeHtml(orderStatus(order.status))} • ${escapeHtml(money(order.amount, order.currency))}</strong></div>`).join("");
       return state.detailCache[kind];
     }
     if (kind === "private") {
-      return '<p class="conta-muted">HistÃ³rico: nenhum atendimento privado registrado.</p>';
+      return '<p class="conta-muted">Histórico: nenhum atendimento privado registrado.</p>';
     }
     if (kind === "wishlist") {
       const items = state.products.filter((p) => state.favorites.includes(String(p.id || p.sku || "")));
@@ -221,7 +221,7 @@
       return cardProducts(recs);
     }
     if (kind === "repairs") {
-      return '<p class="conta-muted">HistÃ³rico de solicitaÃ§Ãµes: vazio.</p>';
+      return '<p class="conta-muted">Histórico de solicitações: vazio.</p>';
     }
     return '<p class="conta-muted">Sem dados.</p>';
   }
@@ -370,7 +370,7 @@
     const activeStore = resolveStore();
     if (!activeStore) {
       showAuthGate();
-      setAuthFeedback("NÃ£o foi possÃ­vel iniciar sua sessÃ£o agora. Tente novamente.", true);
+      setAuthFeedback("Não foi possível iniciar sua sessão agora. Tente novamente.", true);
       return;
     }
 
@@ -428,7 +428,7 @@
     const activeStore = resolveStore();
     if (!activeStore) {
       showAuthGate();
-      setAuthFeedback("NÃ£o foi possÃ­vel carregar o login agora. Atualize a pÃ¡gina e tente novamente.", true);
+      setAuthFeedback("Não foi possível carregar o login agora. Atualize a página e tente novamente.", true);
       return;
     }
 
@@ -480,13 +480,13 @@
     const activeStore = resolveStore();
     if (!activeStore) {
       if (authSubmit) authSubmit.disabled = false;
-      setAuthFeedback("NÃ£o foi possÃ­vel iniciar o login agora. Atualize a pÃ¡gina e tente novamente.", true);
+      setAuthFeedback("Não foi possível iniciar o login agora. Atualize a página e tente novamente.", true);
       return;
     }
     const result = await activeStore.login({ email, password });
     if (authSubmit) authSubmit.disabled = false;
     if (!result?.ok || !result?.user) {
-      setAuthFeedback(result?.error || "NÃ£o foi possÃ­vel entrar.", true);
+      setAuthFeedback(result?.error || "Não foi possível entrar.", true);
       return;
     }
     state.user = result.user;
@@ -506,4 +506,5 @@
     });
   });
 })();
+
 

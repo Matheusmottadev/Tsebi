@@ -1,4 +1,4 @@
-(() => {
+﻿(() => {
   const form = document.getElementById("applicationForm");
   const success = document.getElementById("applicationSuccess");
   const jobInput = document.getElementById("jobInterestInput");
@@ -24,3 +24,4 @@
     window.scrollTo({ top: 0, behavior: "smooth" });
   });
 })();
+

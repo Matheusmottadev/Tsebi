@@ -1,4 +1,4 @@
-* {
+﻿* {
   margin: 0;
   padding: 0;
   box-sizing: border-box;
@@ -4488,7 +4488,7 @@ body.newsletter-popup-open{
 }
 
 .account-list-item-clickable.is-open::after{
-  content: "−";
+  content: "âˆ’";
 }
 
 .account-order-products{
@@ -5648,6 +5648,7 @@ body:not(.home-page) .home-header.product-mode .product-search-trigger svg {
     border-bottom: 1px solid rgba(17, 17, 17, 0.08);
   }
 }
+
 
 
 

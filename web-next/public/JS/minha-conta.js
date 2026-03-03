@@ -109,7 +109,7 @@ function formatTrackingStatus(status) {
   const value = String(status || "").toUpperCase();
   if (value === "ORDER_PLACED") return "Pedido Recebido";
   if (value === "PROCESSING") return "Pedido Confirmado";
-  if (value === "SHIPPED") return "Em PreparaÃ§Ã£o";
+  if (value === "SHIPPED") return "Em Preparação";
   if (value === "IN_TRANSIT") return "Em transporte";
   if (value === "OUT_FOR_DELIVERY") return "Saiu Pra entregar";
   if (value === "DELIVERED") return "Entregue";
@@ -120,7 +120,7 @@ function formatTrackingStatus(status) {
 function formatTrackingStepName(step) {
   if (step === "ORDER_PLACED") return "Pedido Recebido";
   if (step === "PROCESSING") return "Pedido Confirmado";
-  if (step === "SHIPPED") return "Em PreparaÃ§Ã£o";
+  if (step === "SHIPPED") return "Em Preparação";
   if (step === "IN_TRANSIT") return "Em transporte";
   if (step === "OUT_FOR_DELIVERY") return "Saiu Pra entregar";
   if (step === "DELIVERED") return "Entregue";
@@ -298,7 +298,7 @@ function renderTrackingOrder(order) {
     <section class="tracking-order-main">
       <div class="tracking-order-main-grid">
         <article class="tracking-main-field">
-          <span>NÃºmero do pedido</span>
+          <span>Número do pedido</span>
           <strong>${escapeHtml(orderNumber)}</strong>
         </article>
         <article class="tracking-main-field">
@@ -314,11 +314,11 @@ function renderTrackingOrder(order) {
           <em>${escapeHtml(order.carrier || "Melhor Envio")}</em>
         </article>
         <article class="tracking-main-field">
-          <span>CÃ³digo de rastreio</span>
+          <span>Código de rastreio</span>
           <em>${escapeHtml(order.trackingCode || "Aguardando")}</em>
         </article>
         <article class="tracking-main-field">
-          <span>Ãšltima atualizaÃ§Ã£o</span>
+          <span>Última atualização</span>
           <em>${escapeHtml(formatTrackingDate(order.lastTrackingUpdate || order.updatedAt || order.purchaseDate))}</em>
         </article>
       </div>
@@ -383,8 +383,8 @@ async function loadTrackingOrderByLookup(orderNumber, email) {
   setTrackingLoading(false);
 
   if (!result.ok || !result.order) {
-    setTrackingEmptyState("NÃ£o foi possÃ­vel localizar este pedido.");
-    setFeedback(result.error || "Pedido nÃ£o encontrado.", true);
+    setTrackingEmptyState("Não foi possível localizar este pedido.");
+    setFeedback(result.error || "Pedido não encontrado.", true);
     return;
   }
 
@@ -398,7 +398,7 @@ function renderUser(user) {
   const name = String(user?.name || "Cliente");
   const firstName = name.split(/\s+/)[0] || "Cliente";
   const prefix = formatTitlePrefix(user?.title);
-  if (titleEl) titleEl.textContent = prefix ? `OlÃ£, ${prefix} ${firstName}` : `OlÃ£, ${firstName}`;
+  if (titleEl) titleEl.textContent = prefix ? `Olã, ${prefix} ${firstName}` : `Olã, ${firstName}`;
   if (emailEl) emailEl.textContent = user?.email || "";
 
   if (profileTitleInput) profileTitleInput.value = normalizeTitle(user?.title) || "nao_informar";
@@ -496,7 +496,7 @@ function renderFavorites() {
   favoritesGrid.innerHTML = "";
   favoritesSummary.textContent = uniqueIds.length
     ? `${uniqueIds.length} item(ns) salvos na sua lista de favoritos.`
-    : "Suas peÃ§as salvas para comprar depois.";
+    : "Suas peças salvas para comprar depois.";
 
   if (!favoriteItems.length) {
     favoritesEmpty.hidden = false;
@@ -601,7 +601,7 @@ function renderAddresses() {
       <p>${escapeHtml(address.district)} - ${escapeHtml(address.city)}/${escapeHtml(address.state)}</p>
       <p>CEP: ${escapeHtml(formatCep(address.cep))}</p>
       <div class="account-address-item-actions">
-        <button type="button" data-address-action="default" data-address-id="${escapeHtml(address.id)}" ${address.isDefault ? "disabled" : ""}>${address.isDefault ? "PadrÃ£o" : "Definir padrÃ£o"}</button>
+        <button type="button" data-address-action="default" data-address-id="${escapeHtml(address.id)}" ${address.isDefault ? "disabled" : ""}>${address.isDefault ? "Padrão" : "Definir padrão"}</button>
         <button type="button" data-address-action="edit" data-address-id="${escapeHtml(address.id)}">Editar</button>
         <button type="button" data-address-action="delete" data-address-id="${escapeHtml(address.id)}">Excluir</button>
       </div>
@@ -621,7 +621,7 @@ async function loadOrders() {
   if (!result.ok) {
     myOrders = [];
     renderOrders([]);
-    setFeedback(result.error || "NÃ£o foi possÃ­vel carregar seus pedidos.", true);
+    setFeedback(result.error || "Não foi possível carregar seus pedidos.", true);
     return;
   }
 
@@ -634,7 +634,7 @@ async function loadAddresses() {
   if (!result.ok) {
     myAddresses = [];
     renderAddresses();
-    setFeedback(result.error || "NÃ£o foi possÃ­vel carregar endereÃ§os.", true);
+    setFeedback(result.error || "Não foi possível carregar endereços.", true);
     return;
   }
 
@@ -646,15 +646,15 @@ async function loadTrackingOrdersForAccount() {
   if (!result.ok) {
     trackingOrders = [];
     renderTrackingOrderChips([]);
-    setTrackingEmptyState("NÃ£o foi possÃ­vel carregar seus pedidos para rastreamento.");
-    setFeedback(result.error || "NÃ£o foi possÃ­vel carregar o rastreio.", true);
+    setTrackingEmptyState("Não foi possível carregar seus pedidos para rastreamento.");
+    setFeedback(result.error || "Não foi possível carregar o rastreio.", true);
     return;
   }
 
   trackingOrders = Array.isArray(result.orders) ? result.orders : [];
   if (!trackingOrders.length) {
     renderTrackingOrderChips([]);
-    setTrackingEmptyState("VocÃª ainda nÃ£o possui pedidos com rastreamento disponÃ­vel.");
+    setTrackingEmptyState("Você ainda não possui pedidos com rastreamento disponível.");
     clearTrackingResult();
     return;
   }
@@ -677,7 +677,7 @@ async function handlePublicTrackSubmit(event) {
   const email = String(publicTrackEmailInput?.value || "").trim();
 
   if (!orderNumber || !email) {
-    setFeedback("Informe o nÃºmero do pedido e o e-mail.", true);
+    setFeedback("Informe o número do pedido e o e-mail.", true);
     return;
   }
 
@@ -694,13 +694,13 @@ async function handleProfileUpdate(event) {
   const cep = normalizeDigits(profileCepInput?.value || "", 8);
 
   if (!name || !birthDate || cpf.length !== 11 || cep.length !== 8) {
-    setFeedback("Preencha nome, data de nascimento, CPF e CEP vÃ¡lidos.", true);
+    setFeedback("Preencha nome, data de nascimento, CPF e CEP válidos.", true);
     return;
   }
 
   const result = await store.updateMyProfile({ title, name, birthDate, cpf, cep });
   if (!result.ok) {
-    setFeedback(result.error || "NÃ£o foi possÃ­vel atualizar seu perfil.", true);
+    setFeedback(result.error || "Não foi possível atualizar seu perfil.", true);
     return;
   }
 
@@ -713,7 +713,7 @@ async function handleAddressSubmit(event) {
 
   const payload = readAddressForm();
   if (!isValidAddress(payload)) {
-    setFeedback("Preencha todos os campos obrigatÃ³rios do endereÃ§o.", true);
+    setFeedback("Preencha todos os campos obrigatórios do endereço.", true);
     return;
   }
 
@@ -723,13 +723,13 @@ async function handleAddressSubmit(event) {
     : await store.createMyAddress(payload);
 
   if (!result.ok) {
-    setFeedback(result.error || "NÃ£o foi possÃ­vel salvar endereÃ§o.", true);
+    setFeedback(result.error || "Não foi possível salvar endereço.", true);
     return;
   }
 
   applyAddressState(result);
   clearAddressForm();
-  setFeedback(editingId ? "EndereÃ§o atualizado." : "EndereÃ§o adicionado.");
+  setFeedback(editingId ? "Endereço atualizado." : "Endereço adicionado.");
 }
 
 async function handleAddressAction(event) {
@@ -750,27 +750,27 @@ async function handleAddressAction(event) {
   if (action === "default") {
     const result = await store.setMyAddressDefault(addressId);
     if (!result.ok) {
-      setFeedback(result.error || "NÃ£o foi possÃ­vel definir endereÃ§o padrÃ£o.", true);
+      setFeedback(result.error || "Não foi possível definir endereço padrão.", true);
       return;
     }
     applyAddressState(result);
-    setFeedback("EndereÃ§o padrÃ£o atualizado.");
+    setFeedback("Endereço padrão atualizado.");
     return;
   }
 
   if (action === "delete") {
-    const confirmDelete = window.confirm("Deseja remover este endereÃ§o?");
+    const confirmDelete = window.confirm("Deseja remover este endereço?");
     if (!confirmDelete) return;
 
     const result = await store.deleteMyAddress(addressId);
     if (!result.ok) {
-      setFeedback(result.error || "NÃ£o foi possÃ­vel remover endereÃ§o.", true);
+      setFeedback(result.error || "Não foi possível remover endereço.", true);
       return;
     }
 
     applyAddressState(result);
     clearAddressForm();
-    setFeedback("EndereÃ§o removido.");
+    setFeedback("Endereço removido.");
   }
 }
 
@@ -803,7 +803,7 @@ function enterPublicTrackMode() {
 
 async function boot() {
   if (!store) {
-    setFeedback("ServiÃ§o de conta indisponÃ­vel.", true);
+    setFeedback("Serviço de conta indisponível.", true);
     return;
   }
 
@@ -898,5 +898,6 @@ window.addEventListener("tsebi:auth-changed", () => {
 });
 
 boot();
+
 
 

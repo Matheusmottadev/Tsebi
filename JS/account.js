@@ -1,4 +1,4 @@
-const store = window.TsebiUserStore;
+﻿const store = window.TsebiUserStore;
 
 const productCatalog = [
   { id: "genesis-bomber", name: "Jaqueta bomber em couro italiano com forro em seda", priceLabel: "R$ 5.900", image: "images/placeholder.jpg" },
@@ -190,7 +190,7 @@ function renderFavorites() {
         <a class="account-fav-link" href="produto.html?id=${encodeURIComponent(item.id)}">
           <img src="${item.image}" alt="${item.name}" loading="lazy" decoding="async" />
         </a>
-        <button class="product-favorite-btn is-active account-fav-remove" type="button" data-remove-favorite="${item.id}" aria-label="Remover dos favoritos">♥</button>
+        <button class="product-favorite-btn is-active account-fav-remove" type="button" data-remove-favorite="${item.id}" aria-label="Remover dos favoritos">â™¥</button>
       </div>
       <a class="account-fav-link" href="produto.html?id=${encodeURIComponent(item.id)}">
         <h4>${item.name}</h4>
@@ -435,3 +435,4 @@ accountPageBack?.addEventListener("click", () => {
   }
   window.location.href = "index.html";
 });
+

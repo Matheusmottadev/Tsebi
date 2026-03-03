@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { FormEvent, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
@@ -390,3 +390,4 @@ export function CouponsManager({ initialCoupons, csrfToken }: CouponsManagerProp
     </div>
   );
 }
+

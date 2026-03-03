@@ -1,4 +1,4 @@
-(() => {
+﻿(() => {
   // Para atualizar no futuro:
   // 1) Adicione/remova itens no array `genesisItems`.
   // 2) Para nova categoria, basta usar uma nova `categoryKey`.
@@ -283,3 +283,4 @@
     render();
   });
 })();
+

@@ -1,28 +1,28 @@
 ﻿const messages = [
-  "Nova ColeÃ§Ã£o GÃªnesis",
-  "VocÃª merece vestir algo Ã  sua altura.",
-  "Cadastre-se para receber lanÃ§amentos",
-  "Exclusividade para quem valoriza o que Ã© Ãºnico.",
-  "Acesso antecipado a novas coleÃ§Ãµes.",
-  "ProduÃ§Ã£o em pequena escala. Qualidade em cada detalhe."
+  "Nova Coleção Gênesis",
+  "Você merece vestir algo à sua altura.",
+  "Cadastre-se para receber lançamentos",
+  "Exclusividade para quem valoriza o que é único.",
+  "Acesso antecipado a novas coleções.",
+  "Produção em pequena escala. Qualidade em cada detalhe."
 ];
 const searchTopPieces = [
   { id: "origem-skirt", href: "produto.html?id=origem-skirt", src: "images/placeholderreal.webp", alt: "Sabrina charmosa", tag: "NOVO", name: "Sabrina charmosa" },
   { id: "origem-shirt", href: "produto.html?id=origem-shirt", src: "images/placeholderreal.webp", alt: "Sabrina linda", tag: "NOVO", name: "Sabrina linda" },
   { id: "genesis-tailored", href: "produto.html?id=genesis-tailored", src: "images/placeholderreal.webp", alt: "Sabrina maravilhosa", tag: "NOVO", name: "Sabrina maravilhosa" },
-  { id: "genesis-bomber", href: "produto.html?id=genesis-bomber", src: "images/placeholderreal.webp", alt: "Sabrina incrÃ­vel", tag: "NOVO", name: "Sabrina incrÃ­vel" }
+  { id: "genesis-bomber", href: "produto.html?id=genesis-bomber", src: "images/placeholderreal.webp", alt: "Sabrina incrível", tag: "NOVO", name: "Sabrina incrível" }
 ];
 const prelaunchActionCards = [
   {
     tag: "VIP",
     name: "Entrar na lista VIP",
-    description: "Receba acesso antecipado ao lanÃ§amento da Tsebi.",
+    description: "Receba acesso antecipado ao lançamento da Tsebi.",
     href: "lancamento.html#vip"
   },
   {
     tag: "EMAIL",
     name: "Novidades por e-mail",
-    description: "Seja avisado(a) quando as primeiras peÃ§as estiverem disponÃ­veis.",
+    description: "Seja avisado(a) quando as primeiras peças estiverem disponíveis.",
     href: "lancamento.html#newsletter"
   },
   {
@@ -33,8 +33,8 @@ const prelaunchActionCards = [
   },
   {
     tag: "ALICERCE",
-    name: "ColeÃ§Ã£o Alicerce em breve",
-    description: "ConheÃ§a a proposta da primeira coleÃ§Ã£o da Tsebi.",
+    name: "Coleção Alicerce em breve",
+    description: "Conheça a proposta da primeira coleção da Tsebi.",
     href: "lancamento.html#alicerce"
   }
 ];
@@ -49,19 +49,19 @@ function tSearchLabel(text) {
   const map = {
     "RESULTADOS": "RESULTS",
     "Limpar filtros": "Clear filters",
-    "ColeÃ§Ãµes em rotaÃ§Ã£o contÃ­nua. Encontre a peÃ§a ideal pelo estilo e composiÃ§Ã£o.": "Collections in continuous rotation. Find your ideal piece by style and composition.",
+    "Coleções em rotação contínua. Encontre a peça ideal pelo estilo e composição.": "Collections in continuous rotation. Find your ideal piece by style and composition.",
     "Nenhum produto encontrado para os filtros selecionados.": "No products found for the selected filters.",
-    "ColeÃ§Ã£o": "Collection",
+    "Coleção": "Collection",
     "Tamanho": "Size",
     "Cor": "Color",
     "Material": "Material",
     "Categoria": "Category",
-    "GÃªnero": "Gender",
+    "Gênero": "Gender",
     "Ordenar": "Sort",
     "Todos": "All",
-    "RelevÃ¢ncia": "Relevance",
-    "Menor preÃ§o": "Lowest price",
-    "Maior preÃ§o": "Highest price",
+    "Relevância": "Relevance",
+    "Menor preço": "Lowest price",
+    "Maior preço": "Highest price",
     "Nome A-Z": "Name A-Z",
     "Feminino": "Women",
     "Masculino": "Men",
@@ -69,24 +69,24 @@ function tSearchLabel(text) {
     "Bolsas": "Bags",
     "Vestidos": "Dresses",
     "Jaquetas": "Jackets",
-    "CalÃ§ados": "Footwear",
-    "CalÃ§as": "Trousers",
+    "Calçados": "Footwear",
+    "Calças": "Trousers",
     "Camisas": "Shirts",
     "Saias": "Skirts",
     "Casacos": "Coats",
     "Malhas": "Knitwear",
     "Blazers": "Blazers",
-    "LÃ£ fria": "Cool wool",
-    "LÃ£ merino": "Merino wool",
+    "Lã fria": "Cool wool",
+    "Lã merino": "Merino wool",
     "Crepe de seda": "Silk crepe",
     "Linho premium": "Premium linen",
-    "Nylon tÃ©cnico": "Technical nylon",
+    "Nylon técnico": "Technical nylon",
     "Couro envernizado": "Patent leather",
     "Couro natural": "Natural leather",
     "Gabardine": "Gabardine",
     "Sarja premium": "Premium twill",
-    "AlgodÃ£o egÃ­pcio": "Egyptian cotton",
-    "Couro e lÃ£": "Leather and wool",
+    "Algodão egípcio": "Egyptian cotton",
+    "Couro e lã": "Leather and wool",
     "Branco": "White",
     "Azul": "Blue",
     "Preto": "Black",
@@ -99,14 +99,14 @@ function tSearchLabel(text) {
     "Oliva": "Olive",
     "Cinza": "Gray",
     "Off white": "Off-white",
-    "GÃªnesis": "Genesis",
-    "PRÃ‰-LANÃ‡AMENTO": "PRE-LAUNCH",
+    "Gênesis": "Genesis",
+    "PRÉ-LANÇAMENTO": "PRE-LAUNCH",
     "EDITORIAL": "EDITORIAL",
-    "Estamos em prÃ©-lanÃ§amento. Cadastre-se para acesso antecipado.": "We are in pre-launch. Join for early access.",
-    "Ainda sem peÃ§as disponÃ­veis para compra. LanÃ§amento em breve.": "No pieces available for purchase yet. Launching soon.",
+    "Estamos em pré-lançamento. Cadastre-se para acesso antecipado.": "We are in pre-launch. Join for early access.",
+    "Ainda sem peças disponíveis para compra. Lançamento em breve.": "No pieces available for purchase yet. Launching soon.",
     "Entrar na lista VIP": "Join VIP list",
     "Conhecer a marca": "Discover the brand",
-    "ColeÃ§Ã£o Alicerce em breve": "Alicerce collection soon",
+    "Coleção Alicerce em breve": "Alicerce collection soon",
     "Novidades por e-mail": "Email updates"
   };
   return map[text] || text;
@@ -158,7 +158,7 @@ function ensureSearchTopPieces(searchOverlay) {
     section.className = "search-section search-top-pieces";
 
     const title = document.createElement("h3");
-    title.textContent = "PRINCIPAIS PEÃ‡AS";
+    title.textContent = "PRINCIPAIS PEÇAS";
     section.appendChild(title);
 
     grid = document.createElement("div");
@@ -236,16 +236,16 @@ function applyPrelaunchSearchMode(searchOverlay, searchInput) {
   if (!isPrelaunchMode || !searchOverlay) return;
 
   if (searchInput) {
-    searchInput.placeholder = tSearchLabel("Estamos em prÃ©-lanÃ§amento. Cadastre-se para acesso antecipado.");
+    searchInput.placeholder = tSearchLabel("Estamos em pré-lançamento. Cadastre-se para acesso antecipado.");
   }
 
   const suggestionTitle = searchOverlay.querySelector(".search-section h3");
-  if (suggestionTitle) suggestionTitle.textContent = tSearchLabel("PRÃ‰-LANÃ‡AMENTO");
+  if (suggestionTitle) suggestionTitle.textContent = tSearchLabel("PRÉ-LANÇAMENTO");
 
   const chipLabels = [
     { label: "Entrar na lista VIP", href: "lancamento.html#vip" },
     { label: "Conhecer a marca", href: "lancamento.html#origem" },
-    { label: "ColeÃ§Ã£o Alicerce em breve", href: "lancamento.html#alicerce" },
+    { label: "Coleção Alicerce em breve", href: "lancamento.html#alicerce" },
     { label: "Novidades por e-mail", href: "lancamento.html#newsletter" }
   ];
   const chipsWrap = searchOverlay.querySelector(".chips");
@@ -396,7 +396,7 @@ function getSearchPresetFromLabel(label) {
     return { query: "jaqueta", filters: { category: "Jaquetas" } };
   }
   if (normalized.includes("tenis") || normalized.includes("sneaker")) {
-    return { query: "tenis", filters: { category: "CalÃ§ados" } };
+    return { query: "tenis", filters: { category: "Calçados" } };
   }
   if (normalized.includes("acessorio") || normalized.includes("accessor")) {
     return { query: "bolsa", filters: { category: "Bolsas" } };
@@ -450,7 +450,7 @@ function ensureSearchExperience(searchOverlay, searchInput) {
         <button class="search-clear" type="button">${tSearchLabel("Limpar filtros")}</button>
       </div>
       <p class="search-results-count">0 produtos</p>
-      <p class="search-results-note">${tSearchLabel("ColeÃ§Ãµes em rotaÃ§Ã£o contÃ­nua. Encontre a peÃ§a ideal pelo estilo e composiÃ§Ã£o.")}</p>
+      <p class="search-results-note">${tSearchLabel("Coleções em rotação contínua. Encontre a peça ideal pelo estilo e composição.")}</p>
       <div class="search-filters"></div>
       <div class="search-results-grid"></div>
       <p class="search-empty" hidden>${tSearchLabel("Nenhum produto encontrado para os filtros selecionados.")}</p>
@@ -600,13 +600,13 @@ function ensureSearchExperience(searchOverlay, searchInput) {
 
   if (!filtersContainer.children.length) {
     filtersContainer.append(
-      createSearchSelect("collection", "ColeÃ§Ã£o", collectionOptions),
+      createSearchSelect("collection", "Coleção", collectionOptions),
       createSearchSelect("size", "Tamanho", sizeOptions),
       createSearchSelect("color", "Cor", colorOptions),
       createSearchSelect("material", "Material", materialOptions),
       createSearchSelect("category", "Categoria", categoryOptions),
-      createSearchSelect("gender", "GÃªnero", genderOptions),
-      createSearchSelect("sort", "Ordenar", ["RelevÃ¢ncia", "Menor preÃ§o", "Maior preÃ§o", "Nome A-Z"])
+      createSearchSelect("gender", "Gênero", genderOptions),
+      createSearchSelect("sort", "Ordenar", ["Relevância", "Menor preço", "Maior preço", "Nome A-Z"])
     );
   }
 
@@ -636,14 +636,14 @@ function ensureSearchExperience(searchOverlay, searchInput) {
       material: selects.find((s) => s.dataset.filter === "material")?.value || "",
       category: selects.find((s) => s.dataset.filter === "category")?.value || "",
       gender: selects.find((s) => s.dataset.filter === "gender")?.value || "",
-      sort: selects.find((s) => s.dataset.filter === "sort")?.value || "RelevÃ¢ncia"
+      sort: selects.find((s) => s.dataset.filter === "sort")?.value || "Relevância"
     };
   }
 
   function sortResults(items, sortType) {
     const sorted = [...items];
-    if (sortType === "Menor preÃ§o") sorted.sort((a, b) => a.priceValue - b.priceValue);
-    if (sortType === "Maior preÃ§o") sorted.sort((a, b) => b.priceValue - a.priceValue);
+    if (sortType === "Menor preço") sorted.sort((a, b) => a.priceValue - b.priceValue);
+    if (sortType === "Maior preço") sorted.sort((a, b) => b.priceValue - a.priceValue);
     if (sortType === "Nome A-Z") sorted.sort((a, b) => a.name.localeCompare(b.name, "pt-BR"));
     return sorted;
   }
@@ -680,9 +680,9 @@ function ensureSearchExperience(searchOverlay, searchInput) {
     if (isPrelaunchMode) {
       shell.classList.add("is-active");
       resultsGrid.innerHTML = "";
-      countEl.textContent = isEnglish ? "Launch soon" : "LanÃ§amento em breve";
+      countEl.textContent = isEnglish ? "Launch soon" : "Lançamento em breve";
       emptyEl.hidden = false;
-      emptyEl.textContent = tSearchLabel("Ainda sem peÃ§as disponÃ­veis para compra. LanÃ§amento em breve.");
+      emptyEl.textContent = tSearchLabel("Ainda sem peças disponíveis para compra. Lançamento em breve.");
       if (topPiecesSection) topPiecesSection.hidden = false;
       return;
     }
@@ -737,7 +737,7 @@ function ensureSearchExperience(searchOverlay, searchInput) {
       card.innerHTML = `
         <div class="search-result-media">
           <img class="search-result-image search-result-image-primary" src="${product.image}" alt="${product.name}" loading="lazy" decoding="async" />
-          <img class="search-result-image search-result-image-secondary" src="${fallbackSecondary}" alt="${product.name} - outro Ã¢ngulo" loading="lazy" decoding="async" />
+          <img class="search-result-image search-result-image-secondary" src="${fallbackSecondary}" alt="${product.name} - outro ângulo" loading="lazy" decoding="async" />
           <button class="product-favorite-btn ${isFavoriteProduct(product.id) ? "is-active" : ""}" type="button" data-product-id="${product.id}" aria-label="${isFavoriteProduct(product.id) ? "Remover dos favoritos" : "Adicionar aos favoritos"}">${isFavoriteProduct(product.id) ? "â™¥" : "â™¡"}</button>
         </div>
         <div class="search-result-meta">
@@ -814,7 +814,7 @@ function ensureSearchExperience(searchOverlay, searchInput) {
 
   clearBtn.addEventListener("click", () => {
     resetFilters(false);
-    if (selectByFilter.sort) selectByFilter.sort.value = "RelevÃ¢ncia";
+    if (selectByFilter.sort) selectByFilter.sort.value = "Relevância";
     if (searchInput) searchInput.value = "";
     renderResults();
     searchInput?.focus();
@@ -1014,30 +1014,30 @@ function initCategorySwitch() {
   const contentPt = {
     featured: {
       feminino: [
-        { src: "images/placeholderreal.webp", alt: "Saia estruturada em lÃ£ fria", title: "Saia estruturada em lÃ£ fria", href: "produto.html?id=origem-skirt" },
-        { src: "images/placeholderreal.webp", alt: "CalÃ§a de alfaiataria em sarja premium", title: "CalÃ§a de alfaiataria premium", href: "produto.html?id=genesis-tailored" },
+        { src: "images/placeholderreal.webp", alt: "Saia estruturada em lã fria", title: "Saia estruturada em lã fria", href: "produto.html?id=origem-skirt" },
+        { src: "images/placeholderreal.webp", alt: "Calça de alfaiataria em sarja premium", title: "Calça de alfaiataria premium", href: "produto.html?id=genesis-tailored" },
         { src: "images/placeholderreal.webp", alt: "Scarpin em couro envernizado", title: "Scarpin em couro envernizado", href: "produto.html?id=atelier-heels" },
         { src: "images/placeholderreal.webp", alt: "Blazer em linho premium", title: "Blazer em linho premium", href: "produto.html?id=essence-blazer" }
       ],
       masculino: [
-        { src: "images/placeholderreal.webp", alt: "Camisa em algodÃ£o croata", title: "Camisa em algodÃ£o croata", href: "produto.html?id=origem-shirt" },
+        { src: "images/placeholderreal.webp", alt: "Camisa em algodão croata", title: "Camisa em algodão croata", href: "produto.html?id=origem-shirt" },
         { src: "images/placeholderreal.webp", alt: "Jaqueta bomber em couro italiano", title: "Jaqueta bomber em couro italiano", href: "produto.html?id=genesis-bomber" },
-        { src: "images/placeholderreal.webp", alt: "TÃªnis em nylon tÃ©cnico e couro", title: "TÃªnis em nylon tÃ©cnico premium", href: "produto.html?id=noir-sneaker" },
+        { src: "images/placeholderreal.webp", alt: "Tênis em nylon técnico e couro", title: "Tênis em nylon técnico premium", href: "produto.html?id=noir-sneaker" },
         { src: "images/placeholderreal.webp", alt: "Trench coat em gabardine", title: "Trench coat em gabardine", href: "produto.html?id=flux-trench" }
       ]
     },
     popular: {
       feminino: [
-        { src: "images/placeholderreal.webp", alt: "PeÃ§a mais clicada 1", title: "", href: "produto.html?id=origem-skirt" },
-        { src: "images/placeholderreal.webp", alt: "PeÃ§a mais clicada 2", title: "", href: "produto.html?id=genesis-tailored" },
-        { src: "images/placeholderreal.webp", alt: "PeÃ§a mais clicada 3", title: "", href: "produto.html?id=atelier-heels" },
-        { src: "images/placeholderreal.webp", alt: "PeÃ§a mais clicada 4", title: "", href: "produto.html?id=essence-blazer" }
+        { src: "images/placeholderreal.webp", alt: "Peça mais clicada 1", title: "", href: "produto.html?id=origem-skirt" },
+        { src: "images/placeholderreal.webp", alt: "Peça mais clicada 2", title: "", href: "produto.html?id=genesis-tailored" },
+        { src: "images/placeholderreal.webp", alt: "Peça mais clicada 3", title: "", href: "produto.html?id=atelier-heels" },
+        { src: "images/placeholderreal.webp", alt: "Peça mais clicada 4", title: "", href: "produto.html?id=essence-blazer" }
       ],
       masculino: [
-        { src: "images/placeholderreal.webp", alt: "PeÃ§a mais clicada 1", title: "", href: "produto.html?id=origem-shirt" },
-        { src: "images/placeholderreal.webp", alt: "PeÃ§a mais clicada 2", title: "", href: "produto.html?id=genesis-bomber" },
-        { src: "images/placeholderreal.webp", alt: "PeÃ§a mais clicada 3", title: "", href: "produto.html?id=noir-sneaker" },
-        { src: "images/placeholderreal.webp", alt: "PeÃ§a mais clicada 4", title: "", href: "produto.html?id=flux-trench" }
+        { src: "images/placeholderreal.webp", alt: "Peça mais clicada 1", title: "", href: "produto.html?id=origem-shirt" },
+        { src: "images/placeholderreal.webp", alt: "Peça mais clicada 2", title: "", href: "produto.html?id=genesis-bomber" },
+        { src: "images/placeholderreal.webp", alt: "Peça mais clicada 3", title: "", href: "produto.html?id=noir-sneaker" },
+        { src: "images/placeholderreal.webp", alt: "Peça mais clicada 4", title: "", href: "produto.html?id=flux-trench" }
       ]
     }
   };
@@ -1286,7 +1286,7 @@ function initHeaderMenu() {
     notice.style.fontSize = "12px";
     notice.style.letterSpacing = "0.2px";
     notice.innerHTML =
-      '<span>Menu indisponÃ­vel por enquanto. As peÃ§as ainda serÃ£o lanÃ§adas.</span>' +
+      '<span>Menu indisponível por enquanto. As peças ainda serão lançadas.</span>' +
       '<a href="lancamento.html" style="color:#fff;text-decoration:underline;white-space:nowrap;">Ver lancamento</a>';
     document.body.appendChild(notice);
     return notice;
@@ -1679,5 +1679,7 @@ function initNewsletterPopup() {
     }
   });
 }
+
+
 
 

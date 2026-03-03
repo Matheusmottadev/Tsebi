@@ -1,4 +1,4 @@
-(function initAuthLogin() {
+﻿(function initAuthLogin() {
   const stateEmail = document.getElementById("stateEmail");
   const stateCode = document.getElementById("stateCode");
   const statePassword = document.getElementById("statePassword");
@@ -557,3 +557,4 @@
   completeGoogleLoginFromHash();
   setState("email");
 })();
+

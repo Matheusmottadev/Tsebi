@@ -1,4 +1,4 @@
-(() => {
+﻿(() => {
 if (window.__TSEBI_CART_BOOTED__) {
   return;
 }
@@ -17,6 +17,7 @@ let cepLookupController = null;
 let cepLookupRequestSeq = 0;
 let shippingQuoteRequestSeq = 0;
 const CHECKOUT_TRACKING_KEY = "tsebi-checkout-tracking";
+const LAST_ORDER_ID_KEY = "tsebi_last_order_id";
 const LAST_ORDER_EMAIL_KEY = "tsebi_last_order_email";
 const LAST_ORDER_NUMBER_KEY = "tsebi_last_order_number";
 
@@ -940,17 +941,30 @@ function buildShippingPayload() {
 
 function saveTrackingContext(partial = {}) {
   try {
-    const current = JSON.parse(sessionStorage.getItem(CHECKOUT_TRACKING_KEY) || "{}");
+    const sessionCurrent = JSON.parse(sessionStorage.getItem(CHECKOUT_TRACKING_KEY) || "{}");
+    const localCurrent = JSON.parse(localStorage.getItem(CHECKOUT_TRACKING_KEY) || "{}");
+    const current = {
+      ...localCurrent,
+      ...sessionCurrent
+    };
     const next = {
       ...current,
       ...partial,
       updatedAt: new Date().toISOString()
     };
     sessionStorage.setItem(CHECKOUT_TRACKING_KEY, JSON.stringify(next));
+    localStorage.setItem(CHECKOUT_TRACKING_KEY, JSON.stringify(next));
+    const normalizedOrderId = String(next.orderId || "").trim();
     const normalizedEmail = String(next.email || "").trim().toLowerCase();
     const normalizedOrderNumber = String(next.orderNumber || "").trim();
+    if (normalizedOrderId) {
+      sessionStorage.setItem(LAST_ORDER_ID_KEY, normalizedOrderId);
+      localStorage.setItem(LAST_ORDER_ID_KEY, normalizedOrderId);
+    }
     if (normalizedEmail) sessionStorage.setItem(LAST_ORDER_EMAIL_KEY, normalizedEmail);
     if (normalizedOrderNumber) sessionStorage.setItem(LAST_ORDER_NUMBER_KEY, normalizedOrderNumber);
+    if (normalizedEmail) localStorage.setItem(LAST_ORDER_EMAIL_KEY, normalizedEmail);
+    if (normalizedOrderNumber) localStorage.setItem(LAST_ORDER_NUMBER_KEY, normalizedOrderNumber);
   } catch {}
 }
 
@@ -1585,7 +1599,7 @@ async function ensurePaymentElementReady() {
     if (isInvalidCartError(error)) {
       const refreshed = await refreshCartFromLatestProducts();
       if (refreshed.ok) {
-        const messages = ["Atualizamos seu carrinho porque o estoque ou o preco de um item mudou."];
+        const messages = ["Atualizamos seu carrinho porque o estoque ou o preço de um item mudou."];
         if (refreshed.removedOutOfStock) {
           messages.push("Alguns itens foram removidos por falta de estoque.");
         }
@@ -1978,6 +1992,9 @@ async function init() {
 
 init();
 })();
+
+
+
 
 
 

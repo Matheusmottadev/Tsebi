@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+﻿import type { Metadata } from "next";
 import { Montserrat, Playfair_Display } from "next/font/google";
 import Script from "next/script";
 import { LayoutChrome } from "@/components/LayoutChrome";
@@ -150,3 +150,4 @@ export default function RootLayout({
     </html>
   );
 }
+

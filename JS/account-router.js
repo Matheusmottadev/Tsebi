@@ -1,4 +1,4 @@
-(function initAccountRouter() {
+﻿(function initAccountRouter() {
   let store = window.TsebiUserStore || null;
   const subnav = document.querySelector(".conta-subnav");
   const subnavLinks = Array.from(document.querySelectorAll(".conta-subnav [data-section]"));
@@ -496,3 +496,4 @@
     });
   });
 })();
+

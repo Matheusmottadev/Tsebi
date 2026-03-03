@@ -1,4 +1,4 @@
-window.initProfileSection = function initProfileSection(options = {}) {
+﻿window.initProfileSection = function initProfileSection(options = {}) {
   const store = window.TsebiUserStore;
   const profileForm = document.getElementById("profileForm");
   const profileTitle = document.getElementById("profileTitle");
@@ -710,4 +710,5 @@ window.initProfileSection = function initProfileSection(options = {}) {
   bindEvents();
   loadUserProfile();
 };
+
 

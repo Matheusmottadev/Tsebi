@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+﻿import type { Metadata } from "next";
 import Link from "next/link";
 import { StudioShell } from "@/components/studio/StudioShell";
 import { readStudioSession } from "@/lib/studio/server";
@@ -92,3 +92,4 @@ export default async function StudioAuditPage({ searchParams }: StudioAuditPageP
     </StudioShell>
   );
 }
+

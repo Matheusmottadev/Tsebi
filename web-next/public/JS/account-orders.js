@@ -1,4 +1,4 @@
-(function initAccountOrdersModule() {
+﻿(function initAccountOrdersModule() {
   const TRACKING_FLOW = ["RECEIVED", "CONFIRMED", "IN_TRANSIT", "OUT_FOR_DELIVERY", "DELIVERED", "CANCELED"];
 
   function statusLabel(status) {
@@ -280,3 +280,4 @@
     renderOrders();
   };
 })();
+

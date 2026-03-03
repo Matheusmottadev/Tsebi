@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+﻿import type { Metadata } from "next";
 import Link from "next/link";
 import { Price } from "@/components/Price";
 import { StudioShell } from "@/components/studio/StudioShell";
@@ -97,3 +97,4 @@ export default async function StudioProductsPage({ searchParams }: StudioProduct
     </StudioShell>
   );
 }
+

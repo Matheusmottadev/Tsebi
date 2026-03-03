@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+﻿import type { Metadata } from "next";
 import { CouponsManager } from "@/components/studio/CouponsManager";
 import { StudioShell } from "@/components/studio/StudioShell";
 import { readStudioSession } from "@/lib/studio/server";
@@ -30,3 +30,4 @@ export default async function StudioCouponsPage() {
     </StudioShell>
   );
 }
+

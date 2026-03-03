@@ -1,4 +1,4 @@
-(() => {
+﻿(() => {
   const STORAGE_KEY = "tsebi-site-language";
   const DEFAULT_LANG = "pt";
   const SUPPORTED = ["pt", "en"];
@@ -698,4 +698,6 @@
     setTimeout(applyLanguage, 600);
   });
 })();
+
+
 

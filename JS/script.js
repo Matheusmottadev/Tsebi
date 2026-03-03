@@ -1,4 +1,4 @@
-const messages = [
+﻿const messages = [
   "Nova Coleção Gênesis",
   "Você merece vestir algo à sua altura.",
   "Cadastre-se para receber lançamentos",
@@ -120,7 +120,7 @@ function updateFavoriteButtonUI(button) {
   const productId = button?.dataset.productId || "";
   const active = isFavoriteProduct(productId);
   button.classList.toggle("is-active", active);
-  button.textContent = active ? "♥" : "♡";
+  button.textContent = active ? "â™¥" : "â™¡";
   button.setAttribute("aria-label", active ? "Remover dos favoritos" : "Adicionar aos favoritos");
 }
 
@@ -738,7 +738,7 @@ function ensureSearchExperience(searchOverlay, searchInput) {
         <div class="search-result-media">
           <img class="search-result-image search-result-image-primary" src="${product.image}" alt="${product.name}" loading="lazy" decoding="async" />
           <img class="search-result-image search-result-image-secondary" src="${fallbackSecondary}" alt="${product.name} - outro ângulo" loading="lazy" decoding="async" />
-          <button class="product-favorite-btn ${isFavoriteProduct(product.id) ? "is-active" : ""}" type="button" data-product-id="${product.id}" aria-label="${isFavoriteProduct(product.id) ? "Remover dos favoritos" : "Adicionar aos favoritos"}">${isFavoriteProduct(product.id) ? "♥" : "♡"}</button>
+          <button class="product-favorite-btn ${isFavoriteProduct(product.id) ? "is-active" : ""}" type="button" data-product-id="${product.id}" aria-label="${isFavoriteProduct(product.id) ? "Remover dos favoritos" : "Adicionar aos favoritos"}">${isFavoriteProduct(product.id) ? "â™¥" : "â™¡"}</button>
         </div>
         <div class="search-result-meta">
           <h4 class="search-result-name">${product.name}</h4>
@@ -1679,4 +1679,6 @@ function initNewsletterPopup() {
     }
   });
 }
+
+
 

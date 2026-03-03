@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
@@ -9,12 +9,12 @@ import { SearchOverlayRecommendations } from "@/components/SearchOverlayRecommen
 import { getMe } from "@/services/auth";
 
 const TOP_MESSAGES = [
-  "Nova ColeÃ¯Â¿Â½Ã¯Â¿Â½o Genesis",
-  "VocÃ¯Â¿Â½ merece vestir algo a sua altura.",
-  "Cadastre-se para receber lanÃ¯Â¿Â½amentos",
-  "Exclusividade para quem valoriza o que Ã¯Â¿Â½ Ã¯Â¿Â½nico.",
-  "Acesso antecipado a novas coleÃ¯Â¿Â½Ã¯Â¿Â½es.",
-  "ProduÃ¯Â¿Â½Ã¯Â¿Â½o em pequena escala. Qualidade em cada detalhe.",
+  "Nova Coleção Genesis",
+  "Você merece vestir algo a sua altura.",
+  "Cadastre-se para receber lançamentos",
+  "Exclusividade para quem valoriza o que é único.",
+  "Acesso antecipado a novas coleções.",
+  "Produção em pequena escala. Qualidade em cada detalhe.",
 ];
 
 const SEARCH_CATEGORIES = ["Feminino", "Masculino", "Calças", "Camisas", "Blazers", "Bolsas"] as const;
@@ -350,7 +350,7 @@ export function SiteHeader() {
             type="button"
             ref={rightArrowRef}
             onClick={() => stepTopMessage("right", 1)}
-            aria-label="PrÃ¯Â¿Â½xima mensagem"
+            aria-label="Próxima mensagem"
           >
             &#10095;
           </button>
@@ -443,7 +443,7 @@ export function SiteHeader() {
         <nav className="header-menu-nav">
           <div className="menu-group">
             <Link className="menu-group-title" href="/lancamento" onClick={() => setIsMenuOpen(false)}>
-              ColeÃ¯Â¿Â½Ã¯Â¿Â½o Genesis
+              Coleção Genesis
             </Link>
           </div>
           <div className="menu-group">
@@ -544,6 +544,7 @@ export function SiteHeader() {
     </>
   );
 }
+
 
 
 

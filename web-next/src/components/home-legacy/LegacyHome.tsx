@@ -38,12 +38,12 @@ type SearchPiece = {
 type CollectionMediaMode = "video" | "fallback";
 
 const TOP_MESSAGES = [
-  "Nova ColeÃ¯Â¿Â½Ã¯Â¿Â½o Genesis",
-  "VocÃ¯Â¿Â½ merece vestir algo a sua altura.",
-  "Cadastre-se para receber lanÃ¯Â¿Â½amentos",
-  "Exclusividade para quem valoriza o que Ã¯Â¿Â½ Ã¯Â¿Â½nico.",
-  "Acesso antecipado a novas coleÃ¯Â¿Â½Ã¯Â¿Â½es.",
-  "ProduÃ¯Â¿Â½Ã¯Â¿Â½o em pequena escala. Qualidade em cada detalhe.",
+  "Nova Coleção Genesis",
+  "Você merece vestir algo a sua altura.",
+  "Cadastre-se para receber lançamentos",
+  "Exclusividade para quem valoriza o que é único.",
+  "Acesso antecipado a novas coleções.",
+  "Produção em pequena escala. Qualidade em cada detalhe.",
 ];
 
 const SEARCH_CHIPS = [
@@ -53,7 +53,7 @@ const SEARCH_CHIPS = [
   "VESTIDOS",
   "JAQUETAS",
   "TENIS",
-  "AcessÃ¯Â¿Â½rios",
+  "Acessórios",
 ];
 
 
@@ -97,12 +97,12 @@ const HOMEPAGE_CATEGORIES = [
     label: "Vestidos",
   },
   {
-    href: "/categoria/CalÃ¯Â¿Â½as",
+    href: "/categoria/calcas",
     image: "/images/product/essence-trousers-1.jpg",
     secondaryImage: "/images/product/essence-trousers-2.jpg",
     fallbackImage: "/images/product/essence-trousers-1.jpg",
-    alt: "Categoria CalÃ¯Â¿Â½as",
-    label: "CalÃ¯Â¿Â½as",
+    alt: "Categoria Calças",
+    label: "Calças",
   },
   {
     href: "/categoria/carteiras-femininas",
@@ -121,12 +121,12 @@ const HOMEPAGE_CATEGORIES = [
     label: "Jaquetas",
   },
   {
-    href: "/categoria/AcessÃ¯Â¿Â½rios",
+    href: "/categoria/Acessórios",
     image: "/images/product/noir-sneaker-1.jpg",
     secondaryImage: "/images/product/noir-sneaker-2.jpg",
     fallbackImage: "/images/product/noir-sneaker-1.jpg",
-    alt: "Categoria AcessÃ¯Â¿Â½rios",
-    label: "AcessÃ¯Â¿Â½rios",
+    alt: "Categoria Acessórios",
+    label: "Acessórios",
   },
 ] as const;
 
@@ -149,7 +149,7 @@ const FALLBACK_SEARCH_PIECES: SearchPiece[] = [
     secondaryImage: "/images/placeholderreal.webp",
     href: "/product/genesis-tailored",
   },
-  { id: "genesis-bomber", sku: "genesis-bomber", name: "Sabrina incrÃ¯Â¿Â½vel", image: "/images/placeholderreal.webp", secondaryImage: "/images/placeholderreal.webp", href: "/product/genesis-bomber" },
+  { id: "genesis-bomber", sku: "genesis-bomber", name: "Sabrina incrível", image: "/images/placeholderreal.webp", secondaryImage: "/images/placeholderreal.webp", href: "/product/genesis-bomber" },
 ];
 
 function normalizeProducts(products: Product[]): Product[] {
@@ -660,7 +660,7 @@ export function LegacyHome({ products }: LegacyHomeProps) {
 
   const searchSectionTitle = useMemo(() => {
     const normalized = String(searchQuery || "").trim();
-    if (normalized.length < 2) return "PRINCIPAIS PEÃ¯Â¿Â½AS";
+    if (normalized.length < 2) return "PRINCIPAIS PEÇAS";
     if (isSearching) return "BUSCANDO...";
     return "RESULTADOS";
   }, [searchQuery, isSearching]);
@@ -729,7 +729,7 @@ export function LegacyHome({ products }: LegacyHomeProps) {
             type="button"
             ref={rightArrowRef}
             onClick={() => stepTopMessage("right", 1)}
-            aria-label="PrÃ¯Â¿Â½xima mensagem"
+            aria-label="Próxima mensagem"
           >
             &#10095;
           </button>
@@ -839,7 +839,7 @@ export function LegacyHome({ products }: LegacyHomeProps) {
         <nav className="header-menu-nav">
           <div className="menu-group">
             <Link className="menu-group-title" href="/lancamento" onClick={() => setIsMenuOpen(false)}>
-              ColeÃ¯Â¿Â½Ã¯Â¿Â½o Genesis
+              Coleção Genesis
             </Link>
           </div>
 
@@ -850,7 +850,7 @@ export function LegacyHome({ products }: LegacyHomeProps) {
             <div className="menu-flyout">
               <div className="flyout-col">
                 <p className="flyout-title">Novidades</p>
-                <Link href="/products?category=masculino" onClick={() => setIsMenuOpen(false)}>lanÃ¯Â¿Â½amentos</Link>
+                <Link href="/products?category=masculino" onClick={() => setIsMenuOpen(false)}>lançamentos</Link>
                 <Link href="/products" onClick={() => setIsMenuOpen(false)}>Destaques da semana</Link>
                 <a href="/novidades" onClick={handleMenuSearchShortcut}>
                   Editorial masculino
@@ -859,15 +859,15 @@ export function LegacyHome({ products }: LegacyHomeProps) {
               <div className="flyout-col">
                 <p className="flyout-title">Roupas</p>
                 <Link href="/products?category=camisas" onClick={() => setIsMenuOpen(false)}>Camisas</Link>
-                <Link href="/products?category=CalÃ¯Â¿Â½as" onClick={() => setIsMenuOpen(false)}>CalÃ¯Â¿Â½as</Link>
+                <Link href="/products?category=Calças" onClick={() => setIsMenuOpen(false)}>Calças</Link>
                 <Link href="/products?category=jaquetas" onClick={() => setIsMenuOpen(false)}>Jaquetas</Link>
                 <Link href="/products?category=blazers" onClick={() => setIsMenuOpen(false)}>Blazers</Link>
               </div>
               <div className="flyout-col">
-                <p className="flyout-title">AcessÃ¯Â¿Â½rios</p>
+                <p className="flyout-title">Acessórios</p>
                 <Link href="/products?category=calcados" onClick={() => setIsMenuOpen(false)}>Calcados</Link>
                 <Link href="/products?category=bolsas" onClick={() => setIsMenuOpen(false)}>Bolsas</Link>
-                <Link href="/products?category=AcessÃ¯Â¿Â½rios" onClick={() => setIsMenuOpen(false)}>AcessÃ¯Â¿Â½rios</Link>
+                <Link href="/products?category=Acessórios" onClick={() => setIsMenuOpen(false)}>Acessórios</Link>
               </div>
             </div>
           </div>
@@ -879,8 +879,8 @@ export function LegacyHome({ products }: LegacyHomeProps) {
             <div className="menu-flyout">
               <div className="flyout-col">
                 <p className="flyout-title">Novidades</p>
-                <Link href="/products?category=feminino" onClick={() => setIsMenuOpen(false)}>lanÃ¯Â¿Â½amentos</Link>
-                <Link href="/lancamento" onClick={() => setIsMenuOpen(false)}>ColeÃ¯Â¿Â½Ã¯Â¿Â½o Genesis</Link>
+                <Link href="/products?category=feminino" onClick={() => setIsMenuOpen(false)}>lançamentos</Link>
+                <Link href="/lancamento" onClick={() => setIsMenuOpen(false)}>Coleção Genesis</Link>
                 <a href="/novidades" onClick={handleMenuSearchShortcut}>
                   Escolhas da curadoria
                 </a>
@@ -889,14 +889,14 @@ export function LegacyHome({ products }: LegacyHomeProps) {
                 <p className="flyout-title">Roupas</p>
                 <Link href="/products?category=vestidos" onClick={() => setIsMenuOpen(false)}>Vestidos</Link>
                 <Link href="/products?category=saias" onClick={() => setIsMenuOpen(false)}>Saias</Link>
-                <Link href="/products?category=CalÃ¯Â¿Â½as" onClick={() => setIsMenuOpen(false)}>CalÃ¯Â¿Â½as</Link>
+                <Link href="/products?category=Calças" onClick={() => setIsMenuOpen(false)}>Calças</Link>
                 <Link href="/products?category=camisetas" onClick={() => setIsMenuOpen(false)}>Camisetas</Link>
               </div>
               <div className="flyout-col">
-                <p className="flyout-title">AcessÃ¯Â¿Â½rios</p>
+                <p className="flyout-title">Acessórios</p>
                 <Link href="/products?category=calcados" onClick={() => setIsMenuOpen(false)}>Calcados</Link>
                 <Link href="/products?category=bolsas" onClick={() => setIsMenuOpen(false)}>Bolsas</Link>
-                <Link href="/products?category=AcessÃ¯Â¿Â½rios" onClick={() => setIsMenuOpen(false)}>AcessÃ¯Â¿Â½rios</Link>
+                <Link href="/products?category=Acessórios" onClick={() => setIsMenuOpen(false)}>Acessórios</Link>
               </div>
             </div>
           </div>
@@ -992,7 +992,7 @@ export function LegacyHome({ products }: LegacyHomeProps) {
               isOpen={isSearchOpen}
               query={searchQuery}
               placement="search_overlay_legacy"
-              title="Recomendado para voce"
+              title="Recomendado para você"
               limit={6}
             />
             </div>
@@ -1005,7 +1005,7 @@ export function LegacyHome({ products }: LegacyHomeProps) {
 
       <GenderShowcase products={safeProducts} />
 
-      <section className="new-drop collection-drop" aria-label="Nova ColeÃ¯Â¿Â½Ã¯Â¿Â½o em video">
+      <section className="new-drop collection-drop" aria-label="Nova Coleção em vídeo">
         <div className="new-drop-inner">
           <div className="new-drop-media">
             {collectionMediaMode === "video" ? (
@@ -1027,17 +1027,17 @@ export function LegacyHome({ products }: LegacyHomeProps) {
                 <source src={COLLECTION_VIDEO} type="video/mp4" />
               </video>
             ) : (
-              <div className="new-drop-video-fallback" role="img" aria-label="Video da nova colecao indisponivel no momento" />
+              <div className="new-drop-video-fallback" role="img" aria-label="Vídeo da nova coleção indisponível no momento" />
             )}
           </div>
-          <h2>ColeÃ¯Â¿Â½Ã¯Â¿Â½o Alicerce</h2>
+          <h2>Coleção Alicerce</h2>
           <Link className="new-drop-cta" href="/novidades">
             EM BREVE
           </Link>
         </div>
       </section>
 
-      <section className="category-switch" data-category-switch="popular" aria-label="PeÃ¯Â¿Â½as mais clicadas">
+      <section className="category-switch" data-category-switch="popular" aria-label="Peças mais clicadas">
         <div className="category-grid" id="popularGrid">
           {popularProducts.map((product) => {
             const href = resolveProductHref(product);
@@ -1117,7 +1117,7 @@ export function LegacyHome({ products }: LegacyHomeProps) {
           <header style={{ textAlign: "center", marginBottom: "var(--t-space-6)" }}>
             <h2 className="t-h2">Explore as Categorias</h2>
             <p className="t-subtitle" style={{ marginTop: "var(--t-space-2)" }}>
-              SeleÃ¯Â¿Â½Ã¯Â¿Â½o por estilo e essenciais
+              Seleção por estilo e essenciais
             </p>
           </header>
 
@@ -1154,6 +1154,7 @@ export function LegacyHome({ products }: LegacyHomeProps) {
     </div>
   );
 }
+
 
 
 

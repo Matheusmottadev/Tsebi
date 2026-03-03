@@ -19,9 +19,9 @@
     {
       id: "genesis-tailored",
       categoryKey: "trousers",
-      categoryLabel: { pt: "CalÃ§as", en: "Trousers" },
+      categoryLabel: { pt: "Calças", en: "Trousers" },
       name: {
-        pt: "CalÃ§a de alfaiataria em sarja premium estruturada",
+        pt: "Calça de alfaiataria em sarja premium estruturada",
         en: "Premium structured tailored twill trousers"
       },
       priceLabel: "R$ 2.200",
@@ -31,7 +31,7 @@
     {
       id: "atelier-heels",
       categoryKey: "footwear",
-      categoryLabel: { pt: "CalÃ§ados", en: "Footwear" },
+      categoryLabel: { pt: "Calçados", en: "Footwear" },
       name: {
         pt: "Scarpin em couro envernizado de salto esculpido",
         en: "Patent leather pumps with sculpted heel"
@@ -45,7 +45,7 @@
       categoryKey: "knitwear",
       categoryLabel: { pt: "Malhas", en: "Knitwear" },
       name: {
-        pt: "Malha em lÃ£ merino de toque ultrafino",
+        pt: "Malha em lã merino de toque ultrafino",
         en: "Ultrafine merino wool knitwear"
       },
       priceLabel: "R$ 1.980",
@@ -67,9 +67,9 @@
     {
       id: "essence-trousers",
       categoryKey: "trousers",
-      categoryLabel: { pt: "CalÃ§as", en: "Trousers" },
+      categoryLabel: { pt: "Calças", en: "Trousers" },
       name: {
-        pt: "CalÃ§a wide leg em linho premium com prega profunda",
+        pt: "Calça wide leg em linho premium com prega profunda",
         en: "Premium linen wide-leg trousers with deep pleat"
       },
       priceLabel: "R$ 2.250",
@@ -111,12 +111,12 @@
   function toCategoryLabel(category, key) {
     const normalized = normalizeText(category);
     if (key === "jackets") return { pt: "Jaquetas", en: "Jackets" };
-    if (key === "trousers") return { pt: "CalÃ§as", en: "Trousers" };
-    if (key === "footwear") return { pt: "CalÃ§ados", en: "Footwear" };
+    if (key === "trousers") return { pt: "Calças", en: "Trousers" };
+    if (key === "footwear") return { pt: "Calçados", en: "Footwear" };
     if (key === "knitwear") return { pt: "Malhas", en: "Knitwear" };
     if (key === "dresses") return { pt: "Vestidos", en: "Dresses" };
     if (normalized) return { pt: category, en: category };
-    return { pt: "ColeÃ§Ã£o", en: "Collection" };
+    return { pt: "Coleção", en: "Collection" };
   }
 
   let genesisItems = [...fallbackGenesisItems];
@@ -129,7 +129,7 @@
 
   const lang = localStorage.getItem("tsebi-site-language") === "en" ? "en" : "pt";
   const allLabel = lang === "en" ? "All categories" : "Todas as categorias";
-  const emptyLabel = lang === "en" ? "No items found in this category." : "Nenhuma peÃ§a encontrada nessa categoria.";
+  const emptyLabel = lang === "en" ? "No items found in this category." : "Nenhuma peça encontrada nessa categoria.";
 
   let categories = [];
 
@@ -283,4 +283,5 @@
     render();
   });
 })();
+
 
