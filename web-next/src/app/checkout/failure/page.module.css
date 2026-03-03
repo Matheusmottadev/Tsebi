@@ -7,9 +7,11 @@
   width: 100%;
   max-width: 1240px;
   margin: 0 auto;
+  min-height: calc(100vh - 120px);
   padding: 40px 24px 72px;
   display: flex;
   justify-content: center;
+  align-items: center;
 }
 
 .card {
@@ -71,6 +73,7 @@
 
 @media (max-width: 760px) {
   .main {
+    min-height: calc(100vh - 96px);
     padding: 24px 16px 40px;
   }
 
