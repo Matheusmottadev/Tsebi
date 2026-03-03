@@ -5374,6 +5374,7 @@ body:not(.home-page) .home-header.product-mode .product-search-trigger svg {
   font-weight: 500;
   letter-spacing: 0;
   padding: 0 20px;
+  text-align: center;
   outline: none;
   background: transparent;
 }
@@ -5385,6 +5386,8 @@ body:not(.home-page) .home-header.product-mode .product-search-trigger svg {
   pointer-events: none;
   display: inline-flex;
   align-items: center;
+  justify-content: center;
+  text-align: center;
   padding: 0 20px;
   font-family: 'Montserrat', Arial, sans-serif;
   font-size: 16px;

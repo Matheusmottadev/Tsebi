@@ -4,6 +4,8 @@ import Script from "next/script";
 import { LayoutChrome } from "@/components/LayoutChrome";
 import { CookieConsentBar } from "@/components/CookieConsentBar";
 import { IdentityBridge } from "@/components/IdentityBridge";
+import { MetaPixelBase } from "@/components/MetaPixelBase";
+import { MetaPixelPageViewTracker } from "@/components/MetaPixelPageViewTracker";
 import { TrackingScripts } from "@/components/TrackingScripts";
 import "./globals.css";
 import "@/styles/legacy/design-tokens.css";
@@ -130,6 +132,8 @@ export default function RootLayout({
             });
           `}
         </Script>
+        <MetaPixelBase />
+        <MetaPixelPageViewTracker />
         <TrackingScripts />
         <IdentityBridge />
         <LayoutChrome>{children}</LayoutChrome>
