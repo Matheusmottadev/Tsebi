@@ -390,6 +390,7 @@ function normalizeFetchedOrder(raw = null) {
 
 async function refreshOrderStatus({ keepLoader = false } = {}) {
   if (!currentOrderId && !currentOrderNumber) {
+    showContent();
     renderFatal("Pedido não encontrado na URL. Volte ao carrinho e tente novamente.");
     return;
   }

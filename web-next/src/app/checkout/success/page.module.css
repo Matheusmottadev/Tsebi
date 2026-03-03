@@ -7,7 +7,7 @@
   width: 100%;
   max-width: 1240px;
   margin: 0 auto;
-  padding: 40px 24px 72px;
+  padding: 132px 24px 72px;
 }
 
 .card {
@@ -73,7 +73,7 @@
 
 @media (max-width: 760px) {
   .main {
-    padding: 24px 16px 40px;
+    padding: 116px 16px 40px;
   }
 
   .card h1 {

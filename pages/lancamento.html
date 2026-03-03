@@ -3,9 +3,9 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <link rel="icon" type="image/png" href="/images/Gazelalogo.png?v=20260227b" />
-  <link rel="shortcut icon" href="/images/Gazelalogo.png?v=20260227b" />
-  <link rel="apple-touch-icon" href="/images/Gazelalogo.png?v=20260227b" />
+  <link rel="icon" type="image/png" href="/images/Gazelalogo.pngv=20260227b" />
+  <link rel="shortcut icon" href="/images/Gazelalogo.pngv=20260227b" />
+  <link rel="apple-touch-icon" href="/images/Gazelalogo.pngv=20260227b" />
   <title>Lançamento | Tsebi Brasil</title>
   <!-- SEO META START -->
   <meta name="description" content="Acompanhe o pre-lancamento da Tsebi e receba acesso antecipado as proximas pecas da marca." />
@@ -25,8 +25,8 @@
   <!-- SEO META END -->
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link rel="stylesheet" href="/css/style.css?v=20260220h" />
-  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600&family=Montserrat:wght@300;400;500;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/css/style.cssv=20260220h" />
+  <link href="https://fonts.googleapis.com/css2family=Playfair+Display:wght@400;600&family=Montserrat:wght@300;400;500;600&display=swap" rel="stylesheet" />
   <style>
     .launch-main {
       background: #f7f6f2;
@@ -462,7 +462,7 @@
         </button>
 
         <button class="search-box-trigger" id="openSearch" type="button" aria-label="Abrir busca">
-          <span class="search-box-label">O que você está buscando?</span>
+          <span class="search-box-label">O que você está buscando</span>
           <span class="search-box-icon">&#8985;</span>
         </button>
       </div>
@@ -758,7 +758,7 @@
     </section>
   </main>
 
-  <a href="https://wa.me/5511918596632?text=Ol%C3%A1%21%20Preciso%20de%20ajuda%20com%20meu%20pedido%20ou%20produto%20da%20Tsebi." class="whatsapp" aria-label="Atendimento no WhatsApp">
+  <a href="https://wa.me/5511918596632text=Ol%C3%A1%21%20Preciso%20de%20ajuda%20com%20meu%20pedido%20ou%20produto%20da%20Tsebi." class="whatsapp" aria-label="Atendimento no WhatsApp">
     <img src="/images/logo-tsebi.png" alt="WhatsApp">
   </a>
 
@@ -830,7 +830,7 @@
       </section>
 
       <section class="footer-column">
-        <h3>PRECISA DE AJUDA?</h3>
+        <h3>PRECISA DE AJUDA</h3>
         <a href="#">Fale conosco pelo telefone (11) 93461-8004</a>
         <a href="#">Fale conosco pelo WhatsApp</a>
         <a href="mailto:contato@tsebi.com.br">Contato@tsebi.com.br</a>
@@ -935,8 +935,8 @@
   </div>
 
   <script src="/JS/launch-config.js"></script>
-  <script src="/JS/user-utils.js?v=20260220a"></script>
-  <script src="/JS/script.js?v=20260224a"></script>
+  <script src="/JS/user-utils.jsv=20260220a"></script>
+  <script src="/JS/script.jsv=20260224a"></script>
   <script>
     (function () {
       const switchButtons = Array.from(document.querySelectorAll("[data-collection-target]"));
@@ -1087,7 +1087,7 @@
         switchButtons.forEach((button) => {
           const isActive = button.dataset.collectionTarget === collectionKey;
           button.classList.toggle("is-active", isActive);
-          button.setAttribute("aria-pressed", isActive ? "true" : "false");
+          button.setAttribute("aria-pressed", isActive  "true" : "false");
         });
 
         panels.forEach((panel) => {
@@ -1156,7 +1156,7 @@
 
       function setLoading(isLoading) {
         submitBtn.disabled = Boolean(isLoading);
-        submitBtn.textContent = isLoading ? "Enviando..." : "Entrar na lista VIP";
+        submitBtn.textContent = isLoading  "Enviando..." : "Entrar na lista VIP";
       }
 
       function setVipEmailCheckMessage(message, type) {
@@ -1184,7 +1184,7 @@
       }
 
       async function refreshVipEmailAccountStatus(force) {
-        const email = normalizeEmail(vipEmailInput?.value || "");
+        const email = normalizeEmail(vipEmailInput.value || "");
         if (!isValidEmail(email)) {
           vipCheckedEmail = "";
           vipAccountExists = false;
@@ -1252,14 +1252,14 @@
         }, 350);
       }
 
-      talkBtn?.addEventListener("click", function () {
+      talkBtn.addEventListener("click", function () {
         emailBox.classList.toggle("is-visible");
         if (emailBox.classList.contains("is-visible")) {
           setStatus("Equipe disponível em contato@tsebi.com.br", "success");
         }
       });
 
-      copyBtn?.addEventListener("click", async function () {
+      copyBtn.addEventListener("click", async function () {
         try {
           if (navigator.clipboard && navigator.clipboard.writeText) {
             await navigator.clipboard.writeText(EMAIL);
@@ -1270,16 +1270,16 @@
         setStatus("Copie manualmente: contato@tsebi.com.br", "success");
       });
 
-      document.getElementById("vipCpf")?.addEventListener("input", function (event) {
+      document.getElementById("vipCpf").addEventListener("input", function (event) {
         event.target.value = formatCpf(event.target.value);
       });
 
-      document.getElementById("vipCep")?.addEventListener("input", function (event) {
+      document.getElementById("vipCep").addEventListener("input", function (event) {
         event.target.value = formatCep(event.target.value);
       });
 
-      vipEmailInput?.addEventListener("input", function (event) {
-        const normalized = normalizeEmail(event?.target?.value || "");
+      vipEmailInput.addEventListener("input", function (event) {
+        const normalized = normalizeEmail(event.target.value || "");
         if (!normalized) {
           vipCheckedEmail = "";
           vipAccountExists = false;
@@ -1298,7 +1298,7 @@
         queueVipEmailAccountCheck();
       });
 
-      vipEmailInput?.addEventListener("blur", function () {
+      vipEmailInput.addEventListener("blur", function () {
         if (vipEmailCheckTimer) {
           clearTimeout(vipEmailCheckTimer);
           vipEmailCheckTimer = null;
@@ -1306,18 +1306,18 @@
         refreshVipEmailAccountStatus(true);
       });
 
-      form?.addEventListener("submit", async function (event) {
+      form.addEventListener("submit", async function (event) {
         event.preventDefault();
         setStatus("");
 
         const payload = {
-          name: String(document.getElementById("vipName")?.value || "").trim(),
-          email: normalizeEmail(document.getElementById("vipEmail")?.value || ""),
-          birthDate: String(document.getElementById("vipBirthDate")?.value || "").trim(),
-          cpf: digitsOnly(document.getElementById("vipCpf")?.value || "", 11),
-          cep: digitsOnly(document.getElementById("vipCep")?.value || "", 8),
-          password: String(document.getElementById("vipPassword")?.value || ""),
-          passwordConfirm: String(document.getElementById("vipPasswordConfirm")?.value || "")
+          name: String(document.getElementById("vipName").value || "").trim(),
+          email: normalizeEmail(document.getElementById("vipEmail").value || ""),
+          birthDate: String(document.getElementById("vipBirthDate").value || "").trim(),
+          cpf: digitsOnly(document.getElementById("vipCpf").value || "", 11),
+          cep: digitsOnly(document.getElementById("vipCep").value || "", 8),
+          password: String(document.getElementById("vipPassword").value || ""),
+          passwordConfirm: String(document.getElementById("vipPasswordConfirm").value || "")
         };
 
         await refreshVipEmailAccountStatus(true);
