@@ -4,6 +4,7 @@ import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { PaymentElement, useElements, useStripe } from "@stripe/react-stripe-js";
 import type { StripePaymentElementChangeEvent } from "@stripe/stripe-js";
+import { useCartStore } from "@/lib/cart/cartStore";
 import styles from "./CheckoutPaymentForm.module.css";
 
 type CheckoutPaymentFormProps = {
@@ -46,6 +47,7 @@ export function CheckoutPaymentForm({
   onElementStateChange
 }: CheckoutPaymentFormProps) {
   const router = useRouter();
+  const clearCart = useCartStore((state) => state.clear);
   const stripe = useStripe();
   const elements = useElements();
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -122,6 +124,7 @@ export function CheckoutPaymentForm({
 
       const paymentIntentStatus = String(result.paymentIntent?.status || "").toLowerCase();
       if (paymentIntentStatus === "succeeded" || paymentIntentStatus === "processing") {
+        clearCart();
         router.push(successPath);
         return;
       }

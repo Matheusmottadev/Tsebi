@@ -1,6 +1,7 @@
 import type { CartItem, CartSnapshot } from "@/types";
 
 export const CART_STORAGE_KEY = "tsebi.web_next.cart.v1";
+const LEGACY_CART_STORAGE_KEYS = ["tsebi-cart-v1", "tsebi-cart", "cart"];
 
 function isBrowser(): boolean {
   return typeof window !== "undefined" && typeof window.localStorage !== "undefined";
@@ -109,5 +110,10 @@ export function clearCartSnapshot(): void {
   if (!isBrowser()) return;
   try {
     window.localStorage.removeItem(CART_STORAGE_KEY);
+    LEGACY_CART_STORAGE_KEYS.forEach((key) => {
+      try {
+        window.localStorage.removeItem(key);
+      } catch {}
+    });
   } catch {}
 }
