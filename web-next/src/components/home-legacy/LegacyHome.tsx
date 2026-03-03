@@ -660,6 +660,16 @@ export function LegacyHome({ products }: LegacyHomeProps) {
               <span />
               <span />
             </button>
+            <button
+              type="button"
+              className="header-search-trigger"
+              aria-label="Abrir busca"
+            >
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <circle cx="11" cy="11" r="7"></circle>
+                <path d="M20 20l-4.2-4.2"></path>
+              </svg>
+            </button>
 
           </div>
 
