@@ -220,6 +220,8 @@ export function LegacyHome({ products }: LegacyHomeProps) {
   const openMenuButtonRef = useRef<HTMLButtonElement | null>(null);
   const headerMenuRef = useRef<HTMLElement | null>(null);
   const searchInputRef = useRef<HTMLInputElement | null>(null);
+  const searchDialogRef = useRef<HTMLElement | null>(null);
+  const searchCloseButtonRef = useRef<HTMLButtonElement | null>(null);
   const lastTrackedZeroQueryRef = useRef<string>("");
 
   const safeProducts = useMemo(() => normalizeProducts(products), [products]);
@@ -425,6 +427,46 @@ export function LegacyHome({ products }: LegacyHomeProps) {
       searchInputRef.current?.focus();
     }, 50);
     return () => window.clearTimeout(timer);
+  }, [isSearchOpen]);
+
+  useEffect(() => {
+    if (!isSearchOpen) return;
+
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        setIsSearchOpen(false);
+        setSearchQuery("");
+        return;
+      }
+
+      if (event.key !== "Tab") return;
+      const container = searchDialogRef.current;
+      if (!container) return;
+
+      const focusable = Array.from(
+        container.querySelectorAll<HTMLElement>(
+          'a[href], button:not([disabled]), textarea, input, select, [tabindex]:not([tabindex="-1"])'
+        )
+      ).filter((element) => !element.hasAttribute("disabled") && element.getAttribute("aria-hidden") !== "true");
+
+      if (focusable.length === 0) return;
+
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      const active = document.activeElement as HTMLElement | null;
+
+      if (event.shiftKey && active === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && active === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    };
+
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
   }, [isSearchOpen]);
 
   useEffect(() => {
@@ -664,6 +706,7 @@ export function LegacyHome({ products }: LegacyHomeProps) {
               type="button"
               className="header-search-trigger"
               aria-label="Abrir busca"
+              onClick={openSearchOverlay}
             >
               <svg viewBox="0 0 24 24" aria-hidden="true">
                 <circle cx="11" cy="11" r="7"></circle>
@@ -824,174 +867,59 @@ export function LegacyHome({ products }: LegacyHomeProps) {
       </aside>
 
       <div
-        className={`search-overlay ${isSearchOpen ? "is-open" : ""}`}
+        className={`search-overlay lv-search-overlay ${isSearchOpen ? "is-open" : ""}`}
         id="searchOverlay"
         aria-hidden={!isSearchOpen}
       >
         <button
-          className="search-close"
-          id="closeSearch"
           type="button"
+          className="lv-search-backdrop"
           aria-label="Fechar busca"
           onClick={closeSearchOverlay}
+        />
+        <section
+          ref={searchDialogRef}
+          className="lv-search-sheet"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="lvSearchTitle"
         >
-          &times;
-        </button>
-
-        <div className="search-panel">
-          <div className="search-field">
-            <span className="search-field-icon">?</span>
-            <input
-              ref={searchInputRef}
-              className="search-input"
-              type="search"
-              placeholder="O que Você esta buscando?"
-              value={searchQuery}
-              onChange={(event) => setSearchQuery(event.target.value)}
-              onKeyDown={(event) => {
-                if (event.key !== "Enter") return;
-                event.preventDefault();
-                submitSearchPage();
-              }}
-            />
-          </div>
-          {searchSuggestions.length > 0 ? (
-            <div className="search-inline-suggestions" aria-label="Sugestoes de busca">
-              {searchSuggestions.map((suggestion, index) => (
-                <button
-                  key={`${suggestion}-${index}`}
-                  type="button"
-                  className="search-inline-suggestion"
-                  onClick={() => {
-                    void trackSearchEvent({
-                      type: "suggestion_click",
-                      query: String(searchQuery || "").trim(),
-                      suggestion,
-                      position: index,
-                      source: "overlay_suggestions"
-                    }).catch(() => {});
-                    setSearchQuery(suggestion);
-                    const input = searchInputRef.current;
-                    if (input) input.focus();
-                  }}
-                >
-                  {suggestion}
-                </button>
-              ))}
-            </div>
-          ) : null}
-          {didYouMeanQuery && !isSearching ? (
-            <p className="search-did-you-mean">
-              Você quis dizer{" "}
-              <button
-                type="button"
-                className="search-did-you-mean-btn"
-                onClick={() => handleDidYouMeanClick(didYouMeanQuery)}
-              >
-                {didYouMeanQuery}
-              </button>
-              ?
-            </p>
-          ) : null}
-
-          <section className="search-section">
-            <h3>SUGESTÕES</h3>
-            <div className="chips">
-              {SEARCH_CHIPS.map((chip) => (
-                <button key={chip} className="chip" type="button" onClick={() => handleSearchChipClick(chip)}>
-                  {chip}
-                </button>
-              ))}
-            </div>
+          <div className="lv-search-head">
+            <h2 id="lvSearchTitle" className="lv-search-title">
+              Buscar
+            </h2>
             <button
+              ref={searchCloseButtonRef}
+              className="lv-search-close"
               type="button"
-              className="chip"
-              onClick={submitSearchPage}
-              disabled={String(searchQuery || "").trim().length < 2}
-              aria-label="Ver todos os resultados"
+              aria-label="Fechar busca"
+              onClick={closeSearchOverlay}
             >
-              VER TODOS OS RESULTADOS
+              <span aria-hidden="true">&times;</span>
             </button>
-          </section>
-
-          <section className="search-section">
-            <h3>{searchSectionTitle}</h3>
-            <div className="top-grid">
-              {searchResultsToRender.map((piece, index) => (
-                <Link key={piece.id} className="top-card" href={piece.href} onClick={() => handleResultClick(piece, index)}>
-                  <div className="top-media">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
-                      className="top-img top-img-primary"
-                      loading="lazy"
-                      decoding="async"
-                      src={piece.image}
-                      alt={piece.name}
-                      onError={(event) => {
-                        const element = event.currentTarget;
-                        element.onerror = null;
-                        element.src = COLLECTION_PLACEHOLDER;
-                      }}
-                    />
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
-                      className="top-img top-img-secondary"
-                      loading="lazy"
-                      decoding="async"
-                      src={piece.secondaryImage || piece.image}
-                      alt={`${piece.name} - segunda foto`}
-                      onError={(event) => {
-                        const element = event.currentTarget;
-                        element.onerror = null;
-                        element.src = piece.image || COLLECTION_PLACEHOLDER;
-                      }}
-                    />
-                  </div>
-                  <div className="top-meta">
-                    <span className="tag">NOVO</span>
-                    <span className="name">{piece.name}</span>
-                  </div>
-                </Link>
-              ))}
+          </div>
+          <div className="lv-search-body">
+            <div className="lv-search-input-wrap">
+              <label htmlFor="lv-search-input" className="sr-only">
+                Pesquise palavras-chave
+              </label>
+              <input
+                id="lv-search-input"
+                ref={searchInputRef}
+                className="lv-search-input"
+                type="search"
+                placeholder="Pesquise palavras-chave…"
+                value={searchQuery}
+                onChange={(event) => setSearchQuery(event.target.value)}
+                onKeyDown={(event) => {
+                  if (event.key !== "Enter") return;
+                  event.preventDefault();
+                  submitSearchPage();
+                }}
+              />
             </div>
-            {!isSearching && hasSearchRequest && searchResultsToRender.length === 0 ? (
-              <p className="search-empty">Nenhum resultado encontrado. Tente outro termo.</p>
-            ) : null}
-          </section>
-
-          <section className="search-section search-curated-section">
-            <h3>
-              {!isSearching && hasSearchRequest && searchResultsToRender.length === 0
-                ? "NOSSAS ESCOLHAS PARA VOCÊ"
-                : "SELEÇÃO CURADA"}
-            </h3>
-            <div className="search-curated-grid">
-              {zeroStateToRender.map((piece, index) => (
-                <Link key={`curated-${piece.id}-${index}`} className="search-mini-card" href={piece.href} onClick={() => handleResultClick(piece, index)}>
-                  <div className="search-mini-media">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
-                      className="search-mini-img"
-                      loading="lazy"
-                      decoding="async"
-                      src={piece.image}
-                      alt={piece.name}
-                      onError={(event) => {
-                        const element = event.currentTarget;
-                        element.onerror = null;
-                        element.src = COLLECTION_PLACEHOLDER;
-                      }}
-                    />
-                  </div>
-                  <div className="search-mini-meta">
-                    <span className="tag">TSEBI</span>
-                    <span className="name">{piece.name}</span>
-                  </div>
-                </Link>
-              ))}
-            </div>
-          </section>
-        </div>
+          </div>
+        </section>
       </div>
 
       <LegacyHero />

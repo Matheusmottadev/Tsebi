@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { cartSelectors, useCartStore } from "@/lib/cart/cartStore";
 import { getMe } from "@/services/auth";
 
@@ -16,6 +16,7 @@ const TOP_MESSAGES = [
 ];
 
 export function SiteHeader() {
+  const router = useRouter();
   const pathname = usePathname();
   const isProductPage = pathname === "/product" || String(pathname || "").startsWith("/product/");
   const hasHydrated = useCartStore(cartSelectors.hasHydrated);
@@ -26,10 +27,14 @@ export function SiteHeader() {
   const [messageClass, setMessageClass] = useState("slide-right");
   const [messageKey, setMessageKey] = useState(0);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
   const [isHeaderHidden, setIsHeaderHidden] = useState(false);
   const [isHeaderForcedHidden, setIsHeaderForcedHidden] = useState(false);
   const headerMenuRef = useRef<HTMLElement | null>(null);
   const menuButtonRef = useRef<HTMLButtonElement | null>(null);
+  const searchDialogRef = useRef<HTMLElement | null>(null);
+  const searchInputRef = useRef<HTMLInputElement | null>(null);
   const leftArrowRef = useRef<HTMLButtonElement | null>(null);
   const rightArrowRef = useRef<HTMLButtonElement | null>(null);
   const lastScrollYRef = useRef(0);
@@ -117,6 +122,23 @@ export function SiteHeader() {
   }, [isMenuOpen]);
 
   useEffect(() => {
+    document.body.classList.toggle("no-scroll", isSearchOpen);
+    document.documentElement.classList.toggle("no-scroll", isSearchOpen);
+    return () => {
+      document.body.classList.remove("no-scroll");
+      document.documentElement.classList.remove("no-scroll");
+    };
+  }, [isSearchOpen]);
+
+  useEffect(() => {
+    if (!isSearchOpen) return;
+    const timer = window.setTimeout(() => {
+      searchInputRef.current?.focus();
+    }, 50);
+    return () => window.clearTimeout(timer);
+  }, [isSearchOpen]);
+
+  useEffect(() => {
     if (!isMenuOpen) return;
 
     const onDocumentClick = (event: MouseEvent) => {
@@ -135,11 +157,51 @@ export function SiteHeader() {
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key !== "Escape") return;
       setIsMenuOpen(false);
+      setIsSearchOpen(false);
     };
 
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
   }, []);
+
+  useEffect(() => {
+    if (!isSearchOpen) return;
+
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        setIsSearchOpen(false);
+        return;
+      }
+
+      if (event.key !== "Tab") return;
+      const container = searchDialogRef.current;
+      if (!container) return;
+
+      const focusable = Array.from(
+        container.querySelectorAll<HTMLElement>(
+          'a[href], button:not([disabled]), textarea, input, select, [tabindex]:not([tabindex="-1"])'
+        )
+      ).filter((element) => !element.hasAttribute("disabled") && element.getAttribute("aria-hidden") !== "true");
+
+      if (focusable.length === 0) return;
+
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      const active = document.activeElement as HTMLElement | null;
+
+      if (event.shiftKey && active === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && active === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    };
+
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [isSearchOpen]);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -227,6 +289,22 @@ export function SiteHeader() {
   }, [isProductPage]);
 
   const cartCountBadge = displayCount > 0 ? String(displayCount) : undefined;
+  const openSearchOverlay = useCallback(() => {
+    setIsMenuOpen(false);
+    setIsSearchOpen(true);
+  }, []);
+
+  const closeSearchOverlay = useCallback(() => {
+    setIsSearchOpen(false);
+    setSearchQuery("");
+  }, []);
+
+  const submitSearch = useCallback(() => {
+    const normalized = String(searchQuery || "").trim();
+    if (normalized.length < 2) return;
+    router.push(`/products?q=${encodeURIComponent(normalized)}`);
+    closeSearchOverlay();
+  }, [closeSearchOverlay, router, searchQuery]);
 
   return (
     <>
@@ -275,7 +353,7 @@ export function SiteHeader() {
               <span></span>
               <span></span>
             </button>
-            <button type="button" className="header-search-trigger" aria-label="Buscar produtos">
+            <button type="button" className="header-search-trigger" aria-label="Buscar produtos" onClick={openSearchOverlay}>
               <svg viewBox="0 0 24 24" aria-hidden="true">
                 <circle cx="11" cy="11" r="7"></circle>
                 <path d="M20 20l-4.2-4.2"></path>
@@ -362,6 +440,52 @@ export function SiteHeader() {
           </div>
         </nav>
       </aside>
+
+      <div className={`search-overlay lv-search-overlay ${isSearchOpen ? "is-open" : ""}`} aria-hidden={!isSearchOpen}>
+        <button
+          type="button"
+          className="lv-search-backdrop"
+          aria-label="Fechar busca"
+          onClick={closeSearchOverlay}
+        />
+        <section
+          ref={searchDialogRef}
+          className="lv-search-sheet"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="siteHeaderSearchTitle"
+        >
+          <div className="lv-search-head">
+            <h2 id="siteHeaderSearchTitle" className="lv-search-title">
+              Buscar
+            </h2>
+            <button className="lv-search-close" type="button" aria-label="Fechar busca" onClick={closeSearchOverlay}>
+              <span aria-hidden="true">&times;</span>
+            </button>
+          </div>
+          <div className="lv-search-body">
+            <div className="lv-search-input-wrap">
+              <label htmlFor="site-header-search-input" className="sr-only">
+                Pesquise palavras-chave
+              </label>
+              <input
+                id="site-header-search-input"
+                ref={searchInputRef}
+                className="lv-search-input"
+                type="search"
+                placeholder="Pesquise palavras-chave…"
+                value={searchQuery}
+                onChange={(event) => setSearchQuery(event.target.value)}
+                onKeyDown={(event) => {
+                  if (event.key !== "Enter") return;
+                  event.preventDefault();
+                  submitSearch();
+                }}
+              />
+            </div>
+          </div>
+        </section>
+      </div>
     </>
   );
 }

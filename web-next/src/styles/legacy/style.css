@@ -5082,5 +5082,132 @@ body:not(.home-page) .home-header.product-mode .product-search-trigger svg {
   pointer-events: none;
 }
 
+/* ===== LV SEARCH OVERLAY ===== */
+.sr-only{
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  border: 0;
+  clip: rect(0 0 0 0);
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+.lv-search-overlay{
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  display: block;
+  pointer-events: none;
+}
+
+.lv-search-overlay.is-open{
+  pointer-events: auto;
+}
+
+.lv-search-backdrop{
+  position: absolute;
+  inset: 0;
+  border: 0;
+  background: rgba(0, 0, 0, 0.42);
+  opacity: 0;
+  transition: opacity 360ms cubic-bezier(0.22, 1, 0.36, 1);
+  cursor: pointer;
+}
+
+.lv-search-overlay.is-open .lv-search-backdrop{
+  opacity: 1;
+}
+
+.lv-search-sheet{
+  position: absolute;
+  inset: 0;
+  height: 100vh;
+  background: #fff;
+  transform: translateY(-100%);
+  transition: transform 380ms cubic-bezier(0.22, 1, 0.36, 1);
+  display: flex;
+  flex-direction: column;
+}
+
+.lv-search-overlay.is-open .lv-search-sheet{
+  transform: translateY(0);
+}
+
+.lv-search-head{
+  height: 84px;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: 12px;
+  border-bottom: 1px solid #ececec;
+  padding: 0 24px;
+}
+
+.lv-search-title{
+  font-family: 'Playfair Display', serif;
+  font-size: 34px;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+}
+
+.lv-search-close{
+  width: 42px;
+  height: 42px;
+  border: 0;
+  background: transparent;
+  color: #111;
+  font-size: 38px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.lv-search-body{
+  padding: 34px 24px;
+}
+
+.lv-search-input-wrap{
+  max-width: 980px;
+  margin: 0 auto;
+}
+
+.lv-search-input{
+  width: 100%;
+  height: 60px;
+  border: 1px solid #111;
+  border-radius: 999px;
+  font-family: 'Montserrat', sans-serif;
+  font-size: 21px;
+  padding: 0 22px;
+  outline: none;
+}
+
+.lv-search-input:focus{
+  border-color: #000;
+  box-shadow: 0 0 0 3px rgba(0, 0, 0, 0.08);
+}
+
+@media (max-width: 760px){
+  .lv-search-head{
+    height: 72px;
+    padding: 0 16px;
+  }
+
+  .lv-search-title{
+    font-size: 28px;
+  }
+
+  .lv-search-body{
+    padding: 20px 16px;
+  }
+
+  .lv-search-input{
+    height: 54px;
+    font-size: 18px;
+  }
+}
+
 
 
