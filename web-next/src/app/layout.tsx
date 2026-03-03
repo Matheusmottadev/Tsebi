@@ -114,6 +114,9 @@ export default function RootLayout({
 
   return (
     <html lang="pt-BR">
+      <head>
+        <MetaPixelBase />
+      </head>
       <body className={`${montserrat.variable} ${playfairDisplay.variable}`}>
         <Script id="google-consent-default" strategy="beforeInteractive">
           {`
@@ -132,7 +135,6 @@ export default function RootLayout({
             });
           `}
         </Script>
-        <MetaPixelBase />
         <MetaPixelPageViewTracker />
         <TrackingScripts />
         <IdentityBridge />
