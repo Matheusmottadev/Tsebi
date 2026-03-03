@@ -40,6 +40,7 @@ type BehaviorEventInput = {
   userAgent?: string;
   ipAddress?: string;
   occurredAt?: string;
+  skipMetaCapi?: boolean;
 };
 
 type RecommendationOutput = {
@@ -373,10 +374,11 @@ async function logBehaviorEvent(input: BehaviorEventInput) {
     await upsertProfileOnEvent(client, actorKey, safeUserId, safeAnonId, eventName, foldedCategory, priceCents);
   });
 
-  await Promise.allSettled([
-    sendToPosthogServer(input, actorKey, eventId),
-    sendMetaConversionsEvent(input, eventId),
-  ]);
+  const outboundTasks: Promise<unknown>[] = [sendToPosthogServer(input, actorKey, eventId)];
+  if (!input.skipMetaCapi) {
+    outboundTasks.push(sendMetaConversionsEvent(input, eventId));
+  }
+  await Promise.allSettled(outboundTasks);
 
   return { ok: true, actorKey, eventId };
 }
@@ -603,4 +605,3 @@ module.exports = {
   getRecommendationsForActor,
   priceBucketFromCents,
 };
-

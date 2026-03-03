@@ -903,6 +903,14 @@ async function processWebhookEvent(event: any) {
   });
   const pendingNotifications: any[] = [];
   const pendingBehaviorEvents: any[] = [];
+  const pendingMetaCapiEvents: Array<{
+    eventName: string;
+    eventId: string;
+    email: string;
+    currency: string;
+    value: number;
+    externalId: string;
+  }> = [];
 
   await withTransaction(async (client: any) => {
     const isNewEvent = await tryRegisterWebhookEvent(client, event);
@@ -992,6 +1000,17 @@ async function processWebhookEvent(event: any) {
             ).trim()
           : "";
       const webhookMetaEventId = String(stripeObject?.metadata?.event_id || "").trim() || `purchase_${String(order.id || "")}`;
+      const orderForMeta = order as any;
+      pendingMetaCapiEvents.push({
+        eventName: "Purchase",
+        eventId: webhookMetaEventId,
+        email: String(orderForMeta?.userEmail || "").trim().toLowerCase(),
+        currency: String(Array.isArray(order.items) && order.items[0]?.currency ? order.items[0].currency : "BRL")
+          .trim()
+          .toUpperCase(),
+        value: Math.max(0, Number(orderForMeta?.amount || 0)) / 100,
+        externalId: String(order.userId || "").trim()
+      });
       pendingBehaviorEvents.push({
         eventName: "purchase",
         eventId: webhookMetaEventId,
@@ -1009,6 +1028,7 @@ async function processWebhookEvent(event: any) {
           : 0,
         currency: Array.isArray(order.items) && order.items[0]?.currency ? String(order.items[0].currency) : "brl",
         source: "stripe_webhook",
+        skipMetaCapi: true,
         attributes: {
           order_id: String(order.id || ""),
           item_count: Array.isArray(order.items) ? order.items.length : 0
@@ -1137,6 +1157,34 @@ async function processWebhookEvent(event: any) {
     }
   }
 
+  for (const capiEvent of pendingMetaCapiEvents) {
+    try {
+      const result = await sendMetaCapiEvent({
+        eventName: capiEvent.eventName,
+        eventId: capiEvent.eventId,
+        email: capiEvent.email,
+        currency: capiEvent.currency,
+        value: capiEvent.value,
+        ipAddress: "127.0.0.1",
+        userAgent: "stripe-webhook",
+        externalId: capiEvent.externalId
+      });
+      if (!result?.ok) {
+        logStripeLifecycle("webhook_meta_capi_failed", {
+          webhookEventId: webhookContext.webhookEventId,
+          orderId: webhookContext.orderId,
+          reason: result?.reason || "META_CAPI_FAILED"
+        });
+      }
+    } catch (error: any) {
+      logStripeLifecycle("webhook_meta_capi_failed", {
+        webhookEventId: webhookContext.webhookEventId,
+        orderId: webhookContext.orderId,
+        reason: toSafeErrorMessage(error)
+      });
+    }
+  }
+
   for (const trackedEvent of pendingBehaviorEvents) {
     try {
       await logBehaviorEvent({
@@ -1144,7 +1192,13 @@ async function processWebhookEvent(event: any) {
         userAgent: "stripe-webhook",
         ipAddress: "127.0.0.1"
       });
-    } catch {}
+    } catch (error: any) {
+      logStripeLifecycle("webhook_behavior_event_failed", {
+        webhookEventId: webhookContext.webhookEventId,
+        orderId: webhookContext.orderId,
+        reason: toSafeErrorMessage(error)
+      });
+    }
   }
 }
 
@@ -1255,12 +1309,18 @@ app.post(
    */
   async (req: any, res: any) => {
     if (!stripe || !stripeWebhookSecret) {
-      return res.status(500).json({ error: "Stripe webhook not configured." });
+      logStripeLifecycle("webhook_ignored", {
+        reason: "stripe_not_configured"
+      });
+      return res.status(200).json({ received: true, ignored: "stripe_not_configured" });
     }
 
     const signature = req.headers["stripe-signature"];
     if (!signature) {
-      return res.status(400).json({ error: "Missing stripe-signature header." });
+      logStripeLifecycle("webhook_ignored", {
+        reason: "missing_signature_header"
+      });
+      return res.status(200).json({ received: true, ignored: "missing_signature_header" });
     }
 
     /** @type {import("stripe").Stripe.Event} */
@@ -1271,7 +1331,7 @@ app.post(
       logStripeLifecycle("webhook_signature_verification_failed", {
         error: toSafeErrorMessage(error)
       });
-      return res.status(400).json({ error: `Invalid webhook signature: ${error.message}` });
+      return res.status(200).json({ received: true, ignored: "invalid_signature" });
     }
 
     try {
@@ -1283,7 +1343,7 @@ app.post(
         eventType: event?.type || null,
         error: toSafeErrorMessage(error)
       });
-      return res.status(500).json({ error: "Failed to process webhook." });
+      return res.status(200).json({ received: true, warning: "processing_failed" });
     }
   }
 );

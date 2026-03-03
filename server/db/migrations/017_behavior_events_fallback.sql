@@ -1,0 +1,21 @@
+CREATE TABLE IF NOT EXISTS behavior_events (
+  id SERIAL PRIMARY KEY,
+  event_id TEXT UNIQUE,
+  event_name TEXT,
+  actor_key TEXT,
+  user_id TEXT,
+  anon_id TEXT,
+  product_id TEXT,
+  category TEXT,
+  price_cents INTEGER,
+  currency TEXT,
+  source TEXT,
+  query_text TEXT,
+  attributes JSONB,
+  meta JSONB,
+  fbp TEXT,
+  fbc TEXT,
+  user_agent TEXT,
+  ip_address TEXT,
+  occurred_at TIMESTAMPTZ DEFAULT NOW()
+);
