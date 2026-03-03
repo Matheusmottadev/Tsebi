@@ -9,6 +9,12 @@ import { LegacyFooter } from "@/components/home-legacy/LegacyFooter";
 import { LegacyHero } from "@/components/home-legacy/LegacyHero";
 import { NewsletterPopup } from "@/components/home-legacy/NewsletterPopup";
 import { cartSelectors, useCartStore } from "@/lib/cart/cartStore";
+import {
+  trackRecommendationCategoryVisit,
+  trackRecommendationProductInteraction,
+  trackRecommendationSearch,
+} from "@/lib/recommendationSignals";
+import { startSearchPlaceholderRotator } from "@/lib/searchPlaceholderRotator";
 import { getMe } from "@/services/auth";
 import { searchProductsDetailed, trackSearchEvent } from "@/services/products";
 import { buildHoverImagePair } from "@/lib/product-media";
@@ -31,12 +37,12 @@ type SearchPiece = {
 type CollectionMediaMode = "video" | "fallback";
 
 const TOP_MESSAGES = [
-  "Nova Coleção Genesis",
-  "Você merece vestir algo a sua altura.",
-  "Cadastre-se para receber lançamentos",
-  "Exclusividade para quem valoriza o que é único.",
-  "Acesso antecipado a novas coleções.",
-  "Produção em pequena escala. Qualidade em cada detalhe.",
+  "Nova ColeÃ¯Â¿Â½Ã¯Â¿Â½o Genesis",
+  "VocÃ¯Â¿Â½ merece vestir algo a sua altura.",
+  "Cadastre-se para receber lanÃ¯Â¿Â½amentos",
+  "Exclusividade para quem valoriza o que Ã¯Â¿Â½ Ã¯Â¿Â½nico.",
+  "Acesso antecipado a novas coleÃ¯Â¿Â½Ã¯Â¿Â½es.",
+  "ProduÃ¯Â¿Â½Ã¯Â¿Â½o em pequena escala. Qualidade em cada detalhe.",
 ];
 
 const SEARCH_CHIPS = [
@@ -46,9 +52,11 @@ const SEARCH_CHIPS = [
   "VESTIDOS",
   "JAQUETAS",
   "TENIS",
-  "Acessórios",
+  "AcessÃ¯Â¿Â½rios",
 ];
 
+
+const SEARCH_CATEGORIES = ["Feminino", "Masculino", "CalÃ§as", "Camisas", "Blazers", "Bolsas"] as const;
 const COLLECTION_VIDEO = "https://media.tsebi.com.br/31377-386628887.mp4";
 const COLLECTION_PLACEHOLDER = "/images/hero.jpg";
 const HOMEPAGE_PICTURE_IMAGE = "/images/Homepagepicture.jpg";
@@ -88,12 +96,12 @@ const HOMEPAGE_CATEGORIES = [
     label: "Vestidos",
   },
   {
-    href: "/categoria/Calças",
+    href: "/categoria/CalÃ¯Â¿Â½as",
     image: "/images/product/essence-trousers-1.jpg",
     secondaryImage: "/images/product/essence-trousers-2.jpg",
     fallbackImage: "/images/product/essence-trousers-1.jpg",
-    alt: "Categoria Calças",
-    label: "Calças",
+    alt: "Categoria CalÃ¯Â¿Â½as",
+    label: "CalÃ¯Â¿Â½as",
   },
   {
     href: "/categoria/carteiras-femininas",
@@ -112,12 +120,12 @@ const HOMEPAGE_CATEGORIES = [
     label: "Jaquetas",
   },
   {
-    href: "/categoria/Acessórios",
+    href: "/categoria/AcessÃ¯Â¿Â½rios",
     image: "/images/product/noir-sneaker-1.jpg",
     secondaryImage: "/images/product/noir-sneaker-2.jpg",
     fallbackImage: "/images/product/noir-sneaker-1.jpg",
-    alt: "Categoria Acessórios",
-    label: "Acessórios",
+    alt: "Categoria AcessÃ¯Â¿Â½rios",
+    label: "AcessÃ¯Â¿Â½rios",
   },
 ] as const;
 
@@ -140,7 +148,7 @@ const FALLBACK_SEARCH_PIECES: SearchPiece[] = [
     secondaryImage: "/images/placeholderreal.webp",
     href: "/product/genesis-tailored",
   },
-  { id: "genesis-bomber", sku: "genesis-bomber", name: "Sabrina incrível", image: "/images/placeholderreal.webp", secondaryImage: "/images/placeholderreal.webp", href: "/product/genesis-bomber" },
+  { id: "genesis-bomber", sku: "genesis-bomber", name: "Sabrina incrÃ¯Â¿Â½vel", image: "/images/placeholderreal.webp", secondaryImage: "/images/placeholderreal.webp", href: "/product/genesis-bomber" },
 ];
 
 function normalizeProducts(products: Product[]): Product[] {
@@ -190,6 +198,7 @@ function mapProductToSearchPiece(product: HomeProductCard): SearchPiece | null {
   };
 }
 
+
 export function LegacyHome({ products }: LegacyHomeProps) {
   const router = useRouter();
   const hasHydrated = useCartStore(cartSelectors.hasHydrated);
@@ -222,6 +231,9 @@ export function LegacyHome({ products }: LegacyHomeProps) {
   const searchInputRef = useRef<HTMLInputElement | null>(null);
   const searchDialogRef = useRef<HTMLElement | null>(null);
   const searchCloseButtonRef = useRef<HTMLButtonElement | null>(null);
+  const searchPlaceholderCurrentRef = useRef<HTMLSpanElement | null>(null);
+  const searchPlaceholderNextRef = useRef<HTMLSpanElement | null>(null);
+  const searchPlaceholderTrackRef = useRef<HTMLSpanElement | null>(null);
   const lastTrackedZeroQueryRef = useRef<string>("");
 
   const safeProducts = useMemo(() => normalizeProducts(products), [products]);
@@ -230,6 +242,16 @@ export function LegacyHome({ products }: LegacyHomeProps) {
   const popularProducts = useMemo<HomeProductCard[]>(() => {
     if (safeProducts.length === 0) return FALLBACK_POPULAR_PRODUCTS;
     return safeProducts.slice(0, 5);
+  }, [safeProducts]);
+
+  const productBySku = useMemo(() => {
+    const bySku = new Map<string, Product>();
+    safeProducts.forEach((product) => {
+      const sku = String(product.sku || product.id || "").trim();
+      if (!sku) return;
+      bySku.set(sku, product);
+    });
+    return bySku;
   }, [safeProducts]);
 
   const searchTopPieces = useMemo<SearchPiece[]>(() => {
@@ -431,6 +453,22 @@ export function LegacyHome({ products }: LegacyHomeProps) {
 
   useEffect(() => {
     if (!isSearchOpen) return;
+    const currentWordEl = searchPlaceholderCurrentRef.current;
+    const nextWordEl = searchPlaceholderNextRef.current;
+    const trackEl = searchPlaceholderTrackRef.current;
+    if (!currentWordEl || !nextWordEl || !trackEl) return;
+
+    return startSearchPlaceholderRotator({
+      currentWordEl,
+      nextWordEl,
+      trackEl,
+      intervalMs: 1500,
+      durationMs: 400,
+    });
+  }, [isSearchOpen]);
+
+  useEffect(() => {
+    if (!isSearchOpen) return;
 
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
@@ -523,6 +561,7 @@ export function LegacyHome({ products }: LegacyHomeProps) {
   );
 
   const handleSearchChipClick = useCallback((label: string) => {
+    trackRecommendationSearch(label);
     void trackSearchEvent({
       type: "suggestion_click",
       query: String(searchQuery || "").trim(),
@@ -538,6 +577,7 @@ export function LegacyHome({ products }: LegacyHomeProps) {
   const submitSearchPage = useCallback(() => {
     const normalized = String(searchQuery || "").trim();
     if (normalized.length < 2) return;
+    trackRecommendationSearch(normalized);
     router.push(`/search?q=${encodeURIComponent(normalized)}`);
   }, [router, searchQuery]);
 
@@ -619,7 +659,7 @@ export function LegacyHome({ products }: LegacyHomeProps) {
 
   const searchSectionTitle = useMemo(() => {
     const normalized = String(searchQuery || "").trim();
-    if (normalized.length < 2) return "PRINCIPAIS PEÇAS";
+    if (normalized.length < 2) return "PRINCIPAIS PEÃ¯Â¿Â½AS";
     if (isSearching) return "BUSCANDO...";
     return "RESULTADOS";
   }, [searchQuery, isSearching]);
@@ -627,6 +667,7 @@ export function LegacyHome({ products }: LegacyHomeProps) {
   const handleDidYouMeanClick = useCallback((value: string) => {
     const normalized = String(value || "").trim();
     if (!normalized) return;
+    trackRecommendationSearch(normalized);
     void trackSearchEvent({
       type: "did_you_mean_click",
       query: String(searchQuery || "").trim(),
@@ -639,6 +680,13 @@ export function LegacyHome({ products }: LegacyHomeProps) {
   }, [searchQuery]);
 
   const handleResultClick = useCallback((piece: SearchPiece, position: number) => {
+    const matched = productBySku.get(String(piece.sku || "").trim());
+    trackRecommendationProductInteraction({
+      sku: piece.sku,
+      category: matched?.category || "",
+      priceValue: matched?.priceValue || 0,
+      viewed: true
+    });
     void trackSearchEvent({
       type: "result_click",
       query: String(searchQuery || "").trim(),
@@ -646,7 +694,7 @@ export function LegacyHome({ products }: LegacyHomeProps) {
       position,
       source: "overlay_search"
     }).catch(() => {});
-  }, [searchQuery]);
+  }, [productBySku, searchQuery]);
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -680,7 +728,7 @@ export function LegacyHome({ products }: LegacyHomeProps) {
             type="button"
             ref={rightArrowRef}
             onClick={() => stepTopMessage("right", 1)}
-            aria-label="Próxima mensagem"
+            aria-label="PrÃ¯Â¿Â½xima mensagem"
           >
             &#10095;
           </button>
@@ -790,7 +838,7 @@ export function LegacyHome({ products }: LegacyHomeProps) {
         <nav className="header-menu-nav">
           <div className="menu-group">
             <Link className="menu-group-title" href="/lancamento" onClick={() => setIsMenuOpen(false)}>
-              Coleção Genesis
+              ColeÃ¯Â¿Â½Ã¯Â¿Â½o Genesis
             </Link>
           </div>
 
@@ -801,7 +849,7 @@ export function LegacyHome({ products }: LegacyHomeProps) {
             <div className="menu-flyout">
               <div className="flyout-col">
                 <p className="flyout-title">Novidades</p>
-                <Link href="/products?category=masculino" onClick={() => setIsMenuOpen(false)}>lançamentos</Link>
+                <Link href="/products?category=masculino" onClick={() => setIsMenuOpen(false)}>lanÃ¯Â¿Â½amentos</Link>
                 <Link href="/products" onClick={() => setIsMenuOpen(false)}>Destaques da semana</Link>
                 <a href="/novidades" onClick={handleMenuSearchShortcut}>
                   Editorial masculino
@@ -810,15 +858,15 @@ export function LegacyHome({ products }: LegacyHomeProps) {
               <div className="flyout-col">
                 <p className="flyout-title">Roupas</p>
                 <Link href="/products?category=camisas" onClick={() => setIsMenuOpen(false)}>Camisas</Link>
-                <Link href="/products?category=Calças" onClick={() => setIsMenuOpen(false)}>Calças</Link>
+                <Link href="/products?category=CalÃ¯Â¿Â½as" onClick={() => setIsMenuOpen(false)}>CalÃ¯Â¿Â½as</Link>
                 <Link href="/products?category=jaquetas" onClick={() => setIsMenuOpen(false)}>Jaquetas</Link>
                 <Link href="/products?category=blazers" onClick={() => setIsMenuOpen(false)}>Blazers</Link>
               </div>
               <div className="flyout-col">
-                <p className="flyout-title">Acessórios</p>
+                <p className="flyout-title">AcessÃ¯Â¿Â½rios</p>
                 <Link href="/products?category=calcados" onClick={() => setIsMenuOpen(false)}>Calcados</Link>
                 <Link href="/products?category=bolsas" onClick={() => setIsMenuOpen(false)}>Bolsas</Link>
-                <Link href="/products?category=Acessórios" onClick={() => setIsMenuOpen(false)}>Acessórios</Link>
+                <Link href="/products?category=AcessÃ¯Â¿Â½rios" onClick={() => setIsMenuOpen(false)}>AcessÃ¯Â¿Â½rios</Link>
               </div>
             </div>
           </div>
@@ -830,8 +878,8 @@ export function LegacyHome({ products }: LegacyHomeProps) {
             <div className="menu-flyout">
               <div className="flyout-col">
                 <p className="flyout-title">Novidades</p>
-                <Link href="/products?category=feminino" onClick={() => setIsMenuOpen(false)}>lançamentos</Link>
-                <Link href="/lancamento" onClick={() => setIsMenuOpen(false)}>Coleção Genesis</Link>
+                <Link href="/products?category=feminino" onClick={() => setIsMenuOpen(false)}>lanÃ¯Â¿Â½amentos</Link>
+                <Link href="/lancamento" onClick={() => setIsMenuOpen(false)}>ColeÃ¯Â¿Â½Ã¯Â¿Â½o Genesis</Link>
                 <a href="/novidades" onClick={handleMenuSearchShortcut}>
                   Escolhas da curadoria
                 </a>
@@ -840,14 +888,14 @@ export function LegacyHome({ products }: LegacyHomeProps) {
                 <p className="flyout-title">Roupas</p>
                 <Link href="/products?category=vestidos" onClick={() => setIsMenuOpen(false)}>Vestidos</Link>
                 <Link href="/products?category=saias" onClick={() => setIsMenuOpen(false)}>Saias</Link>
-                <Link href="/products?category=Calças" onClick={() => setIsMenuOpen(false)}>Calças</Link>
+                <Link href="/products?category=CalÃ¯Â¿Â½as" onClick={() => setIsMenuOpen(false)}>CalÃ¯Â¿Â½as</Link>
                 <Link href="/products?category=camisetas" onClick={() => setIsMenuOpen(false)}>Camisetas</Link>
               </div>
               <div className="flyout-col">
-                <p className="flyout-title">Acessórios</p>
+                <p className="flyout-title">AcessÃ¯Â¿Â½rios</p>
                 <Link href="/products?category=calcados" onClick={() => setIsMenuOpen(false)}>Calcados</Link>
                 <Link href="/products?category=bolsas" onClick={() => setIsMenuOpen(false)}>Bolsas</Link>
-                <Link href="/products?category=Acessórios" onClick={() => setIsMenuOpen(false)}>Acessórios</Link>
+                <Link href="/products?category=AcessÃ¯Â¿Â½rios" onClick={() => setIsMenuOpen(false)}>AcessÃ¯Â¿Â½rios</Link>
               </div>
             </div>
           </div>
@@ -866,31 +914,27 @@ export function LegacyHome({ products }: LegacyHomeProps) {
         </nav>
       </aside>
 
-      <div
-        className={`search-overlay lv-search-overlay ${isSearchOpen ? "is-open" : ""}`}
-        id="searchOverlay"
-        aria-hidden={!isSearchOpen}
-      >
+      <div className={`tsebi-search-overlay ${isSearchOpen ? "is-open" : ""}`} id="searchOverlay" aria-hidden={!isSearchOpen}>
         <button
           type="button"
-          className="lv-search-backdrop"
+          className="tsebi-search-backdrop"
           aria-label="Fechar busca"
           onClick={closeSearchOverlay}
         />
         <section
           ref={searchDialogRef}
-          className="lv-search-sheet"
+          className="tsebi-search-sheet"
           role="dialog"
           aria-modal="true"
-          aria-labelledby="lvSearchTitle"
+          aria-labelledby="tsebiSearchTitle"
         >
-          <div className="lv-search-head">
-            <h2 id="lvSearchTitle" className="lv-search-title">
-              Buscar
+          <div className="tsebi-search-head">
+            <h2 id="tsebiSearchTitle" className="tsebi-search-title">
+              Tsebi
             </h2>
             <button
               ref={searchCloseButtonRef}
-              className="lv-search-close"
+              className="tsebi-search-close"
               type="button"
               aria-label="Fechar busca"
               onClick={closeSearchOverlay}
@@ -898,17 +942,27 @@ export function LegacyHome({ products }: LegacyHomeProps) {
               <span aria-hidden="true">&times;</span>
             </button>
           </div>
-          <div className="lv-search-body">
-            <div className="lv-search-input-wrap">
-              <label htmlFor="lv-search-input" className="sr-only">
+          <div className="tsebi-search-body">
+            <div className="tsebi-search-input-wrap">
+              <label htmlFor="tsebi-search-input" className="sr-only">
                 Pesquise palavras-chave
               </label>
+              <div className={`tsebi-search-placeholder ${String(searchQuery || "").trim().length > 0 ? "is-hidden" : ""}`} aria-hidden="true">
+                <span className="tsebi-search-placeholder-static">Pesquise por um </span>
+                <span className="tsebi-search-placeholder-word-viewport">
+                  <span className="tsebi-search-placeholder-word-track" ref={searchPlaceholderTrackRef}>
+                    <span className="tsebi-search-placeholder-word" ref={searchPlaceholderCurrentRef}></span>
+                    <span className="tsebi-search-placeholder-word" ref={searchPlaceholderNextRef}></span>
+                  </span>
+                </span>
+              </div>
               <input
-                id="lv-search-input"
+                id="tsebi-search-input"
                 ref={searchInputRef}
-                className="lv-search-input"
+                className="tsebi-search-input"
                 type="search"
-                placeholder="Pesquise palavras-chave…"
+                placeholder=""
+                aria-label="Buscar"
                 value={searchQuery}
                 onChange={(event) => setSearchQuery(event.target.value)}
                 onKeyDown={(event) => {
@@ -917,6 +971,22 @@ export function LegacyHome({ products }: LegacyHomeProps) {
                   submitSearchPage();
                 }}
               />
+            <div className="tsebi-search-categories" aria-label="Categorias de busca">
+              {SEARCH_CATEGORIES.map((category) => (
+                <button
+                  key={category}
+                  type="button"
+                  className="tsebi-search-category-btn"
+                  onClick={() => {
+                    trackRecommendationCategoryVisit(category, 4500);
+                    setSearchQuery(category);
+                    searchInputRef.current?.focus();
+                  }}
+                >
+                  {category}
+                </button>
+              ))}
+            </div>
             </div>
           </div>
         </section>
@@ -927,7 +997,7 @@ export function LegacyHome({ products }: LegacyHomeProps) {
 
       <GenderShowcase products={safeProducts} />
 
-      <section className="new-drop collection-drop" aria-label="Nova Coleção em video">
+      <section className="new-drop collection-drop" aria-label="Nova ColeÃ¯Â¿Â½Ã¯Â¿Â½o em video">
         <div className="new-drop-inner">
           <div className="new-drop-media">
             {collectionMediaMode === "video" ? (
@@ -952,14 +1022,14 @@ export function LegacyHome({ products }: LegacyHomeProps) {
               <div className="new-drop-video-fallback" role="img" aria-label="Video da nova colecao indisponivel no momento" />
             )}
           </div>
-          <h2>Coleção Alicerce</h2>
+          <h2>ColeÃ¯Â¿Â½Ã¯Â¿Â½o Alicerce</h2>
           <Link className="new-drop-cta" href="/novidades">
             EM BREVE
           </Link>
         </div>
       </section>
 
-      <section className="category-switch" data-category-switch="popular" aria-label="Peças mais clicadas">
+      <section className="category-switch" data-category-switch="popular" aria-label="PeÃ¯Â¿Â½as mais clicadas">
         <div className="category-grid" id="popularGrid">
           {popularProducts.map((product) => {
             const href = resolveProductHref(product);
@@ -1039,13 +1109,18 @@ export function LegacyHome({ products }: LegacyHomeProps) {
           <header style={{ textAlign: "center", marginBottom: "var(--t-space-6)" }}>
             <h2 className="t-h2">Explore as Categorias</h2>
             <p className="t-subtitle" style={{ marginTop: "var(--t-space-2)" }}>
-              Seleção por estilo e essenciais
+              SeleÃ¯Â¿Â½Ã¯Â¿Â½o por estilo e essenciais
             </p>
           </header>
 
           <div className="t-grid t-grid--4 t-grid--mobile-carousel">
             {HOMEPAGE_CATEGORIES.map((item) => (
-              <a key={`${item.href}-${item.label}`} className="t-card-link" href={item.href}>
+              <a
+                key={`${item.href}-${item.label}`}
+                className="t-card-link"
+                href={item.href}
+                onClick={() => trackRecommendationCategoryVisit(item.label, 7000)}
+              >
                 <div className="t-media t-media--cat">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
@@ -1071,5 +1146,7 @@ export function LegacyHome({ products }: LegacyHomeProps) {
     </div>
   );
 }
+
+
 
 

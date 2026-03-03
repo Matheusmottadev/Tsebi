@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import { clearCartSnapshot, readCartSnapshot, writeCartSnapshot } from "@/lib/cart/storage";
+import { getOrCreateAnonId, trackCommerceEvent } from "@/lib/analytics";
 import type { AddCartItemInput, CartItem, CartItemVariantSnapshot, CartSnapshot } from "@/types";
 
 type SetQtyOptions = {
@@ -146,11 +147,29 @@ export const useCartStore = create<CartStore>((set, get) => ({
     const nextCurrency = currentCurrency || currency;
     persistSnapshot(nextItems, nextCurrency);
     set({ items: nextItems, currency: nextCurrency, lastError: null });
+    void trackCommerceEvent({
+      eventName: "add_to_cart",
+      anonId: getOrCreateAnonId(),
+      productId,
+      category: String((item as { category?: string }).category || ""),
+      price: unitAmount * safeQty,
+      currency,
+      source: "cart_store",
+      attributes: {
+        qty: safeQty,
+        variant_id: variantId || "",
+        variant_color: variant.color || "",
+        variant_size: variant.size || "",
+      },
+    });
     return { ok: true };
   },
 
   removeItem: ({ productId, variantId = null }) => {
     const currentItems = get().items;
+    const removed = currentItems.find(
+      (item) => item.productId === productId && (item.variant.variantId || null) === (variantId || null)
+    );
     const nextItems = currentItems.filter(
       (item) => !(item.productId === productId && (item.variant.variantId || null) === (variantId || null))
     );
@@ -161,6 +180,23 @@ export const useCartStore = create<CartStore>((set, get) => ({
       persistSnapshot(nextItems, nextCurrency);
     }
     set({ items: nextItems, currency: nextCurrency, lastError: null });
+    if (removed) {
+      void trackCommerceEvent({
+        eventName: "remove_from_cart",
+        anonId: getOrCreateAnonId(),
+        productId: removed.productId,
+        category: "",
+        price: removed.unitAmount * Math.max(1, removed.qty),
+        currency: removed.currency,
+        source: "cart_store",
+        attributes: {
+          qty: removed.qty,
+          variant_id: removed.variant.variantId || "",
+          variant_color: removed.variant.color || "",
+          variant_size: removed.variant.size || "",
+        },
+      });
+    }
   },
 
   setQty: ({ productId, variantId = null, qty }) => {

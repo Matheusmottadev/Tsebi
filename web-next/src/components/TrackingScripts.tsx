@@ -2,14 +2,21 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Script from "next/script";
+import posthog from "posthog-js";
 import { CONSENT_EVENT, type ConsentState, readStoredConsent } from "@/components/CookieConsentBar";
+import { getOrCreateAnonId } from "@/lib/analytics";
 
 const GA_MEASUREMENT_ID = String(process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID || "").trim();
 const GTM_ID = String(process.env.NEXT_PUBLIC_GTM_ID || "").trim();
 const GOOGLE_ADS_ID = String(process.env.NEXT_PUBLIC_GOOGLE_ADS_ID || "").trim();
+const META_PIXEL_ID = String(process.env.NEXT_PUBLIC_META_PIXEL_ID || "").trim();
+const POSTHOG_KEY = String(process.env.NEXT_PUBLIC_POSTHOG_KEY || "").trim();
+const POSTHOG_HOST = String(process.env.NEXT_PUBLIC_POSTHOG_HOST || "https://us.i.posthog.com").trim();
 
 export function TrackingScripts() {
   const [consent, setConsent] = useState<ConsentState | null>(null);
+  const allowAnalytics = Boolean(consent?.analytics);
+  const allowAds = Boolean(consent?.ads);
 
   useEffect(() => {
     setConsent(readStoredConsent());
@@ -27,8 +34,22 @@ export function TrackingScripts() {
     return () => window.removeEventListener(CONSENT_EVENT, onConsentUpdated);
   }, []);
 
-  const allowAnalytics = Boolean(consent?.analytics);
-  const allowAds = Boolean(consent?.ads);
+  useEffect(() => {
+    if (!allowAnalytics) return;
+    if (!POSTHOG_KEY) return;
+    if (posthog.__loaded) return;
+    const anonId = getOrCreateAnonId();
+    posthog.init(POSTHOG_KEY, {
+      api_host: POSTHOG_HOST,
+      person_profiles: "identified_only",
+      persistence: "localStorage+cookie",
+      autocapture: true,
+      capture_pageview: true,
+      loaded: (instance) => {
+        instance.register({ anon_id: anonId });
+      },
+    });
+  }, [allowAnalytics]);
 
   const shouldLoadGtag = useMemo(() => {
     if (!allowAnalytics && !allowAds) return false;
@@ -74,6 +95,34 @@ export function TrackingScripts() {
             })(window,document,'script','dataLayer','${GTM_ID}');
           `}
         </Script>
+      ) : null}
+
+      {allowAds && META_PIXEL_ID ? (
+        <>
+          <Script id="meta-pixel-base" strategy="afterInteractive">
+            {`
+              !function(f,b,e,v,n,t,s)
+              {if(f.fbq)return;n=f.fbq=function(){n.callMethod?
+              n.callMethod.apply(n,arguments):n.queue.push(arguments)};
+              if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';
+              n.queue=[];t=b.createElement(e);t.async=!0;
+              t.src=v;s=b.getElementsByTagName(e)[0];
+              s.parentNode.insertBefore(t,s)}(window, document,'script',
+              'https://connect.facebook.net/en_US/fbevents.js');
+              fbq('init', '${META_PIXEL_ID}');
+              fbq('track', 'PageView');
+            `}
+          </Script>
+          <noscript>
+            <img
+              height="1"
+              width="1"
+              style={{ display: "none" }}
+              src={`https://www.facebook.com/tr?id=${encodeURIComponent(META_PIXEL_ID)}&ev=PageView&noscript=1`}
+              alt=""
+            />
+          </noscript>
+        </>
       ) : null}
     </>
   );

@@ -1,4 +1,4 @@
-import type { Express } from "express";
+﻿import type { Express } from "express";
 const path = require("node:path");
 const crypto = require("node:crypto");
 const express = require("express");
@@ -36,6 +36,12 @@ const { checkAvailability, commitStock } = require("./lib/inventory-repository")
 const { evaluateAccessCode } = require("./lib/access-code-repository");
 const { withTransaction } = require("./lib/db");
 const { logProductSearchEvent } = require("./lib/search-telemetry-repository");
+const {
+  logBehaviorEvent,
+  mergeAnonymousIdentity,
+  getRecommendationsForActor,
+  priceBucketFromCents
+} = require("./lib/behavior-analytics-repository");
 const { shippingRouter } = require("../src/routes/shipping.routes");
 const { adminShippingRouter } = require("../src/routes/admin.shipping.routes");
 const { adminWhatsAppRouter } = require("../src/routes/admin.whatsapp.routes");
@@ -154,6 +160,22 @@ const productSearchSuggestionsRateLimit = rateLimit({
   message: { error: "TOO_MANY_REQUESTS" }
 });
 
+const behaviorEventsRateLimit = rateLimit({
+  windowMs: 60 * 1000,
+  max: 200,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: "TOO_MANY_REQUESTS" }
+});
+
+const identifyRateLimit = rateLimit({
+  windowMs: 60 * 1000,
+  max: 60,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: "TOO_MANY_REQUESTS" }
+});
+
 const newsletterSubscribeSchema = z.object({
   email: z.string().trim().email(),
   phone: z.string().trim().max(32).optional().default(""),
@@ -235,6 +257,46 @@ const paymentIntentSchema = z.object({
       country: z.string().trim().max(2).optional().default("BR")
     })
     .optional()
+});
+
+const behaviorEventSchema = z.object({
+  eventName: z
+    .string()
+    .trim()
+    .toLowerCase()
+    .refine((value: string) =>
+      [
+        "view_item",
+        "view_item_list",
+        "search",
+        "add_to_cart",
+        "remove_from_cart",
+        "begin_checkout",
+        "purchase",
+        "favorite_toggle",
+        "view_recommendations",
+        "click_recommendation"
+      ].includes(value)
+    ),
+  eventId: z.string().trim().max(120).optional().default(""),
+  anonId: z.string().trim().max(160).optional().default(""),
+  userId: z.string().trim().max(120).optional().default(""),
+  productId: z.string().trim().max(120).optional().default(""),
+  category: z.string().trim().max(120).optional().default(""),
+  price: z.coerce.number().min(0).optional().default(0),
+  currency: z.string().trim().max(12).optional().default("brl"),
+  source: z.string().trim().max(80).optional().default("storefront"),
+  query: z.string().trim().max(180).optional().default(""),
+  attributes: z.record(z.any()).optional().default({}),
+  meta: z.record(z.any()).optional().default({}),
+  occurredAt: z.string().trim().max(64).optional().default(""),
+  fbp: z.string().trim().max(220).optional().default(""),
+  fbc: z.string().trim().max(220).optional().default("")
+});
+
+const identifySchema = z.object({
+  anon_id: z.string().trim().min(6).max(160),
+  user_id: z.string().trim().min(6).max(120)
 });
 
 function normalizeAndAggregateItems(rawItems: any) {
@@ -702,6 +764,7 @@ async function fetchOrderWithItemsInTx(client: any, orderId: any) {
 
   return {
     id: order.id,
+    userId: order.user_id || null,
     status: order.status,
     stockCommitted: Boolean(order.stock_committed),
     items: itemsResult.rows.map((item: any) => ({
@@ -759,6 +822,7 @@ async function processWebhookEvent(event: any) {
     paymentIntentId: webhookContext.paymentIntentId
   });
   const pendingNotifications: any[] = [];
+  const pendingBehaviorEvents: any[] = [];
 
   await withTransaction(async (client: any) => {
     const isNewEvent = await tryRegisterWebhookEvent(client, event);
@@ -837,6 +901,37 @@ async function processWebhookEvent(event: any) {
       webhookContext.outcome = "order_updated";
       webhookContext.statusFrom = previousStatus;
       webhookContext.statusTo = "paid";
+      const catalog = await listProducts().catch(() => []);
+      const categoryFromOrder =
+        Array.isArray(order.items) && order.items.length > 0
+          ? String(
+              (Array.isArray(catalog) ? catalog : []).find(
+                (product: any) =>
+                  String(product.sku || product.id || "").trim() === String(order.items[0]?.id || "").trim()
+              )?.category || ""
+            ).trim()
+          : "";
+      pendingBehaviorEvents.push({
+        eventName: "purchase",
+        userId: String(order.userId || ""),
+        productId: Array.isArray(order.items)
+          ? order.items
+              .map((item: any) => String(item.id || "").trim())
+              .filter(Boolean)
+              .slice(0, 3)
+              .join(",")
+          : "",
+        category: categoryFromOrder,
+        price: Array.isArray(order.items)
+          ? order.items.reduce((sum: number, item: any) => sum + Math.max(0, Number(item.unitAmount || 0) * Math.max(1, Number(item.qty || 1))), 0)
+          : 0,
+        currency: Array.isArray(order.items) && order.items[0]?.currency ? String(order.items[0].currency) : "brl",
+        source: "stripe_webhook",
+        attributes: {
+          order_id: String(order.id || ""),
+          item_count: Array.isArray(order.items) ? order.items.length : 0
+        }
+      });
       if (previousStatus !== "processing" && previousStatus !== "paid") {
         pendingNotifications.push({ type: "payment_confirmed", orderId: order.id });
       }
@@ -959,6 +1054,16 @@ async function processWebhookEvent(event: any) {
       });
     }
   }
+
+  for (const trackedEvent of pendingBehaviorEvents) {
+    try {
+      await logBehaviorEvent({
+        ...trackedEvent,
+        userAgent: "stripe-webhook",
+        ipAddress: "127.0.0.1"
+      });
+    } catch {}
+  }
 }
 
 app.use(
@@ -994,6 +1099,8 @@ app.use(
           "https://www.googletagmanager.com",
           "https://www.google-analytics.com",
           "https://ssl.google-analytics.com",
+          "https://connect.facebook.net",
+          "https://www.facebook.com",
           "https://accounts.google.com",
           "https://www.google.com/recaptcha/"
         ],
@@ -1005,6 +1112,9 @@ app.use(
           "https:",
           "https://www.google-analytics.com",
           "https://stats.g.doubleclick.net",
+          "https://www.facebook.com",
+          "https://*.facebook.com",
+          "https://*.fbcdn.net",
           "https://*.googleusercontent.com",
           "https://*.gstatic.com"
         ],
@@ -1021,6 +1131,9 @@ app.use(
           "https://www.google-analytics.com",
           "https://region1.google-analytics.com",
           "https://stats.g.doubleclick.net",
+          "https://graph.facebook.com",
+          "https://www.facebook.com",
+          "https://connect.facebook.net",
           "https://www.google.com",
           "https://www.gstatic.com",
           "https://oauth2.googleapis.com",
@@ -1211,6 +1324,56 @@ app.post("/api/products/search/events", productSearchEventsRateLimit, async (req
   }
 });
 
+app.post("/api/events", behaviorEventsRateLimit, async (req: any, res: any) => {
+  const parsed = behaviorEventSchema.safeParse(req.body || {});
+  if (!parsed.success) {
+    return res.status(400).json({ ok: false, error: "INVALID_INPUT" });
+  }
+
+  try {
+    const payload = parsed.data;
+    const result = await logBehaviorEvent({
+      eventName: payload.eventName,
+      eventId: payload.eventId,
+      anonId: payload.anonId || String(req.headers["x-anon-id"] || req.query.anon_id || "").trim(),
+      userId: payload.userId || String(req.session?.userId || "").trim(),
+      productId: payload.productId,
+      category: payload.category,
+      price: payload.price,
+      currency: payload.currency,
+      source: payload.source,
+      query: payload.query,
+      attributes: payload.attributes,
+      meta: payload.meta,
+      fbp: payload.fbp || String(req.headers["x-fbp"] || "").trim(),
+      fbc: payload.fbc || String(req.headers["x-fbc"] || "").trim(),
+      userAgent: String(req.headers["user-agent"] || "").trim(),
+      ipAddress: String(req.headers["x-forwarded-for"] || req.ip || "").split(",")[0].trim(),
+      occurredAt: payload.occurredAt || undefined
+    });
+    return res.status(201).json({ ok: true, actorKey: result.actorKey, eventId: result.eventId });
+  } catch {
+    return res.status(500).json({ ok: false, error: "EVENT_TRACKING_FAILED" });
+  }
+});
+
+app.post("/api/identify", identifyRateLimit, async (req: any, res: any) => {
+  const parsed = identifySchema.safeParse(req.body || {});
+  if (!parsed.success) {
+    return res.status(400).json({ ok: false, error: "INVALID_INPUT" });
+  }
+
+  try {
+    const result = await mergeAnonymousIdentity({
+      anonId: parsed.data.anon_id,
+      userId: parsed.data.user_id
+    });
+    return res.json({ ok: true, actorKey: result.actorKey });
+  } catch {
+    return res.status(500).json({ ok: false, error: "IDENTIFY_FAILED" });
+  }
+});
+
 app.get("/api/products/recent", async (req: any, res: any) => {
   try {
     const ids = String(req.query.ids || "")
@@ -1256,6 +1419,198 @@ function buildSimilarProducts(target: any, products: any, limit: any = 4) {
   }
   return unique;
 }
+
+function foldRecommendationText(value: any) {
+  return String(value || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .trim();
+}
+
+function splitRecommendationTokens(value: any) {
+  return String(value || "")
+    .split(",")
+    .map((item: any) => String(item || "").trim())
+    .filter(Boolean);
+}
+
+function parseRecommendationSignals(rawSignals: any) {
+  if (!rawSignals) {
+    return {
+      topCategory: "",
+      topClickedSku: "",
+      topPriceBand: "",
+      searches: [] as string[],
+      recentViewed: [] as string[],
+      cartSkus: [] as string[]
+    };
+  }
+
+  try {
+    const parsed = typeof rawSignals === "string" ? JSON.parse(rawSignals) : rawSignals;
+    return {
+      topCategory: String(parsed?.topCategory || "").trim(),
+      topClickedSku: String(parsed?.topClickedSku || "").trim(),
+      topPriceBand: String(parsed?.topPriceBand || "").trim().toLowerCase(),
+      searches: Array.isArray(parsed?.searches) ? parsed.searches.map((item: any) => String(item || "").trim()).filter(Boolean).slice(0, 12) : [],
+      recentViewed: Array.isArray(parsed?.recentViewed)
+        ? parsed.recentViewed.map((item: any) => String(item || "").trim()).filter(Boolean).slice(0, 16)
+        : [],
+      cartSkus: Array.isArray(parsed?.cartSkus) ? parsed.cartSkus.map((item: any) => String(item || "").trim()).filter(Boolean).slice(0, 16) : []
+    };
+  } catch {
+    return {
+      topCategory: "",
+      topClickedSku: "",
+      topPriceBand: "",
+      searches: [] as string[],
+      recentViewed: [] as string[],
+      cartSkus: [] as string[]
+    };
+  }
+}
+
+function resolvePriceBandThresholds(products: any[]) {
+  const prices = products
+    .map((item: any) => Number(item?.priceValue || 0))
+    .filter((value: any) => Number.isFinite(value) && value > 0)
+    .sort((a: any, b: any) => a - b);
+  if (prices.length < 3) return { lowMax: 400, midMax: 1100 };
+
+  const lowIndex = Math.floor(prices.length * 0.33);
+  const midIndex = Math.floor(prices.length * 0.66);
+  const lowMax = prices[Math.max(0, Math.min(prices.length - 1, lowIndex))];
+  const midMax = prices[Math.max(0, Math.min(prices.length - 1, midIndex))];
+  return {
+    lowMax: Math.max(1, Number(lowMax || 400)),
+    midMax: Math.max(Number(lowMax || 400) + 1, Number(midMax || 1100))
+  };
+}
+
+function resolveProductPriceBand(product: any, thresholds: any) {
+  const price = Number(product?.priceValue || 0);
+  if (!Number.isFinite(price) || price <= thresholds.lowMax) return "low";
+  if (price <= thresholds.midMax) return "mid";
+  return "high";
+}
+
+function rankPersonalizedProducts({
+  products,
+  signals,
+  purchasedSkus
+}: {
+  products: any[];
+  signals: any;
+  purchasedSkus: Set<string>;
+}) {
+  const activeProducts = (products || []).filter((item: any) => item && item.active !== false);
+  const bySku = new Map(activeProducts.map((item: any) => [String(item.sku || item.id), item]));
+  const clickedProduct = bySku.get(String(signals.topClickedSku || ""));
+  const thresholds = resolvePriceBandThresholds(activeProducts);
+  const normalizedTopCategory = foldRecommendationText(signals.topCategory);
+  const normalizedSearches = (signals.searches || []).map((term: any) => foldRecommendationText(term)).filter(Boolean);
+  const viewedSet = new Set((signals.recentViewed || []).map((value: any) => String(value || "").trim()).filter(Boolean));
+  const cartSet = new Set((signals.cartSkus || []).map((value: any) => String(value || "").trim()).filter(Boolean));
+  const requestedBand = ["low", "mid", "high"].includes(String(signals.topPriceBand || "")) ? String(signals.topPriceBand) : "";
+
+  const scored = activeProducts.map((product: any) => {
+    let score = 0;
+    const reasons: string[] = [];
+    const productSku = String(product.sku || product.id || "").trim();
+    const category = foldRecommendationText(product.category);
+    const collection = foldRecommendationText(product.collection);
+    const material = foldRecommendationText(product.material);
+
+    if (normalizedTopCategory && category === normalizedTopCategory) {
+      score += 5;
+      reasons.push("top_category");
+    }
+
+    if (clickedProduct && productSku && productSku !== String(clickedProduct.sku || clickedProduct.id || "")) {
+      const clickedCategory = foldRecommendationText(clickedProduct.category);
+      const clickedCollection = foldRecommendationText(clickedProduct.collection);
+      const clickedMaterial = foldRecommendationText(clickedProduct.material);
+      if (category === clickedCategory || collection === clickedCollection || material === clickedMaterial) {
+        score += 4;
+        reasons.push("similar_to_clicked");
+      }
+    }
+
+    if (requestedBand) {
+      const band = resolveProductPriceBand(product, thresholds);
+      if (band === requestedBand) {
+        score += 3;
+        reasons.push("price_band");
+      }
+    }
+
+    if (normalizedSearches.length > 0) {
+      const searchable = [product.name, product.category, product.collection, product.material]
+        .map((entry: any) => foldRecommendationText(entry))
+        .filter(Boolean)
+        .join(" ");
+      if (normalizedSearches.some((term: any) => searchable.includes(term))) {
+        score += 2;
+        reasons.push("search_match");
+      }
+    }
+
+    if (viewedSet.has(productSku)) {
+      score += 2;
+      reasons.push("recently_viewed");
+    }
+    if (cartSet.has(productSku)) {
+      score += 2;
+      reasons.push("cart_related");
+    }
+    if (purchasedSkus.has(productSku)) {
+      score -= 8;
+      reasons.push("already_purchased");
+    }
+
+    return { product, score, reasons };
+  });
+
+  scored.sort((a: any, b: any) => {
+    if (b.score !== a.score) return b.score - a.score;
+    if (Number(b.product.stock || 0) !== Number(a.product.stock || 0)) return Number(b.product.stock || 0) - Number(a.product.stock || 0);
+    return String(a.product.name || "").localeCompare(String(b.product.name || ""));
+  });
+
+  return scored;
+}
+
+app.get("/api/recommendations", async (req: any, res: any) => {
+  try {
+    const limit = Math.max(1, Math.min(12, Number(req.query.limit || 6) || 6));
+    const placement = String(req.query.placement || "search").trim();
+    const sessionUserId = req.session?.userId ? String(req.session.userId) : "";
+    const requestedUserId = String(req.query.userId || "").trim();
+    const userId = requestedUserId || sessionUserId;
+    const anonId = String(req.query.anon_id || req.query.anonId || req.headers["x-anon-id"] || "").trim();
+    const products = await listProducts();
+
+    const recommendation = await getRecommendationsForActor({
+      products,
+      userId,
+      anonId,
+      placement,
+      limit
+    });
+
+    return res.json({
+      title: recommendation.title,
+      source: recommendation.source,
+      placement: recommendation.placement,
+      actorKey: recommendation.actorKey,
+      products: recommendation.products,
+      items: recommendation.items
+    });
+  } catch {
+    return res.status(500).json({ error: "RECOMMENDATIONS_FAILED" });
+  }
+});
 
 app.get("/api/products/:id", async (req: any, res: any) => {
   try {
@@ -1480,6 +1835,10 @@ app.post(
   }
 
   const itemsAmount = availability.resolvedItems.reduce((sum: any, item: any) => sum + item.unitAmount * item.qty, 0);
+  const catalogForMetadata = await listProducts().catch(() => []);
+  const catalogBySku = new Map(
+    (Array.isArray(catalogForMetadata) ? catalogForMetadata : []).map((product: any) => [String(product.sku || product.id || "").trim(), product])
+  );
   let shippingAmount = getShippingCostFromRules(shipping);
   let selectedShippingQuote: any = null;
   let quotedShippingCents = Math.max(0, Number(shippingAmount || 0));
@@ -1528,6 +1887,18 @@ app.post(
   }
 
   const orderAmount = Math.max(0, itemsAmount + shippingAmount - discountAmount);
+  const ticketBucket = priceBucketFromCents(orderAmount);
+  const topCategories = Array.from(
+    new Set(
+      availability.resolvedItems
+        .map((item: any) => {
+          const sku = String(item.id || item.sku || "").trim();
+          const product = catalogBySku.get(sku);
+          return String(product?.category || "").trim();
+        })
+        .filter(Boolean)
+    )
+  ).slice(0, 4);
   const currency = "brl";
 
   try {
@@ -1623,6 +1994,27 @@ app.post(
     }
   }
 
+  logBehaviorEvent({
+    eventName: "begin_checkout",
+    userId: String(checkoutUser?.id || ""),
+    productId: availability.resolvedItems.map((item: any) => String(item.id || item.sku || "").trim()).filter(Boolean).slice(0, 3).join(","),
+    category: topCategories[0] || "",
+    price: orderAmount,
+    currency,
+    source: "checkout_payment_intent",
+    attributes: {
+      item_count: availability.resolvedItems.length,
+      checkout_mode: checkoutMode,
+      ticket_bucket: ticketBucket,
+      top_categories: topCategories
+    },
+    meta: {
+      email: checkoutUser?.email || guest.email || ""
+    },
+    userAgent: String(req.headers["user-agent"] || ""),
+    ipAddress: String(req.headers["x-forwarded-for"] || req.ip || "").split(",")[0].trim()
+  }).catch(() => {});
+
   /** @type {import("stripe").Stripe.PaymentIntentCreateParams} */
   const paymentIntentParams: any = {
     amount: Math.max(0, Number(order?.amount || orderAmount)),
@@ -1632,7 +2024,10 @@ app.post(
       orderId: String(order.id || ""),
       orderNumber: String(order.orderNumber || ""),
       userId: String(checkoutUser?.id || ""),
-      checkoutMode
+      checkoutMode,
+      top_categories: topCategories.join("|").slice(0, 180),
+      ticket_bucket: ticketBucket || "",
+      avg_item_ticket_bucket: priceBucketFromCents(Math.floor(itemsAmount / Math.max(1, availability.resolvedItems.length))) || ""
     }
   };
 

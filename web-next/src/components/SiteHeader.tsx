@@ -1,19 +1,22 @@
-﻿"use client";
+"use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { cartSelectors, useCartStore } from "@/lib/cart/cartStore";
+import { startSearchPlaceholderRotator } from "@/lib/searchPlaceholderRotator";
 import { getMe } from "@/services/auth";
 
 const TOP_MESSAGES = [
-  "Nova Coleção Genesis",
-  "Você merece vestir algo a sua altura.",
-  "Cadastre-se para receber lançamentos",
-  "Exclusividade para quem valoriza o que é único.",
-  "Acesso antecipado a novas coleções.",
-  "Produção em pequena escala. Qualidade em cada detalhe.",
+  "Nova ColeÃ¯Â¿Â½Ã¯Â¿Â½o Genesis",
+  "VocÃ¯Â¿Â½ merece vestir algo a sua altura.",
+  "Cadastre-se para receber lanÃ¯Â¿Â½amentos",
+  "Exclusividade para quem valoriza o que Ã¯Â¿Â½ Ã¯Â¿Â½nico.",
+  "Acesso antecipado a novas coleÃ¯Â¿Â½Ã¯Â¿Â½es.",
+  "ProduÃ¯Â¿Â½Ã¯Â¿Â½o em pequena escala. Qualidade em cada detalhe.",
 ];
+
+const SEARCH_CATEGORIES = ["Feminino", "Masculino", "Calças", "Camisas", "Blazers", "Bolsas"] as const;
 
 export function SiteHeader() {
   const router = useRouter();
@@ -35,6 +38,9 @@ export function SiteHeader() {
   const menuButtonRef = useRef<HTMLButtonElement | null>(null);
   const searchDialogRef = useRef<HTMLElement | null>(null);
   const searchInputRef = useRef<HTMLInputElement | null>(null);
+  const searchPlaceholderCurrentRef = useRef<HTMLSpanElement | null>(null);
+  const searchPlaceholderNextRef = useRef<HTMLSpanElement | null>(null);
+  const searchPlaceholderTrackRef = useRef<HTMLSpanElement | null>(null);
   const leftArrowRef = useRef<HTMLButtonElement | null>(null);
   const rightArrowRef = useRef<HTMLButtonElement | null>(null);
   const lastScrollYRef = useRef(0);
@@ -136,6 +142,22 @@ export function SiteHeader() {
       searchInputRef.current?.focus();
     }, 50);
     return () => window.clearTimeout(timer);
+  }, [isSearchOpen]);
+
+  useEffect(() => {
+    if (!isSearchOpen) return;
+    const currentWordEl = searchPlaceholderCurrentRef.current;
+    const nextWordEl = searchPlaceholderNextRef.current;
+    const trackEl = searchPlaceholderTrackRef.current;
+    if (!currentWordEl || !nextWordEl || !trackEl) return;
+
+    return startSearchPlaceholderRotator({
+      currentWordEl,
+      nextWordEl,
+      trackEl,
+      intervalMs: 1500,
+      durationMs: 400,
+    });
   }, [isSearchOpen]);
 
   useEffect(() => {
@@ -327,7 +349,7 @@ export function SiteHeader() {
             type="button"
             ref={rightArrowRef}
             onClick={() => stepTopMessage("right", 1)}
-            aria-label="Próxima mensagem"
+            aria-label="PrÃ¯Â¿Â½xima mensagem"
           >
             &#10095;
           </button>
@@ -420,7 +442,7 @@ export function SiteHeader() {
         <nav className="header-menu-nav">
           <div className="menu-group">
             <Link className="menu-group-title" href="/lancamento" onClick={() => setIsMenuOpen(false)}>
-              Coleção Genesis
+              ColeÃ¯Â¿Â½Ã¯Â¿Â½o Genesis
             </Link>
           </div>
           <div className="menu-group">
@@ -441,39 +463,49 @@ export function SiteHeader() {
         </nav>
       </aside>
 
-      <div className={`search-overlay lv-search-overlay ${isSearchOpen ? "is-open" : ""}`} aria-hidden={!isSearchOpen}>
+      <div className={`tsebi-search-overlay ${isSearchOpen ? "is-open" : ""}`} aria-hidden={!isSearchOpen}>
         <button
           type="button"
-          className="lv-search-backdrop"
+          className="tsebi-search-backdrop"
           aria-label="Fechar busca"
           onClick={closeSearchOverlay}
         />
         <section
           ref={searchDialogRef}
-          className="lv-search-sheet"
+          className="tsebi-search-sheet"
           role="dialog"
           aria-modal="true"
           aria-labelledby="siteHeaderSearchTitle"
         >
-          <div className="lv-search-head">
-            <h2 id="siteHeaderSearchTitle" className="lv-search-title">
-              Buscar
+          <div className="tsebi-search-head">
+            <h2 id="siteHeaderSearchTitle" className="tsebi-search-title">
+              Tsebi
             </h2>
-            <button className="lv-search-close" type="button" aria-label="Fechar busca" onClick={closeSearchOverlay}>
+            <button className="tsebi-search-close" type="button" aria-label="Fechar busca" onClick={closeSearchOverlay}>
               <span aria-hidden="true">&times;</span>
             </button>
           </div>
-          <div className="lv-search-body">
-            <div className="lv-search-input-wrap">
+          <div className="tsebi-search-body">
+            <div className="tsebi-search-input-wrap">
               <label htmlFor="site-header-search-input" className="sr-only">
                 Pesquise palavras-chave
               </label>
+              <div className={`tsebi-search-placeholder ${String(searchQuery || "").trim().length > 0 ? "is-hidden" : ""}`} aria-hidden="true">
+                <span className="tsebi-search-placeholder-static">Pesquise por um </span>
+                <span className="tsebi-search-placeholder-word-viewport">
+                  <span className="tsebi-search-placeholder-word-track" ref={searchPlaceholderTrackRef}>
+                    <span className="tsebi-search-placeholder-word" ref={searchPlaceholderCurrentRef}></span>
+                    <span className="tsebi-search-placeholder-word" ref={searchPlaceholderNextRef}></span>
+                  </span>
+                </span>
+              </div>
               <input
                 id="site-header-search-input"
                 ref={searchInputRef}
-                className="lv-search-input"
+                className="tsebi-search-input"
                 type="search"
-                placeholder="Pesquise palavras-chave…"
+                placeholder=""
+                aria-label="Buscar"
                 value={searchQuery}
                 onChange={(event) => setSearchQuery(event.target.value)}
                 onKeyDown={(event) => {
@@ -482,6 +514,21 @@ export function SiteHeader() {
                   submitSearch();
                 }}
               />
+            <div className="tsebi-search-categories" aria-label="Categorias de busca">
+              {SEARCH_CATEGORIES.map((category) => (
+                <button
+                  key={category}
+                  type="button"
+                  className="tsebi-search-category-btn"
+                  onClick={() => {
+                    setSearchQuery(category);
+                    searchInputRef.current?.focus();
+                  }}
+                >
+                  {category}
+                </button>
+              ))}
+            </div>
             </div>
           </div>
         </section>
@@ -489,4 +536,6 @@ export function SiteHeader() {
     </>
   );
 }
+
+
 

@@ -6,6 +6,7 @@ import { Price } from "@/components/Price";
 import { buildVariantSnapshot, getProductVariantOptions } from "@/lib/cart/cartItem";
 import { useCartStore } from "@/lib/cart/cartStore";
 import { getSmoothScrollEngine } from "@/lib/animation/smoothScrollEngine";
+import { getOrCreateAnonId, trackCommerceEvent } from "@/lib/analytics";
 import type { Product } from "@/types";
 import { Drawer } from "./Drawer";
 import {
@@ -233,6 +234,22 @@ export function ProductExperience({ product, recommendations, imageBaseUrl }: Pr
   const [showStickyBar, setShowStickyBar] = useState(false);
 
   const canBuy = sizes.length === 0 || Boolean(selectedSize);
+
+  useEffect(() => {
+    void trackCommerceEvent({
+      eventName: "view_item",
+      anonId: getOrCreateAnonId(),
+      productId: String(product.sku || product.id || "").trim(),
+      category: String(product.category || "").trim(),
+      price: Number(product.priceValue || product.unitAmount || 0),
+      currency: String(product.currency || "brl"),
+      source: "product_page",
+      attributes: {
+        material: product.material,
+        collection: product.collection,
+      },
+    });
+  }, [product]);
 
   useEffect(() => {
     const nextColor = String(colors[0] || "Preto");

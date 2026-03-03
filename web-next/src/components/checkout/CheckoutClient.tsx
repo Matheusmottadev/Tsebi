@@ -6,6 +6,7 @@ import type { Stripe } from "@stripe/stripe-js";
 import { Price } from "@/components/Price";
 import { CheckoutPaymentForm } from "@/components/checkout/CheckoutPaymentForm";
 import { cartSelectors, useCartStore } from "@/lib/cart/cartStore";
+import { getOrCreateAnonId, trackCommerceEvent } from "@/lib/analytics";
 import { isCheckoutEnabled } from "@/lib/env";
 import { resolveStripePromise } from "@/lib/stripe";
 import { addAddress, getMe } from "@/services/auth";
@@ -508,6 +509,32 @@ export function CheckoutClient() {
   const stripePaymentMethodOrder = useMemo(() => buildStripePaymentMethodOrder("apple_pay"), []);
   const stripeConfigured = stripeStatus === "ready";
   const stripeLoading = stripeStatus === "loading";
+  const hasTrackedBeginCheckoutRef = useRef(false);
+
+  useEffect(() => {
+    if (hasTrackedBeginCheckoutRef.current) return;
+    if (!hasHydrated || itemCount <= 0) return;
+    hasTrackedBeginCheckoutRef.current = true;
+    void trackCommerceEvent({
+      eventName: "begin_checkout",
+      anonId: getOrCreateAnonId(),
+      productId: items
+        .map((item) => String(item.productId || "").trim())
+        .filter(Boolean)
+        .slice(0, 3)
+        .join(","),
+      category: "",
+      price: totalCents,
+      currency,
+      source: "checkout_page",
+      attributes: {
+        item_count: itemCount,
+      },
+      meta: {
+        email: checkoutEmail,
+      },
+    });
+  }, [hasHydrated, itemCount, items, totalCents, currency, checkoutEmail]);
 
   useEffect(() => {
     let isMounted = true;

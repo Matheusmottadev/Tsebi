@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { getOrCreateAnonId, trackCommerceEvent } from "@/lib/analytics";
 import { buildVariantSnapshot, getProductVariantOptions, getVariantStockQty } from "@/lib/cart/cartItem";
 import { useCartStore } from "@/lib/cart/cartStore";
 import { Price } from "@/components/Price";
@@ -55,6 +56,23 @@ export function ProductPurchasePanel({ product }: ProductPurchasePanelProps) {
       },
       qty: clampQty(qty),
     });
+
+    if (result.ok) {
+      void trackCommerceEvent({
+        eventName: "add_to_cart",
+        anonId: getOrCreateAnonId(),
+        productId: String(product.sku || product.id || "").trim(),
+        category: String(product.category || "").trim(),
+        price: Number(product.unitAmount || 0) * clampQty(qty),
+        currency: product.currency || "brl",
+        source: "product_purchase_panel",
+        attributes: {
+          qty: clampQty(qty),
+          color: selectedColor || "",
+          size: selectedSize || "",
+        },
+      });
+    }
 
     setMessage(result.ok ? "Added to cart" : result.error || "Could not add item");
     window.setTimeout(() => setMessage(""), 1700);

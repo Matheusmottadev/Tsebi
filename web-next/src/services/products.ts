@@ -58,6 +58,31 @@ export interface SearchEventPayload {
   source?: string;
 }
 
+export interface RecommendationSignalPayload {
+  topCategory?: string;
+  topClickedSku?: string;
+  topPriceBand?: "low" | "mid" | "high" | "";
+  searches?: string[];
+  recentViewed?: string[];
+  cartSkus?: string[];
+}
+
+export interface PersonalizedProductsResponse {
+  title: string;
+  source: "personalized" | "best_sellers";
+  placement?: string;
+  actorKey?: string;
+  products: Product[];
+  items?: Array<{
+    product_id: string;
+    name: string;
+    price: number;
+    image_url: string;
+    category: string;
+    link: string;
+  }>;
+}
+
 function buildRecentProductsPath(ids: string[]): string {
   const validIds = ids.map((id) => String(id || "").trim()).filter(Boolean);
   const params = new URLSearchParams();
@@ -145,6 +170,41 @@ export async function searchProductSuggestions(query: string, limit = 8): Promis
     suggestions: Array.isArray(response?.suggestions) ? response.suggestions : [],
     suggestedQuery: response?.suggestedQuery ? String(response.suggestedQuery) : null,
     curatedProducts: Array.isArray(response?.curatedProducts) ? response.curatedProducts : []
+  };
+}
+
+/**
+ * GET /api/recommendations
+ * Auth: public (session-aware if available)
+ */
+export async function getPersonalizedProducts(
+  userId = "",
+  limit = 8,
+  signals: RecommendationSignalPayload = {},
+  options: { anonId?: string; placement?: string } = {}
+): Promise<PersonalizedProductsResponse> {
+  const safeLimit = Math.max(1, Math.min(12, Number(limit) || 8));
+  const search = new URLSearchParams();
+  search.set("limit", String(safeLimit));
+  search.set("placement", String(options.placement || "search"));
+  const normalizedUserId = String(userId || "").trim();
+  if (normalizedUserId) search.set("userId", normalizedUserId);
+  const normalizedAnonId = String(options.anonId || "").trim();
+  if (normalizedAnonId) search.set("anon_id", normalizedAnonId);
+  const hasSignals =
+    Boolean(signals.topCategory || signals.topClickedSku || signals.topPriceBand) ||
+    (Array.isArray(signals.searches) && signals.searches.length > 0) ||
+    (Array.isArray(signals.recentViewed) && signals.recentViewed.length > 0) ||
+    (Array.isArray(signals.cartSkus) && signals.cartSkus.length > 0);
+  if (hasSignals) {
+    search.set("signals", JSON.stringify(signals));
+  }
+
+  const response = await get<PersonalizedProductsResponse>(`/api/recommendations?${search.toString()}`);
+  return {
+    title: String(response?.title || "Seleção personalizada"),
+    source: response?.source === "best_sellers" ? "best_sellers" : "personalized",
+    products: Array.isArray(response?.products) ? response.products : [],
   };
 }
 
