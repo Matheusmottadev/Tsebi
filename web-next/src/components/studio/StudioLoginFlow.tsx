@@ -174,9 +174,12 @@ export function StudioLoginFlow({ returnTo }: StudioLoginFlowProps) {
       } catch (error) {
         if (cancelled) return;
         const resolved = resolveLoginFailure(error, "Não foi possível validar a sessão admin.");
-        if (resolved.reason === "session_expired") {
-          setFailureReason("session_expired");
+        if (resolved.reason !== "session_expired") {
+          setFailureReason(resolved.reason);
           setErrorMessage(resolved.message);
+        } else {
+          setFailureReason("");
+          setErrorMessage("");
         }
         setStudioStatus("not_authenticated");
         setStage("login");
@@ -315,7 +318,9 @@ export function StudioLoginFlow({ returnTo }: StudioLoginFlowProps) {
           {errorMessage}
         </p>
       ) : null}
-      {failureReason ? <p className={styles.reason}>Reason: {failureReason}</p> : null}
+      {failureReason && failureReason !== "session_expired" ? (
+        <p className={styles.reason}>Reason: {failureReason}</p>
+      ) : null}
 
       {stage === "login" ? (
         <form className={styles.form} onSubmit={handleLoginSubmit}>

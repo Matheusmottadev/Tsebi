@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+﻿import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { Price } from "@/components/Price";
 import { StudioShell } from "@/components/studio/StudioShell";
@@ -162,3 +162,4 @@ export default async function StudioOrderDetailPage({ params }: StudioOrderDetai
     </StudioShell>
   );
 }
+

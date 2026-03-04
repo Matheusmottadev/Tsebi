@@ -1,4 +1,4 @@
-.filters {
+﻿.filters {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 120px;
   gap: 8px;
@@ -11,7 +11,7 @@
   border: 1px solid var(--studio-border);
   padding: 0 10px;
   font-size: 14px;
-  background: rgba(8, 24, 59, 0.55);
+  background: #101010;
   color: var(--studio-text);
 }
 
@@ -39,7 +39,7 @@
 
 .table th,
 .table td {
-  border-bottom: 1px solid #213457;
+  border-bottom: 1px solid var(--studio-border-strong);
   text-align: left;
   padding: 10px 12px;
 }
@@ -79,3 +79,4 @@
     grid-template-columns: 1fr;
   }
 }
+

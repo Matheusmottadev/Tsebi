@@ -1,30 +1,17 @@
-.filters {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) 180px 120px;
-  gap: 8px;
-}
-
-.filters input,
-.filters select,
-.filters button {
-  min-height: 40px;
-  border-radius: 10px;
+.welcomeCard {
   border: 1px solid var(--studio-border);
-  padding: 0 10px;
-  font-size: 14px;
-  background: rgba(8, 24, 59, 0.55);
-  color: var(--studio-text);
+  border-radius: 14px;
+  background: #0f0f0f;
+  padding: 16px;
 }
 
-.filters button {
-  border-color: var(--studio-accent);
-  background: var(--studio-accent-soft);
+.welcomeCard h3 {
+  margin: 0 0 8px;
   color: var(--studio-text);
-  cursor: pointer;
+  font-size: 20px;
 }
 
-@media (max-width: 900px) {
-  .filters {
-    grid-template-columns: 1fr;
-  }
+.welcomeCard p {
+  margin: 0;
+  color: var(--studio-muted);
 }

@@ -1,17 +1,23 @@
-.root {
+﻿.root {
   min-height: 100dvh;
-  background: radial-gradient(circle at top center, #0e1d43 0%, #050d23 42%, #030713 100%);
-  color: #e6ebff;
-  --studio-bg: #02091a;
-  --studio-surface: #07132d;
-  --studio-surface-soft: #0b1a3a;
-  --studio-border: #223862;
-  --studio-text: #e6ebff;
-  --studio-muted: #a8b7da;
-  --studio-accent: #19be87;
-  --studio-accent-soft: rgba(25, 190, 135, 0.18);
+  background: #000;
+  color: #fff;
+  --studio-bg: #000;
+  --studio-surface: #0a0a0a;
+  --studio-surface-soft: #111;
+  --studio-border: #2a2a2a;
+  --studio-border-strong: #3a3a3a;
+  --studio-text: #fff;
+  --studio-muted: #b8b8b8;
+  --studio-positive: #16a34a;
+  --studio-positive-soft: rgba(22, 163, 74, 0.22);
+  --studio-negative: #dc2626;
+  --studio-negative-soft: rgba(220, 38, 38, 0.2);
+  --studio-accent: var(--studio-positive);
+  --studio-accent-soft: var(--studio-positive-soft);
 }
 
 .root :global(*) {
   box-sizing: border-box;
 }
+

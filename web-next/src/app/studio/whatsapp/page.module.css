@@ -1,8 +1,9 @@
-.card {
+﻿.card {
   border: 1px solid var(--studio-border);
   border-radius: 16px;
   background: var(--studio-surface-soft);
   padding: 16px;
+  margin-bottom: 12px;
 }
 
 .card h3 {
@@ -14,3 +15,95 @@
   margin: 0;
   color: var(--studio-muted);
 }
+
+.stats {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.statCard {
+  border: 1px solid var(--studio-border);
+  border-radius: 16px;
+  background: var(--studio-surface-soft);
+  padding: 16px;
+}
+
+.statCard h3 {
+  margin: 0;
+  color: var(--studio-text);
+  font-size: 16px;
+}
+
+.statCard strong {
+  display: block;
+  margin-top: 10px;
+  font-size: 28px;
+  color: var(--studio-text);
+}
+
+.statCard p {
+  margin-top: 8px;
+  color: var(--studio-muted);
+}
+
+.checklist {
+  margin: 0;
+  padding-left: 18px;
+  color: var(--studio-text);
+  display: grid;
+  gap: 8px;
+}
+
+.listGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.listGrid h4 {
+  margin: 0 0 8px;
+  color: var(--studio-text);
+}
+
+.listGrid ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 8px;
+}
+
+.listGrid li {
+  border: 1px solid var(--studio-border);
+  border-radius: 10px;
+  background: #101010;
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.listGrid span {
+  color: var(--studio-text);
+  font-size: 14px;
+}
+
+.listGrid small {
+  color: var(--studio-muted);
+  font-size: 12px;
+}
+
+.empty {
+  color: var(--studio-muted);
+  font-size: 13px;
+}
+
+@media (max-width: 860px) {
+  .stats,
+  .listGrid {
+    grid-template-columns: 1fr;
+  }
+}
+

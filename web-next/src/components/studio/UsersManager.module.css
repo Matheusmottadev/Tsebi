@@ -1,4 +1,4 @@
-.wrapper {
+﻿.wrapper {
   display: flex;
   flex-direction: column;
   gap: 10px;
@@ -37,9 +37,9 @@
 .actionGrid button {
   min-height: 36px;
   border-radius: 8px;
-  border: 1px solid #35558a;
-  background: #0f2750;
-  color: #e8efff;
+  border: 1px solid var(--studio-border);
+  background: #0d0d0d;
+  color: var(--studio-text);
   padding: 0 10px;
 }
 
@@ -54,6 +54,7 @@
 .detailActions button:nth-child(2) {
   border-color: var(--studio-accent);
   background: var(--studio-accent-soft);
+  color: #ecfdf3;
 }
 
 .tableWrap {
@@ -71,7 +72,7 @@
 
 .table th,
 .table td {
-  border-bottom: 1px solid #213457;
+  border-bottom: 1px solid var(--studio-border-strong);
   text-align: left;
   padding: 8px;
   vertical-align: middle;
@@ -92,9 +93,9 @@
   position: sticky;
   top: 0;
   z-index: 2;
-  background: #081a3b;
+  background: #0d0d0d;
   padding: 2px 0 10px;
-  border-bottom: 1px solid #213457;
+  border-bottom: 1px solid var(--studio-border-strong);
 }
 
 .detailActions {
@@ -145,14 +146,14 @@
   bottom: 0;
   width: min(820px, 98vw);
   border-radius: 0;
-  border-left: 1px solid #2b4778;
+  border-left: 1px solid var(--studio-border);
   overflow-y: auto;
   padding: 14px;
   display: flex;
   flex-direction: column;
   gap: 12px;
-  background: #081a3b;
-  color: #e8efff;
+  background: #0b0b0b;
+  color: var(--studio-text);
   box-shadow: -22px 0 40px rgba(0, 0, 0, 0.5);
 }
 
@@ -171,10 +172,10 @@
 }
 
 .block {
-  border: 1px solid #2c4879;
+  border: 1px solid var(--studio-border);
   border-radius: 12px;
   padding: 10px;
-  background: #0a2148;
+  background: #0f0f0f;
 }
 
 .block h4 {
@@ -190,14 +191,14 @@
 .metaGrid input:disabled,
 .metaGrid select:disabled {
   opacity: 1;
-  background: #122d5b;
-  color: #e8efff;
-  border-color: #35558a;
+  background: #141414;
+  color: var(--studio-text);
+  border-color: var(--studio-border);
 }
 
 .danger {
-  border-color: #7a2f40 !important;
-  color: #ffd6dd !important;
+  border-color: var(--studio-negative) !important;
+  color: #fff2f2 !important;
 }
 
 .error,
@@ -209,15 +210,15 @@
 }
 
 .error {
-  border: 1px solid #6f2f3e;
-  background: rgba(111, 47, 62, 0.26);
-  color: #ffd4db;
+  border: 1px solid var(--studio-negative);
+  background: var(--studio-negative-soft);
+  color: #fff2f2;
 }
 
 .ok {
-  border: 1px solid #207f5f;
-  background: rgba(32, 127, 95, 0.24);
-  color: #d7fff2;
+  border: 1px solid var(--studio-positive);
+  background: var(--studio-positive-soft);
+  color: #ecfdf3;
 }
 
 .empty {
@@ -241,3 +242,4 @@
     grid-template-columns: 1fr;
   }
 }
+

@@ -1,4 +1,4 @@
-.flow {
+﻿.flow {
   margin-top: 10px;
   display: flex;
   flex-direction: column;
@@ -17,18 +17,18 @@
 .helpBox,
 .recoveryBlock pre {
   margin: 0;
-  border: 1px solid #253b65;
-  background: rgba(8, 24, 59, 0.45);
-  color: #dce6ff;
+  border: 1px solid var(--studio-border);
+  background: #0f0f0f;
+  color: var(--studio-text);
   border-radius: 10px;
   padding: 10px 12px;
   font-size: 13px;
 }
 
 .error {
-  border-color: #6f2f3e;
-  background: rgba(111, 47, 62, 0.26);
-  color: #ffd4db;
+  border-color: var(--studio-negative);
+  background: var(--studio-negative-soft);
+  color: #fff2f2;
 }
 
 .statusLabel {
@@ -58,22 +58,26 @@
 
 .field input {
   min-height: 40px;
-  border: 1px solid #253b65;
+  border: 1px solid #ffffff;
   border-radius: 9px;
   padding: 0 10px;
   font-size: 14px;
-  background: rgba(8, 24, 59, 0.6);
-  color: #e6ebff;
+  background: #0d0d0d;
+  color: var(--studio-text);
 }
 
 .submit {
   width: 100%;
   min-height: 42px;
   border-radius: 999px;
-  border: 1px solid #19be87;
-  background: rgba(25, 190, 135, 0.18);
-  color: #e6ebff;
+  border: 1px solid #ffffff;
+  background: var(--studio-positive-soft);
+  color: #ecfdf3;
   cursor: pointer;
+}
+
+.submit:hover {
+  border-color: var(--studio-positive);
 }
 
 .submit:disabled {
@@ -92,7 +96,7 @@
   width: 180px;
   height: 180px;
   border-radius: 12px;
-  border: 1px solid #253b65;
+  border: 1px solid var(--studio-border);
   background: #fff;
 }
 
@@ -117,3 +121,4 @@
     grid-template-columns: 1fr;
   }
 }
+

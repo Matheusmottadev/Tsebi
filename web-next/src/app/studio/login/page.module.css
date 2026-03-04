@@ -1,19 +1,23 @@
 .page {
-  min-height: 100dvh;
-  background: radial-gradient(circle at top center, #0e1d43 0%, #050d23 42%, #030713 100%);
-  display: grid;
-  place-items: center;
+  position: fixed;
+  inset: 0;
+  background: #000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   padding: 24px 14px;
+  overflow-y: auto;
 }
 
 .main {
-  width: min(100%, 640px);
+  width: min(100%, 680px);
+  margin: auto;
 }
 
 .card {
-  border: 1px solid #253b65;
+  border: 1px solid #2a2a2a;
   border-radius: 18px;
-  background: rgba(3, 13, 34, 0.86);
+  background: #0b0b0b;
   padding: 18px;
   display: flex;
   flex-direction: column;
@@ -22,7 +26,7 @@
 
 .kicker {
   margin: 0;
-  color: #a8b7da;
+  color: #b8b8b8;
   font-size: 12px;
   text-transform: uppercase;
   letter-spacing: 0.08em;
@@ -30,7 +34,7 @@
 
 .card h1 {
   margin: 0;
-  color: #f2f5ff;
+  color: #fff;
   font-size: 34px;
   line-height: 1.1;
   font-family: var(--font-playfair), Georgia, serif;
@@ -39,5 +43,5 @@
 
 .card p {
   margin: 0;
-  color: #a8b7da;
+  color: #b8b8b8;
 }

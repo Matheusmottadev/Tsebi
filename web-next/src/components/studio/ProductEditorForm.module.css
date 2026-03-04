@@ -1,10 +1,10 @@
-.form {
+﻿.form {
   display: flex;
   flex-direction: column;
   gap: 10px;
   border: 1px solid var(--studio-border);
   border-radius: 12px;
-  background: rgba(8, 24, 59, 0.45);
+  background: #0f0f0f;
   padding: 14px;
 }
 
@@ -18,7 +18,7 @@
   border: 1px solid var(--studio-border);
   border-radius: 10px;
   padding: 10px;
-  background: rgba(8, 24, 59, 0.38);
+  background: #101010;
 }
 
 .variantTitle {
@@ -50,7 +50,7 @@
   border-radius: 9px;
   padding: 0 10px;
   font-size: 14px;
-  background: rgba(8, 24, 59, 0.6);
+  background: #0d0d0d;
   color: var(--studio-text);
 }
 
@@ -77,15 +77,15 @@
 }
 
 .error {
-  border: 1px solid #6f2f3e;
-  background: rgba(111, 47, 62, 0.26);
-  color: #ffd4db;
+  border: 1px solid var(--studio-negative);
+  background: var(--studio-negative-soft);
+  color: #fff2f2;
 }
 
 .success {
-  border: 1px solid #207f5f;
-  background: rgba(32, 127, 95, 0.24);
-  color: #d7fff2;
+  border: 1px solid var(--studio-positive);
+  background: var(--studio-positive-soft);
+  color: #ecfdf3;
 }
 
 .submit {
@@ -93,7 +93,7 @@
   border-radius: 999px;
   border: 1px solid var(--studio-accent);
   background: var(--studio-accent-soft);
-  color: var(--studio-text);
+  color: #ecfdf3;
   cursor: pointer;
 }
 
@@ -111,3 +111,4 @@
     grid-template-columns: 1fr;
   }
 }
+
