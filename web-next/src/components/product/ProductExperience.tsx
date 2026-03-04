@@ -229,7 +229,7 @@ export function ProductExperience({ product, recommendations, imageBaseUrl }: Pr
   const [selectedSize, setSelectedSize] = useState("");
   const [selectedColor, setSelectedColor] = useState("");
   const [feedback, setFeedback] = useState("");
-  const [stickySelectionWarning, setStickySelectionWarning] = useState(false);
+  const [stickyToastMessage, setStickyToastMessage] = useState("");
   const [openDrawer, setOpenDrawer] = useState<DrawerKey | null>(null);
   const [showStickyBar, setShowStickyBar] = useState(false);
 
@@ -527,23 +527,25 @@ export function ProductExperience({ product, recommendations, imageBaseUrl }: Pr
     };
   }, [openDrawer, resetMediaMotion, startMediaAnimation]);
 
-  const showSelectionWarningAndScrollTop = useCallback(() => {
+  const showStickyToast = useCallback((message: string, scrollToTop = false) => {
     if (typeof window !== "undefined") {
-      window.scrollTo({ top: 0, behavior: "smooth" });
+      if (scrollToTop) {
+        window.scrollTo({ top: 0, behavior: "smooth" });
+      }
     }
-    setStickySelectionWarning(true);
+    setStickyToastMessage(String(message || "").trim());
     if (stickyToastTimerRef.current) {
       window.clearTimeout(stickyToastTimerRef.current);
     }
     stickyToastTimerRef.current = window.setTimeout(() => {
-      setStickySelectionWarning(false);
+      setStickyToastMessage("");
     }, 6000);
   }, []);
 
   const handleBuy = (source: "main" | "sticky" = "main") => {
     if (!canBuy) {
       if (source === "sticky") {
-        showSelectionWarningAndScrollTop();
+        showStickyToast("Você precisa escolher o tamanho e cor da peça", true);
       } else {
         setFeedback("Selecione cor e tamanho para continuar.");
         window.setTimeout(() => setFeedback(""), 1800);
@@ -565,6 +567,9 @@ export function ProductExperience({ product, recommendations, imageBaseUrl }: Pr
       qty: 1,
     });
 
+    if (source === "sticky") {
+      showStickyToast(result.ok ? "Produto adicionado ao carrinho." : result.error || "Não foi possível adicionar.");
+    }
     setFeedback(result.ok ? "Produto adicionado ao carrinho." : result.error || "Não foi possível adicionar.");
     window.setTimeout(() => setFeedback(""), 1800);
   };
@@ -597,9 +602,9 @@ export function ProductExperience({ product, recommendations, imageBaseUrl }: Pr
           </button>
         </div>
       </div>
-      {stickySelectionWarning ? (
+      {stickyToastMessage ? (
         <div className={styles.stickySelectionWarning} role="status" aria-live="polite">
-          Você precisa escolher o tamanho e cor da peça
+          {stickyToastMessage}
         </div>
       ) : null}
       <main className={styles.main} ref={mainRef}>
