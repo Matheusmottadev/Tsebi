@@ -63,15 +63,38 @@
   padding: 0 10px;
   font-size: 14px;
   background: #0d0d0d;
-  color: #ffffff;
-  -webkit-text-fill-color: #ffffff;
-  caret-color: #ffffff;
+  color: #ffffff !important;
+  -webkit-text-fill-color: #ffffff !important;
+  caret-color: #ffffff !important;
 }
 
 .field input:focus {
   outline: 0;
   border-color: #ffffff;
   box-shadow: 0 0 0 1px #ffffff;
+  color: #ffffff !important;
+  -webkit-text-fill-color: #ffffff !important;
+  caret-color: #ffffff !important;
+}
+
+.field input::placeholder {
+  color: #8a8a8a;
+  -webkit-text-fill-color: #8a8a8a;
+}
+
+.field input[type="password"] {
+  font-family: Arial, sans-serif;
+  letter-spacing: 0.08em;
+}
+
+.field input:-webkit-autofill,
+.field input:-webkit-autofill:hover,
+.field input:-webkit-autofill:focus,
+.field input:-webkit-autofill:active {
+  -webkit-text-fill-color: #ffffff !important;
+  caret-color: #ffffff !important;
+  box-shadow: 0 0 0 1000px #0d0d0d inset !important;
+  transition: background-color 9999s ease-in-out 0s;
 }
 
 .submit {
