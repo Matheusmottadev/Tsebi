@@ -204,6 +204,7 @@ export function ProductExperience({ product, recommendations, imageBaseUrl }: Pr
   const mediaPanelRef = useRef<HTMLElement | null>(null);
   const mediaTrackRef = useRef<HTMLDivElement | null>(null);
   const buyButtonRef = useRef<HTMLButtonElement | null>(null);
+  const stickyToastTimerRef = useRef<number | null>(null);
   const addItem = useCartStore((state) => state.addItem);
   const clearError = useCartStore((state) => state.clearError);
   const { sizes, colors } = useMemo(() => getProductVariantOptions(product), [product]);
@@ -226,12 +227,18 @@ export function ProductExperience({ product, recommendations, imageBaseUrl }: Pr
   const mediaMotionRef = useRef({ current: 0, target: 0, rafId: 0 });
 
   const [selectedSize, setSelectedSize] = useState("");
-  const [selectedColor, setSelectedColor] = useState(() => String(colors[0] || "Preto"));
+  const [selectedColor, setSelectedColor] = useState("");
   const [feedback, setFeedback] = useState("");
+  const [stickySelectionWarning, setStickySelectionWarning] = useState(false);
   const [openDrawer, setOpenDrawer] = useState<DrawerKey | null>(null);
   const [showStickyBar, setShowStickyBar] = useState(false);
 
-  const canBuy = sizes.length === 0 || Boolean(selectedSize);
+  const colorRequired = colors.length > 0;
+  const sizeRequired = sizes.length > 0;
+  const hasValidColorSelection = !colorRequired || Boolean(String(selectedColor || "").trim());
+  const hasValidSizeSelection = !sizeRequired || Boolean(String(selectedSize || "").trim());
+  const canBuy = hasValidColorSelection && hasValidSizeSelection;
+  const selectedColorLabel = hasValidColorSelection ? selectedColor : "Selecione";
   const drawerSizes = useMemo(() => (sizes.length > 0 ? sizes : [...GLOBAL_SIZES]), [sizes]);
 
   const getDrawerStockBySize = useCallback(
@@ -277,14 +284,16 @@ export function ProductExperience({ product, recommendations, imageBaseUrl }: Pr
   }, [product]);
 
   useEffect(() => {
-    const nextColor = String(colors[0] || "Preto");
-    const rafId = window.requestAnimationFrame(() => {
-      setSelectedColor((current) => (current === nextColor ? current : nextColor));
-    });
-    return () => {
-      window.cancelAnimationFrame(rafId);
-    };
+    setSelectedColor((current) => (colors.includes(current) ? current : ""));
   }, [colors]);
+
+  useEffect(() => {
+    return () => {
+      if (stickyToastTimerRef.current) {
+        window.clearTimeout(stickyToastTimerRef.current);
+      }
+    };
+  }, []);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -518,10 +527,27 @@ export function ProductExperience({ product, recommendations, imageBaseUrl }: Pr
     };
   }, [openDrawer, resetMediaMotion, startMediaAnimation]);
 
-  const handleBuy = () => {
+  const showSelectionWarningAndScrollTop = useCallback(() => {
+    if (typeof window !== "undefined") {
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+    setStickySelectionWarning(true);
+    if (stickyToastTimerRef.current) {
+      window.clearTimeout(stickyToastTimerRef.current);
+    }
+    stickyToastTimerRef.current = window.setTimeout(() => {
+      setStickySelectionWarning(false);
+    }, 6000);
+  }, []);
+
+  const handleBuy = (source: "main" | "sticky" = "main") => {
     if (!canBuy) {
-      setFeedback("Selecione um tamanho para continuar.");
-      window.setTimeout(() => setFeedback(""), 1800);
+      if (source === "sticky") {
+        showSelectionWarningAndScrollTop();
+      } else {
+        setFeedback("Selecione cor e tamanho para continuar.");
+        window.setTimeout(() => setFeedback(""), 1800);
+      }
       return;
     }
 
@@ -566,11 +592,16 @@ export function ProductExperience({ product, recommendations, imageBaseUrl }: Pr
               <Price amountCents={product.unitAmount} currency={product.currency} className={styles.stickyPrice} />
             </div>
           </div>
-          <button type="button" className={styles.stickyBuyButton} onClick={handleBuy}>
+          <button type="button" className={styles.stickyBuyButton} onClick={() => handleBuy("sticky")}>
             Adicionar
           </button>
         </div>
       </div>
+      {stickySelectionWarning ? (
+        <div className={styles.stickySelectionWarning} role="status" aria-live="polite">
+          Você precisa esvolher o tamanho e cor da peça
+        </div>
+      ) : null}
       <main className={styles.main} ref={mainRef}>
         <section className={styles.mediaPanel} ref={mediaPanelRef}>
           <div className={styles.mediaTrack} ref={mediaTrackRef}>
@@ -597,11 +628,11 @@ export function ProductExperience({ product, recommendations, imageBaseUrl }: Pr
             <Price amountCents={product.unitAmount} currency={product.currency} className={styles.price} />
             <div className={styles.colorRow}>
               <span>Cor</span>
-              <span>{selectedColor}</span>
+              <span>{selectedColorLabel}</span>
             </div>
 
             <div className={styles.swatches}>
-              {(colors.length > 0 ? colors : [selectedColor]).map((color) => {
+              {colors.map((color) => {
                 const token = resolveColorToken(color);
                 const isAvailable = !token.unknown && hasColorStock(product, color);
                 return (
@@ -632,7 +663,7 @@ export function ProductExperience({ product, recommendations, imageBaseUrl }: Pr
                 Tabela de tamanhos
               </button>
             </div>
-            <button type="button" className={styles.buyButton} onClick={handleBuy} ref={buyButtonRef}>
+            <button type="button" className={styles.buyButton} onClick={() => handleBuy("main")} ref={buyButtonRef}>
               Adicionar ao carrinho
             </button>
 

@@ -44,8 +44,25 @@ export const metadata: Metadata = {
     template: "%s | Tsebi Brasil",
   },
   applicationName: "Tsebi Brasil",
+  category: "fashion",
+  creator: "Tsebi Brasil",
+  publisher: "Tsebi Brasil",
+  metadataBase: resolveMetadataBaseUrl(),
+  alternates: {
+    canonical: "/",
+    languages: {
+      "pt-BR": "/",
+    },
+  },
   description:
     "Tsebi Brasil: moda autoral com coleções exclusivas, design contemporâneo e acabamento premium.",
+  referrer: "origin-when-cross-origin",
+  formatDetection: {
+    email: false,
+    address: false,
+    telephone: false,
+  },
+  authors: [{ name: "Tsebi Brasil", url: defaultSiteUrl }],
   keywords: [
     "tsebi",
     "tsebi brasil",
@@ -56,10 +73,16 @@ export const metadata: Metadata = {
     "Coleção Genesis",
     "ecommerce de moda",
   ],
-  metadataBase: resolveMetadataBaseUrl(),
   robots: {
     index: true,
     follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      "max-image-preview": "large",
+      "max-snippet": -1,
+      "max-video-preview": -1,
+    },
   },
   openGraph: {
     locale: "pt_BR",
@@ -111,6 +134,17 @@ export default function RootLayout({
     logo: `${defaultSiteUrl}/images/Gazelalogo.png`,
     sameAs: [],
   };
+  const websiteSchema = {
+    "@context": "https://schema.org",
+    "@type": "WebSite",
+    name: "Tsebi Brasil",
+    url: defaultSiteUrl,
+    potentialAction: {
+      "@type": "SearchAction",
+      target: `${defaultSiteUrl}/products?q={search_term_string}`,
+      "query-input": "required name=search_term_string",
+    },
+  };
 
   return (
     <html lang="pt-BR">
@@ -144,6 +178,12 @@ export default function RootLayout({
           type="application/ld+json"
           dangerouslySetInnerHTML={{
             __html: JSON.stringify(organizationSchema),
+          }}
+        />
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify(websiteSchema),
           }}
         />
       </body>

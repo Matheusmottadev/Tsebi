@@ -18,12 +18,22 @@ export default function robots(): MetadataRoute.Robots {
     rules: [
       {
         userAgent: "*",
-        allow: ["/", "/products", "/product/", "/lancamento", "/nossa-historia", "/processos", "/faq"],
-        disallow: ["/api/", "/account", "/checkout", "/cart", "/studio", "/login", "/search"],
+        allow: [
+          "/",
+          "/products",
+          "/product/",
+          "/lancamento",
+          "/nossa-historia",
+          "/processos",
+          "/faq",
+          "/aviso-legal.html",
+          "/politica-privacidade.html",
+          "/cookie-policy.html",
+        ],
+        disallow: ["/api/", "/account", "/checkout", "/cart", "/studio", "/login", "/search", "/legacy/"],
       },
     ],
     sitemap: `${siteUrl}/sitemap.xml`,
     host: siteUrl,
   };
 }
-

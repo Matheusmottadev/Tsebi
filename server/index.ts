@@ -121,6 +121,13 @@ function parseAllowedCorsOrigins(): string[] {
 
 app.set("trust proxy", 1);
 app.disable("x-powered-by");
+app.use((req: any, res: any, next: any) => {
+  const incoming = String(req.headers["x-request-id"] || "").trim();
+  const requestId = incoming || crypto.randomUUID();
+  req.requestId = requestId;
+  res.setHeader("x-request-id", requestId);
+  next();
+});
 
 const webhookRateLimit = rateLimit({
   windowMs: 60 * 1000,
@@ -640,11 +647,40 @@ function toSafeErrorMessage(error: any, fallback: any = "unknown_error") {
   return message ? message.slice(0, 300) : fallback;
 }
 
+function sanitizeLogDetails(value: any): any {
+  if (Array.isArray(value)) {
+    return value.map((item: any) => sanitizeLogDetails(item));
+  }
+  if (!value || typeof value !== "object") {
+    return value;
+  }
+  const sensitiveKeys = new Set([
+    "email",
+    "phone",
+    "cpf",
+    "token",
+    "secret",
+    "authorization",
+    "cookie",
+    "set-cookie"
+  ]);
+  const sanitized: Record<string, unknown> = {};
+  for (const [rawKey, rawVal] of Object.entries(value)) {
+    const normalizedKey = String(rawKey || "").toLowerCase();
+    if (sensitiveKeys.has(normalizedKey)) {
+      sanitized[rawKey] = "[REDACTED]";
+      continue;
+    }
+    sanitized[rawKey] = sanitizeLogDetails(rawVal);
+  }
+  return sanitized;
+}
+
 function logStripeLifecycle(event: any, details: any = {}) {
   const payload = {
     ts: new Date().toISOString(),
     event,
-    ...details
+    ...sanitizeLogDetails(details)
   };
   try {
     // eslint-disable-next-line no-console
@@ -957,6 +993,7 @@ async function fetchOrderWithItemsInTx(client: any, orderId: any) {
 async function processWebhookEvent(
   event: any,
   requestContext: {
+    requestId?: string;
     ipAddress?: string;
     userAgent?: string;
     fbp?: string;
@@ -980,6 +1017,7 @@ async function processWebhookEvent(
     eventType: string;
     paymentIntentId: string | null;
     orderId: string | null;
+    requestId: string | null;
     outcome: "ignored" | "duplicate" | "order_updated" | "noop";
     reason: string | null;
     statusFrom: string | null;
@@ -989,12 +1027,14 @@ async function processWebhookEvent(
     eventType: event.type,
     paymentIntentId: paymentIntentId || null,
     orderId: null,
+    requestId: requestContext.requestId || null,
     outcome: "ignored",
     reason: null,
     statusFrom: null,
     statusTo: null
   };
   logStripeLifecycle("webhook_received", {
+    requestId: webhookContext.requestId,
     webhookEventId: webhookContext.webhookEventId,
     eventType: webhookContext.eventType,
     paymentIntentId: webhookContext.paymentIntentId
@@ -1248,6 +1288,7 @@ async function processWebhookEvent(
     webhookContext.statusFrom !== webhookContext.statusTo
   ) {
     logStripeLifecycle("order_status_changed", {
+      requestId: webhookContext.requestId,
       orderId: webhookContext.orderId,
       from: webhookContext.statusFrom,
       to: webhookContext.statusTo,
@@ -1274,6 +1315,7 @@ async function processWebhookEvent(
       }
     } catch (error: any) {
       logStripeLifecycle("webhook_notification_failed", {
+        requestId: webhookContext.requestId,
         webhookEventId: webhookContext.webhookEventId,
         orderId: notification.orderId,
         notificationType: notification.type,
@@ -1292,6 +1334,7 @@ async function processWebhookEvent(
       });
     } catch (error: any) {
       logStripeLifecycle("webhook_behavior_event_failed", {
+        requestId: webhookContext.requestId,
         webhookEventId: webhookContext.webhookEventId,
         orderId: webhookContext.orderId,
         reason: toSafeErrorMessage(error)
@@ -1303,9 +1346,13 @@ async function processWebhookEvent(
   for (const capiEvent of pendingMetaCapiEvents) {
     try {
       const metaConfig = resolveMetaConfig();
-      console.log("[meta] token_present", metaConfig.tokenPresent);
-      console.log("[meta] pixel_id", metaConfig.pixelId);
+      console.log("[meta]", {
+        requestId: webhookContext.requestId || "",
+        token_present: metaConfig.tokenPresent,
+        pixel_id: metaConfig.pixelId
+      });
       console.log("[meta] sending Purchase", {
+        requestId: webhookContext.requestId || "",
         orderId: capiEvent.orderId,
         amountCents: capiEvent.amountCents
       });
@@ -1326,10 +1373,17 @@ async function processWebhookEvent(
         contents: capiEvent.contents,
         orderId: capiEvent.orderId
       });
-      console.log("[meta] response_status", Number((result as any)?.status || 0));
-      console.log("[meta] response_body", String((result as any)?.responseBody || ""));
+      console.log("[meta] response_status", {
+        requestId: webhookContext.requestId || "",
+        status: Number((result as any)?.status || 0)
+      });
+      console.log("[meta] response_body", {
+        requestId: webhookContext.requestId || "",
+        body: String((result as any)?.responseBody || "")
+      });
       if (!result?.ok) {
         logStripeLifecycle("webhook_meta_capi_failed", {
+          requestId: webhookContext.requestId,
           webhookEventId: webhookContext.webhookEventId,
           orderId: webhookContext.orderId,
           reason: result?.reason || "META_CAPI_FAILED",
@@ -1338,6 +1392,7 @@ async function processWebhookEvent(
       }
     } catch (error: any) {
       logStripeLifecycle("webhook_meta_capi_failed", {
+        requestId: webhookContext.requestId,
         webhookEventId: webhookContext.webhookEventId,
         orderId: webhookContext.orderId,
         reason: toSafeErrorMessage(error),
@@ -1455,6 +1510,7 @@ app.post(
   async (req: any, res: any) => {
     if (!stripe || !stripeWebhookSecret) {
       logStripeLifecycle("webhook_ignored", {
+        requestId: String(req.requestId || ""),
         reason: "stripe_not_configured"
       });
       return res.status(200).json({ received: true, ignored: "stripe_not_configured" });
@@ -1463,6 +1519,7 @@ app.post(
     const signature = req.headers["stripe-signature"];
     if (!signature) {
       logStripeLifecycle("webhook_ignored", {
+        requestId: String(req.requestId || ""),
         reason: "missing_signature_header"
       });
       return res.status(400).json({ received: false, error: "missing_signature_header" });
@@ -1474,6 +1531,7 @@ app.post(
       event = stripe.webhooks.constructEvent(req.body, signature, stripeWebhookSecret);
     } catch (error: any) {
       logStripeLifecycle("webhook_signature_verification_failed", {
+        requestId: String(req.requestId || ""),
         error: toSafeErrorMessage(error)
       });
       return res.status(400).json({ received: false, error: "invalid_signature" });
@@ -1485,6 +1543,7 @@ app.post(
       const requestUserAgent = String(req.headers["user-agent"] || "").trim() || "stripe-webhook";
       const requestCookies = String(req.headers.cookie || "");
       await processWebhookEvent(event, {
+        requestId: String(req.requestId || ""),
         ipAddress: requestIp,
         userAgent: requestUserAgent,
         fbp: parseCookieValue(requestCookies, "_fbp"),
@@ -1493,6 +1552,7 @@ app.post(
       return res.json({ received: true });
     } catch (error: any) {
       logStripeLifecycle("webhook_processing_failed", {
+        requestId: String(req.requestId || ""),
         webhookEventId: event?.id || null,
         eventType: event?.type || null,
         error: toSafeErrorMessage(error)

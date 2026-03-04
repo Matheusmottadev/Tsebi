@@ -30,8 +30,9 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: `${siteUrl}/nossa-historia`, lastModified: now, changeFrequency: "monthly", priority: 0.6 },
     { url: `${siteUrl}/processos`, lastModified: now, changeFrequency: "monthly", priority: 0.6 },
     { url: `${siteUrl}/faq`, lastModified: now, changeFrequency: "monthly", priority: 0.5 },
-    { url: `${siteUrl}/politica-privacidade`, lastModified: now, changeFrequency: "yearly", priority: 0.2 },
-    { url: `${siteUrl}/aviso-legal`, lastModified: now, changeFrequency: "yearly", priority: 0.2 },
+    { url: `${siteUrl}/politica-privacidade.html`, lastModified: now, changeFrequency: "yearly", priority: 0.2 },
+    { url: `${siteUrl}/aviso-legal.html`, lastModified: now, changeFrequency: "yearly", priority: 0.2 },
+    { url: `${siteUrl}/cookie-policy.html`, lastModified: now, changeFrequency: "yearly", priority: 0.2 },
   ];
 
   let productRoutes: MetadataRoute.Sitemap = [];
@@ -56,4 +57,3 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 
   return [...staticRoutes, ...productRoutes];
 }
-

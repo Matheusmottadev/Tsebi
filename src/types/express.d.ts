@@ -46,6 +46,7 @@ declare global {
       adminSession?: AdminAuthSession;
       adminProfile?: Record<string, unknown> | null;
       rawBody?: Buffer;
+      requestId?: string;
     }
   }
 }
