@@ -1465,7 +1465,7 @@ app.post(
       logStripeLifecycle("webhook_ignored", {
         reason: "missing_signature_header"
       });
-      return res.status(200).json({ received: true, ignored: "missing_signature_header" });
+      return res.status(400).json({ received: false, error: "missing_signature_header" });
     }
 
     /** @type {import("stripe").Stripe.Event} */
@@ -1476,7 +1476,7 @@ app.post(
       logStripeLifecycle("webhook_signature_verification_failed", {
         error: toSafeErrorMessage(error)
       });
-      return res.status(200).json({ received: true, ignored: "invalid_signature" });
+      return res.status(400).json({ received: false, error: "invalid_signature" });
     }
 
     try {
@@ -1502,7 +1502,17 @@ app.post(
   }
 );
 
-app.use(express.json());
+app.use(
+  express.json({
+    verify: (req: any, _res: any, buf: Buffer) => {
+      try {
+        if (String(req.originalUrl || "").startsWith("/api/whatsapp/webhook")) {
+          req.rawBody = Buffer.from(buf);
+        }
+      } catch {}
+    }
+  })
+);
 app.use(
   "/images",
   express.static(path.resolve(process.cwd(), "images"), {
@@ -1632,7 +1642,7 @@ app.post("/api/events", behaviorEventsRateLimit, async (req: any, res: any) => {
       eventName: payload.eventName,
       eventId: payload.eventId,
       anonId: payload.anonId || String(req.headers["x-anon-id"] || req.query.anon_id || "").trim(),
-      userId: payload.userId || String(req.session?.userId || "").trim(),
+      userId: String(req.session?.userId || "").trim(),
       productId: payload.productId,
       category: payload.category,
       price: payload.price,
@@ -1654,6 +1664,12 @@ app.post("/api/events", behaviorEventsRateLimit, async (req: any, res: any) => {
 });
 
 app.post("/api/meta/capi", behaviorEventsRateLimit, async (req: any, res: any) => {
+  const expectedInternalApiKey = String(process.env.META_CAPI_INTERNAL_KEY || "").trim();
+  const providedInternalApiKey = String(req.headers["x-internal-api-key"] || "").trim();
+  if (!expectedInternalApiKey || providedInternalApiKey !== expectedInternalApiKey) {
+    return res.status(403).json({ ok: false, error: "FORBIDDEN" });
+  }
+
   const parsed = metaCapiEventSchema.safeParse(req.body || {});
   if (!parsed.success) {
     return res.status(400).json({ ok: false, error: "INVALID_INPUT" });
@@ -1916,7 +1932,10 @@ app.get("/api/recommendations", async (req: any, res: any) => {
     const placement = String(req.query.placement || "search").trim();
     const sessionUserId = req.session?.userId ? String(req.session.userId) : "";
     const requestedUserId = String(req.query.userId || "").trim();
-    const userId = requestedUserId || sessionUserId;
+    if (requestedUserId && requestedUserId !== sessionUserId) {
+      return res.status(403).json({ error: "FORBIDDEN_USER_SCOPE" });
+    }
+    const userId = sessionUserId;
     const anonId = String(req.query.anon_id || req.query.anonId || req.headers["x-anon-id"] || "").trim();
     const products = await listProducts();
 
@@ -2427,11 +2446,8 @@ app.get("/api/orders/:orderId", async (req: any, res: any) => {
   const order = await findOrderById(req.params.orderId);
   if (!order) return res.status(404).json({ error: "Order not found." });
   const sessionUserId = req.session?.userId ? String(req.session.userId) : "";
-  const requestedEmail = normalizeEmail(req.query?.email || "");
-  const orderEmail = normalizeEmail(order.userEmail || "");
   const hasSessionAccess = Boolean(sessionUserId && String(order.userId || "") === sessionUserId);
-  const hasEmailAccess = Boolean(requestedEmail && orderEmail && requestedEmail === orderEmail);
-  if (!hasSessionAccess && !hasEmailAccess) {
+  if (!hasSessionAccess) {
     return res.status(401).json({ error: "UNAUTHORIZED" });
   }
 

@@ -1,4 +1,5 @@
 export {};
+const crypto = require("crypto");
 const express = require("express");
 const { z } = require("zod");
 const { upsertInboundContact } = require("../../server/lib/whatsapp-repository");
@@ -17,6 +18,18 @@ function isValidVerificationToken(token: any) {
   return token === expected;
 }
 
+function isValidWhatsAppSignature(req: any) {
+  const appSecret = String(process.env.WHATSAPP_APP_SECRET || "").trim();
+  const signature = String(req.headers["x-hub-signature-256"] || "").trim();
+  if (!appSecret || !signature || !signature.startsWith("sha256=")) return false;
+  const raw = Buffer.isBuffer(req.rawBody) ? req.rawBody : Buffer.from(JSON.stringify(req.body || {}), "utf8");
+  const expected = `sha256=${crypto.createHmac("sha256", appSecret).update(raw).digest("hex")}`;
+  const a = Buffer.from(signature, "utf8");
+  const b = Buffer.from(expected, "utf8");
+  if (a.length !== b.length) return false;
+  return crypto.timingSafeEqual(a, b);
+}
+
 whatsappRouter.get("/webhook", (req: any, res: any) => {
   const parsed = verifySchema.safeParse(req.query || {});
   if (!parsed.success) return res.status(400).send("invalid");
@@ -33,6 +46,10 @@ whatsappRouter.get("/webhook", (req: any, res: any) => {
 });
 
 whatsappRouter.post("/webhook", async (req: any, res: any) => {
+  if (!isValidWhatsAppSignature(req)) {
+    return res.status(401).json({ ok: false, error: "INVALID_SIGNATURE" });
+  }
+
   const payload = req.body || {};
   const entries = Array.isArray(payload.entry) ? payload.entry : [];
 
