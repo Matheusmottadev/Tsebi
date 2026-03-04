@@ -21,9 +21,7 @@ export default function robots(): MetadataRoute.Robots {
         allow: [
           "/",
           "/products",
-          "/product/",
-          "/novidades",
-          "/nossa-historia",
+          "/product/",          "/nossa-historia",
           "/processos",
           "/faq",
           "/aviso-legal.html",
@@ -37,4 +35,5 @@ export default function robots(): MetadataRoute.Robots {
     host: siteUrl,
   };
 }
+
 

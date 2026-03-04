@@ -13,7 +13,7 @@ export function LegacyFooter({ variant = "dark", language = "pt", onLanguageChan
       <div className="footer-grid">
         <section className="footer-newsletter">
           <h3>ASSINE NOSSA NEWSLETTER</h3>
-          <form className="newsletter-form" action="/novidades" method="get">
+          <form className="newsletter-form" action="/" method="get">
             <label htmlFor="legacyFooterNewsletterEmail">Insira seu e-mail *</label>
             <div className="newsletter-input-row">
               <input id="legacyFooterNewsletterEmail" name="email" type="email" required />
@@ -133,4 +133,5 @@ export function LegacyFooter({ variant = "dark", language = "pt", onLanguageChan
     </footer>
   );
 }
+
 

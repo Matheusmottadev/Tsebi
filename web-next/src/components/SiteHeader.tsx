@@ -442,7 +442,7 @@ export function SiteHeader() {
         </button>
         <nav className="header-menu-nav">
           <div className="menu-group">
-            <Link className="menu-group-title" href="/novidades" onClick={() => setIsMenuOpen(false)}>
+            <Link className="menu-group-title" href="/" onClick={() => setIsMenuOpen(false)}>
               Coleção Genesis
             </Link>
           </div>
@@ -554,6 +554,7 @@ export function SiteHeader() {
     </>
   );
 }
+
 
 
 

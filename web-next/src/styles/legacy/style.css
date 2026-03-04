@@ -292,8 +292,8 @@ nav a:hover { opacity: 0.6; }
 .menu-toggle {
   width: 38px;
   height: 38px;
-  border: 1px solid #0d0f12;
-  background: #0b0f14;
+  border: 1px solid #111;
+  background: #fff;
   padding: 0 9px;
   display: inline-flex;
   flex-direction: column;
@@ -306,7 +306,7 @@ nav a:hover { opacity: 0.6; }
 .menu-toggle span {
   width: 18px;
   height: 2px;
-  background: #fff;
+  background: #111;
   display: block;
 }
 

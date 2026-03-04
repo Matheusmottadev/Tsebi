@@ -39,7 +39,7 @@ function rewriteLegacyAccountUrls(markup: string): string {
     .replace(/<script\b[\s\S]*?<\/script>/gi, "")
     .replace(/href="index\.html"/g, 'href="/"')
     .replace(/href="conta\.html"/g, 'href="/account"')
-    .replace(/href="lancamento\.html"/g, 'href="/novidades"')
+    .replace(/href="lancamento\.html"/g, 'href="/"')
     .replace(/href="nossa-historia\.html"/g, 'href="/nossa-historia"')
     .replace(/href="processos\.html"/g, 'href="/processos"')
     .replace(/href="faq\.html"/g, 'href="/faq"')
@@ -128,4 +128,5 @@ export default async function AccountPage() {
     </>
   );
 }
+
 

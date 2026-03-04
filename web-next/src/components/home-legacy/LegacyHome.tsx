@@ -821,7 +821,7 @@ export function LegacyHome({ products }: LegacyHomeProps) {
 
         <nav className="header-menu-nav">
           <div className="menu-group">
-            <Link className="menu-group-title" href="/novidades" onClick={() => setIsMenuOpen(false)}>
+            <Link className="menu-group-title" href="/" onClick={() => setIsMenuOpen(false)}>
               Coleção Genesis
             </Link>
           </div>
@@ -835,7 +835,7 @@ export function LegacyHome({ products }: LegacyHomeProps) {
                 <p className="flyout-title">Novidades</p>
                 <Link href="/products?category=masculino" onClick={() => setIsMenuOpen(false)}>lançamentos</Link>
                 <Link href="/products" onClick={() => setIsMenuOpen(false)}>Destaques da semana</Link>
-                <a href="/novidades" onClick={handleMenuSearchShortcut}>
+                <a href="/" onClick={handleMenuSearchShortcut}>
                   Editorial masculino
                 </a>
               </div>
@@ -863,8 +863,8 @@ export function LegacyHome({ products }: LegacyHomeProps) {
               <div className="flyout-col">
                 <p className="flyout-title">Novidades</p>
                 <Link href="/products?category=feminino" onClick={() => setIsMenuOpen(false)}>lançamentos</Link>
-                <Link href="/novidades" onClick={() => setIsMenuOpen(false)}>Coleção Genesis</Link>
-                <a href="/novidades" onClick={handleMenuSearchShortcut}>
+                <Link href="/" onClick={() => setIsMenuOpen(false)}>Coleção Genesis</Link>
+                <a href="/" onClick={handleMenuSearchShortcut}>
                   Escolhas da curadoria
                 </a>
               </div>
@@ -1016,7 +1016,7 @@ export function LegacyHome({ products }: LegacyHomeProps) {
             />
           </div>
           <h2>Coleção Alicerce</h2>
-          <Link className="new-drop-cta" href="/novidades">
+          <Link className="new-drop-cta" href="/">
             EM BREVE
           </Link>
         </div>
@@ -1139,6 +1139,7 @@ export function LegacyHome({ products }: LegacyHomeProps) {
     </div>
   );
 }
+
 
 
 
