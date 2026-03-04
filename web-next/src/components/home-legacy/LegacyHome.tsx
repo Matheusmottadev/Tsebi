@@ -995,7 +995,17 @@ export function LegacyHome({ products }: LegacyHomeProps) {
               placement="search_overlay_legacy"
               title="Recomendado para você"
               limit={6}
+              mode="personalized"
             />
+            <SearchOverlayRecommendations
+              isOpen={isSearchOpen}
+              query={searchQuery}
+              placement="search_overlay_legacy_best_sellers"
+              title="Mais vendidos"
+              limit={6}
+              mode="best_sellers"
+            />
+            <p className="tsebi-search-footer-quote">Se torne a sua melhor versão!</p>
           </div>
         </section>
       </div>

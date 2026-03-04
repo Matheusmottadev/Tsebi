@@ -78,13 +78,6 @@ export function LegacyFooter({ variant = "dark" }: LegacyFooterProps) {
         <section className="footer-column">
           <h3>PRECISA DE AJUDA?</h3>
           <a href="tel:+5511934618004">Fale conosco pelo telefone (11) 93461-8004</a>
-          <a href="https://wa.me/5511918596632?text=Ola%21%20Preciso%20de%20ajuda%20com%20meu%20pedido%20ou%20produto%20da%20Tsebi.">
-            Fale conosco pelo WhatsApp
-          </a>
-          <a href="mailto:contato@tsebi.com.br">Contato@tsebi.com.br</a>
-          <a href="https://www.google.com/maps/place/S%C3%A3o+Paulo+-+SP" target="_blank" rel="noopener noreferrer">
-            São Paulo/SP
-          </a>
           <Link href="/faq">FAQ</Link>
           <Link href="/">Mapa do site</Link>
         </section>
@@ -103,17 +96,11 @@ export function LegacyFooter({ variant = "dark" }: LegacyFooterProps) {
           <Link href="/nossa-historia">A Tsebi</Link>
           <Link href="/processos">Processos</Link>
           <Link href="/processos">Sustentabilidade</Link>
-        </section>
-
-        <section className="footer-column">
-          <h3>TRABALHE CONOSCO</h3>
           <Link href="/loading-careers">Trabalhe conosco</Link>
-          <Link href="/carreiras">Carreiras</Link>
-          <Link href="/candidatura">Candidatura</Link>
         </section>
 
         <section className="footer-column">
-          <h3>TERMOS E condições LEGAIS</h3>
+          <h3>TERMOS E CONDIÇÕES LEGAIS</h3>
           <Link href="/aviso-legal">Aviso legal</Link>
           <Link href="/Política-privacidade">Política de Privacidade</Link>
           <Link href="/cookie-policy">Política de cookies</Link>

@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { ProductImage } from "@/components/ProductImage";
 import { Price } from "@/components/Price";
-import { buildVariantSnapshot, getProductVariantOptions } from "@/lib/cart/cartItem";
+import { buildVariantSnapshot, getProductVariantOptions, getVariantStockQty } from "@/lib/cart/cartItem";
 import { useCartStore } from "@/lib/cart/cartStore";
 import { getSmoothScrollEngine } from "@/lib/animation/smoothScrollEngine";
 import { getOrCreateAnonId, trackCommerceEvent } from "@/lib/analytics";
@@ -11,7 +11,6 @@ import type { Product } from "@/types";
 import { Drawer } from "./Drawer";
 import {
   GLOBAL_SIZES,
-  buildProductSizeModel,
 } from "./SizeModel";
 import styles from "./ProductExperience.module.css";
 
@@ -209,7 +208,6 @@ export function ProductExperience({ product, recommendations, imageBaseUrl }: Pr
   const clearError = useCartStore((state) => state.clearError);
   const { sizes, colors } = useMemo(() => getProductVariantOptions(product), [product]);
   const galleryImages = useMemo(() => buildGalleryImages(product), [product]);
-  const sizeModel = useMemo(() => buildProductSizeModel(product), [product]);
   const tailoredProducts = useMemo(
     () =>
       [...recommendations]
@@ -234,6 +232,33 @@ export function ProductExperience({ product, recommendations, imageBaseUrl }: Pr
   const [showStickyBar, setShowStickyBar] = useState(false);
 
   const canBuy = sizes.length === 0 || Boolean(selectedSize);
+  const drawerSizes = useMemo(() => (sizes.length > 0 ? sizes : [...GLOBAL_SIZES]), [sizes]);
+
+  const getDrawerStockBySize = useCallback(
+    (size: string) => {
+      const normalizedSize = String(size || "").trim();
+      if (!normalizedSize) return 0;
+      const variantEntries = Object.entries(product.variantStock || {});
+      if (variantEntries.length === 0) return Math.max(0, Number(product.stock || 0));
+
+      const selectedColorStock = getVariantStockQty(product, {
+        color: selectedColor || null,
+        size: normalizedSize,
+      });
+      if (selectedColorStock > 0) return selectedColorStock;
+
+      return variantEntries.reduce((sum, [rawKey, rawQty]) => {
+        const key = String(rawKey || "").trim();
+        if (!key) return sum;
+        const parts = key.includes("__") ? key.split("__") : key.includes("|") ? key.split("|") : [];
+        if (parts.length !== 2) return sum;
+        const variantSize = String(parts[1] || "").trim().toLowerCase();
+        if (variantSize !== normalizedSize.toLowerCase()) return sum;
+        return sum + Math.max(0, Number(rawQty || 0));
+      }, 0);
+    },
+    [product, selectedColor]
+  );
 
   useEffect(() => {
     void trackCommerceEvent({
@@ -677,8 +702,8 @@ export function ProductExperience({ product, recommendations, imageBaseUrl }: Pr
       >
         <p className={styles.drawerIntro}>Sistema global. Selecione seu tamanho:</p>
         <div className={styles.drawerSizeGrid}>
-          {GLOBAL_SIZES.map((size) => {
-            const stock = Number(sizeModel.sizes[size] || 0);
+          {drawerSizes.map((size) => {
+            const stock = getDrawerStockBySize(size);
             const disabled = stock <= 0;
             const isSelected = selectedSize === size;
             return (
