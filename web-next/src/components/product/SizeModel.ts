@@ -121,14 +121,26 @@ function closestAvailableSize(model: ProductSizeModel, size: GlobalSize): Global
 
 export function buildProductSizeModel(product: Product): ProductSizeModel {
   const baseStock: ProductSizeStock = { XS: 0, S: 0, M: 0, L: 0, XL: 0, XXL: 0 };
+  const variantEntries = Object.entries(product.variantStock || {});
   for (const rawSize of Array.isArray(product.sizes) ? product.sizes : []) {
     const size = normalizeSize(rawSize);
     if (!size) continue;
-    const variantStockKey = Object.keys(product.variantStock || {}).find((key) =>
-      key.toUpperCase().includes(`SIZE:${size}`)
-    );
-    const stockFromVariant = variantStockKey ? Number(product.variantStock[variantStockKey] || 0) : Number(product.stock || 0);
-    baseStock[size] = Math.max(baseStock[size], stockFromVariant);
+    const stockFromVariant = variantEntries.reduce((sum, [key, qty]) => {
+      const canonicalKey = String(key || "").trim();
+      if (!canonicalKey) return sum;
+      const parts = canonicalKey.includes("__")
+        ? canonicalKey.split("__")
+        : canonicalKey.includes("|")
+          ? canonicalKey.split("|")
+          : [];
+      if (parts.length !== 2) return sum;
+      const variantSize = String(parts[1] || "").trim().toUpperCase();
+      if (variantSize !== size) return sum;
+      return sum + Math.max(0, Number(qty || 0));
+    }, 0);
+    const fallbackStock = Math.max(0, Number(product.stock || 0));
+    const resolvedStock = stockFromVariant > 0 ? stockFromVariant : fallbackStock;
+    baseStock[size] = Math.max(baseStock[size], resolvedStock);
   }
 
   const fallbackByCategory: ProductMeasurementProfile =

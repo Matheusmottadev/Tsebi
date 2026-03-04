@@ -1,9 +1,28 @@
 const fs = require("node:fs/promises");
 const path = require("node:path");
 const dotenv = require("dotenv");
-const { getPool } = require("../server/lib/db");
+const { Pool } = require("pg");
 
 dotenv.config();
+
+function getDatabaseUrl() {
+  return String(process.env.DATABASE_URL || "").trim();
+}
+
+function getPool() {
+  const connectionString = getDatabaseUrl();
+  if (!connectionString) {
+    throw new Error("DATABASE_URL is required. Configure PostgreSQL before running migrations.");
+  }
+
+  return new Pool({
+    connectionString,
+    ssl:
+      process.env.PGSSLMODE === "require" || process.env.NODE_ENV === "production"
+        ? { rejectUnauthorized: false }
+        : false,
+  });
+}
 
 async function runMigrations() {
   const pool = getPool();
