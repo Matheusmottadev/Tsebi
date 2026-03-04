@@ -1,4 +1,4 @@
-body {
+﻿body {
   background: #ffffff;
   color: #111111;
 }
@@ -29,7 +29,7 @@ body.conta-page > .home-header {
   box-shadow: none;
 }
 
-body.conta-page > .home-header .search-box-trigger {
+body.conta-page > .home-header .header-search-trigger {
   height: 44px;
 }
 
@@ -877,3 +877,4 @@ nav.conta-subnav {
     width: 100%;
   }
 }
+

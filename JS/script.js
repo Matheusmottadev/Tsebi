@@ -917,7 +917,7 @@ function initTopBar() {
 }
 
 function initSearchOverlay() {
-  const openSearch = document.getElementById("openSearch");
+  const openSearch = document.querySelector(".header-search-trigger");
   const closeSearch = document.getElementById("closeSearch");
   const searchOverlay = document.getElementById("searchOverlay");
   const searchInput = document.getElementById("searchInput");
@@ -1679,6 +1679,8 @@ function initNewsletterPopup() {
     }
   });
 }
+
+
 
 
 

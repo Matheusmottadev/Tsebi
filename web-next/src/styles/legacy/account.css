@@ -1,4 +1,4 @@
-body.account-profile-page {
+﻿body.account-profile-page {
   --account-topbar-h: 38px;
   --account-header-h: 84px;
   --account-subnav-h: 54px;
@@ -22,7 +22,7 @@ body.account-profile-page > .home-header {
   z-index: 5600;
 }
 
-body.account-profile-page > .home-header .search-box-trigger {
+body.account-profile-page > .home-header .header-search-trigger {
   height: 44px;
 }
 
@@ -544,7 +544,7 @@ body.login-page > .home-header {
   border-bottom: 1px solid #ececec !important;
 }
 
-body.login-page > .home-header .search-box-trigger {
+body.login-page > .home-header .header-search-trigger {
   height: 44px;
 }
 
@@ -1041,5 +1041,6 @@ body.login-page > .home-header .search-box-trigger {
     padding: 22px 18px;
   }
 }
+
 
 

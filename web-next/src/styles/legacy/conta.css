@@ -1,4 +1,4 @@
-body {
+﻿body {
   background: #ffffff;
   color: #111111;
 }
@@ -30,8 +30,8 @@ body.conta-page .legacy-account-root > .home-header {
   box-shadow: none;
 }
 
-body.conta-page > .home-header .search-box-trigger,
-body.conta-page .legacy-account-root > .home-header .search-box-trigger {
+body.conta-page > .home-header .header-search-trigger,
+body.conta-page .legacy-account-root > .home-header .header-search-trigger {
   height: 44px;
 }
 
@@ -960,4 +960,5 @@ nav.conta-subnav {
     content: none;
   }
 }
+
 

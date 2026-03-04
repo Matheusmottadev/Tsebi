@@ -1,4 +1,4 @@
-(function initAccountHeaderUi() {
+﻿(function initAccountHeaderUi() {
   const messages = [
     "Nova Colecao Genesis",
     "Voce merece vestir algo a sua altura.",
@@ -57,7 +57,7 @@
   const menu = document.getElementById("headerMenu");
   const openMenuBtn = document.getElementById("openHeaderMenu");
   const closeMenuBtn = document.getElementById("closeHeaderMenu");
-  const searchBtn = document.getElementById("openSearch");
+  const searchBtn = document.querySelector(".header-search-trigger");
   const cartLinks = Array.from(document.querySelectorAll('a[aria-label="Carrinho"]'));
 
   function readCartCount() {
@@ -123,3 +123,5 @@
     window.location.href = "/products";
   });
 })();
+
+

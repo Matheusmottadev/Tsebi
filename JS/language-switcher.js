@@ -277,9 +277,7 @@
     GG: "XS"
   };
 
-  const EXPLICIT_SELECTORS_EN = [
-    { selector: ".search-box-label", text: "What are you looking for?" },
-    { selector: "#searchInput", attr: "placeholder", text: "Search (blue dress, etc)" },
+  const EXPLICIT_SELECTORS_EN = [`r`n    { selector: "#searchInput", attr: "placeholder", text: "Search (blue dress, etc)" },
     { selector: "#topMessage", text: "Free shipping!" },
     { selector: "#tabFeminino", text: "Women" },
     { selector: "#tabMasculino", text: "Men" }
@@ -698,6 +696,7 @@
     setTimeout(applyLanguage, 600);
   });
 })();
+
 
 
 
