@@ -1,4 +1,4 @@
-﻿import type { MetadataRoute } from "next";
+import type { MetadataRoute } from "next";
 
 const defaultSiteUrl = "https://tsebi.com.br";
 

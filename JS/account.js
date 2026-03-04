@@ -1,4 +1,4 @@
-﻿const store = window.TsebiUserStore;
+const store = window.TsebiUserStore;
 
 const productCatalog = [
   { id: "genesis-bomber", name: "Jaqueta bomber em couro italiano com forro em seda", priceLabel: "R$ 5.900", image: "images/placeholder.jpg" },

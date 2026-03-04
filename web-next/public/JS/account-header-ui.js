@@ -1,4 +1,4 @@
-﻿(function initAccountHeaderUi() {
+(function initAccountHeaderUi() {
   const messages = [
     "Nova Colecao Genesis",
     "Voce merece vestir algo a sua altura.",

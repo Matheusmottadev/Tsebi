@@ -1,4 +1,4 @@
-﻿let productsCatalog = [];
+let productsCatalog = [];
 
 async function loadProductsCatalog() {
   try {

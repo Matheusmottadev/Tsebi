@@ -1,4 +1,4 @@
-﻿(function initAccountOrdersModule() {
+(function initAccountOrdersModule() {
   function statusLabel(status) {
     const value = String(status || '').trim().toLowerCase();
     if (value === 'paid') return 'Pago';

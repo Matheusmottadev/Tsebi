@@ -1,4 +1,4 @@
-﻿import type { Express } from "express";
+import type { Express } from "express";
 const path = require("node:path");
 const crypto = require("node:crypto");
 const express = require("express");

@@ -1,4 +1,4 @@
-﻿(function initTsebiCookieSettings() {
+(function initTsebiCookieSettings() {
   const KEY = "tsebi-cookie-preferences-v1";
   const GA_ID = "G-4GHX4VL6DZ";
   const LANG_KEY = "tsebi-site-language";

@@ -1,4 +1,4 @@
-﻿import type { Metadata } from "next";
+import type { Metadata } from "next";
 import { StudioShell } from "@/components/studio/StudioShell";
 import { readStudioSession } from "@/lib/studio/server";
 import { listNewsletterAdmin, listOrdersAdmin, listUsersAdmin, listVipAdmin, type AdminOrderSummary } from "@/services/admin";

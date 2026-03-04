@@ -1,4 +1,4 @@
-﻿(function initSmartAccountSubnavSticky() {
+(function initSmartAccountSubnavSticky() {
   const subnav = document.querySelector('.conta-subnav, .account-subnav');
   if (!subnav) return;
 

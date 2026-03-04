@@ -1,4 +1,4 @@
-﻿import type { Metadata } from "next";
+import type { Metadata } from "next";
 import { LegacyHome } from "@/components/home-legacy/LegacyHome";
 import { BodyClassName } from "@/components/BodyClassName";
 import { listProducts } from "@/services/products";

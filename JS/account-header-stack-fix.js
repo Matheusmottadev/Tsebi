@@ -1,4 +1,4 @@
-﻿(function fixAccountHeaderStack() {
+(function fixAccountHeaderStack() {
   const body = document.body;
   if (!body) return;
 

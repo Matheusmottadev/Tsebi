@@ -1,4 +1,4 @@
-﻿const messages = [
+const messages = [
   "Nova Coleção Gênesis",
   "Você merece vestir algo à sua altura.",
   "Cadastre-se para receber lançamentos",

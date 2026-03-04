@@ -1,4 +1,4 @@
-﻿import type { Metadata } from "next";
+import type { Metadata } from "next";
 import { readPublicEnv } from "@/lib/env";
 import { listProducts } from "@/services/products";
 import { CatalogBrowser } from "@/components/CatalogBrowser";

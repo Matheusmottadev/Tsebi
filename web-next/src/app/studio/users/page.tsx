@@ -1,4 +1,4 @@
-﻿import type { Metadata } from "next";
+import type { Metadata } from "next";
 import { StudioShell } from "@/components/studio/StudioShell";
 import { UsersManager } from "@/components/studio/UsersManager";
 import { readStudioSession } from "@/lib/studio/server";

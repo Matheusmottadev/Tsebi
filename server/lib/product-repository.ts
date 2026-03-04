@@ -1,4 +1,4 @@
-﻿export {};
+export {};
 type JsonRecord = Record<string, unknown>;
 
 type QueryResult<TRow extends JsonRecord> = {

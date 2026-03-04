@@ -1,4 +1,4 @@
-﻿(function initAccountExtraSections() {
+(function initAccountExtraSections() {
   const PRIVATE_CARE_KEY = 'tsebi-private-care-v1';
   const PRIVATE_PREFS_KEY = 'tsebi-private-care-prefs-v1';
   const REPAIRS_KEY = 'tsebi-repairs-v1';

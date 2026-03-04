@@ -1,4 +1,4 @@
-﻿(() => {
+(() => {
 if (window.__TSEBI_CART_BOOTED__) {
   return;
 }
