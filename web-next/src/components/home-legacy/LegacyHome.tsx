@@ -35,8 +35,6 @@ type SearchPiece = {
   href: string;
 };
 
-type CollectionMediaMode = "video" | "fallback";
-
 const TOP_MESSAGES = [
   "Nova Coleção Genesis",
   "Você merece vestir algo a sua altura.",
@@ -58,9 +56,9 @@ const SEARCH_CHIPS = [
 
 
 const SEARCH_CATEGORIES = ["Feminino", "Masculino", "Calças", "Camisas", "Blazers", "Bolsas"] as const;
-const COLLECTION_VIDEO = "https://media.tsebi.com.br/31377-386628887.mp4";
+const COLLECTION_DROP_IMAGE = "https://media.tsebi.com.br/generation-6393ea28-757e-45d6-ab49-4dfed1ba1a87.png";
 const COLLECTION_PLACEHOLDER = "/images/hero.jpg";
-const HOMEPAGE_PICTURE_IMAGE = "/images/Homepagepicture.jpg";
+const HOMEPAGE_PICTURE_IMAGE = "https://media.tsebi.com.br/generation-57e63375-48cf-4bbf-a7b9-22ce3f1b5a6a.png";
 const HOMEPAGE_PICTURE_FALLBACK = "/images/hero.jpg";
 
 const HOMEPAGE_CATEGORIES = [
@@ -222,8 +220,6 @@ export function LegacyHome({ products }: LegacyHomeProps) {
   const [hasSearchRequest, setHasSearchRequest] = useState(false);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [language, setLanguage] = useState<"pt" | "en">("pt");
-  const [collectionMediaMode, setCollectionMediaMode] = useState<CollectionMediaMode>("video");
-  const [isCollectionVideoReady, setIsCollectionVideoReady] = useState(false);
   const logoCycleTimerRef = useRef<number | null>(null);
   const leftArrowRef = useRef<HTMLButtonElement | null>(null);
   const rightArrowRef = useRef<HTMLButtonElement | null>(null);
@@ -507,19 +503,6 @@ export function LegacyHome({ products }: LegacyHomeProps) {
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [isSearchOpen]);
-
-  useEffect(() => {
-    if (collectionMediaMode !== "video") return;
-    if (isCollectionVideoReady) return;
-
-    const fallbackTimer = window.setTimeout(() => {
-      setCollectionMediaMode("fallback");
-    }, 4500);
-
-    return () => {
-      window.clearTimeout(fallbackTimer);
-    };
-  }, [collectionMediaMode, isCollectionVideoReady]);
 
   const openSearchOverlay = useCallback(() => {
     setIsMenuOpen(false);
@@ -1018,27 +1001,19 @@ export function LegacyHome({ products }: LegacyHomeProps) {
       <section className="new-drop collection-drop" aria-label="Nova Coleção em vídeo">
         <div className="new-drop-inner">
           <div className="new-drop-media">
-            {collectionMediaMode === "video" ? (
-              <video
-                className={`new-drop-video ${isCollectionVideoReady ? "is-ready" : "is-loading"}`}
-                autoPlay
-                muted
-                loop
-                playsInline
-                preload="metadata"
-                onCanPlay={() => setIsCollectionVideoReady(true)}
-                onLoadedData={() => setIsCollectionVideoReady(true)}
-                onPlaying={() => setIsCollectionVideoReady(true)}
-                onError={() => {
-                  setIsCollectionVideoReady(false);
-                  setCollectionMediaMode("fallback");
-                }}
-              >
-                <source src={COLLECTION_VIDEO} type="video/mp4" />
-              </video>
-            ) : (
-              <div className="new-drop-video-fallback" role="img" aria-label="Vídeo da nova coleção indisponível no momento" />
-            )}
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              className="new-drop-static-image"
+              src={COLLECTION_DROP_IMAGE}
+              alt="Nova Coleção em destaque"
+              loading="lazy"
+              decoding="async"
+              onError={(event) => {
+                const element = event.currentTarget;
+                element.onerror = null;
+                element.src = COLLECTION_PLACEHOLDER;
+              }}
+            />
           </div>
           <h2>Coleção Alicerce</h2>
           <Link className="new-drop-cta" href="/novidades">

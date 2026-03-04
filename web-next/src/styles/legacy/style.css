@@ -2211,6 +2211,16 @@ body.no-scroll .top-bar{
   transform-origin: center;
 }
 
+.collection-drop .new-drop-media .new-drop-static-image{
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  box-shadow: none;
+  filter: none;
+  transform: none;
+}
+
 .new-drop-video{
   width: 100%;
   height: 100%;
