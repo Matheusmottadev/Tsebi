@@ -821,7 +821,7 @@ export function LegacyHome({ products }: LegacyHomeProps) {
 
         <nav className="header-menu-nav">
           <div className="menu-group">
-            <Link className="menu-group-title" href="/lancamento" onClick={() => setIsMenuOpen(false)}>
+            <Link className="menu-group-title" href="/novidades" onClick={() => setIsMenuOpen(false)}>
               Coleção Genesis
             </Link>
           </div>
@@ -863,7 +863,7 @@ export function LegacyHome({ products }: LegacyHomeProps) {
               <div className="flyout-col">
                 <p className="flyout-title">Novidades</p>
                 <Link href="/products?category=feminino" onClick={() => setIsMenuOpen(false)}>lançamentos</Link>
-                <Link href="/lancamento" onClick={() => setIsMenuOpen(false)}>Coleção Genesis</Link>
+                <Link href="/novidades" onClick={() => setIsMenuOpen(false)}>Coleção Genesis</Link>
                 <a href="/novidades" onClick={handleMenuSearchShortcut}>
                   Escolhas da curadoria
                 </a>
@@ -1139,6 +1139,7 @@ export function LegacyHome({ products }: LegacyHomeProps) {
     </div>
   );
 }
+
 
 
 

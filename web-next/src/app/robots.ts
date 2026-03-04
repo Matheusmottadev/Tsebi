@@ -1,4 +1,4 @@
-import type { MetadataRoute } from "next";
+﻿import type { MetadataRoute } from "next";
 
 const defaultSiteUrl = "https://tsebi.com.br";
 
@@ -22,7 +22,7 @@ export default function robots(): MetadataRoute.Robots {
           "/",
           "/products",
           "/product/",
-          "/lancamento",
+          "/novidades",
           "/nossa-historia",
           "/processos",
           "/faq",
@@ -37,3 +37,4 @@ export default function robots(): MetadataRoute.Robots {
     host: siteUrl,
   };
 }
+

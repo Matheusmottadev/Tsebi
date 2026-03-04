@@ -1,4 +1,4 @@
-import path from "node:path";
+﻿import path from "node:path";
 import { readFile } from "node:fs/promises";
 import type { Metadata } from "next";
 import Script from "next/script";
@@ -39,7 +39,7 @@ function rewriteLegacyAccountUrls(markup: string): string {
     .replace(/<script\b[\s\S]*?<\/script>/gi, "")
     .replace(/href="index\.html"/g, 'href="/"')
     .replace(/href="conta\.html"/g, 'href="/account"')
-    .replace(/href="lancamento\.html"/g, 'href="/lancamento"')
+    .replace(/href="lancamento\.html"/g, 'href="/novidades"')
     .replace(/href="nossa-historia\.html"/g, 'href="/nossa-historia"')
     .replace(/href="processos\.html"/g, 'href="/processos"')
     .replace(/href="faq\.html"/g, 'href="/faq"')
@@ -128,3 +128,4 @@ export default async function AccountPage() {
     </>
   );
 }
+

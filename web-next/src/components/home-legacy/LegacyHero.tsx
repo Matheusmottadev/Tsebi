@@ -47,12 +47,13 @@ export function LegacyHero() {
 
       <div className="hero-text">
         <h2>Coleção Genesis</h2>
-        <Link className="hero-cta-btn" href="/lancamento">
+        <Link className="hero-cta-btn" href="/novidades">
           EM BREVE
         </Link>
       </div>
     </section>
   );
 }
+
 
 
