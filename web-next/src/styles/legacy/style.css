@@ -2153,7 +2153,7 @@ body.no-scroll .top-bar{
 .new-drop h2{
   font-family: "Playfair Display", serif;
   font-optical-sizing: auto;
-  color: #000;
+  color: #fff;
   font-size: 42px;
   font-weight: 700;
   letter-spacing: .8px;
@@ -2169,9 +2169,9 @@ body.no-scroll .top-bar{
   font-family: "Playfair Display", serif;
   font-optical-sizing: auto;
   display: inline-block;
-  color: #000;
+  color: #fff;
   text-decoration: none;
-  border-bottom: 2px solid rgba(0,0,0,.9);
+  border-bottom: 2px solid rgba(255,255,255,.9);
   padding-bottom: 2px;
   font-size: 16px;
   font-weight: 700;
