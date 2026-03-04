@@ -149,6 +149,7 @@ export default function RootLayout({
   return (
     <html lang="pt-BR">
       <head>
+        <link rel="preload" as="video" href="/videos/legacy/hero.mp4" type="video/mp4" />
         <MetaPixelBase />
       </head>
       <body className={`${montserrat.variable} ${playfairDisplay.variable}`}>

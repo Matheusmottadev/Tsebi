@@ -1,4 +1,4 @@
-﻿* {
+* {
   margin: 0;
   padding: 0;
   box-sizing: border-box;
@@ -655,7 +655,7 @@ body.menu-open {
   height: 100%;
   object-fit: cover;
   opacity: 0;
-  transition: opacity 0.22s ease;
+  transition: opacity 0.1s linear;
 }
 
 .hero-video.is-ready {

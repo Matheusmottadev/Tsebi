@@ -1,4 +1,4 @@
-﻿.filters {
+.filters {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 120px;
   gap: 8px;
