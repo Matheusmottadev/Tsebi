@@ -1,7 +1,8 @@
-import type { Metadata } from "next";
+﻿import type { Metadata } from "next";
 import { StudioShell } from "@/components/studio/StudioShell";
+import { UsersManager } from "@/components/studio/UsersManager";
 import { readStudioSession } from "@/lib/studio/server";
-import styles from "./page.module.css";
+import { listUsersAdmin } from "@/services/admin";
 
 export const metadata: Metadata = {
   title: "Studio",
@@ -14,13 +15,14 @@ export const metadata: Metadata = {
 
 export default async function StudioPage() {
   const session = await readStudioSession("/studio");
+  const users = await listUsersAdmin(
+    { page: 1, pageSize: 100 },
+    { cookie: session.cookie, cache: "no-store" }
+  );
 
   return (
-    <StudioShell admin={session.admin} title="Studio" subtitle="Selecione uma categoria no header para começar.">
-      <section className={styles.welcomeCard}>
-        <h3>Painel pronto</h3>
-        <p>Backend mantido. Agora podemos evoluir cada categoria com as funções que você quiser.</p>
-      </section>
+    <StudioShell admin={session.admin} title="Usuarios" subtitle="Gerencie contas, acessos e dados dos clientes.">
+      <UsersManager users={users.users || []} csrfToken={session.csrfToken} />
     </StudioShell>
   );
 }
