@@ -63,7 +63,15 @@
   padding: 0 10px;
   font-size: 14px;
   background: #0d0d0d;
-  color: var(--studio-text);
+  color: #ffffff;
+  -webkit-text-fill-color: #ffffff;
+  caret-color: #ffffff;
+}
+
+.field input:focus {
+  outline: 0;
+  border-color: #ffffff;
+  box-shadow: 0 0 0 1px #ffffff;
 }
 
 .submit {
