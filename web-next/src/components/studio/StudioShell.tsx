@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -17,7 +17,8 @@ export function StudioShell({ admin, title, subtitle, children }: StudioShellPro
   const pathname = usePathname();
 
   const tabs = [
-    { href: "/studio", label: "Usuários" },
+    { href: "/studio", label: "Inicio" },
+    { href: "/studio/users", label: "Usuarios" },
     { href: "/studio/orders", label: "Pedidos" },
     { href: "/studio/products", label: "Produtos" },
     { href: "/studio/vip", label: "Lista VIP" },
@@ -40,10 +41,9 @@ export function StudioShell({ admin, title, subtitle, children }: StudioShellPro
           <h1>Studio Tsebi</h1>
         </div>
 
-        <nav className={styles.tabs} aria-label="Studio seções">
+        <nav className={styles.tabs} aria-label="Studio secoes">
           {tabs.map((tab) => {
-            const isActive =
-              tab.href === "/studio" ? pathname === "/studio" : pathname === tab.href || pathname.startsWith(`${tab.href}/`);
+            const isActive = pathname === tab.href || (tab.href !== "/studio" && pathname.startsWith(`${tab.href}/`));
             return (
               <Link key={tab.href} href={tab.href} className={`${styles.tab} ${isActive ? styles.tabActive : ""}`}>
                 {tab.label}
