@@ -1056,18 +1056,22 @@ body.menu-open {
   stroke-linejoin: round;
 }
 
-/* ===== SEARCH OVERLAY (Balmain-style) ===== */
+/* ===== SEARCH OVERLAY (legacy -> slide-up) ===== */
 .search-overlay{
   position: fixed;
   inset: 0;
-  background: #fff;
   z-index: 9999;
-  display: none;
+  display: block;
+  pointer-events: none;
+  background: rgba(0, 0, 0, 0.42);
+  opacity: 0;
+  transition: opacity 360ms cubic-bezier(0.22, 1, 0.36, 1);
   overflow: hidden;
 }
 
 .search-overlay.is-open{
-  display: block;
+  pointer-events: auto;
+  opacity: 1;
 }
 
 body.no-scroll{
@@ -1080,14 +1084,16 @@ html.no-scroll{
 
 .search-close{
   position: fixed;
-  top: 26px;
-  right: 30px;
+  top: 20px;
+  right: 24px;
   border: none;
   background: transparent;
-  font-size: 28px;
+  font-size: 38px;
+  font-weight: 300;
   cursor: pointer;
   line-height: 1;
   color: #111;
+  z-index: 10001;
 }
 
 .newsletter-popup-close,
@@ -1097,14 +1103,22 @@ html.no-scroll{
   color: #111;
 }
 
-/* painel central com rolagem */
+/* painel full-screen com slide-up */
 .search-panel{
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 110px 40px 60px;
+  width: 100%;
+  max-width: none;
+  margin: 0;
+  padding: 96px 24px 34px;
   height: 100vh;
+  background: #fff;
   overflow-y: auto;
   overflow-x: hidden;
+  transform: translateY(-100%);
+  transition: transform 380ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.search-overlay.is-open .search-panel{
+  transform: translateY(0);
 }
 
 /* input grande */
@@ -1113,8 +1127,10 @@ html.no-scroll{
   align-items: center;
   gap: 14px;
   border: 1px solid #111;
-  border-radius: 6px;
-  padding: 16px 18px;
+  border-radius: 999px;
+  padding: 14px 20px;
+  max-width: 1180px;
+  margin: 0 auto;
 }
 
 .search-field-icon{
@@ -1133,13 +1149,17 @@ html.no-scroll{
 
 /* sections */
 .search-section{
-  margin-top: 55px;
+  margin-top: 26px;
+  max-width: 1180px;
+  margin-left: auto;
+  margin-right: auto;
 }
 
 .search-section h3{
-  font-size: 14px;
-  letter-spacing: 1px;
-  margin-bottom: 18px;
+  font-size: 13px;
+  letter-spacing: 1.4px;
+  margin-bottom: 20px;
+  font-weight: 500;
 }
 
 /* chips */
@@ -1156,7 +1176,7 @@ html.no-scroll{
   font-size: 12px;
   letter-spacing: 1px;
   cursor: pointer;
-  border-radius: 6px;
+  border-radius: 999px;
 }
 
 /* top grid */
@@ -4719,7 +4739,7 @@ body:not(.home-page) .home-header .logo-center-image {
 
 
 
-.header-search-trigger{width:38px;height:38px;border:1px solid #111;background:#fff;display:inline-flex;align-items:center;justify-content:center;padding:0;cursor:pointer;color:#111;}
+.header-search-trigger{width:38px;height:38px;border:none;background:transparent;display:inline-flex;align-items:center;justify-content:center;padding:0;cursor:pointer;color:#111;}
 .header-search-trigger svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round;}
 
 
