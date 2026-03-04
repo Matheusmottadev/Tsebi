@@ -1160,7 +1160,7 @@ export function LegacyHome({ products }: LegacyHomeProps) {
         </div>
       </section>
 
-      <LegacyFooter />
+      <LegacyFooter language={language} onLanguageChange={setLanguage} />
     </div>
   );
 }

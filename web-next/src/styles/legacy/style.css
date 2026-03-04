@@ -4925,10 +4925,24 @@ body.newsletter-popup-open{
   -webkit-tap-highlight-color: transparent;
 }
 
+.site-footer .site-language-switcher{
+  display: none;
+}
+
 .home-header .site-language-switcher .lang-btn,
 .cart-simple-header .site-language-switcher .lang-btn,
 .account-min-header .site-language-switcher .lang-btn{
   font-size: 11px;
+}
+
+@media (max-width: 760px){
+  .home-header .site-language-switcher{
+    display: none;
+  }
+
+  .site-footer .site-language-switcher{
+    display: inline-flex;
+  }
 }
 
 /* ===== NEW CATEGORY SECTION (LV-style) ===== */

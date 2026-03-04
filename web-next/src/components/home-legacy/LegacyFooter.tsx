@@ -2,9 +2,11 @@
 
 type LegacyFooterProps = {
   variant?: "dark" | "light";
+  language?: "pt" | "en";
+  onLanguageChange?: (language: "pt" | "en") => void;
 };
 
-export function LegacyFooter({ variant = "dark" }: LegacyFooterProps) {
+export function LegacyFooter({ variant = "dark", language = "pt", onLanguageChange }: LegacyFooterProps) {
   const footerClassName = variant === "light" ? "site-footer site-footer--light" : "site-footer";
   return (
     <footer className={footerClassName}>
@@ -108,6 +110,25 @@ export function LegacyFooter({ variant = "dark" }: LegacyFooterProps) {
           <Link href="/aviso-legal">Termos de venda</Link>
         </section>
       </div>
+      {onLanguageChange ? (
+        <div className="site-language-switcher" aria-label="Language switcher">
+          <button
+            type="button"
+            className={`lang-btn ${language === "pt" ? "is-active" : ""}`}
+            onClick={() => onLanguageChange("pt")}
+          >
+            PT
+          </button>
+          <span className="lang-divider">|</span>
+          <button
+            type="button"
+            className={`lang-btn ${language === "en" ? "is-active" : ""}`}
+            onClick={() => onLanguageChange("en")}
+          >
+            EN
+          </button>
+        </div>
+      ) : null}
       <p className="footer-cnpj">CNPJ: 65.164.000/0001-72</p>
     </footer>
   );

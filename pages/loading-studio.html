@@ -126,7 +126,7 @@
     const rawReturnTo = String(searchParams.get("returnTo") || "").trim();
     const safeReturnTo =
       rawReturnTo && !rawReturnTo.startsWith("//")
-        ? rawReturnTo
+         rawReturnTo
         : "studio-portal.html";
 
     try {
@@ -148,7 +148,7 @@
     window.setTimeout(() => {
       const nextParams = new URLSearchParams();
       nextParams.set("returnTo", safeReturnTo);
-      window.location.href = `studio-login.html?${nextParams.toString()}`;
+      window.location.href = `studio-login.html${nextParams.toString()}`;
     }, 2300);
   </script>
   <script src="JS/posthog.js"></script>
