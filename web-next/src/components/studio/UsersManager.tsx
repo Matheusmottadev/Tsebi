@@ -49,6 +49,48 @@ function normalizeDigits(value: string): string {
   return String(value || "").replace(/\D/g, "");
 }
 
+function formatCpfInput(value: string): string {
+  const digits = normalizeDigits(value).slice(0, 11);
+  const part1 = digits.slice(0, 3);
+  const part2 = digits.slice(3, 6);
+  const part3 = digits.slice(6, 9);
+  const part4 = digits.slice(9, 11);
+  if (digits.length <= 3) return part1;
+  if (digits.length <= 6) return `${part1}.${part2}`;
+  if (digits.length <= 9) return `${part1}.${part2}.${part3}`;
+  return `${part1}.${part2}.${part3}-${part4}`;
+}
+
+function formatBirthDateInput(value: string): string {
+  const digits = normalizeDigits(value).slice(0, 8);
+  const day = digits.slice(0, 2);
+  const month = digits.slice(2, 4);
+  const year = digits.slice(4, 8);
+  if (digits.length <= 2) return day;
+  if (digits.length <= 4) return `${day}/${month}`;
+  return `${day}/${month}/${year}`;
+}
+
+function toDisplayBirthDate(value: string): string {
+  const raw = String(value || "").trim();
+  const isoMatch = raw.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (isoMatch) return `${isoMatch[3]}/${isoMatch[2]}/${isoMatch[1]}`;
+  return formatBirthDateInput(raw);
+}
+
+function toApiBirthDate(value: string): string {
+  const raw = String(value || "").trim();
+  if (!raw) return "";
+  const isoMatch = raw.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (isoMatch) return raw;
+  const digits = normalizeDigits(raw);
+  if (digits.length !== 8) return "";
+  const day = digits.slice(0, 2);
+  const month = digits.slice(2, 4);
+  const year = digits.slice(4, 8);
+  return `${year}-${month}-${day}`;
+}
+
 function formatDate(value: string | null): string {
   if (!value) return "-";
   const date = new Date(value);
@@ -62,8 +104,8 @@ function buildDraft(user: AdminUserDetail): UserDraft {
     name: user.name || "",
     email: user.email || "",
     phone: user.phone || "",
-    birthDate: user.birthDate || "",
-    cpf: user.cpf || "",
+    birthDate: toDisplayBirthDate(user.birthDate || ""),
+    cpf: formatCpfInput(user.cpf || ""),
     cep: user.cep || "",
   };
 }
@@ -137,7 +179,7 @@ export function UsersManager({ users, csrfToken }: UsersManagerProps) {
           email: createData.email.trim(),
           phone: createData.phone.trim(),
           password: createData.password,
-          birthDate: createData.birthDate.trim(),
+          birthDate: toApiBirthDate(createData.birthDate),
           cpf: normalizeDigits(createData.cpf),
           cep: normalizeDigits(createData.cep),
         },
@@ -170,7 +212,9 @@ export function UsersManager({ users, csrfToken }: UsersManagerProps) {
     if (draft.name.trim() !== selectedUser.name) patch.name = draft.name.trim();
     if (draft.email.trim() !== selectedUser.email) patch.email = draft.email.trim();
     if (draft.phone.trim() !== (selectedUser.phone || "")) patch.phone = draft.phone.trim();
-    if (draft.birthDate.trim() !== (selectedUser.birthDate || "")) patch.birthDate = draft.birthDate.trim();
+    const draftBirthDateApi = toApiBirthDate(draft.birthDate);
+    const selectedBirthDateApi = toApiBirthDate(selectedUser.birthDate || "");
+    if (draftBirthDateApi !== selectedBirthDateApi) patch.birthDate = draftBirthDateApi;
 
     const draftCpf = normalizeDigits(draft.cpf);
     const currentCpf = normalizeDigits(selectedUser.cpf || "");
@@ -266,8 +310,16 @@ export function UsersManager({ users, csrfToken }: UsersManagerProps) {
           <input value={createData.email} onChange={(event) => setCreateData((c) => ({ ...c, email: event.target.value }))} placeholder="Email" type="email" />
           <input value={createData.phone} onChange={(event) => setCreateData((c) => ({ ...c, phone: event.target.value }))} placeholder="Telefone" />
           <input value={createData.password} onChange={(event) => setCreateData((c) => ({ ...c, password: event.target.value }))} placeholder="Senha" type="password" />
-          <input value={createData.birthDate} onChange={(event) => setCreateData((c) => ({ ...c, birthDate: event.target.value }))} placeholder="Nascimento AAAA-MM-DD" />
-          <input value={createData.cpf} onChange={(event) => setCreateData((c) => ({ ...c, cpf: event.target.value }))} placeholder="CPF" />
+          <input
+            value={createData.birthDate}
+            onChange={(event) => setCreateData((c) => ({ ...c, birthDate: formatBirthDateInput(event.target.value) }))}
+            placeholder="Nascimento DD/MM/AAAA"
+          />
+          <input
+            value={createData.cpf}
+            onChange={(event) => setCreateData((c) => ({ ...c, cpf: formatCpfInput(event.target.value) }))}
+            placeholder="CPF"
+          />
           <input value={createData.cep} onChange={(event) => setCreateData((c) => ({ ...c, cep: event.target.value }))} placeholder="CEP" />
         </div>
         <button
@@ -388,11 +440,19 @@ export function UsersManager({ users, csrfToken }: UsersManagerProps) {
             </label>
             <label>
               <span>Nascimento</span>
-              <input disabled={!editMode} value={draft.birthDate} onChange={(event) => setDraft((c) => (c ? { ...c, birthDate: event.target.value } : c))} />
+              <input
+                disabled={!editMode}
+                value={draft.birthDate}
+                onChange={(event) => setDraft((c) => (c ? { ...c, birthDate: formatBirthDateInput(event.target.value) } : c))}
+              />
             </label>
             <label>
               <span>CPF</span>
-              <input disabled={!editMode} value={draft.cpf} onChange={(event) => setDraft((c) => (c ? { ...c, cpf: event.target.value } : c))} />
+              <input
+                disabled={!editMode}
+                value={draft.cpf}
+                onChange={(event) => setDraft((c) => (c ? { ...c, cpf: formatCpfInput(event.target.value) } : c))}
+              />
             </label>
             <label>
               <span>CEP</span>

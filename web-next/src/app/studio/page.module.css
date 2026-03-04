@@ -19,6 +19,13 @@
   font-size: 20px;
 }
 
+.cardHeader {
+  background: #000000;
+  border: 1px solid #242424;
+  border-radius: 10px;
+  padding: 10px 12px;
+}
+
 .statsList {
   margin: 12px 0 0;
   padding: 0;
