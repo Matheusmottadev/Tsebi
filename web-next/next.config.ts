@@ -1,4 +1,4 @@
-import path from "node:path";
+﻿import path from "node:path";
 import type { NextConfig } from "next";
 
 const projectRoot = path.resolve(__dirname);
@@ -19,7 +19,7 @@ function readApiProxyTarget(): string | null {
 const migratedHtmlRedirects = [
   { source: "/index.html", destination: "/" },
   { source: "/home-legacy.html", destination: "/" },
-  { source: "/cart.html", destination: "/cart" },
+  { source: "/cart.html", destination: "/cart" },`n  { source: "/legacy/pages/cart.html", destination: "/cart" },
   { source: "/login.html", destination: "/login" },
   { source: "/produto.html", destination: "/produto" },
   { source: "/conta.html", destination: "/account" },
@@ -119,3 +119,4 @@ const nextConfig: NextConfig = {
 };
 
 export default nextConfig;
+

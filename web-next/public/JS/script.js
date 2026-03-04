@@ -1375,7 +1375,7 @@ function initCartEntryPoints() {
   const legacyCartKeys = ["tsebi-cart", "cart"];
   const returnKey = "tsebi-last-shopping-url";
   const currentPath = window.location.pathname.toLowerCase();
-  const isCartPage = currentPath.endsWith("/cart.html") || currentPath.endsWith("cart.html");
+  const isCartPage = currentPath.endsWith("/cart") || currentPath.endsWith("/cart");
 
   function getCurrentRelativeUrl() {
     return `${window.location.pathname}${window.location.search}${window.location.hash}`;
@@ -1431,14 +1431,14 @@ function initCartEntryPoints() {
   cartLinks.forEach((link) => {
     if (!isCartPage) {
       const returnTo = getCurrentRelativeUrl();
-      link.href = `cart.html?returnTo=${encodeURIComponent(returnTo)}`;
+      link.href = `/cart?returnTo=${encodeURIComponent(returnTo)}`;
       link.addEventListener("click", () => {
         try {
           sessionStorage.setItem(returnKey, returnTo);
         } catch {}
       });
     } else {
-      link.href = "cart.html";
+      link.href = "/cart";
     }
     link.classList.add("cart-link");
     if (totalItems > 0) {
@@ -1679,6 +1679,7 @@ function initNewsletterPopup() {
     }
   });
 }
+
 
 
 

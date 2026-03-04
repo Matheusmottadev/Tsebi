@@ -275,7 +275,7 @@ function syncProductHeaderCartLink() {
   const totalItems = readCart().reduce((sum, item) => sum + Math.max(1, Number(item.qty) || 1), 0);
   cartLinks.forEach((link) => {
     const returnTo = `${window.location.pathname}${window.location.search}${window.location.hash}`;
-    link.href = `cart.html?returnTo=${encodeURIComponent(returnTo)}`;
+    link.href = `/cart?returnTo=${encodeURIComponent(returnTo)}`;
     link.classList.add("cart-link");
     if (!link.dataset.returnBound) {
       link.addEventListener("click", () => {
@@ -295,9 +295,9 @@ function syncProductHeaderCartLink() {
 
 function initProductCartLinksReturnTo() {
   const returnTo = `${window.location.pathname}${window.location.search}${window.location.hash}`;
-  const links = Array.from(document.querySelectorAll('a[href="cart.html"]'));
+  const links = Array.from(document.querySelectorAll('a[href="/cart"]'));
   links.forEach((link) => {
-    link.href = `cart.html?returnTo=${encodeURIComponent(returnTo)}`;
+    link.href = `/cart?returnTo=${encodeURIComponent(returnTo)}`;
     if (link.dataset.returnBound) return;
     link.addEventListener("click", () => {
       try {
@@ -1186,5 +1186,6 @@ if (!product) {
   if (productView) productView.hidden = false;
 }
 }
+
 
 

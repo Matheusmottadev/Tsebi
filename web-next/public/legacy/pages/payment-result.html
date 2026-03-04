@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8" />
@@ -75,9 +75,9 @@
 <body class="payment-result-body">
   <header class="cart-simple-header payment-result-header">
     <a class="cart-simple-logo" href="/index.html">TSEBI</a>
-    <nav class="cart-simple-actions" aria-label="Ações da página">
+    <nav class="cart-simple-actions" aria-label="AÃ§Ãµes da pÃ¡gina">
       <a href="/login.html" aria-label="Conta">Conta</a>
-      <a href="/cart.html" aria-label="Carrinho">Carrinho</a>
+      <a href="/cart" aria-label="Carrinho">Carrinho</a>
     </nav>
   </header>
 
@@ -94,8 +94,8 @@
         <p class="payment-result-message" id="resultMessage"></p>
 
         <div class="payment-result-summary" id="resultSummary" hidden>
-          <p><strong>Número do pedido:</strong> <span id="resultOrderId">-</span></p>
-          <p><strong>Código de rastreio:</strong> <span id="resultOrderNumber">-</span></p>
+          <p><strong>NÃºmero do pedido:</strong> <span id="resultOrderId">-</span></p>
+          <p><strong>CÃ³digo de rastreio:</strong> <span id="resultOrderNumber">-</span></p>
           <p><strong>E-mail:</strong> <span id="resultOrderEmail">-</span></p>
           <p><strong>Total:</strong> <span id="resultOrderTotal">-</span></p>
           <ul id="resultItems"></ul>
@@ -104,8 +104,8 @@
         <section class="payment-activation" id="paymentActivation" hidden>
           <h2>Cadastro aprovado automaticamente</h2>
           <p>
-            Seu cadastro foi aprovado automaticamente para facilitar suas próximas compras.
-            Se quiser acompanhar pedidos na área logada, crie uma senha agora.
+            Seu cadastro foi aprovado automaticamente para facilitar suas prÃ³ximas compras.
+            Se quiser acompanhar pedidos na Ã¡rea logada, crie uma senha agora.
           </p>
           <form id="activationForm" class="payment-activation-form" novalidate>
             <label>
@@ -125,15 +125,15 @@
         </section>
 
         <p class="payment-result-hint" id="supportHint" hidden>
-          Ainda não recebemos a confirmação final. Se o status não mudar, fale com nosso suporte.
+          Ainda nÃ£o recebemos a confirmaÃ§Ã£o final. Se o status nÃ£o mudar, fale com nosso suporte.
         </p>
 
         <div class="payment-result-actions">
           <button class="payment-refresh-btn" id="refreshStatusButton" type="button">Atualizar status</button>
           <button class="payment-action-link" id="trackGuestButton" type="button">Acompanhar pedido</button>
           <a class="payment-action-link" id="ordersButton" href="/conta.html#card-orders">Ver meus pedidos</a>
-          <a class="payment-action-link" id="storeButton" href="/index.html">Voltar à loja</a>
-          <a class="payment-action-link" id="retryButton" href="/cart.html">Tentar novamente</a>
+          <a class="payment-action-link" id="storeButton" href="/index.html">Voltar Ã  loja</a>
+          <a class="payment-action-link" id="retryButton" href="/cart">Tentar novamente</a>
           <a class="payment-action-link" id="whatsappButton" href="https://wa.me/5511918596632" target="_blank" rel="noopener noreferrer">Falar no WhatsApp</a>
         </div>
       </div>
@@ -144,3 +144,4 @@
   <script src="/JS/posthog.js"></script>
 </body>
 </html>
+
