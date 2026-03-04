@@ -121,6 +121,7 @@ export interface GoogleLoginPayload {
 
 export interface FavoritesResponse {
   favorites: string[];
+  csrfToken?: string;
 }
 
 export type LoginResponse = AuthUserResponse | AuthCodeChallengeResponse;

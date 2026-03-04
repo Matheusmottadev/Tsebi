@@ -1677,8 +1677,10 @@ myRouter.delete("/addresses/:addressId", requireAuth, async (req: any, res: any)
 myRouter.get("/favorites", requireAuth, async (req: any, res: any) => {
   const row = await getAccountDataRow(req.session.userId);
   if (!row) return res.status(404).json({ error: "USER_NOT_FOUND" });
+  const csrfToken = String(req.session?.userCsrfToken || "").trim();
   return res.json({
-    favorites: normalizeFavoriteIds(row.account_favorites)
+    favorites: normalizeFavoriteIds(row.account_favorites),
+    csrfToken: csrfToken || undefined
   });
 });
 
@@ -1700,7 +1702,11 @@ myRouter.put("/favorites", requireAuth, async (req: any, res: any) => {
   );
 
   if (!updated.rowCount) return res.status(404).json({ error: "USER_NOT_FOUND" });
-  return res.json({ favorites });
+  const csrfToken = String(req.session?.userCsrfToken || "").trim();
+  return res.json({
+    favorites,
+    csrfToken: csrfToken || undefined
+  });
 });
 
 myRouter.get("/preferences", requireAuth, async (req: any, res: any) => {

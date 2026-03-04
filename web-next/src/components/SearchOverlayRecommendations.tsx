@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { getOrCreateAnonId, trackCommerceEvent } from "@/lib/analytics";
+import { HttpError } from "@/lib/http";
 import { getFavorites, updateFavorites } from "@/services/auth";
 import { getPersonalizedProducts, listProducts } from "@/services/products";
 import type { Product } from "@/types";
@@ -68,6 +69,7 @@ export function SearchOverlayRecommendations({
   const [resolvedTitle, setResolvedTitle] = useState(title);
   const [favoriteSkus, setFavoriteSkus] = useState<Record<string, boolean>>({});
   const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [favoritesCsrfToken, setFavoritesCsrfToken] = useState("");
   const [guestFavoriteNotice, setGuestFavoriteNotice] = useState("");
   const [isToastHiding, setIsToastHiding] = useState(false);
   const toastHideTimerRef = useRef<number | null>(null);
@@ -82,6 +84,7 @@ export function SearchOverlayRecommendations({
   useEffect(() => {
     if (!isOpen || !isLoggedIn) {
       setFavoriteSkus({});
+      setFavoritesCsrfToken("");
       return;
     }
 
@@ -98,8 +101,12 @@ export function SearchOverlayRecommendations({
           nextMap[key] = true;
         });
         setFavoriteSkus(nextMap);
+        setFavoritesCsrfToken(String(response.csrfToken || "").trim());
       } catch {
-        if (!cancelled) setFavoriteSkus({});
+        if (!cancelled) {
+          setFavoriteSkus({});
+          setFavoritesCsrfToken("");
+        }
       } finally {
         if (!cancelled) setFavoritesLoading(false);
       }
@@ -272,7 +279,13 @@ export function SearchOverlayRecommendations({
 
                     try {
                       const nextFavorites = Object.keys(nextMap).filter((sku) => Boolean(nextMap[sku]));
-                      const response = await updateFavorites(nextFavorites);
+                      const response = await updateFavorites(nextFavorites, {
+                        headers: favoritesCsrfToken
+                          ? {
+                              "x-csrf-token": favoritesCsrfToken,
+                            }
+                          : undefined,
+                      });
                       const confirmedMap: Record<string, boolean> = {};
                       (Array.isArray(response.favorites) ? response.favorites : []).forEach((sku) => {
                         const key = String(sku || "").trim();
@@ -280,6 +293,7 @@ export function SearchOverlayRecommendations({
                         confirmedMap[key] = true;
                       });
                       setFavoriteSkus(confirmedMap);
+                      setFavoritesCsrfToken(String(response.csrfToken || favoritesCsrfToken || "").trim());
 
                       const anonId = getOrCreateAnonId();
                       const userId = String(window.localStorage.getItem("tsebi.user_id") || "").trim();
@@ -295,8 +309,11 @@ export function SearchOverlayRecommendations({
                         query: String(query || "").trim(),
                         attributes: { active: nextActive },
                       });
-                    } catch {
+                    } catch (error) {
                       setFavoriteSkus(favoriteSkus);
+                      if (error instanceof HttpError && error.status === 403) {
+                        setGuestFavoriteNotice("Sua sessão foi atualizada. Recarregue a página e tente novamente.");
+                      }
                     }
                   }}
                 >
