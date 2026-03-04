@@ -599,7 +599,7 @@ export function ProductExperience({ product, recommendations, imageBaseUrl }: Pr
       </div>
       {stickySelectionWarning ? (
         <div className={styles.stickySelectionWarning} role="status" aria-live="polite">
-          Você precisa esvolher o tamanho e cor da peça
+          Você precisa escolher o tamanho e cor da peça
         </div>
       ) : null}
       <main className={styles.main} ref={mainRef}>
