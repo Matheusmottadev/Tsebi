@@ -108,16 +108,16 @@ export const metadata: Metadata = {
   icons: {
     icon: [
       {
-        url: "/images/Gazelalogo.png?v=20260227b",
+        url: "/images/Gazelalogo-round.png?v=20260304a",
         type: "image/png",
       },
       {
-        url: "/favicon.ico?v=20260227b",
+        url: "/images/Gazelalogo-round.png?v=20260304a",
         type: "image/x-icon",
       },
     ],
-    shortcut: [{ url: "/favicon.ico?v=20260227b" }],
-    apple: [{ url: "/images/Gazelalogo.png?v=20260227b" }],
+    shortcut: [{ url: "/images/Gazelalogo-round.png?v=20260304a" }],
+    apple: [{ url: "/images/Gazelalogo-round.png?v=20260304a" }],
   },
 };
 
