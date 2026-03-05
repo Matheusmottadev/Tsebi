@@ -27,3 +27,40 @@ a {
 h1, h2, h3, h4, h5, h6, p, span, a, li, label, small, strong, b, button, input, textarea, select {
   font-weight: 400 !important;
 }
+
+body.home-legacy-page > .top-bar,
+body.home-legacy-page > .siteHeader {
+  display: none !important;
+}
+
+.home-legacy-menu-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.24);
+  border: 0;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s ease;
+  z-index: 1240;
+}
+
+.home-legacy-menu-backdrop.is-open {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.legacy-dev-badge {
+  position: absolute;
+  left: 14px;
+  bottom: 14px;
+  z-index: 3;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  padding: 4px 10px;
+  font-size: 11px;
+  letter-spacing: 0.4px;
+  color: #fff;
+  background: rgba(0, 0, 0, 0.52);
+}

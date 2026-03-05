@@ -72,9 +72,41 @@
   </header>
 
   <aside class="header-menu" id="headerMenu" aria-hidden="true">
-    <button class="header-menu-close" id="closeHeaderMenu" type="button" aria-label="Fechar menu">&times;</button>
-    <nav class="header-menu-nav" aria-label="Menu lateral"></nav>
-  </aside>
+    <div class="header-menu-actions"><button class="header-menu-close" id="closeHeaderMenu" type="button" aria-label="Fechar menu"><span class="header-menu-close-mark" aria-hidden="true">&times;</span><span class="header-menu-close-label">Fechar</span></button><button class="header-menu-search" type="button" aria-label="Pesquisar"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="M20 20l-4.2-4.2"></path></svg><span>Pesquisar</span></button></div>
+    <nav class="header-menu-nav" aria-label="Menu lateral">
+      <a href="#">Novidades</a>
+      <a href="#">Presentes</a>
+      <a href="#">Feminino</a>
+      <a href="#">Masculino</a>
+      <a href="#">Bolsas e Acessorios</a>
+      <a href="#">Seleção Tsebi</a>
+    </nav>
+    <div class="header-menu-utilities" aria-label="Utilidades do menu">
+      <a class="header-menu-utility" href="login.html">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 21a8 8 0 0 0-16 0"></path><circle cx="12" cy="8" r="4"></circle></svg>
+        <span>Entrar ou Registrar-se</span>
+      </a>
+      <a class="header-menu-utility cart-link" href="cart.html" aria-label="Carrinho">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 7h10l1 12H6L7 7z"></path><path d="M9 7V6a3 3 0 1 1 6 0v1"></path></svg>
+        <span>Carrinho</span>
+      </a>
+      <a class="header-menu-utility" href="conta.html#wishlist" data-link-key="wishlist">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.1A4 4 0 0 1 19 10c0 5.6-7 10-7 10z"></path></svg>
+        <span>Lista de desejos</span>
+      </a>
+      <a class="header-menu-utility" href="#" data-link-key="private-care-no-route" data-no-route="true">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4h4l2 5-3 2a12 12 0 0 0 5 5l2-3 5 2v4c0 1-1 2-2 2C10 21 3 14 3 6c0-1 1-2 2-2z"></path></svg>
+        <span>Marque um atendimento privativo</span>
+      </a>
+      <label class="header-menu-utility header-menu-language" aria-label="Idioma">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M3 12h18"></path><path d="M12 3a14 14 0 0 1 0 18"></path><path d="M12 3a14 14 0 0 0 0 18"></path></svg>
+        <span>Idioma</span>
+        <select aria-label="Selecionar idioma">
+          <option value="pt-br" selected>PT-BR</option>
+          <option value="en">Ingles</option>
+        </select>
+      </label>
+    </div>  </aside>
 
   <main class="faq-page">
     <section class="faq-hero">
@@ -575,6 +607,18 @@
   <script src="/JS/script.jsóv=20260224a"></script>
 </body>
 </html>
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

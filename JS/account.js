@@ -43,7 +43,7 @@ const logoutBtn = document.getElementById("accountLogoutBtn");
 const backToEmailFromLogin = document.getElementById("accountBackToEmailFromLogin");
 const backToEmailFromRegister = document.getElementById("accountBackToEmailFromRegister");
 const accountPageBack = document.getElementById("accountPageBack");
-const headerCartLink = document.querySelector('a[aria-label="Carrinho"]');
+const headerCartLinks = Array.from(document.querySelectorAll('a[aria-label="Carrinho"]'));
 
 const dataName = document.getElementById("accountDataName");
 const dataLastName = document.getElementById("accountDataLastName");
@@ -108,7 +108,7 @@ function formatCpfInput(value) {
 }
 
 function syncHeaderCartBadge() {
-  if (!headerCartLink) return;
+  if (!headerCartLinks.length) return;
   const cartKey = "tsebi-cart-v1";
   let total = 0;
   try {
@@ -119,12 +119,14 @@ function syncHeaderCartBadge() {
     }
   } catch {}
 
-  headerCartLink.classList.add("cart-link");
-  if (total > 0) {
-    headerCartLink.setAttribute("data-cart-count", String(total));
-  } else {
-    headerCartLink.removeAttribute("data-cart-count");
-  }
+  headerCartLinks.forEach((link) => {
+    link.classList.add("cart-link");
+    if (total > 0) {
+      link.setAttribute("data-cart-count", String(total));
+    } else {
+      link.removeAttribute("data-cart-count");
+    }
+  });
 }
 
 function setFeedback(message, tone = "") {

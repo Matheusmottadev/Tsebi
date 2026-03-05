@@ -1,28 +1,28 @@
-const messages = [
-  "Nova Coleção Gênesis",
-  "Você merece vestir algo à sua altura.",
-  "Cadastre-se para receber lançamentos",
-  "Exclusividade para quem valoriza o que é único.",
-  "Acesso antecipado a novas coleções.",
-  "Produção em pequena escala. Qualidade em cada detalhe."
+﻿const messages = [
+  "Nova ColeÃ§Ã£o GÃªnesis",
+  "VocÃª merece vestir algo Ã  sua altura.",
+  "Cadastre-se para receber lanÃ§amentos",
+  "Exclusividade para quem valoriza o que Ã© Ãºnico.",
+  "Acesso antecipado a novas coleÃ§Ãµes.",
+  "ProduÃ§Ã£o em pequena escala. Qualidade em cada detalhe."
 ];
 const searchTopPieces = [
   { id: "origem-skirt", href: "produto.html?id=origem-skirt", src: "images/placeholder.jpg", alt: "Sabrina charmosa", tag: "NOVO", name: "Sabrina charmosa" },
   { id: "origem-shirt", href: "produto.html?id=origem-shirt", src: "images/placeholder.jpg", alt: "Sabrina linda", tag: "NOVO", name: "Sabrina linda" },
   { id: "genesis-tailored", href: "produto.html?id=genesis-tailored", src: "images/placeholder.jpg", alt: "Sabrina maravilhosa", tag: "NOVO", name: "Sabrina maravilhosa" },
-  { id: "genesis-bomber", href: "produto.html?id=genesis-bomber", src: "images/placeholder.jpg", alt: "Sabrina incrível", tag: "NOVO", name: "Sabrina incrível" }
+  { id: "genesis-bomber", href: "produto.html?id=genesis-bomber", src: "images/placeholder.jpg", alt: "Sabrina incrÃ­vel", tag: "NOVO", name: "Sabrina incrÃ­vel" }
 ];
 const prelaunchActionCards = [
   {
     tag: "VIP",
     name: "Entrar na lista VIP",
-    description: "Receba acesso antecipado ao lançamento da Tsebi.",
+    description: "Receba acesso antecipado ao lanÃ§amento da Tsebi.",
     href: "lancamento.html#vip"
   },
   {
     tag: "EMAIL",
     name: "Novidades por e-mail",
-    description: "Seja avisado(a) quando as primeiras peças estiverem disponíveis.",
+    description: "Seja avisado(a) quando as primeiras peÃ§as estiverem disponÃ­veis.",
     href: "lancamento.html#newsletter"
   },
   {
@@ -33,8 +33,8 @@ const prelaunchActionCards = [
   },
   {
     tag: "ALICERCE",
-    name: "Coleção Alicerce em breve",
-    description: "Conheça a proposta da primeira coleção da Tsebi.",
+    name: "ColeÃ§Ã£o Alicerce em breve",
+    description: "ConheÃ§a a proposta da primeira coleÃ§Ã£o da Tsebi.",
     href: "lancamento.html#alicerce"
   }
 ];
@@ -49,19 +49,19 @@ function tSearchLabel(text) {
   const map = {
     "RESULTADOS": "RESULTS",
     "Limpar filtros": "Clear filters",
-    "Coleções em rotação contínua. Encontre a peça ideal pelo estilo e composição.": "Collections in continuous rotation. Find your ideal piece by style and composition.",
+    "ColeÃ§Ãµes em rotaÃ§Ã£o contÃ­nua. Encontre a peÃ§a ideal pelo estilo e composiÃ§Ã£o.": "Collections in continuous rotation. Find your ideal piece by style and composition.",
     "Nenhum produto encontrado para os filtros selecionados.": "No products found for the selected filters.",
-    "Coleção": "Collection",
+    "ColeÃ§Ã£o": "Collection",
     "Tamanho": "Size",
     "Cor": "Color",
     "Material": "Material",
     "Categoria": "Category",
-    "Gênero": "Gender",
+    "GÃªnero": "Gender",
     "Ordenar": "Sort",
     "Todos": "All",
-    "Relevância": "Relevance",
-    "Menor preço": "Lowest price",
-    "Maior preço": "Highest price",
+    "RelevÃ¢ncia": "Relevance",
+    "Menor preÃ§o": "Lowest price",
+    "Maior preÃ§o": "Highest price",
     "Nome A-Z": "Name A-Z",
     "Feminino": "Women",
     "Masculino": "Men",
@@ -69,24 +69,24 @@ function tSearchLabel(text) {
     "Bolsas": "Bags",
     "Vestidos": "Dresses",
     "Jaquetas": "Jackets",
-    "Calçados": "Footwear",
-    "Calças": "Trousers",
+    "CalÃ§ados": "Footwear",
+    "CalÃ§as": "Trousers",
     "Camisas": "Shirts",
     "Saias": "Skirts",
     "Casacos": "Coats",
     "Malhas": "Knitwear",
     "Blazers": "Blazers",
-    "Lã fria": "Cool wool",
-    "Lã merino": "Merino wool",
+    "LÃ£ fria": "Cool wool",
+    "LÃ£ merino": "Merino wool",
     "Crepe de seda": "Silk crepe",
     "Linho premium": "Premium linen",
-    "Nylon técnico": "Technical nylon",
+    "Nylon tÃ©cnico": "Technical nylon",
     "Couro envernizado": "Patent leather",
     "Couro natural": "Natural leather",
     "Gabardine": "Gabardine",
     "Sarja premium": "Premium twill",
-    "Algodão egípcio": "Egyptian cotton",
-    "Couro e lã": "Leather and wool",
+    "AlgodÃ£o egÃ­pcio": "Egyptian cotton",
+    "Couro e lÃ£": "Leather and wool",
     "Branco": "White",
     "Azul": "Blue",
     "Preto": "Black",
@@ -99,14 +99,14 @@ function tSearchLabel(text) {
     "Oliva": "Olive",
     "Cinza": "Gray",
     "Off white": "Off-white",
-    "Gênesis": "Genesis",
-    "PRÉ-LANÇAMENTO": "PRE-LAUNCH",
+    "GÃªnesis": "Genesis",
+    "PRÃ‰-LANÃ‡AMENTO": "PRE-LAUNCH",
     "EDITORIAL": "EDITORIAL",
-    "Estamos em pré-lançamento. Cadastre-se para acesso antecipado.": "We are in pre-launch. Join for early access.",
-    "Ainda sem peças disponíveis para compra. Lançamento em breve.": "No pieces available for purchase yet. Launching soon.",
+    "Estamos em prÃ©-lanÃ§amento. Cadastre-se para acesso antecipado.": "We are in pre-launch. Join for early access.",
+    "Ainda sem peÃ§as disponÃ­veis para compra. LanÃ§amento em breve.": "No pieces available for purchase yet. Launching soon.",
     "Entrar na lista VIP": "Join VIP list",
     "Conhecer a marca": "Discover the brand",
-    "Coleção Alicerce em breve": "Alicerce collection soon",
+    "ColeÃ§Ã£o Alicerce em breve": "Alicerce collection soon",
     "Novidades por e-mail": "Email updates"
   };
   return map[text] || text;
@@ -120,7 +120,7 @@ function updateFavoriteButtonUI(button) {
   const productId = button?.dataset.productId || "";
   const active = isFavoriteProduct(productId);
   button.classList.toggle("is-active", active);
-  button.textContent = active ? "â™¥" : "â™¡";
+  button.textContent = active ? "Ã¢â„¢Â¥" : "Ã¢â„¢Â¡";
   button.setAttribute("aria-label", active ? "Remover dos favoritos" : "Adicionar aos favoritos");
 }
 
@@ -158,7 +158,7 @@ function ensureSearchTopPieces(searchOverlay) {
     section.className = "search-section search-top-pieces";
 
     const title = document.createElement("h3");
-    title.textContent = "PRINCIPAIS PEÇAS";
+    title.textContent = "PRINCIPAIS PEÃ‡AS";
     section.appendChild(title);
 
     grid = document.createElement("div");
@@ -236,16 +236,16 @@ function applyPrelaunchSearchMode(searchOverlay, searchInput) {
   if (!isPrelaunchMode || !searchOverlay) return;
 
   if (searchInput) {
-    searchInput.placeholder = tSearchLabel("Estamos em pré-lançamento. Cadastre-se para acesso antecipado.");
+    searchInput.placeholder = tSearchLabel("Estamos em prÃ©-lanÃ§amento. Cadastre-se para acesso antecipado.");
   }
 
   const suggestionTitle = searchOverlay.querySelector(".search-section h3");
-  if (suggestionTitle) suggestionTitle.textContent = tSearchLabel("PRÉ-LANÇAMENTO");
+  if (suggestionTitle) suggestionTitle.textContent = tSearchLabel("PRÃ‰-LANÃ‡AMENTO");
 
   const chipLabels = [
     { label: "Entrar na lista VIP", href: "lancamento.html#vip" },
     { label: "Conhecer a marca", href: "lancamento.html#origem" },
-    { label: "Coleção Alicerce em breve", href: "lancamento.html#alicerce" },
+    { label: "ColeÃ§Ã£o Alicerce em breve", href: "lancamento.html#alicerce" },
     { label: "Novidades por e-mail", href: "lancamento.html#newsletter" }
   ];
   const chipsWrap = searchOverlay.querySelector(".chips");
@@ -396,7 +396,7 @@ function getSearchPresetFromLabel(label) {
     return { query: "jaqueta", filters: { category: "Jaquetas" } };
   }
   if (normalized.includes("tenis") || normalized.includes("sneaker")) {
-    return { query: "tenis", filters: { category: "Calçados" } };
+    return { query: "tenis", filters: { category: "CalÃ§ados" } };
   }
   if (normalized.includes("acessorio") || normalized.includes("accessor")) {
     return { query: "bolsa", filters: { category: "Bolsas" } };
@@ -450,7 +450,7 @@ function ensureSearchExperience(searchOverlay, searchInput) {
         <button class="search-clear" type="button">${tSearchLabel("Limpar filtros")}</button>
       </div>
       <p class="search-results-count">0 produtos</p>
-      <p class="search-results-note">${tSearchLabel("Coleções em rotação contínua. Encontre a peça ideal pelo estilo e composição.")}</p>
+      <p class="search-results-note">${tSearchLabel("ColeÃ§Ãµes em rotaÃ§Ã£o contÃ­nua. Encontre a peÃ§a ideal pelo estilo e composiÃ§Ã£o.")}</p>
       <div class="search-filters"></div>
       <div class="search-results-grid"></div>
       <p class="search-empty" hidden>${tSearchLabel("Nenhum produto encontrado para os filtros selecionados.")}</p>
@@ -600,13 +600,13 @@ function ensureSearchExperience(searchOverlay, searchInput) {
 
   if (!filtersContainer.children.length) {
     filtersContainer.append(
-      createSearchSelect("collection", "Coleção", collectionOptions),
+      createSearchSelect("collection", "ColeÃ§Ã£o", collectionOptions),
       createSearchSelect("size", "Tamanho", sizeOptions),
       createSearchSelect("color", "Cor", colorOptions),
       createSearchSelect("material", "Material", materialOptions),
       createSearchSelect("category", "Categoria", categoryOptions),
-      createSearchSelect("gender", "Gênero", genderOptions),
-      createSearchSelect("sort", "Ordenar", ["Relevância", "Menor preço", "Maior preço", "Nome A-Z"])
+      createSearchSelect("gender", "GÃªnero", genderOptions),
+      createSearchSelect("sort", "Ordenar", ["RelevÃ¢ncia", "Menor preÃ§o", "Maior preÃ§o", "Nome A-Z"])
     );
   }
 
@@ -636,14 +636,14 @@ function ensureSearchExperience(searchOverlay, searchInput) {
       material: selects.find((s) => s.dataset.filter === "material")?.value || "",
       category: selects.find((s) => s.dataset.filter === "category")?.value || "",
       gender: selects.find((s) => s.dataset.filter === "gender")?.value || "",
-      sort: selects.find((s) => s.dataset.filter === "sort")?.value || "Relevância"
+      sort: selects.find((s) => s.dataset.filter === "sort")?.value || "RelevÃ¢ncia"
     };
   }
 
   function sortResults(items, sortType) {
     const sorted = [...items];
-    if (sortType === "Menor preço") sorted.sort((a, b) => a.priceValue - b.priceValue);
-    if (sortType === "Maior preço") sorted.sort((a, b) => b.priceValue - a.priceValue);
+    if (sortType === "Menor preÃ§o") sorted.sort((a, b) => a.priceValue - b.priceValue);
+    if (sortType === "Maior preÃ§o") sorted.sort((a, b) => b.priceValue - a.priceValue);
     if (sortType === "Nome A-Z") sorted.sort((a, b) => a.name.localeCompare(b.name, "pt-BR"));
     return sorted;
   }
@@ -680,9 +680,9 @@ function ensureSearchExperience(searchOverlay, searchInput) {
     if (isPrelaunchMode) {
       shell.classList.add("is-active");
       resultsGrid.innerHTML = "";
-      countEl.textContent = isEnglish ? "Launch soon" : "Lançamento em breve";
+      countEl.textContent = isEnglish ? "Launch soon" : "LanÃ§amento em breve";
       emptyEl.hidden = false;
-      emptyEl.textContent = tSearchLabel("Ainda sem peças disponíveis para compra. Lançamento em breve.");
+      emptyEl.textContent = tSearchLabel("Ainda sem peÃ§as disponÃ­veis para compra. LanÃ§amento em breve.");
       if (topPiecesSection) topPiecesSection.hidden = false;
       return;
     }
@@ -737,8 +737,8 @@ function ensureSearchExperience(searchOverlay, searchInput) {
       card.innerHTML = `
         <div class="search-result-media">
           <img class="search-result-image search-result-image-primary" src="${product.image}" alt="${product.name}" loading="lazy" decoding="async" />
-          <img class="search-result-image search-result-image-secondary" src="${fallbackSecondary}" alt="${product.name} - outro ângulo" loading="lazy" decoding="async" />
-          <button class="product-favorite-btn ${isFavoriteProduct(product.id) ? "is-active" : ""}" type="button" data-product-id="${product.id}" aria-label="${isFavoriteProduct(product.id) ? "Remover dos favoritos" : "Adicionar aos favoritos"}">${isFavoriteProduct(product.id) ? "â™¥" : "â™¡"}</button>
+          <img class="search-result-image search-result-image-secondary" src="${fallbackSecondary}" alt="${product.name} - outro Ã¢ngulo" loading="lazy" decoding="async" />
+          <button class="product-favorite-btn ${isFavoriteProduct(product.id) ? "is-active" : ""}" type="button" data-product-id="${product.id}" aria-label="${isFavoriteProduct(product.id) ? "Remover dos favoritos" : "Adicionar aos favoritos"}">${isFavoriteProduct(product.id) ? "Ã¢â„¢Â¥" : "Ã¢â„¢Â¡"}</button>
         </div>
         <div class="search-result-meta">
           <h4 class="search-result-name">${product.name}</h4>
@@ -814,7 +814,7 @@ function ensureSearchExperience(searchOverlay, searchInput) {
 
   clearBtn.addEventListener("click", () => {
     resetFilters(false);
-    if (selectByFilter.sort) selectByFilter.sort.value = "Relevância";
+    if (selectByFilter.sort) selectByFilter.sort.value = "RelevÃ¢ncia";
     if (searchInput) searchInput.value = "";
     renderResults();
     searchInput?.focus();
@@ -948,6 +948,14 @@ function initSearchOverlay() {
   const menuLinks = Array.from(document.querySelectorAll(".header-menu a"));
   menuLinks.forEach((link) => {
     link.addEventListener("click", (event) => {
+      if (link.closest(".header-menu-nav")) {
+        return;
+      }
+      if (String(link.dataset.noRoute || "").toLowerCase() === "true") {
+        event.preventDefault();
+        return;
+      }
+
       const rawText = link.textContent?.trim() || "";
       const href = link.getAttribute("href") || "";
       if (!rawText) return;
@@ -959,6 +967,7 @@ function initSearchOverlay() {
         headerMenu.classList.remove("is-open");
         headerMenu.setAttribute("aria-hidden", "true");
         document.body.classList.remove("menu-open");
+        document.documentElement.classList.remove("menu-open");
       }
       openSearchOverlay();
       searchExperience?.applyFromLabel(rawText);
@@ -1014,30 +1023,30 @@ function initCategorySwitch() {
   const contentPt = {
     featured: {
       feminino: [
-        { src: "images/placeholder.jpg", alt: "Saia estruturada em lã fria", title: "Saia estruturada em lã fria", href: "produto.html?id=origem-skirt" },
-        { src: "images/placeholder.jpg", alt: "Calça de alfaiataria em sarja premium", title: "Calça de alfaiataria premium", href: "produto.html?id=genesis-tailored" },
+        { src: "images/placeholder.jpg", alt: "Saia estruturada em lÃ£ fria", title: "Saia estruturada em lÃ£ fria", href: "produto.html?id=origem-skirt" },
+        { src: "images/placeholder.jpg", alt: "CalÃ§a de alfaiataria em sarja premium", title: "CalÃ§a de alfaiataria premium", href: "produto.html?id=genesis-tailored" },
         { src: "images/placeholder.jpg", alt: "Scarpin em couro envernizado", title: "Scarpin em couro envernizado", href: "produto.html?id=atelier-heels" },
         { src: "images/placeholder.jpg", alt: "Blazer em linho premium", title: "Blazer em linho premium", href: "produto.html?id=essence-blazer" }
       ],
       masculino: [
-        { src: "images/placeholder.jpg", alt: "Camisa em algodão croata", title: "Camisa em algodão croata", href: "produto.html?id=origem-shirt" },
+        { src: "images/placeholder.jpg", alt: "Camisa em algodÃ£o croata", title: "Camisa em algodÃ£o croata", href: "produto.html?id=origem-shirt" },
         { src: "images/placeholder.jpg", alt: "Jaqueta bomber em couro italiano", title: "Jaqueta bomber em couro italiano", href: "produto.html?id=genesis-bomber" },
-        { src: "images/placeholder.jpg", alt: "Tênis em nylon técnico e couro", title: "Tênis em nylon técnico premium", href: "produto.html?id=noir-sneaker" },
+        { src: "images/placeholder.jpg", alt: "TÃªnis em nylon tÃ©cnico e couro", title: "TÃªnis em nylon tÃ©cnico premium", href: "produto.html?id=noir-sneaker" },
         { src: "images/placeholder.jpg", alt: "Trench coat em gabardine", title: "Trench coat em gabardine", href: "produto.html?id=flux-trench" }
       ]
     },
     popular: {
       feminino: [
-        { src: "images/placeholder.jpg", alt: "Peça mais clicada 1", title: "", href: "produto.html?id=origem-skirt" },
-        { src: "images/placeholder.jpg", alt: "Peça mais clicada 2", title: "", href: "produto.html?id=genesis-tailored" },
-        { src: "images/placeholder.jpg", alt: "Peça mais clicada 3", title: "", href: "produto.html?id=atelier-heels" },
-        { src: "images/placeholder.jpg", alt: "Peça mais clicada 4", title: "", href: "produto.html?id=essence-blazer" }
+        { src: "images/placeholder.jpg", alt: "PeÃ§a mais clicada 1", title: "", href: "produto.html?id=origem-skirt" },
+        { src: "images/placeholder.jpg", alt: "PeÃ§a mais clicada 2", title: "", href: "produto.html?id=genesis-tailored" },
+        { src: "images/placeholder.jpg", alt: "PeÃ§a mais clicada 3", title: "", href: "produto.html?id=atelier-heels" },
+        { src: "images/placeholder.jpg", alt: "PeÃ§a mais clicada 4", title: "", href: "produto.html?id=essence-blazer" }
       ],
       masculino: [
-        { src: "images/placeholder.jpg", alt: "Peça mais clicada 1", title: "", href: "produto.html?id=origem-shirt" },
-        { src: "images/placeholder.jpg", alt: "Peça mais clicada 2", title: "", href: "produto.html?id=genesis-bomber" },
-        { src: "images/placeholder.jpg", alt: "Peça mais clicada 3", title: "", href: "produto.html?id=noir-sneaker" },
-        { src: "images/placeholder.jpg", alt: "Peça mais clicada 4", title: "", href: "produto.html?id=flux-trench" }
+        { src: "images/placeholder.jpg", alt: "PeÃ§a mais clicada 1", title: "", href: "produto.html?id=origem-shirt" },
+        { src: "images/placeholder.jpg", alt: "PeÃ§a mais clicada 2", title: "", href: "produto.html?id=genesis-bomber" },
+        { src: "images/placeholder.jpg", alt: "PeÃ§a mais clicada 3", title: "", href: "produto.html?id=noir-sneaker" },
+        { src: "images/placeholder.jpg", alt: "PeÃ§a mais clicada 4", title: "", href: "produto.html?id=flux-trench" }
       ]
     }
   };
@@ -1242,20 +1251,559 @@ function initHeaderMenu() {
   const menu = document.getElementById("headerMenu");
   const openBtn = document.getElementById("openHeaderMenu");
   const closeBtn = document.getElementById("closeHeaderMenu");
+  const menuSearchBtn = menu?.querySelector(".header-menu-search");
+  const headerSearchBtn = document.querySelector(".header-left .header-search-trigger");
 
   if (!menu || !openBtn) return;
   let prelaunchNoticeTimer = null;
+  let menuStage = null;
+  let menuSubpanel = null;
+  let menuSubpanelBody = null;
+  const navPanelPages = new Map();
 
   function openMenu() {
     menu.classList.add("is-open");
     menu.setAttribute("aria-hidden", "false");
     document.body.classList.add("menu-open");
+    document.documentElement.classList.add("menu-open");
+  }
+
+  function closeNavPanel() {
+    if (!menuStage || !menuSubpanel) return;
+    menuStage.classList.remove("is-nav-panel-open");
+    menuSubpanel.setAttribute("aria-hidden", "true");
+    navPanelPages.forEach((page) => page.classList.remove("is-active"));
+  }
+
+  function openNavPanel(key) {
+    if (!menuStage || !menuSubpanel) return;
+    menuStage.classList.add("is-nav-panel-open");
+    menuSubpanel.setAttribute("aria-hidden", "false");
+    if (key && navPanelPages.has(key)) {
+      navPanelPages.forEach((page, pageKey) => {
+        page.classList.toggle("is-active", pageKey === key);
+      });
+    }
   }
 
   function closeMenu() {
+    closeNavPanel();
     menu.classList.remove("is-open");
     menu.setAttribute("aria-hidden", "true");
     document.body.classList.remove("menu-open");
+    document.documentElement.classList.remove("menu-open");
+  }
+
+  function ensureNavPanelStructure() {
+    const nav = menu.querySelector(".header-menu-nav");
+    const utilities = menu.querySelector(".header-menu-utilities");
+    if (!nav || !utilities) return;
+
+    let stage = menu.querySelector(".header-menu-stage");
+    let main = menu.querySelector(".header-menu-main");
+    let subpanel = menu.querySelector(".header-menu-subpanel");
+    let subpanelBody = menu.querySelector(".header-menu-subpanel-body");
+
+    if (!stage) {
+      stage = document.createElement("div");
+      stage.className = "header-menu-stage";
+      nav.parentNode.insertBefore(stage, nav);
+    }
+
+    if (!main) {
+      main = document.createElement("div");
+      main.className = "header-menu-main";
+      stage.appendChild(main);
+    }
+
+    if (nav.parentElement !== main) main.appendChild(nav);
+    if (utilities.parentElement !== main) main.appendChild(utilities);
+
+    if (!subpanel) {
+      subpanel = document.createElement("div");
+      subpanel.className = "header-menu-subpanel";
+      subpanel.setAttribute("aria-hidden", "true");
+      stage.appendChild(subpanel);
+    }
+
+    if (!subpanelBody) {
+      subpanelBody = document.createElement("div");
+      subpanelBody.className = "header-menu-subpanel-body";
+      subpanel.appendChild(subpanelBody);
+    }
+
+    menuStage = stage;
+    menuSubpanel = subpanel;
+    menuSubpanelBody = subpanelBody;
+    navPanelPages.clear();
+
+    const navLinks = Array.from(nav.querySelectorAll("a"));
+    navLinks.forEach((link) => {
+      const panelKey = String(link.dataset.menuPanel || link.textContent || "").trim();
+      if (!panelKey) return;
+      link.dataset.menuPanel = panelKey;
+      if (navPanelPages.has(panelKey)) return;
+
+      const page = document.createElement("div");
+      page.className = "header-menu-subpanel-page";
+      page.dataset.navKey = panelKey;
+      const head = document.createElement("div");
+      head.className = "header-menu-subpanel-head";
+
+      const backButton = document.createElement("button");
+      backButton.type = "button";
+      backButton.className = "header-menu-subpanel-back";
+      backButton.innerHTML = '<span aria-hidden="true">&lt;</span><span>Voltar</span>';
+      backButton.addEventListener("click", (event) => {
+        event.preventDefault();
+        closeNavPanel();
+      });
+
+      const title = document.createElement("h2");
+      title.className = "header-menu-subpanel-title";
+      title.textContent = panelKey;
+
+      head.appendChild(backButton);
+      if (panelKey !== "Seleção Tsebi" && panelKey !== "SeleÃ§Ã£o Tsebi") {
+        head.appendChild(title);
+      }
+      page.appendChild(head);
+
+      if (panelKey === "Novidades" || panelKey === "Presentes") {
+        const categories = document.createElement("div");
+        categories.className = "header-menu-subpanel-categories";
+        const isPresentes = panelKey === "Presentes";
+
+        const makeItem = (label) => {
+          const link = document.createElement("a");
+          link.href = "#";
+          link.textContent = label;
+          link.addEventListener("click", (event) => event.preventDefault());
+          return link;
+        };
+
+        const groupForHim = document.createElement("div");
+        groupForHim.className = "header-menu-subpanel-category-group";
+        const forHim = document.createElement("span");
+        forHim.textContent = "Para ele";
+        forHim.className = "header-menu-subpanel-category-title";
+        const forHimLinks = document.createElement("div");
+        forHimLinks.className = "header-menu-subpanel-category-links";
+        forHimLinks.appendChild(makeItem(isPresentes ? "Presentes para homens" : "Novidades para homens"));
+        forHimLinks.appendChild(makeItem("ColeÃ§Ã£o GÃªnesis"));
+        forHimLinks.appendChild(makeItem("ColeÃ§Ã£o Alicerce"));
+        groupForHim.appendChild(forHim);
+        groupForHim.appendChild(forHimLinks);
+
+        const groupForHer = document.createElement("div");
+        groupForHer.className = "header-menu-subpanel-category-group";
+        const forHer = document.createElement("span");
+        forHer.textContent = "Para ela";
+        forHer.className = "header-menu-subpanel-category-title";
+        const forHerLinks = document.createElement("div");
+        forHerLinks.className = "header-menu-subpanel-category-links";
+        forHerLinks.appendChild(makeItem(isPresentes ? "Presentes para mulheres" : "Novidades para Mulheres"));
+        forHerLinks.appendChild(makeItem("ColeÃ§Ã£o GÃªnesis"));
+        forHerLinks.appendChild(makeItem("ColeÃ§Ã£o Alicerce"));
+        groupForHer.appendChild(forHer);
+        groupForHer.appendChild(forHerLinks);
+
+        categories.appendChild(groupForHim);
+        categories.appendChild(groupForHer);
+
+        const gallery = document.createElement("div");
+        gallery.className = "header-menu-subpanel-gallery";
+        gallery.setAttribute("aria-label", isPresentes ? "Destaques Presentes" : "Destaques Novidades");
+        const galleryItems = isPresentes
+          ? [
+              "Cinto em couro natural",
+              "Carteira em couro premium",
+              "LenÃ§o em seda pura",
+              "Bolsa em couro natural"
+            ]
+          : [
+              "Saia estruturada em lÃ£ fria",
+              "CalÃ§a de alfaiataria premium",
+              "Scarpin em couro envernizado",
+              "Blazer em linho premium"
+            ];
+        for (let index = 0; index < galleryItems.length; index += 1) {
+          const item = document.createElement("a");
+          item.className = "header-menu-subpanel-gallery-item";
+          item.href = "#";
+          item.addEventListener("click", (event) => event.preventDefault());
+          const image = document.createElement("img");
+          image.src = "/images/placeholderreal.webp";
+          image.alt = `Imagem destaque ${index + 1}`;
+          const meta = document.createElement("div");
+          meta.className = "header-menu-subpanel-gallery-meta";
+          const name = document.createElement("p");
+          name.className = "header-menu-subpanel-gallery-name";
+          name.textContent = galleryItems[index];
+          meta.appendChild(name);
+          item.appendChild(image);
+          item.appendChild(meta);
+          gallery.appendChild(item);
+        }
+        categories.appendChild(gallery);
+        page.appendChild(categories);
+      } else if (panelKey === "Bolsas e Acessorios") {
+        const categories = document.createElement("div");
+        categories.className = "header-menu-subpanel-categories";
+
+        const group = document.createElement("div");
+        group.className = "header-menu-subpanel-category-group";
+
+        const title = document.createElement("span");
+        title.className = "header-menu-subpanel-category-title";
+        title.textContent = "BOLSAS";
+
+        const links = document.createElement("div");
+        links.className = "header-menu-subpanel-category-links";
+
+        const allBagsLink = document.createElement("a");
+        allBagsLink.href = "/products?category=Bolsas";
+        allBagsLink.textContent = "Todas as bolsas";
+        const genesisBlackLink = document.createElement("a");
+        genesisBlackLink.href = "/products?q=Genesis%20Bag%20%E2%80%94%20Black";
+        genesisBlackLink.textContent = "Genesis Bag â€” Black";
+        const genesisSandLink = document.createElement("a");
+        genesisSandLink.href = "/products?q=Genesis%20Bag%20%E2%80%94%20Sand";
+        genesisSandLink.textContent = "Genesis Bag â€” Sand";
+
+        links.appendChild(allBagsLink);
+        links.appendChild(genesisBlackLink);
+        links.appendChild(genesisSandLink);
+        group.appendChild(title);
+        group.appendChild(links);
+        categories.appendChild(group);
+
+        const accessoriesGroup = document.createElement("div");
+        accessoriesGroup.className = "header-menu-subpanel-category-group";
+        const accessoriesTitle = document.createElement("span");
+        accessoriesTitle.className = "header-menu-subpanel-category-title";
+        accessoriesTitle.textContent = "ACESSÃ“RIOS";
+        const accessoriesLinks = document.createElement("div");
+        accessoriesLinks.className = "header-menu-subpanel-category-links";
+        const walletsLink = document.createElement("a");
+        walletsLink.href = "/products?category=Carteiras";
+        walletsLink.textContent = "Carteiras";
+        const beltsLink = document.createElement("a");
+        beltsLink.href = "/products?category=Cintos";
+        beltsLink.textContent = "Cintos";
+        accessoriesLinks.appendChild(walletsLink);
+        accessoriesLinks.appendChild(beltsLink);
+        accessoriesGroup.appendChild(accessoriesTitle);
+        accessoriesGroup.appendChild(accessoriesLinks);
+        categories.appendChild(accessoriesGroup);
+
+        const featuredGroup = document.createElement("div");
+        featuredGroup.className = "header-menu-subpanel-category-group";
+        const featuredTitle = document.createElement("span");
+        featuredTitle.className = "header-menu-subpanel-category-title";
+        featuredTitle.textContent = "FEATURED";
+        const featuredLinks = document.createElement("div");
+        featuredLinks.className = "header-menu-subpanel-category-links";
+        const arrivalsLink = document.createElement("a");
+        arrivalsLink.href = "/products?sort=latest";
+        arrivalsLink.textContent = "New Arrivals";
+        const signatureLink = document.createElement("a");
+        signatureLink.href = "/products?featured=signature";
+        signatureLink.textContent = "Signature Pieces";
+        featuredLinks.appendChild(arrivalsLink);
+        featuredLinks.appendChild(signatureLink);
+        featuredGroup.appendChild(featuredTitle);
+        featuredGroup.appendChild(featuredLinks);
+        categories.appendChild(featuredGroup);
+
+        const singleImage = document.createElement("a");
+        singleImage.className = "header-menu-subpanel-single-image header-menu-subpanel-single-image--clean";
+        singleImage.href = "#";
+        singleImage.setAttribute("aria-label", "Imagem destaque Bolsas e Acessorios");
+        singleImage.addEventListener("click", (event) => event.preventDefault());
+        const singleImageEl = document.createElement("img");
+        singleImageEl.src = "https://media.tsebi.com.br/Pin%20on%20IN%20EYE%2C%20EAR%2C%20MOUTH.jpg";
+        singleImageEl.alt = "Destaque Bolsas e Acessorios";
+        singleImage.appendChild(singleImageEl);
+        categories.appendChild(singleImage);
+
+        page.appendChild(categories);
+      } else if (panelKey === "SeleÃ§Ã£o Tsebi") {
+        const section = document.createElement("section");
+        section.className = "header-menu-subpanel-curation";
+        section.setAttribute("aria-label", "SeleÃ§Ã£o Tsebi");
+
+        const hero = document.createElement("div");
+        hero.className = "header-menu-subpanel-curation-hero";
+        const heroImage = document.createElement("img");
+        heroImage.src = "https://media.tsebi.com.br/generation-57e63375-48cf-4bbf-a7b9-22ce3f1b5a6a.png";
+        heroImage.alt = "Modelo com look completo Tsebi";
+        hero.appendChild(heroImage);
+        section.appendChild(hero);
+
+        const title = document.createElement("h3");
+        title.className = "header-menu-subpanel-curation-title";
+        title.textContent = "SeleÃ§Ã£o Tsebi";
+        section.appendChild(title);
+
+        const subtitle = document.createElement("p");
+        subtitle.className = "header-menu-subpanel-curation-subtitle";
+        subtitle.textContent = "Uma curadoria semanal com peÃ§as que representam a essÃªncia da marca.";
+        section.appendChild(subtitle);
+
+        const shopTitle = document.createElement("h4");
+        shopTitle.className = "header-menu-subpanel-curation-shop-title";
+        shopTitle.textContent = "COMPRE O LOOK";
+        section.appendChild(shopTitle);
+
+        const productsGrid = document.createElement("div");
+        productsGrid.className = "header-menu-subpanel-curation-grid";
+        const lookProducts = [
+          { id: "genesis-jacket", name: "Jaqueta Genesis", priceLabel: "R$ 2.990", image: "images/placeholderreal.webp", href: "/products?q=Jaqueta%20Genesis" },
+          { id: "genesis-tee", name: "Camiseta", priceLabel: "R$ 590", image: "images/placeholderreal.webp", href: "/products?q=Camiseta" },
+          { id: "genesis-trousers", name: "CalÃ§a", priceLabel: "R$ 1.490", image: "images/placeholderreal.webp", href: "/products?q=Cal%C3%A7a" },
+          { id: "genesis-bag", name: "Bolsa Genesis", priceLabel: "R$ 3.490", image: "images/placeholderreal.webp", href: "/products?q=Genesis%20Bag" }
+        ];
+
+        lookProducts.forEach((product, index) => {
+          const card = document.createElement("article");
+          card.className = "header-menu-subpanel-curation-card";
+
+          const image = document.createElement("img");
+          image.src = product.image;
+          image.alt = `Produto ${index + 1} - ${product.name}`;
+          card.appendChild(image);
+
+          const body = document.createElement("div");
+          body.className = "header-menu-subpanel-curation-card-body";
+
+          const name = document.createElement("p");
+          name.className = "header-menu-subpanel-curation-card-name";
+          name.textContent = product.name;
+          body.appendChild(name);
+
+          const price = document.createElement("p");
+          price.className = "header-menu-subpanel-curation-card-price";
+          price.textContent = product.priceLabel;
+          body.appendChild(price);
+
+          const link = document.createElement("a");
+          link.className = "header-menu-subpanel-curation-card-link";
+          link.href = product.href;
+          link.textContent = "Ver produto";
+
+          const addBtn = document.createElement("button");
+          addBtn.type = "button";
+          addBtn.className = "header-menu-subpanel-curation-card-add";
+          addBtn.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 7h10l1 12H6L7 7z"></path><path d="M9 7V6a3 3 0 1 1 6 0v1"></path></svg><span>+</span>';
+          addBtn.addEventListener("click", (event) => {
+            event.preventDefault();
+            const ok = addProductFromSearchToCart({
+              id: product.id,
+              name: product.name,
+              priceLabel: product.priceLabel,
+              image: product.image,
+              stock: 10
+            });
+            feedback.textContent = ok ? `${product.name} adicionado ao carrinho.` : "Não foi possível adicionar o item.";
+            feedback.style.display = "block";
+            window.setTimeout(() => {
+              feedback.style.display = "none";
+            }, 1500);
+          });
+
+          const actions = document.createElement("div");
+          actions.className = "header-menu-subpanel-curation-card-actions";
+          actions.appendChild(link);
+          actions.appendChild(addBtn);
+          body.appendChild(actions);
+
+          card.appendChild(body);
+          productsGrid.appendChild(card);
+        });
+        section.appendChild(productsGrid);
+
+        const buyAll = document.createElement("button");
+        buyAll.type = "button";
+        buyAll.className = "header-menu-subpanel-curation-buy-all";
+        buyAll.textContent = "Comprar curadoria semanal";
+        const feedback = document.createElement("p");
+        feedback.className = "header-menu-subpanel-curation-feedback";
+        feedback.style.display = "none";
+        buyAll.addEventListener("click", (event) => {
+          event.preventDefault();
+          event.stopPropagation();
+          let hasError = false;
+          lookProducts.forEach((product) => {
+            const ok = addProductFromSearchToCart({
+              id: product.id,
+              name: product.name,
+              priceLabel: product.priceLabel,
+              image: product.image,
+              stock: 10
+            });
+            if (!ok) hasError = true;
+          });
+          feedback.textContent = hasError ? "NÃ£o foi possÃ­vel adicionar todos os itens." : "Look completo adicionado ao carrinho.";
+          feedback.style.display = "block";
+          const headerMenu = document.getElementById("headerMenu");
+          if (headerMenu?.classList.contains("is-open")) {
+            headerMenu.classList.remove("is-open");
+            headerMenu.setAttribute("aria-hidden", "true");
+            document.body.classList.remove("menu-open");
+            document.documentElement.classList.remove("menu-open");
+          }
+          window.setTimeout(() => {
+            feedback.style.display = "none";
+          }, 1800);
+        });
+        section.appendChild(buyAll);
+        section.appendChild(feedback);
+        page.appendChild(section);
+      } else if (panelKey === "Feminino") {
+        const layout = document.createElement("div");
+        layout.className = "header-menu-subpanel-fashion-layout";
+        const categories = document.createElement("div");
+        categories.className = "header-menu-subpanel-categories";
+
+        const groups = [
+          {
+            title: "Ready-to-Wear",
+            items: ["Vestidos", "Camisetas", "Camisas", "CalÃ§as", "Saias"]
+          },
+          {
+            title: "Outerwear",
+            items: ["Casacos", "Jaquetas"]
+          },
+          {
+            title: "Leather",
+            items: ["Jaquetas de couro", "CalÃ§as de couro", "Saias de couro"]
+          },
+          {
+            title: "Accessories",
+            items: ["Cintos", "Bolsas", "LenÃ§os"]
+          }
+        ];
+
+        groups.forEach((group) => {
+          const groupEl = document.createElement("div");
+          groupEl.className = "header-menu-subpanel-category-group";
+
+          const title = document.createElement("span");
+          title.className = "header-menu-subpanel-category-title";
+          title.textContent = group.title;
+
+          const links = document.createElement("div");
+          links.className = "header-menu-subpanel-category-links";
+
+          group.items.forEach((subItem) => {
+            const link = document.createElement("a");
+            link.href = `/products?q=${encodeURIComponent(subItem)}`;
+            link.textContent = subItem;
+            links.appendChild(link);
+          });
+
+          groupEl.appendChild(title);
+          groupEl.appendChild(links);
+          categories.appendChild(groupEl);
+        });
+
+        const viewAll = document.createElement("a");
+        viewAll.className = "header-menu-subpanel-view-all";
+        viewAll.href = "/products?gender=Feminino";
+        viewAll.textContent = "Ver tudo";
+        categories.appendChild(viewAll);
+
+        const banner = document.createElement("aside");
+        banner.className = "header-menu-subpanel-editorial-banner";
+        banner.setAttribute("aria-hidden", "true");
+        const bannerSpace = document.createElement("div");
+        bannerSpace.className = "header-menu-subpanel-editorial-banner-space";
+        banner.appendChild(bannerSpace);
+
+        layout.appendChild(categories);
+        layout.appendChild(banner);
+        page.appendChild(layout);
+      } else if (panelKey === "Masculino") {
+        const layout = document.createElement("div");
+        layout.className = "header-menu-subpanel-fashion-layout";
+        const categories = document.createElement("div");
+        categories.className = "header-menu-subpanel-categories";
+
+        const groups = [
+          {
+            title: "Ready-to-Wear",
+            items: ["Camisetas", "Camisas", "CalÃ§as", "Bermudas"]
+          },
+          {
+            title: "Outerwear",
+            items: ["Jaquetas", "Casacos"]
+          },
+          {
+            title: "Leather",
+            items: ["Jaquetas de couro", "CalÃ§as de couro"]
+          },
+          {
+            title: "Accessories",
+            items: ["Cintos", "Bolsas"]
+          }
+        ];
+
+        groups.forEach((group) => {
+          const groupEl = document.createElement("div");
+          groupEl.className = "header-menu-subpanel-category-group";
+
+          const title = document.createElement("span");
+          title.className = "header-menu-subpanel-category-title";
+          title.textContent = group.title;
+
+          const links = document.createElement("div");
+          links.className = "header-menu-subpanel-category-links";
+
+          group.items.forEach((subItem) => {
+            const link = document.createElement("a");
+            link.href = `/products?q=${encodeURIComponent(subItem)}`;
+            link.textContent = subItem;
+            links.appendChild(link);
+          });
+
+          groupEl.appendChild(title);
+          groupEl.appendChild(links);
+          categories.appendChild(groupEl);
+        });
+
+        const viewAll = document.createElement("a");
+        viewAll.className = "header-menu-subpanel-view-all";
+        viewAll.href = "/products?gender=Masculino";
+        viewAll.textContent = "Ver tudo";
+        categories.appendChild(viewAll);
+
+        const banner = document.createElement("aside");
+        banner.className = "header-menu-subpanel-editorial-banner header-menu-subpanel-editorial-banner--masculino";
+        banner.setAttribute("aria-hidden", "true");
+        const bannerSpace = document.createElement("div");
+        bannerSpace.className = "header-menu-subpanel-editorial-banner-space";
+        banner.appendChild(bannerSpace);
+
+        layout.appendChild(categories);
+        layout.appendChild(banner);
+        page.appendChild(layout);
+      }
+      subpanelBody.appendChild(page);
+      navPanelPages.set(panelKey, page);
+    });
+
+    navLinks.forEach((link) => {
+      if (link.dataset.navPanelBound === "true") return;
+      link.addEventListener("click", (event) => {
+        const href = String(link.getAttribute("href") || "").trim();
+        if (href && href !== "#") return;
+        event.preventDefault();
+        const panelKey = String(link.dataset.menuPanel || link.textContent || "").trim();
+        openNavPanel(panelKey);
+      });
+      link.dataset.navPanelBound = "true";
+    });
   }
 
   function ensurePrelaunchMenuNotice() {
@@ -1286,7 +1834,7 @@ function initHeaderMenu() {
     notice.style.fontSize = "12px";
     notice.style.letterSpacing = "0.2px";
     notice.innerHTML =
-      '<span>Menu indisponível por enquanto. As peças ainda serão lançadas.</span>' +
+      '<span>Menu indisponÃ­vel por enquanto. As peÃ§as ainda serÃ£o lanÃ§adas.</span>' +
       '<a href="lancamento.html" style="color:#fff;text-decoration:underline;white-space:nowrap;">Ver lancamento</a>';
     document.body.appendChild(notice);
     return notice;
@@ -1315,8 +1863,15 @@ function initHeaderMenu() {
     return;
   }
 
+  ensureNavPanelStructure();
+
   openBtn.addEventListener("click", openMenu);
   closeBtn?.addEventListener("click", closeMenu);
+  menuSearchBtn?.addEventListener("click", (event) => {
+    event.preventDefault();
+    closeMenu();
+    headerSearchBtn?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+  });
 
   window.addEventListener("keydown", (event) => {
     if (event.key === "Escape" && menu.classList.contains("is-open")) {
@@ -1451,17 +2006,39 @@ function initCartEntryPoints() {
 
 function initAccountEntryPoints() {
   const accountLinks = Array.from(document.querySelectorAll('a[aria-label="Conta"]'));
-  if (!accountLinks.length) return;
+  const menuAccountLinks = Array.from(document.querySelectorAll(".header-menu-utilities .header-menu-utility"))
+    .filter((link) => {
+      const text = String(link.textContent || "").trim().toLowerCase();
+      return text.includes("entrar ou registrar-se") || text.includes("minha conta");
+    });
   const currentRelativeUrl = `${window.location.pathname}${window.location.search}${window.location.hash}`;
   const loginUrl = `login.html?returnUrl=${encodeURIComponent(currentRelativeUrl)}`;
+  const wishlistTarget = "conta.html#wishlist";
+  const wishlistLoginUrl = `login.html?returnUrl=${encodeURIComponent(wishlistTarget)}`;
+  const wishlistLinks = Array.from(document.querySelectorAll(".header-menu-utilities .header-menu-utility"))
+    .filter((link) => String(link.textContent || "").trim().toLowerCase().includes("lista de desejos"));
+
+  if (!accountLinks.length && !wishlistLinks.length && !menuAccountLinks.length) return;
 
   function render() {
     const user = userStore?.getCurrentUser?.() || null;
-    const label = userStore?.getDisplayName?.() || "Entrar / Criar conta";
     accountLinks.forEach((link) => {
       link.href = user ? "conta.html" : loginUrl;
       if (link.classList.contains("quick-action")) return;
-      link.textContent = label;
+      link.textContent = user ? "Minha conta" : "Entrar ou Registrar-se";
+    });
+    menuAccountLinks.forEach((link) => {
+      link.href = user ? "conta.html" : "login.html";
+      const labelNode = link.querySelector("span");
+      if (labelNode) {
+        labelNode.textContent = user ? "Minha conta" : "Entrar ou Registrar-se";
+      } else {
+        link.textContent = user ? "Minha conta" : "Entrar ou Registrar-se";
+      }
+    });
+    wishlistLinks.forEach((link) => {
+      link.href = user ? wishlistTarget : wishlistLoginUrl;
+      link.dataset.linkKey = "wishlist";
     });
   }
 
@@ -1679,9 +2256,4 @@ function initNewsletterPopup() {
     }
   });
 }
-
-
-
-
-
 

@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
@@ -9,15 +9,107 @@ import { SearchOverlayRecommendations } from "@/components/SearchOverlayRecommen
 import { getMe } from "@/services/auth";
 
 const TOP_MESSAGES = [
-  "Nova Coleção Genesis",
-  "Você merece vestir algo a sua altura.",
-  "Cadastre-se para receber lançamentos",
-  "Exclusividade para quem valoriza o que é único.",
-  "Acesso antecipado a novas coleções.",
-  "Produção em pequena escala. Qualidade em cada detalhe.",
+  "Nova ColeÃ§Ã£o Genesis",
+  "VocÃª merece vestir algo a sua altura.",
+  "Cadastre-se para receber lanÃ§amentos",
+  "Exclusividade para quem valoriza o que Ã© Ãºnico.",
+  "Acesso antecipado a novas coleÃ§Ãµes.",
+  "ProduÃ§Ã£o em pequena escala. Qualidade em cada detalhe.",
 ];
 
-const SEARCH_CATEGORIES = ["Feminino", "Masculino", "Calças", "Camisas", "Blazers", "Bolsas"] as const;
+const SEARCH_CATEGORIES = ["Feminino", "Masculino", "CalÃ§as", "Camisas", "Blazers", "Bolsas"] as const;
+const MENU_NAV_ITEMS = ["Novidades", "Presentes", "Feminino", "Masculino", "Bolsas e Acessorios", "Seleção Tsebi"] as const;
+const MENU_NOVIDADES_GALLERY_ITEMS = [
+  { name: "Saia estruturada em lã fria" },
+  { name: "Calça de alfaiataria premium" },
+  { name: "Scarpin em couro envernizado" },
+  { name: "Blazer em linho premium" },
+] as const;
+const MENU_PRESENTES_GALLERY_ITEMS = [
+  { name: "Cinto em couro natural" },
+  { name: "Carteira em couro premium" },
+  { name: "Lenço em seda pura" },
+  { name: "Bolsa em couro natural" },
+] as const;
+const MENU_FEMININO_CATEGORIES = [
+  {
+    title: "Ready-to-Wear",
+    items: ["Vestidos", "Camisetas", "Camisas", "Calças", "Saias"],
+  },
+  {
+    title: "Outerwear",
+    items: ["Casacos", "Jaquetas"],
+  },
+  {
+    title: "Leather",
+    items: ["Jaquetas de couro", "Calças de couro", "Saias de couro"],
+  },
+  {
+    title: "Accessories",
+    items: ["Cintos", "Bolsas", "Lenços"],
+  },
+] as const;
+const MENU_MASCULINO_CATEGORIES = [
+  {
+    title: "Ready-to-Wear",
+    items: ["Camisetas", "Camisas", "Calças", "Bermudas"],
+  },
+  {
+    title: "Outerwear",
+    items: ["Jaquetas", "Casacos"],
+  },
+  {
+    title: "Leather",
+    items: ["Jaquetas de couro", "Calças de couro"],
+  },
+  {
+    title: "Accessories",
+    items: ["Cintos", "Bolsas"],
+  },
+] as const;
+const MENU_SELECAO_TSEBI_LOOK = {
+  heroImage: "https://media.tsebi.com.br/generation-57e63375-48cf-4bbf-a7b9-22ce3f1b5a6a.png",
+  title: "Seleção Tsebi",
+  subtitle: "Uma curadoria semanal com peças que representam a essência da marca.",
+  products: [
+    {
+      id: "genesis-jacket",
+      name: "Jaqueta Genesis",
+      priceLabel: "R$ 2.990",
+      unitAmount: 299000,
+      currency: "brl",
+      image: "/images/placeholderreal.webp",
+      href: "/products?q=Jaqueta%20Genesis",
+    },
+    {
+      id: "genesis-tee",
+      name: "Camiseta",
+      priceLabel: "R$ 590",
+      unitAmount: 59000,
+      currency: "brl",
+      image: "/images/placeholderreal.webp",
+      href: "/products?q=Camiseta",
+    },
+    {
+      id: "genesis-trousers",
+      name: "Calça",
+      priceLabel: "R$ 1.490",
+      unitAmount: 149000,
+      currency: "brl",
+      image: "/images/placeholderreal.webp",
+      href: "/products?q=Cal%C3%A7a",
+    },
+    {
+      id: "genesis-bag",
+      name: "Bolsa Genesis",
+      priceLabel: "R$ 3.490",
+      unitAmount: 349000,
+      currency: "brl",
+      image: "/images/placeholderreal.webp",
+      href: "/products?q=Genesis%20Bag",
+    },
+  ],
+} as const;
 
 export function SiteHeader() {
   const router = useRouter();
@@ -25,14 +117,22 @@ export function SiteHeader() {
   const isProductPage = pathname === "/product" || String(pathname || "").startsWith("/product/");
   const hasHydrated = useCartStore(cartSelectors.hasHydrated);
   const itemCount = useCartStore(cartSelectors.itemCount);
+  const addItem = useCartStore((state) => state.addItem);
   const displayCount = hasHydrated ? itemCount : 0;
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const wishlistTarget = "/account#wishlist";
+  const wishlistHref = isAuthenticated
+    ? wishlistTarget
+    : `/login?returnUrl=${encodeURIComponent(wishlistTarget)}`;
   const [messageIndex, setMessageIndex] = useState(0);
   const [messageClass, setMessageClass] = useState("slide-right");
   const [messageKey, setMessageKey] = useState(0);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [isMenuNavPanelOpen, setIsMenuNavPanelOpen] = useState(false);
+  const [activeMenuNavPanel, setActiveMenuNavPanel] = useState<string | null>(null);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [selecaoFeedback, setSelecaoFeedback] = useState("");
   const [isHeaderHidden, setIsHeaderHidden] = useState(false);
   const [isHeaderForcedHidden, setIsHeaderForcedHidden] = useState(false);
   const headerMenuRef = useRef<HTMLElement | null>(null);
@@ -123,8 +223,14 @@ export function SiteHeader() {
 
   useEffect(() => {
     document.body.classList.toggle("menu-open", isMenuOpen);
+    document.documentElement.classList.toggle("menu-open", isMenuOpen);
+    if (!isMenuOpen) {
+      setIsMenuNavPanelOpen(false);
+      setActiveMenuNavPanel(null);
+    }
     return () => {
       document.body.classList.remove("menu-open");
+      document.documentElement.classList.remove("menu-open");
     };
   }, [isMenuOpen]);
 
@@ -314,6 +420,8 @@ export function SiteHeader() {
   const cartCountBadge = displayCount > 0 ? String(displayCount) : undefined;
   const openSearchOverlay = useCallback(() => {
     setIsMenuOpen(false);
+    setIsMenuNavPanelOpen(false);
+    setActiveMenuNavPanel(null);
     setIsSearchOpen(true);
   }, []);
 
@@ -322,12 +430,61 @@ export function SiteHeader() {
     setSearchQuery("");
   }, []);
 
+  const handleMenuNavPanelOpen = useCallback((event: React.MouseEvent<HTMLAnchorElement>) => {
+    event.preventDefault();
+    const key = String(event.currentTarget.dataset.menuPanel || "").trim();
+    if (!key) return;
+    setActiveMenuNavPanel(key);
+    setIsMenuNavPanelOpen(true);
+  }, []);
+
   const submitSearch = useCallback(() => {
     const normalized = String(searchQuery || "").trim();
     if (normalized.length < 2) return;
     router.push(`/products?q=${encodeURIComponent(normalized)}`);
     closeSearchOverlay();
   }, [closeSearchOverlay, router, searchQuery]);
+
+  const handleAddSelecaoLook = useCallback((event?: React.MouseEvent<HTMLButtonElement>) => {
+    event?.preventDefault();
+    event?.stopPropagation();
+    const results = MENU_SELECAO_TSEBI_LOOK.products.map((product) =>
+      addItem({
+        item: {
+          productId: product.id,
+          name: product.name,
+          unitAmount: product.unitAmount,
+          currency: product.currency,
+          imageUrl: product.image,
+        },
+        qty: 1,
+      })
+    );
+    const hasError = results.some((result) => !result.ok);
+    setSelecaoFeedback(hasError ? "Não foi possível adicionar todos os itens." : "Look completo adicionado ao carrinho.");
+    setIsMenuOpen(false);
+    setIsMenuNavPanelOpen(false);
+    setActiveMenuNavPanel(null);
+    window.setTimeout(() => setSelecaoFeedback(""), 1800);
+  }, [addItem]);
+
+  const handleAddSelecaoItem = useCallback(
+    (product: (typeof MENU_SELECAO_TSEBI_LOOK.products)[number]) => {
+      const result = addItem({
+        item: {
+          productId: product.id,
+          name: product.name,
+          unitAmount: product.unitAmount,
+          currency: product.currency,
+          imageUrl: product.image,
+        },
+        qty: 1,
+      });
+      setSelecaoFeedback(result.ok ? `${product.name} adicionado ao carrinho.` : result.error || "Não foi possível adicionar o item.");
+      window.setTimeout(() => setSelecaoFeedback(""), 1500);
+    },
+    [addItem]
+  );
 
   return (
     <>
@@ -350,7 +507,7 @@ export function SiteHeader() {
             type="button"
             ref={rightArrowRef}
             onClick={() => stepTopMessage("right", 1)}
-            aria-label="Próxima mensagem"
+            aria-label="PrÃ³xima mensagem"
           >
             &#10095;
           </button>
@@ -370,6 +527,8 @@ export function SiteHeader() {
               aria-label="Abrir menu"
               onClick={() => {
                 setIsMenuOpen(true);
+                setIsMenuNavPanelOpen(false);
+                setActiveMenuNavPanel(null);
               }}
             >
               <span></span>
@@ -431,16 +590,298 @@ export function SiteHeader() {
         ref={headerMenuRef}
         aria-hidden={!isMenuOpen}
       >
-        <button
-          className="header-menu-close"
-          id="closeHeaderMenu"
-          type="button"
-          aria-label="Fechar menu"
-          onClick={() => setIsMenuOpen(false)}
-        >
-          &times;
-        </button>
-        <nav className="header-menu-nav" aria-label="Menu lateral"></nav>
+        <div className="header-menu-actions">
+          <button
+            className="header-menu-close"
+            id="closeHeaderMenu"
+            type="button"
+            aria-label="Fechar menu"
+            onClick={() => setIsMenuOpen(false)}
+          >
+            <span className="header-menu-close-mark" aria-hidden="true">&times;</span>
+            <span className="header-menu-close-label">Fechar</span>
+          </button>
+          <button
+            className="header-menu-search"
+            type="button"
+            aria-label="Pesquisar"
+            onClick={openSearchOverlay}
+          >
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <circle cx="11" cy="11" r="7"></circle>
+              <path d="M20 20l-4.2-4.2"></path>
+            </svg>
+            <span>Pesquisar</span>
+          </button>
+        </div>
+        <div className={`header-menu-stage ${isMenuNavPanelOpen ? "is-nav-panel-open" : ""}`}>
+          <div className="header-menu-main">
+            <nav className="header-menu-nav" aria-label="Menu lateral">
+              {MENU_NAV_ITEMS.map((item) => (
+                <a key={item} href="#" data-menu-panel={item} onClick={handleMenuNavPanelOpen}>
+                  {item}
+                </a>
+              ))}
+            </nav>
+            <div className="header-menu-utilities" aria-label="Utilidades do menu">
+              <a className="header-menu-utility" href={isAuthenticated ? "/account" : "/login"}>
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M20 21a8 8 0 0 0-16 0"></path>
+                  <circle cx="12" cy="8" r="4"></circle>
+                </svg>
+                <span>{isAuthenticated ? "Minha conta" : "Entrar ou Registrar-se"}</span>
+              </a>
+              <a className="header-menu-utility cart-link" href="/cart" aria-label="Carrinho" data-cart-count={cartCountBadge}>
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M7 7h10l1 12H6L7 7z"></path>
+                  <path d="M9 7V6a3 3 0 1 1 6 0v1"></path>
+                </svg>
+                <span>Carrinho</span>
+              </a>
+              <a className="header-menu-utility" href={wishlistHref} data-link-key="wishlist">
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.1A4 4 0 0 1 19 10c0 5.6-7 10-7 10z"></path>
+                </svg>
+                <span>Lista de desejos</span>
+              </a>
+              <a
+                className="header-menu-utility"
+                href="#"
+                data-link-key="private-care-no-route"
+                data-no-route="true"
+                onClick={(event) => event.preventDefault()}
+              >
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M5 4h4l2 5-3 2a12 12 0 0 0 5 5l2-3 5 2v4c0 1-1 2-2 2C10 21 3 14 3 6c0-1 1-2 2-2z"></path>
+                </svg>
+                <span>Marque um atendimento privativo</span>
+              </a>
+              <label className="header-menu-utility header-menu-language" aria-label="Idioma">
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <circle cx="12" cy="12" r="9"></circle>
+                  <path d="M3 12h18"></path>
+                  <path d="M12 3a14 14 0 0 1 0 18"></path>
+                  <path d="M12 3a14 14 0 0 0 0 18"></path>
+                </svg>
+                <span>Idioma</span>
+                <select defaultValue="pt-br" aria-label="Selecionar idioma">
+                  <option value="pt-br">PT-BR</option>
+                  <option value="en">Ingles</option>
+                </select>
+              </label>
+            </div>
+          </div>
+          <div className="header-menu-subpanel" aria-hidden={!isMenuNavPanelOpen}>
+            <div className="header-menu-subpanel-body">
+              {MENU_NAV_ITEMS.map((item) => (
+                <div
+                  key={item}
+                  className={`header-menu-subpanel-page ${activeMenuNavPanel === item ? "is-active" : ""}`}
+                  data-nav-key={item}
+                >
+                  <div className="header-menu-subpanel-head">
+                    <button
+                      type="button"
+                      className="header-menu-subpanel-back"
+                      onClick={() => {
+                        setIsMenuNavPanelOpen(false);
+                        setActiveMenuNavPanel(null);
+                      }}
+                    >
+                      <span aria-hidden="true">&lt;</span>
+                      <span>Voltar</span>
+                    </button>
+                    {item !== "Seleção Tsebi" ? <h2 className="header-menu-subpanel-title">{item}</h2> : null}
+                  </div>
+                  {item === "Novidades" || item === "Presentes" ? (
+                    <div className="header-menu-subpanel-categories">
+                      <div className="header-menu-subpanel-category-group">
+                        <span className="header-menu-subpanel-category-title">Para ele</span>
+                        <div className="header-menu-subpanel-category-links">
+                          <a href="#" onClick={(event) => event.preventDefault()}>
+                            {item === "Presentes" ? "Presentes para homens" : "Novidades para homens"}
+                          </a>
+                          <a href="#" onClick={(event) => event.preventDefault()}>Coleção Gênesis</a>
+                          <a href="#" onClick={(event) => event.preventDefault()}>Coleção Alicerce</a>
+                        </div>
+                      </div>
+                      <div className="header-menu-subpanel-category-group">
+                        <span className="header-menu-subpanel-category-title">Para ela</span>
+                        <div className="header-menu-subpanel-category-links">
+                          <a href="#" onClick={(event) => event.preventDefault()}>
+                            {item === "Presentes" ? "Presentes para mulheres" : "Novidades para Mulheres"}
+                          </a>
+                          <a href="#" onClick={(event) => event.preventDefault()}>Coleção Gênesis</a>
+                          <a href="#" onClick={(event) => event.preventDefault()}>Coleção Alicerce</a>
+                        </div>
+                      </div>
+                      <div
+                        className="header-menu-subpanel-gallery"
+                        aria-label={
+                          item === "Presentes"
+                            ? "Destaques Presentes"
+                            : "Destaques Novidades"
+                        }
+                      >
+                        {(item === "Presentes"
+                          ? MENU_PRESENTES_GALLERY_ITEMS
+                          : MENU_NOVIDADES_GALLERY_ITEMS).map((galleryItem, imageIndex) => (
+                          <a key={galleryItem.name} href="#" onClick={(event) => event.preventDefault()} className="header-menu-subpanel-gallery-item">
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img src="/images/placeholderreal.webp" alt={`Imagem destaque ${imageIndex}`} />
+                            <div className="header-menu-subpanel-gallery-meta">
+                              <p className="header-menu-subpanel-gallery-name">{galleryItem.name}</p>
+                            </div>
+                          </a>
+                        ))}
+                      </div>
+                    </div>
+                  ) : item === "Bolsas e Acessorios" ? (
+                    <div className="header-menu-subpanel-categories">
+                      <div className="header-menu-subpanel-category-group">
+                        <span className="header-menu-subpanel-category-title">BOLSAS</span>
+                        <div className="header-menu-subpanel-category-links">
+                          <a href="/products?category=Bolsas">Todas as bolsas</a>
+                          <a href="/products?q=Genesis%20Bag%20%E2%80%94%20Black">Genesis Bag — Black</a>
+                          <a href="/products?q=Genesis%20Bag%20%E2%80%94%20Sand">Genesis Bag — Sand</a>
+                        </div>
+                      </div>
+                      <div className="header-menu-subpanel-category-group">
+                        <span className="header-menu-subpanel-category-title">ACESSÓRIOS</span>
+                        <div className="header-menu-subpanel-category-links">
+                          <a href="/products?category=Carteiras">Carteiras</a>
+                          <a href="/products?category=Cintos">Cintos</a>
+                        </div>
+                      </div>
+                      <div className="header-menu-subpanel-category-group">
+                        <span className="header-menu-subpanel-category-title">FEATURED</span>
+                        <div className="header-menu-subpanel-category-links">
+                          <a href="/products?sort=latest">New Arrivals</a>
+                          <a href="/products?featured=signature">Signature Pieces</a>
+                        </div>
+                      </div>
+                      <a
+                        href="#"
+                        onClick={(event) => event.preventDefault()}
+                        className="header-menu-subpanel-single-image header-menu-subpanel-single-image--clean"
+                        aria-label="Imagem destaque Bolsas e Acessorios"
+                      >
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img
+                          src="https://media.tsebi.com.br/Pin%20on%20IN%20EYE%2C%20EAR%2C%20MOUTH.jpg"
+                          alt="Destaque Bolsas e Acessorios"
+                        />
+                      </a>
+                    </div>
+                  ) : item === "Seleção Tsebi" ? (
+                    <section className="header-menu-subpanel-curation" aria-label="Seleção Tsebi">
+                      <div className="header-menu-subpanel-curation-hero">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img src={MENU_SELECAO_TSEBI_LOOK.heroImage} alt="Modelo com look completo Tsebi" />
+                      </div>
+                      <h3 className="header-menu-subpanel-curation-title">{MENU_SELECAO_TSEBI_LOOK.title}</h3>
+                      <p className="header-menu-subpanel-curation-subtitle">{MENU_SELECAO_TSEBI_LOOK.subtitle}</p>
+                      <h4 className="header-menu-subpanel-curation-shop-title">COMPRE O LOOK</h4>
+                      <div className="header-menu-subpanel-curation-grid">
+                        {MENU_SELECAO_TSEBI_LOOK.products.map((product, index) => (
+                          <article key={product.id} className="header-menu-subpanel-curation-card">
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img src={product.image} alt={`Produto ${index + 1} - ${product.name}`} />
+                            <div className="header-menu-subpanel-curation-card-body">
+                              <p className="header-menu-subpanel-curation-card-name">{product.name}</p>
+                              <p className="header-menu-subpanel-curation-card-price">{product.priceLabel}</p>
+                              <div className="header-menu-subpanel-curation-card-actions">
+                                <a href={product.href} className="header-menu-subpanel-curation-card-link">
+                                  Ver produto
+                                </a>
+                                <button
+                                  type="button"
+                                  className="header-menu-subpanel-curation-card-add"
+                                  onClick={() => handleAddSelecaoItem(product)}
+                                >
+                                  <svg viewBox="0 0 24 24" aria-hidden="true">
+                                    <path d="M7 7h10l1 12H6L7 7z"></path>
+                                    <path d="M9 7V6a3 3 0 1 1 6 0v1"></path>
+                                  </svg>
+                                  <span>+</span>
+                                </button>
+                              </div>
+                            </div>
+                          </article>
+                        ))}
+                      </div>
+                      <button
+                        type="button"
+                        className="header-menu-subpanel-curation-buy-all"
+                        onClick={(event) => handleAddSelecaoLook(event)}
+                      >
+                        Comprar curadoria semanal
+                      </button>
+                      {selecaoFeedback ? <p className="header-menu-subpanel-curation-feedback">{selecaoFeedback}</p> : null}
+                    </section>
+                  ) : item === "Feminino" ? (
+                    <div className="header-menu-subpanel-fashion-layout">
+                      <div className="header-menu-subpanel-categories">
+                        {MENU_FEMININO_CATEGORIES.map((group) => (
+                          <div key={group.title} className="header-menu-subpanel-category-group">
+                            <span className="header-menu-subpanel-category-title">{group.title}</span>
+                            <div className="header-menu-subpanel-category-links">
+                              {group.items.map((subItem) => (
+                                <a key={subItem} href={`/products?q=${encodeURIComponent(subItem)}`}>
+                                  {subItem}
+                                </a>
+                              ))}
+                            </div>
+                          </div>
+                        ))}
+                        <a className="header-menu-subpanel-view-all" href="/products?gender=Feminino">
+                          Ver tudo
+                        </a>
+                      </div>
+                      <aside className="header-menu-subpanel-editorial-banner" aria-hidden="true">
+                        <div className="header-menu-subpanel-editorial-banner-space"></div>
+                      </aside>
+                    </div>
+                  ) : item === "Masculino" ? (
+                    <div className="header-menu-subpanel-fashion-layout">
+                      <div className="header-menu-subpanel-categories">
+                        {MENU_MASCULINO_CATEGORIES.map((group) => (
+                          <div key={group.title} className="header-menu-subpanel-category-group">
+                            <span className="header-menu-subpanel-category-title">{group.title}</span>
+                            <div className="header-menu-subpanel-category-links">
+                              {group.items.map((subItem) => (
+                                <a key={subItem} href={`/products?q=${encodeURIComponent(subItem)}`}>
+                                  {subItem}
+                                </a>
+                              ))}
+                            </div>
+                          </div>
+                        ))}
+                        <a className="header-menu-subpanel-view-all" href="/products?gender=Masculino">
+                          Ver tudo
+                        </a>
+                      </div>
+                      <aside
+                        className="header-menu-subpanel-editorial-banner header-menu-subpanel-editorial-banner--masculino"
+                        aria-hidden="true"
+                        style={{
+                          display: "block",
+                          backgroundImage:
+                            'linear-gradient(180deg, rgba(3, 4, 5, 0.46) 0%, rgba(3, 4, 5, 0.34) 30%, rgba(3, 4, 5, 0.24) 58%, rgba(3, 4, 5, 0.54) 100%), radial-gradient(80% 68% at 50% 52%, rgba(255, 255, 255, 0.04) 0%, rgba(255, 255, 255, 0.01) 40%, rgba(0, 0, 0, 0.24) 100%), url("https://media.tsebi.com.br/generation-6393ea28-757e-45d6-ab49-4dfed1ba1a87.png")',
+                          backgroundSize: "auto 100%",
+                          backgroundPosition: "40% 60%",
+                          backgroundRepeat: "no-repeat",
+                        }}
+                      >
+                        <div className="header-menu-subpanel-editorial-banner-space"></div>
+                      </aside>
+                    </div>
+                  ) : null}
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
       </aside>
 
       <div className={`tsebi-search-overlay ${isSearchOpen ? "is-open" : ""}`} aria-hidden={!isSearchOpen}>
@@ -514,7 +955,7 @@ export function SiteHeader() {
               isOpen={isSearchOpen}
               query={searchQuery}
               placement="search_overlay_header"
-              title="Recomendado para você"
+              title="Recomendado para vocÃª"
               limit={6}
               mode="personalized"
             />
@@ -522,17 +963,23 @@ export function SiteHeader() {
               isOpen={isSearchOpen}
               query={searchQuery}
               placement="search_overlay_header_best_sellers"
-              title="Mais vendidos"
+              title="Seleção Tsebi"
               limit={6}
               mode="best_sellers"
             />
-            <p className="tsebi-search-footer-quote">Se torne a sua melhor versão!</p>
+            <p className="tsebi-search-footer-quote">Se torne a sua melhor versÃ£o!</p>
           </div>
         </section>
       </div>
     </>
   );
 }
+
+
+
+
+
+
 
 
 
