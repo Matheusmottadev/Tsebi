@@ -440,28 +440,7 @@ export function SiteHeader() {
         >
           &times;
         </button>
-        <nav className="header-menu-nav">
-          <div className="menu-group">
-            <Link className="menu-group-title" href="/" onClick={() => setIsMenuOpen(false)}>
-              Coleção Genesis
-            </Link>
-          </div>
-          <div className="menu-group">
-            <Link className="menu-group-title" href="/nossa-historia" onClick={() => setIsMenuOpen(false)}>
-              Origem
-            </Link>
-          </div>
-          <div className="menu-group">
-            <Link className="menu-group-title" href="/processos" onClick={() => setIsMenuOpen(false)}>
-              Processos
-            </Link>
-          </div>
-          <div className="menu-group">
-            <Link className="menu-group-title" href="/faq" onClick={() => setIsMenuOpen(false)}>
-              FAQ
-            </Link>
-          </div>
-        </nav>
+        <nav className="header-menu-nav" aria-label="Menu lateral"></nav>
       </aside>
 
       <div className={`tsebi-search-overlay ${isSearchOpen ? "is-open" : ""}`} aria-hidden={!isSearchOpen}>
