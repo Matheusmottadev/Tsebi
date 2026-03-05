@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
-import { redirect } from "next/navigation";
+import { notFound } from "next/navigation";
+import { LegacyStaticPageRenderer } from "@/components/LegacyStaticPageRenderer";
+import { loadLegacyStaticPage } from "@/lib/legacy-static-pages";
 
 export const metadata: Metadata = {
   title: "Processos",
@@ -15,6 +17,15 @@ export const metadata: Metadata = {
   },
 };
 
-export default function ProcessosPage() {
-  redirect("/legacy/pages/processos.html");
+export default async function ProcessosPage() {
+  const page = await loadLegacyStaticPage("processos");
+  if (!page) notFound();
+
+  return (
+    <LegacyStaticPageRenderer
+      stylesheetHrefs={page.stylesheetHrefs}
+      inlineStyles={page.inlineStyles}
+      bodyMarkup={page.bodyMarkup}
+    />
+  );
 }

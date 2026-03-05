@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
-import { redirect } from "next/navigation";
+import { notFound } from "next/navigation";
+import { LegacyStaticPageRenderer } from "@/components/LegacyStaticPageRenderer";
+import { loadLegacyStaticPage } from "@/lib/legacy-static-pages";
 
 export const metadata: Metadata = {
   title: "FAQ",
@@ -20,6 +22,15 @@ export const metadata: Metadata = {
   },
 };
 
-export default function FaqPage() {
-  redirect("/legacy/pages/faq.html");
+export default async function FaqPage() {
+  const page = await loadLegacyStaticPage("faq");
+  if (!page) notFound();
+
+  return (
+    <LegacyStaticPageRenderer
+      stylesheetHrefs={page.stylesheetHrefs}
+      inlineStyles={page.inlineStyles}
+      bodyMarkup={page.bodyMarkup}
+    />
+  );
 }

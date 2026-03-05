@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
-import { redirect } from "next/navigation";
+import { notFound } from "next/navigation";
+import { LegacyStaticPageRenderer } from "@/components/LegacyStaticPageRenderer";
+import { loadLegacyStaticPage } from "@/lib/legacy-static-pages";
 
 export const metadata: Metadata = {
   title: "Nossa historia",
@@ -15,6 +17,15 @@ export const metadata: Metadata = {
   },
 };
 
-export default function NossaHistoriaPage() {
-  redirect("/legacy/pages/nossa-historia.html");
+export default async function NossaHistoriaPage() {
+  const page = await loadLegacyStaticPage("nossa-historia");
+  if (!page) notFound();
+
+  return (
+    <LegacyStaticPageRenderer
+      stylesheetHrefs={page.stylesheetHrefs}
+      inlineStyles={page.inlineStyles}
+      bodyMarkup={page.bodyMarkup}
+    />
+  );
 }

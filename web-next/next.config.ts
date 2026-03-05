@@ -106,13 +106,6 @@ const nextConfig: NextConfig = {
       }
     }
 
-    rewrites.push(
-      ...staticLegacyPageSlugs.map((slug) => ({
-        source: `/${slug}`,
-        destination: `/legacy/pages/${slug}.html`,
-      }))
-    );
-
     return rewrites;
   },
 };
