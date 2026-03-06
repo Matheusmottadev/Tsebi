@@ -1,6 +1,6 @@
 "use client";
 
-import type { ReactNode } from "react";
+import { Suspense, type ReactNode } from "react";
 import { usePathname } from "next/navigation";
 import { CartBootstrap } from "@/components/CartBootstrap";
 import { SiteHeader } from "@/components/SiteHeader";
@@ -24,7 +24,11 @@ export function LayoutChrome({ children }: LayoutChromeProps) {
   return (
     <>
       <CartBootstrap />
-      {shouldRenderHeader ? <SiteHeader /> : null}
+      {shouldRenderHeader ? (
+        <Suspense fallback={null}>
+          <SiteHeader />
+        </Suspense>
+      ) : null}
       {children}
     </>
   );
