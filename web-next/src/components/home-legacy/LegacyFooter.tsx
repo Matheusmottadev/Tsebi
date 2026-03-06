@@ -24,7 +24,7 @@ export function LegacyFooter({ variant = "dark", language = "pt", onLanguageChan
           </form>
           <p className="newsletter-legal">
             Ao clicar em &quot;Assinar&quot;, Você confirma que leu e entendeu nossa{" "}
-            <Link href="/Política-privacidade">Política de Privacidade</Link> e que deseja receber a newsletter e outras
+            <Link href="/politica-privacidade">Política de Privacidade</Link> e que deseja receber a newsletter e outras
             comunicações de marketing, conforme nela estabelecido.
           </p>
           <div className="footer-socials">
@@ -104,7 +104,7 @@ export function LegacyFooter({ variant = "dark", language = "pt", onLanguageChan
         <section className="footer-column">
           <h3>TERMOS E CONDIÇÕES LEGAIS</h3>
           <Link href="/aviso-legal">Aviso legal</Link>
-          <Link href="/Política-privacidade">Política de Privacidade</Link>
+          <Link href="/politica-privacidade">Política de Privacidade</Link>
           <Link href="/cookie-policy">Política de cookies</Link>
           <a href="#" data-cookie-settings-trigger="true">Configuracoes de cookies</a>
           <Link href="/aviso-legal">Termos de venda</Link>
