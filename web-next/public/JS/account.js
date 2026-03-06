@@ -192,7 +192,7 @@ function renderFavorites() {
         <a class="account-fav-link" href="produto.html?id=${encodeURIComponent(item.id)}">
           <img src="${item.image}" alt="${item.name}" loading="lazy" decoding="async" />
         </a>
-        <button class="product-favorite-btn is-active account-fav-remove" type="button" data-remove-favorite="${item.id}" aria-label="Remover dos favoritos">â™¥</button>
+        <button class="product-favorite-btn is-active account-fav-remove" type="button" data-remove-favorite="${item.id}" aria-label="Remover dos favoritos">♥</button>
       </div>
       <a class="account-fav-link" href="produto.html?id=${encodeURIComponent(item.id)}">
         <h4>${item.name}</h4>

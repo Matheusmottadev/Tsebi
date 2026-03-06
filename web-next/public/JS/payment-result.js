@@ -241,7 +241,7 @@ function renderPaid(order) {
   if (titleEl) titleEl.textContent = "Pagamento confirmado";
   if (messageEl) {
     messageEl.textContent =
-      "Recebemos seu pagamento com sucesso. Seu cadastro foi aprovado automaticamente para facilitar suas proximas compras.";
+      "Recebemos seu pagamento com sucesso. Seu cadastro foi aprovado automaticamente para facilitar suas próximas compras.";
   }
   renderSummary(order);
   setActionsVisibility({
@@ -520,7 +520,7 @@ async function handleActivateSubmit(event) {
     return;
   }
   if (password !== confirmPassword) {
-    setActivationError("As senhas nao conferem.");
+    setActivationError("As senhas não conferem.");
     return;
   }
   if (!currentCheckoutEmail) {

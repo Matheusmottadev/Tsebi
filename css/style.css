@@ -47,7 +47,7 @@ body {
   max-width: 100%;
 }
 
-/* Setas (sem hover / sem animation no CSS Ã¢â‚¬â€ o JS anima) */
+/* Setas (sem hover / sem animation no CSS — o JS anima) */
 .arrow {
   background: none;
   border: none;
@@ -63,7 +63,7 @@ body {
   flex: 0 0 auto;
 }
 
-/* remove Ã¢â‚¬Å“puloÃ¢â‚¬Â por foco/click */
+/* remove “pulo” por foco/click */
 .arrow:focus { outline: none; }
 .arrow::-moz-focus-inner { border: 0; }
 
@@ -78,7 +78,7 @@ body {
   text-overflow: ellipsis;
 }
 
-/* AnimaÃƒÂ§ÃƒÂµes do texto (mantÃƒÂ©m do jeito que vocÃƒÂª jÃƒÂ¡ usa) */
+/* Animações do texto (mantém do jeito que você já usa) */
 .slide-right { animation: slideRight 0.45s ease; }
 .slide-left  { animation: slideLeft 0.45s ease; }
 
@@ -5221,7 +5221,7 @@ body.newsletter-popup-open{
 }
 
 .account-list-item-clickable.is-open::after{
-  content: "ÃƒÂ¢Ã‹â€ Ã¢â‚¬â„¢";
+  content: "−";
 }
 
 .account-order-products{

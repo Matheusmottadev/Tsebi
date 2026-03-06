@@ -1397,7 +1397,7 @@ async function lookupAddressByCep(cep, { force = false } = {}) {
         fillShippingForm();
         saveShipping();
         refreshShippingProgressButton();
-        setFieldError("cep", "CEP nao encontrado.");
+        setFieldError("cep", "CEP não encontrado.");
       } else {
         setFieldError("cep", "Falha ao consultar CEP. Tente novamente.");
       }

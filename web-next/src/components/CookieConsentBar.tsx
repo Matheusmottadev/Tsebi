@@ -204,10 +204,10 @@ export function CookieConsentBar() {
           <div className={styles.content}>
             <p className={styles.title}>Preferencias de cookies</p>
             <p className={styles.text}>
-              Usamos cookies essenciais para o site funcionar e, com sua permissao, cookies de analise e publicidade.
+              Usamos cookies essenciais para o site funcionar e, com sua permissão, cookies de análise e publicidade.
             </p>
             <a className={styles.policyLink} href="/legacy/pages/cookie-policy.html">
-              Ver politica de cookies
+              Ver política de cookies
             </a>
           </div>
 
@@ -222,7 +222,7 @@ export function CookieConsentBar() {
               Aceitar todos
             </button>
           </div>
-          <p className={styles.footnote}>Voce pode alterar suas preferencias a qualquer momento.</p>
+          <p className={styles.footnote}>Você pode alterar suas preferencias a qualquer momento.</p>
         </aside>
       ) : null}
 

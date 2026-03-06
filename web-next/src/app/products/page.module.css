@@ -1,4 +1,4 @@
-.page {
+﻿.page {
   min-height: 100vh;
   background: #f7f7f7;
 }
@@ -41,7 +41,956 @@
   color: #5d5d5d;
 }
 
+.novidadesToolbarSection {
+  --novidades-toolbar-height: 40px;
+  --novidades-toolbar-height-expanded: 64px;
+  --novidades-toolbar-attach-offset: 8px;
+  position: fixed;
+  top: calc(var(--top-bar-height, 38px) + var(--header-height, 84px) - var(--novidades-toolbar-attach-offset));
+  left: 0;
+  right: 0;
+  z-index: 980;
+  width: 100vw;
+  height: var(--novidades-toolbar-height);
+  background: #fff;
+  border-top: 0;
+  border-bottom: 1px solid #ececec;
+}
+
+.novidadesToolbarSection:has(.novidadesFiltersPopupCheckbox:checked) {
+  z-index: 21000;
+}
+
+.novidadesToolbarSectionExpanded {
+  height: var(--novidades-toolbar-height-expanded);
+}
+
+.novidadesToolbarInner {
+  width: calc(100% - 68px);
+  margin: 0 34px;
+  min-height: 0;
+  height: 100%;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.novidadesFiltersLeft {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 4px;
+  flex: 1;
+}
+
+.novidadesCategoriesRow,
+.novidadesSubcategoriesRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  min-width: 0;
+}
+
+.novidadesSubDivider {
+  color: #b0b0b0;
+  font-size: 11px;
+  line-height: 1;
+}
+
+.novidadesBackButton {
+  color: #8a8a8a;
+  font-size: 11px;
+  line-height: 1.2;
+  letter-spacing: 0;
+  white-space: nowrap;
+  transition: color 0.2s ease, opacity 0.2s ease;
+  opacity: 0.9;
+}
+
+.novidadesBackButton:hover {
+  color: #000;
+  opacity: 1;
+  text-decoration: none;
+  font-weight: 600 !important;
+}
+
+.novidadesMainCategoryLink {
+  color: #5b5b5b;
+  font-size: 11px;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  transition: color 0.2s ease, opacity 0.2s ease;
+  opacity: 0.95;
+}
+
+.novidadesMainCategoryLink:hover {
+  color: #000;
+  opacity: 1;
+}
+
+.novidadesMainCategoryLinkActive {
+  color: #111;
+  font-weight: 600 !important;
+}
+
+.novidadesFlatLink {
+  color: #8a8a8a;
+  font-size: 11px;
+  line-height: 1.2;
+  letter-spacing: 0;
+  white-space: nowrap;
+  transition: color 0.2s ease, opacity 0.2s ease;
+  opacity: 0.9;
+}
+
+.novidadesFlatLink:hover {
+  color: #000;
+  opacity: 1;
+  text-decoration: none;
+  font-weight: 600 !important;
+}
+
+.novidadesFlatLinkActive {
+  color: #111;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.novidadesFilterGroup,
+.novidadesSortGroup {
+  position: relative;
+}
+
+.novidadesSortGroup {
+  display: inline-flex;
+  align-items: center;
+}
+
+.novidadesActionsRight {
+  display: inline-flex;
+  align-items: center;
+  gap: 16px;
+  margin-right: 14px;
+  line-height: 1;
+}
+
+.novidadesFilterToggle,
+.novidadesSortToggle {
+  list-style: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  border-radius: 999px;
+  border: 1px solid #d7d7d7;
+  background: #fff;
+  color: #1f1f1f;
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 4px 9px;
+  cursor: pointer;
+  transition: border-color 0.2s ease, background 0.2s ease;
+}
+
+.novidadesSortToggle {
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  padding: 0;
+  gap: 4px;
+  line-height: 1;
+  color: #111;
+  font-size: 11px;
+  font-weight: 700 !important;
+  letter-spacing: 0.05em;
+  transition: color 0.2s ease, opacity 0.2s ease;
+  opacity: 0.95;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.novidadesSortToggle:hover {
+  color: #000;
+  opacity: 1;
+}
+
+.novidadesSortToggle span {
+  display: inline-flex;
+  align-items: center;
+  line-height: 1;
+  font-weight: 700 !important;
+}
+
+.novidadesSortActionIcon {
+  width: 14px;
+  height: 14px;
+  display: inline-block;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.7;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  vertical-align: middle;
+}
+
+.novidadesActionButton {
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 4px;
+  line-height: 1;
+  color: #111;
+  font-size: 11px;
+  font-weight: 700 !important;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  transition: color 0.2s ease, opacity 0.2s ease;
+  opacity: 0.95;
+  cursor: pointer;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.novidadesActionButton span {
+  display: inline-flex;
+  align-items: center;
+  line-height: 1;
+  font-weight: 700 !important;
+}
+
+.novidadesActionButton:hover {
+  color: #000;
+  opacity: 1;
+}
+
+.novidadesFiltersPopupGroup {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+
+.novidadesFiltersPopupCheckbox {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  border: 0;
+  padding: 0;
+  clip: rect(0, 0, 0, 0);
+  overflow: hidden;
+}
+
+.novidadesFiltersPopupToggle {
+  cursor: pointer;
+}
+
+.novidadesFiltersLabel {
+  display: inline-flex;
+  align-items: baseline;
+  line-height: 1;
+}
+
+.novidadesFiltersSelectedCount {
+  margin-left: 0.5px;
+  font-size: 7px;
+  line-height: 1;
+  font-weight: 700 !important;
+  color: currentColor;
+  vertical-align: super;
+  display: inline-block;
+  letter-spacing: 0.01em;
+  top: -0.34em;
+  position: relative;
+}
+
+.novidadesFiltersPopupPanel {
+  position: fixed;
+  inset: 0 0 0 auto;
+  width: 45vw;
+  height: 100dvh;
+  min-height: 100dvh;
+  z-index: 20001;
+  border-left: 1px solid #dedede;
+  border-radius: 0;
+  background: #fff;
+  box-shadow: none;
+  transform: translateX(100%);
+  opacity: 0;
+  pointer-events: none;
+  transition: transform 0.78s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.52s ease;
+  will-change: transform;
+}
+
+.novidadesFiltersPopupCheckbox:checked ~ .novidadesFiltersPopupPanel {
+  transform: translateX(0);
+  opacity: 1;
+  pointer-events: auto;
+  transition: transform 0.52s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.36s ease;
+}
+
+.novidadesFiltersPopupClose {
+  position: absolute;
+  top: 20px;
+  right: 26px;
+  width: 28px;
+  height: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #5b5b5b;
+  font-size: 18px;
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: 0;
+  cursor: pointer;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.novidadesFiltersPopupClose:hover {
+  color: #111;
+}
+
+.novidadesFiltersClear {
+  position: absolute;
+  top: 60px;
+  left: 52px;
+  display: inline-block;
+  color: #111;
+  font-size: 18.7px;
+  font-weight: 700 !important;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+
+.novidadesFiltersClear:hover {
+  color: #111;
+}
+
+.novidadesFiltersPopupBody {
+  position: absolute;
+  inset: 104px 0 0 0;
+  overflow-y: auto;
+  padding: 0;
+}
+
+.novidadesFiltersSection {
+  padding: 26px 22px 22px;
+  border-top: 1px solid #ececec;
+}
+
+.novidadesFiltersPopupBody .novidadesFiltersSection:first-child {
+  border-top: 0;
+}
+
+.novidadesFiltersSectionTitle {
+  margin: 0 0 14px;
+  color: #1c1c1c;
+  font-size: 18px;
+  line-height: 1.2;
+  letter-spacing: 0;
+}
+
+.novidadesFiltersTwoColumns {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  column-gap: 22px;
+  row-gap: 8px;
+}
+
+.novidadesFiltersOption {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 8px;
+  min-height: 30px;
+  color: #1f1f1f;
+  font-size: 14px;
+  line-height: 1.35;
+  transition: color 0.2s ease;
+}
+
+.novidadesFiltersOption:hover {
+  color: #000;
+}
+
+.novidadesFiltersOptionActive {
+  color: #111;
+}
+
+.novidadesFiltersOptionUnavailable {
+  opacity: 0.38;
+  cursor: not-allowed;
+}
+
+.novidadesFiltersColorDot {
+  width: 16px;
+  height: 16px;
+  border-radius: 999px;
+  border: 1px solid #d4d4d4;
+  flex: 0 0 16px;
+}
+
+.novidadesFiltersExpandableBlock {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.novidadesFiltersMoreGroup {
+  margin-top: 6px;
+  display: flex;
+  flex-direction: column;
+}
+
+.novidadesFiltersMoreToggle {
+  list-style: none;
+  display: inline-block;
+  color: #202020;
+  font-size: 13px;
+  line-height: 1.2;
+  cursor: pointer;
+  margin-bottom: 10px;
+  order: 1;
+  align-self: flex-start;
+}
+
+.novidadesFiltersMoreToggle:focus {
+  outline: none;
+}
+
+.novidadesFiltersMoreToggle::-webkit-details-marker {
+  display: none;
+}
+
+.novidadesFiltersMoreTextLess {
+  display: none;
+}
+
+.novidadesFiltersMoreGroup[open] .novidadesFiltersMoreToggle {
+  order: 2;
+  margin-top: 10px;
+  margin-bottom: 0;
+}
+
+.novidadesFiltersMoreGroup[open] .novidadesFiltersMoreTextMore {
+  display: none;
+}
+
+.novidadesFiltersMoreGroup[open] .novidadesFiltersMoreTextLess {
+  display: inline;
+}
+
+.novidadesFiltersCollapsibleGrid {
+  order: 2;
+  max-height: 0;
+  margin-top: 0;
+  opacity: 0;
+  overflow: hidden;
+  transform: translateY(-4px);
+  pointer-events: none;
+  transition:
+    max-height 0.42s cubic-bezier(0.22, 1, 0.36, 1),
+    opacity 0.28s ease,
+    transform 0.28s ease,
+    margin-top 0.28s ease;
+}
+
+.novidadesFiltersMoreGroup[open] .novidadesFiltersCollapsibleGrid {
+  order: 1;
+  max-height: 420px;
+  margin-top: 6px;
+  opacity: 1;
+  transform: translateY(0);
+  pointer-events: auto;
+}
+
+.novidadesFiltersSizesWrap {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 14px;
+}
+
+.novidadesFiltersSizeDivider {
+  color: #777;
+  font-size: 14px;
+  line-height: 1;
+}
+
+.novidadesFiltersSizeChip {
+  min-width: 0;
+  height: auto;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  color: #1f1f1f;
+  font-size: 14px;
+  line-height: 1.25;
+}
+
+.novidadesFiltersSizeChipActive {
+  color: #111;
+}
+
+.novidadesFiltersSizeChipUnavailable {
+  opacity: 0.38;
+  cursor: not-allowed;
+}
+
+.novidadesFiltersClear,
+.novidadesFiltersSizeChip {
+  position: relative;
+  text-decoration: none;
+}
+
+.novidadesFiltersClear::after,
+.novidadesFiltersSizeChip::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  bottom: -3px;
+  width: 100%;
+  height: 1px;
+  background: currentColor;
+  transform: scaleX(0);
+  transform-origin: right center;
+  transition: transform 0.28s cubic-bezier(0.22, 1, 0.36, 1);
+  pointer-events: none;
+}
+
+.novidadesFiltersClear:hover::after,
+.novidadesFiltersClear:focus-visible::after,
+.novidadesFiltersSizeChip:hover::after,
+.novidadesFiltersSizeChip:focus-visible::after {
+  transform: scaleX(1);
+  transform-origin: left center;
+}
+
+.novidadesFiltersOptionLabel {
+  position: relative;
+  display: inline-block;
+}
+
+.novidadesFiltersOptionLabel::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  bottom: -3px;
+  width: 100%;
+  height: 1px;
+  background: currentColor;
+  transform: scaleX(0);
+  transform-origin: right center;
+  transition: transform 0.28s cubic-bezier(0.22, 1, 0.36, 1);
+  pointer-events: none;
+}
+
+.novidadesFiltersOption:hover .novidadesFiltersOptionLabel::after,
+.novidadesFiltersOption:focus-visible .novidadesFiltersOptionLabel::after {
+  transform: scaleX(1);
+  transform-origin: left center;
+}
+
+.novidadesFiltersSelectedMark {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 2px;
+  min-width: 0;
+  height: 12px;
+  flex: 0 0 auto;
+  color: #1b1b1b;
+  line-height: 0;
+}
+
+.novidadesFiltersSelectedLogo {
+  width: 13px;
+  height: 13px;
+  object-fit: contain;
+  display: block;
+}
+
+.novidadesFiltersSelectedTick {
+  width: 9px;
+  height: 9px;
+  flex: 0 0 9px;
+  fill: none;
+  stroke: #111;
+  stroke-width: 2.2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  transform: translateY(0.5px);
+}
+
+.novidadesFiltersMoreTextMore,
+.novidadesFiltersMoreTextLess {
+  position: relative;
+  display: inline-block;
+}
+
+.novidadesFiltersMoreTextMore::before,
+.novidadesFiltersMoreTextLess::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  bottom: -3px;
+  width: 100%;
+  height: 1px;
+  background: currentColor;
+  opacity: 0.42;
+  pointer-events: none;
+}
+
+.novidadesFiltersMoreTextMore::after,
+.novidadesFiltersMoreTextLess::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  bottom: -3px;
+  width: 100%;
+  height: 1px;
+  background: currentColor;
+  transform: scaleX(0);
+  transform-origin: right center;
+  transition: transform 0.28s cubic-bezier(0.22, 1, 0.36, 1);
+  pointer-events: none;
+}
+
+.novidadesFiltersMoreToggle:hover .novidadesFiltersMoreTextMore::after,
+.novidadesFiltersMoreToggle:focus-visible .novidadesFiltersMoreTextMore::after,
+.novidadesFiltersMoreToggle:hover .novidadesFiltersMoreTextLess::after,
+.novidadesFiltersMoreToggle:focus-visible .novidadesFiltersMoreTextLess::after {
+  transform: scaleX(1);
+  transform-origin: left center;
+}
+
+.novidadesFiltersMoreGroup:not([open]) .novidadesFiltersMoreTextMore {
+  display: inline-block;
+}
+
+.novidadesFiltersMoreGroup:not([open]) .novidadesFiltersMoreTextLess {
+  display: none;
+}
+
+.novidadesFiltersMoreGroup[open] .novidadesFiltersMoreTextMore {
+  display: none;
+}
+
+.novidadesFiltersMoreGroup[open] .novidadesFiltersMoreTextLess {
+  display: inline-block;
+}
+
+.novidadesFiltersEmpty {
+  margin: 0;
+  color: #7a7a7a;
+  font-size: 13px;
+}
+
+.novidadesActionButton::selection {
+  background: transparent;
+  color: inherit;
+}
+
+.novidadesFilterActionIcon {
+  width: 14px;
+  height: 14px;
+  display: inline-block;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.7;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  transform: none;
+  vertical-align: middle;
+}
+
+.novidadesSortToggle::selection {
+  background: transparent;
+  color: inherit;
+}
+
+.novidadesFilterToggle::after {
+  content: "";
+  width: 7px;
+  height: 7px;
+  border-right: 1.2px solid currentColor;
+  border-bottom: 1.2px solid currentColor;
+  transform: rotate(45deg) translateY(-1px);
+}
+
+.novidadesSortToggle::after {
+  content: none;
+}
+
+.novidadesFilterToggle::-webkit-details-marker,
+.novidadesSortToggle::-webkit-details-marker {
+  display: none;
+}
+
+.novidadesFilterToggleActive,
+.novidadesFilterGroup[open] .novidadesFilterToggle,
+.novidadesSortGroup[open] .novidadesSortToggle {
+  border-color: #121212;
+}
+
+.novidadesSortGroup[open] .novidadesSortToggle {
+  border-color: transparent;
+}
+
+.novidadesFilterMenu,
+.novidadesSortMenu {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 0;
+  min-width: 200px;
+  z-index: 18;
+  border: 1px solid #e3e3e3;
+  border-radius: 12px;
+  background: #fff;
+  box-shadow: 0 20px 45px rgba(0, 0, 0, 0.12);
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.novidadesSortMenu {
+  right: 0;
+  left: auto;
+  min-width: 190px;
+}
+
+.novidadesFilterItem {
+  display: block;
+  border-radius: 8px;
+  color: #1f1f1f;
+  font-size: 12px;
+  line-height: 1.2;
+  padding: 6px 8px;
+  transition: background 0.18s ease, color 0.18s ease;
+}
+
+.novidadesFilterItem:hover {
+  background: #f3f3f3;
+}
+
+.novidadesFilterItemActive,
+.novidadesFilterItemActive:hover {
+  background: #111;
+  color: #fff;
+}
+
+.novidadesSection {
+  width: 100vw;
+  margin-left: calc(50% - 50vw);
+  background: #f4f4f4;
+}
+
+.novidadesGrid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0;
+}
+
+.novidadesCard {
+  position: relative;
+  display: block;
+  aspect-ratio: 3 / 3.7;
+  overflow: hidden;
+  background: #e9ecef;
+  color: inherit;
+  text-decoration: none;
+}
+
+.novidadesLink {
+  display: block;
+  height: 100%;
+  position: relative;
+  color: inherit;
+  text-decoration: none;
+}
+
+.novidadesCardLarge {
+  grid-column: 1 / span 2;
+  grid-row: span 2;
+}
+
+.novidadesImage {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+  display: block;
+  transition: opacity 0.3s ease, transform 0.32s ease;
+}
+
+.novidadesImagePrimary {
+  opacity: 1;
+}
+
+.novidadesImageSecondary {
+  opacity: 0;
+}
+
+.novidadesCard:hover .novidadesImagePrimary,
+.novidadesCard:focus-within .novidadesImagePrimary {
+  opacity: 0;
+  transform: scale(1.03);
+}
+
+.novidadesCard:hover .novidadesImageSecondary,
+.novidadesCard:focus-within .novidadesImageSecondary {
+  opacity: 1;
+  transform: scale(1.03);
+}
+
+.novidadesMeta {
+  position: absolute;
+  inset: auto 0 0 0;
+  padding: 14px 14px 16px;
+  background: linear-gradient(180deg, rgba(0, 0, 0, 0) 0%, rgba(0, 0, 0, 0.66) 100%);
+  color: #fff;
+}
+
+.novidadesName {
+  margin: 0;
+  font-size: 15px;
+  line-height: 1.25;
+  letter-spacing: 0.01em;
+}
+
+.novidadesPrice {
+  margin: 6px 0 0;
+  font-size: 13px;
+  letter-spacing: 0.02em;
+  opacity: 0.95;
+}
+
+.novidadesFavoriteBtn {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  z-index: 3;
+  width: 28px;
+  height: 28px;
+  border: none;
+  border-radius: 0;
+  background: transparent;
+  color: #fff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: transform 0.2s ease, opacity 0.2s ease;
+}
+
+.novidadesFavoriteBtn:hover {
+  transform: translateY(-1px);
+  opacity: 0.88;
+}
+
+.novidadesFavoriteBtn:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+
+.novidadesFavoriteBtn svg {
+  width: 20px;
+  height: 20px;
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.65));
+}
+
+.novidadesFavoriteBtn path {
+  fill: transparent;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.novidadesFavoriteBtnActive path {
+  fill: currentColor;
+}
+
+.novidadesToast {
+  position: fixed;
+  right: 16px;
+  bottom: 18px;
+  z-index: 120;
+  max-width: min(92vw, 360px);
+  padding: 10px 14px;
+  border-radius: 10px;
+  background: rgba(17, 17, 17, 0.94);
+  color: #fff;
+  font-size: 13px;
+  line-height: 1.35;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25);
+  opacity: 1;
+  transform: translateY(0);
+  transition: opacity 0.3s ease, transform 0.3s ease;
+}
+
+.novidadesToastHiding {
+  opacity: 0;
+  transform: translateY(10px);
+}
+
+@media (max-width: 1024px) {
+  .novidadesToolbarSection {
+    --novidades-toolbar-height: 64px;
+    --novidades-toolbar-height-expanded: 86px;
+    --novidades-toolbar-attach-offset: 7px;
+  }
+
+  .novidadesToolbarInner {
+    width: calc(100% - 40px);
+    margin: 0 20px;
+    padding: 6px 0;
+    gap: 10px;
+    align-items: flex-start;
+  }
+
+  .novidadesActionsRight {
+    align-self: flex-start;
+    margin-right: 0;
+  }
+
+  .novidadesGrid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .novidadesCardLarge {
+    grid-column: 1 / span 2;
+  }
+}
+
 @media (max-width: 760px) {
+  .novidadesToolbarSection {
+    --novidades-toolbar-height: 92px;
+    --novidades-toolbar-height-expanded: 118px;
+    --novidades-toolbar-attach-offset: 5px;
+  }
+
   .main {
     padding: 24px 16px 40px;
   }
@@ -53,4 +1002,83 @@
   .hero h1 {
     font-size: 30px;
   }
+
+  .novidadesToolbarInner {
+    width: calc(100% - 24px);
+    margin: 0 12px;
+  }
+
+  .novidadesFiltersLeft {
+    width: 100%;
+    gap: 6px;
+  }
+
+  .novidadesCategoriesRow,
+  .novidadesSubcategoriesRow {
+    width: 100%;
+    gap: 8px;
+  }
+
+  .novidadesActionsRight {
+    width: 100%;
+    gap: 12px;
+    justify-content: flex-start;
+    flex-wrap: wrap;
+  }
+
+  .novidadesSortGroup {
+    width: auto;
+  }
+
+  .novidadesMainCategoryLink,
+  .novidadesFlatLink {
+    font-size: 10px;
+  }
+
+  .novidadesBackButton {
+    font-size: 10px;
+  }
+
+  .novidadesFilterToggle,
+  .novidadesSortToggle {
+    width: auto;
+  }
+
+  .novidadesActionButton {
+    font-size: 10px;
+  }
+
+  .novidadesFilterMenu,
+  .novidadesSortMenu {
+    position: static;
+    margin-top: 8px;
+    width: 100%;
+    min-width: 0;
+    border-radius: 10px;
+    box-shadow: none;
+  }
+
+  .novidadesActionsRight {
+    align-self: stretch;
+  }
+
+  .novidadesGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .novidadesCardLarge {
+    grid-column: span 2;
+    grid-row: span 1;
+  }
 }
+
+@media (max-width: 520px) {
+  .novidadesGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .novidadesCardLarge {
+    grid-column: auto;
+  }
+}
+

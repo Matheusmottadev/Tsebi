@@ -60,7 +60,7 @@ export default async function StudioNewsletterPage({ searchParams }: StudioNewsl
                 <td>{row.phone || "-"}</td>
                 <td>{row.source || "-"}</td>
                 <td>{row.status || "-"}</td>
-                <td>{row.consent ? "sim" : "nao"}</td>
+                <td>{row.consent ? "sim" : "não"}</td>
                 <td>{formatDate(row.subscribedAt)}</td>
               </tr>
             ))}

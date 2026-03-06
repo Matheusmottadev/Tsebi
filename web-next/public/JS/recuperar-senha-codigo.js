@@ -119,7 +119,7 @@ async function handleVerifySubmit(event) {
     return;
   }
   if (password !== passwordConfirm) {
-    setFeedback("As senhas nao coincidem.", true);
+    setFeedback("As senhas não coincidem.", true);
     return;
   }
 

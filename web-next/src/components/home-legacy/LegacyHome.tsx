@@ -51,12 +51,12 @@ const SEARCH_CHIPS = [
   "VESTIDOS",
   "JAQUETAS",
   "TENIS",
-  "AcessÃ³rios",
+  "Acessórios",
 ];
 
 
-const SEARCH_CATEGORIES = ["Feminino", "Masculino", "CalÃ§as", "Camisas", "Blazers", "Bolsas"] as const;
-const MENU_NAV_ITEMS = ["Novidades", "Presentes", "Feminino", "Masculino", "Bolsas e Acessorios", "Seleção Tsebi"] as const;
+const SEARCH_CATEGORIES = ["Feminino", "Masculino", "Calças", "Camisas", "Blazers", "Bolsas"] as const;
+const MENU_NAV_ITEMS = ["Novidades", "Presentes", "Feminino", "Masculino", "Bolsas e Acessórios", "Seleção Tsebi"] as const;
 const MENU_NOVIDADES_GALLERY_ITEMS = [
   { name: "Origem Shirt", image: "/images/product/origem-shirt-1.jpg", href: "/product/origem-shirt" },
   { name: "Genesis Bomber", image: "/images/product/genesis-bomber-1.jpg", href: "/product/genesis-bomber" },
@@ -191,8 +191,8 @@ const HOMEPAGE_CATEGORIES = [
     image: "/images/product/essence-trousers-1.jpg",
     secondaryImage: "/images/product/essence-trousers-2.jpg",
     fallbackImage: "/images/product/essence-trousers-1.jpg",
-    alt: "Categoria CalÃ§as",
-    label: "CalÃ§as",
+    alt: "Categoria Calças",
+    label: "Calças",
   },
   {
     href: "/categoria/carteiras-femininas",
@@ -211,12 +211,12 @@ const HOMEPAGE_CATEGORIES = [
     label: "Jaquetas",
   },
   {
-    href: "/categoria/AcessÃ³rios",
+    href: "/categoria/Acessórios",
     image: "/images/product/noir-sneaker-1.jpg",
     secondaryImage: "/images/product/noir-sneaker-2.jpg",
     fallbackImage: "/images/product/noir-sneaker-1.jpg",
-    alt: "Categoria AcessÃ³rios",
-    label: "AcessÃ³rios",
+    alt: "Categoria Acessórios",
+    label: "Acessórios",
   },
 ] as const;
 
@@ -239,7 +239,7 @@ const FALLBACK_SEARCH_PIECES: SearchPiece[] = [
     secondaryImage: "/images/placeholderreal.webp",
     href: "/product/genesis-tailored",
   },
-  { id: "genesis-bomber", sku: "genesis-bomber", name: "Sabrina incrÃ­vel", image: "/images/placeholderreal.webp", secondaryImage: "/images/placeholderreal.webp", href: "/product/genesis-bomber" },
+  { id: "genesis-bomber", sku: "genesis-bomber", name: "Sabrina incrível", image: "/images/placeholderreal.webp", secondaryImage: "/images/placeholderreal.webp", href: "/product/genesis-bomber" },
 ];
 
 function normalizeProducts(products: Product[]): Product[] {
@@ -787,7 +787,7 @@ export function LegacyHome({ products }: LegacyHomeProps) {
 
   const searchSectionTitle = useMemo(() => {
     const normalized = String(searchQuery || "").trim();
-    if (normalized.length < 2) return "PRINCIPAIS PEÃ‡AS";
+    if (normalized.length < 2) return "PRINCIPAIS PEÇAS";
     if (isSearching) return "BUSCANDO...";
     return "RESULTADOS";
   }, [searchQuery, isSearching]);
@@ -1067,7 +1067,7 @@ export function LegacyHome({ products }: LegacyHomeProps) {
                         <span className="header-menu-subpanel-category-title">Para ele</span>
                         <div className="header-menu-subpanel-category-links">
                           <a
-                            href={item === "Novidades" ? "/products?view=novidades-para-ele" : "#"}
+                            href={item === "Novidades" ? "/products?n=e" : "#"}
                             onClick={(event) => {
                               if (item !== "Novidades") event.preventDefault();
                             }}
@@ -1082,7 +1082,7 @@ export function LegacyHome({ products }: LegacyHomeProps) {
                         <span className="header-menu-subpanel-category-title">Para ela</span>
                         <div className="header-menu-subpanel-category-links">
                           <a
-                            href={item === "Novidades" ? "/products?view=novidades-para-ela" : "#"}
+                            href={item === "Novidades" ? "/products?n=a" : "#"}
                             onClick={(event) => {
                               if (item !== "Novidades") event.preventDefault();
                             }}
@@ -1114,7 +1114,7 @@ export function LegacyHome({ products }: LegacyHomeProps) {
                         ))}
                       </div>
                     </div>
-                  ) : item === "Bolsas e Acessorios" ? (
+                  ) : item === "Bolsas e Acessórios" ? (
                     <div className="header-menu-subpanel-categories">
                       <div className="header-menu-subpanel-category-group">
                         <span className="header-menu-subpanel-category-title">BOLSAS</span>
@@ -1142,12 +1142,12 @@ export function LegacyHome({ products }: LegacyHomeProps) {
                         href="#"
                         onClick={(event) => event.preventDefault()}
                         className="header-menu-subpanel-single-image header-menu-subpanel-single-image--clean"
-                        aria-label="Imagem destaque Bolsas e Acessorios"
+                        aria-label="Imagem destaque Bolsas e Acessórios"
                       >
                         {/* eslint-disable-next-line @next/next/no-img-element */}
                         <img
                           src="https://media.tsebi.com.br/Pin%20on%20IN%20EYE%2C%20EAR%2C%20MOUTH.jpg"
-                          alt="Destaque Bolsas e Acessorios"
+                          alt="Destaque Bolsas e Acessórios"
                         />
                       </a>
                     </div>
@@ -1324,7 +1324,7 @@ export function LegacyHome({ products }: LegacyHomeProps) {
               isOpen={isSearchOpen}
               query={searchQuery}
               placement="search_overlay_legacy"
-              title="Recomendado para vocÃª"
+              title="Recomendado para você"
               limit={6}
               mode="personalized"
             />
@@ -1336,7 +1336,7 @@ export function LegacyHome({ products }: LegacyHomeProps) {
               limit={6}
               mode="best_sellers"
             />
-            <p className="tsebi-search-footer-quote">Se torne a sua melhor versÃ£o!</p>
+            <p className="tsebi-search-footer-quote">Se torne a sua melhor versão!</p>
           </div>
         </section>
       </div>
@@ -1353,7 +1353,7 @@ export function LegacyHome({ products }: LegacyHomeProps) {
             <img
               className="new-drop-static-image"
               src={COLLECTION_DROP_IMAGE}
-              alt="Nova ColeÃ§Ã£o em destaque"
+              alt="Nova Coleção em destaque"
               loading="lazy"
               decoding="async"
               onError={(event) => {
@@ -1363,7 +1363,7 @@ export function LegacyHome({ products }: LegacyHomeProps) {
               }}
             />
           </div>
-          <h2>ColeÃ§Ã£o Alicerce</h2>
+          <h2>Coleção Alicerce</h2>
           <Link className="new-drop-cta" href="/">
             EM BREVE
           </Link>
@@ -1450,7 +1450,7 @@ export function LegacyHome({ products }: LegacyHomeProps) {
           <header style={{ textAlign: "center", marginBottom: "var(--t-space-6)" }}>
             <h2 className="t-h2">Explore as Categorias</h2>
             <p className="t-subtitle" style={{ marginTop: "var(--t-space-2)" }}>
-              SeleÃ§Ã£o por estilo e essenciais
+              Seleção por estilo e essenciais
             </p>
           </header>
 

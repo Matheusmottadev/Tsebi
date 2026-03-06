@@ -290,7 +290,7 @@ export function UsersManager({ users, csrfToken }: UsersManagerProps) {
   return (
     <div className={styles.wrapper}>
       <section className={styles.createCard}>
-        <h3>Novo usuario</h3>
+        <h3>Novo usuário</h3>
         <div className={styles.grid}>
           <select
             value={createData.title}
@@ -364,7 +364,7 @@ export function UsersManager({ users, csrfToken }: UsersManagerProps) {
             {sortedRows.length === 0 ? (
               <tr>
                 <td colSpan={6} className={styles.empty}>
-                  Nenhum usuario encontrado.
+                  Nenhum usuário encontrado.
                 </td>
               </tr>
             ) : null}
@@ -474,7 +474,7 @@ export function UsersManager({ users, csrfToken }: UsersManagerProps) {
                   <div className={styles.metaGrid}>
             <label>
               <span>Email verificado</span>
-              <input disabled value={selectedUser.emailVerified ? "sim" : "nao"} />
+              <input disabled value={selectedUser.emailVerified ? "sim" : "não"} />
             </label>
             <label>
               <span>Ultimo login</span>
@@ -515,14 +515,14 @@ export function UsersManager({ users, csrfToken }: UsersManagerProps) {
                       type="button"
                       className={styles.danger}
                       onClick={() => {
-                        if (!window.confirm(`Excluir usuario ${selectedUser.email}?`)) return;
+                        if (!window.confirm(`Excluir usuário ${selectedUser.email}?`)) return;
                         runAction("Usuario excluido.", async () => {
                           await deleteUserAdmin(selectedUser.id, csrfToken);
                           setSelectedUser(null);
                         });
                       }}
                     >
-                      Excluir usuario
+                      Excluir usuário
                     </button>
                   </div>
                 </section>

@@ -9,7 +9,7 @@
     if (value === "canceled") return "Cancelado";
     if (value === "failed") return "Falhou";
     if (value === "refunded") return "Reembolsado";
-    return "Em analise";
+    return "Em análise";
   }
 
   function formatCurrencyBRL(amountCents, currency) {
@@ -198,7 +198,7 @@
         </div>
         <div class="order-detail-section">
           <h4>Entrega</h4>
-          <p class="conta-muted">${escapeHtml(addressText || "Endereco nao informado")}</p>
+          <p class="conta-muted">${escapeHtml(addressText || "Endereço não informado")}</p>
         </div>
         <div class="order-detail-section">
           <h4>Resumo</h4>
@@ -234,7 +234,7 @@
       if (!orders.length) {
         listMount.innerHTML = `
           <div class="orders-empty">
-            <p>Voce ainda nao realizou nenhuma compra.</p>
+            <p>Você ainda não realizou nenhuma compra.</p>
             <a class="btn-primary" href="/">Comecar a comprar</a>
           </div>
         `;

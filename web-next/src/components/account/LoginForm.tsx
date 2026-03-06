@@ -620,7 +620,7 @@ export function LoginForm() {
         </div>
 
         <p className="auth-footer">
-          Ainda nao tem conta?{" "}
+          Ainda não tem conta?{" "}
           <Link className="auth-link" href="/account">
             Criar conta
           </Link>

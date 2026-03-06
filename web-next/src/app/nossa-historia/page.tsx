@@ -5,13 +5,13 @@ import { loadLegacyStaticPage } from "@/lib/legacy-static-pages";
 
 export const metadata: Metadata = {
   title: "Nossa historia",
-  description: "Conheca a origem da Tsebi, nossa visao de marca e os pilares que guiam cada colecao.",
+  description: "Conheça a origem da Tsebi, nossa visão de marca e os pilares que guiam cada coleção.",
   alternates: {
     canonical: "/nossa-historia",
   },
   openGraph: {
     title: "Nossa historia | Tsebi Brasil",
-    description: "Conheca a origem da Tsebi, nossa visao de marca e os pilares que guiam cada colecao.",
+    description: "Conheça a origem da Tsebi, nossa visão de marca e os pilares que guiam cada coleção.",
     url: "/nossa-historia",
     type: "website",
   },

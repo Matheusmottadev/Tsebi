@@ -150,7 +150,7 @@
             <span>${escapeHtml(entry.email || "-")}</span>
             <span>Inscricao: ${escapeHtml(formatDate(entry.subscribedAt))}</span>
           </div>
-          <span class="pill${accountCreated ? "" : " no"}">${accountCreated ? "Conta criada" : "Conta nao criada"}</span>
+          <span class="pill${accountCreated ? "" : " no"}">${accountCreated ? "Conta criada" : "Conta não criada"}</span>
           <div style="display:flex; gap:8px; flex-wrap:wrap;">
             <button type="button" class="secondary" data-action="toggle">Abrir detalhes</button>
             <button type="button" class="danger" data-action="remove">Remover</button>

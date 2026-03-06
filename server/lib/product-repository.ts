@@ -138,10 +138,10 @@ export type Product = {
 
 const PRODUCT_METADATA: Record<string, ProductStaticMetadata> = {
   "genesis-bomber": {
-    collection: "GÃƒÂªnesis",
+    collection: "Gênesis",
     category: "Outerwear",
     subcategory: "Jaquetas",
-    material: "Couro e lÃƒÂ£",
+    material: "Couro e lã",
     sizes: ["P", "M", "G"],
     colors: ["Vermelho", "Areia"],
     gender: "Unissex",
@@ -150,7 +150,7 @@ const PRODUCT_METADATA: Record<string, ProductStaticMetadata> = {
     nameEn: "Italian leather bomber jacket with silk lining"
   },
   "genesis-tailored": {
-    collection: "GÃƒÂªnesis",
+    collection: "Gênesis",
     category: "Ready-to-Wear",
     subcategory: "Calças",
     material: "Sarja premium",
@@ -165,7 +165,7 @@ const PRODUCT_METADATA: Record<string, ProductStaticMetadata> = {
     collection: "Alicerce",
     category: "Ready-to-Wear",
     subcategory: "Camisas",
-    material: "AlgodÃƒÂ£o egÃƒÂ­pcio",
+    material: "Algodão egípcio",
     sizes: ["P", "M", "G", "GG"],
     colors: ["Branco", "Azul"],
     gender: "Masculino",
@@ -177,7 +177,7 @@ const PRODUCT_METADATA: Record<string, ProductStaticMetadata> = {
     collection: "Alicerce",
     category: "Ready-to-Wear",
     subcategory: "Saias",
-    material: "LÃƒÂ£ fria",
+    material: "Lã fria",
     sizes: ["36", "38", "40"],
     colors: ["Preto", "Marfim"],
     gender: "Feminino",
@@ -190,7 +190,7 @@ const PRODUCT_METADATA: Record<string, ProductStaticMetadata> = {
     category: "Leather",
     subcategory: "Jaquetas de couro",
     material: "Couro natural",
-    sizes: ["ÃƒÅ¡nico"],
+    sizes: ["?nico"],
     colors: ["Caramelo", "Preto"],
     gender: "Unissex",
     image: "images/placeholderreal.webp",
@@ -198,7 +198,7 @@ const PRODUCT_METADATA: Record<string, ProductStaticMetadata> = {
     nameEn: "Natural leather bag with plated hardware"
   },
   "atelier-heels": {
-    collection: "GÃƒÂªnesis",
+    collection: "Gênesis",
     category: "Leather",
     subcategory: "Calças de couro",
     material: "Couro envernizado",
@@ -222,10 +222,10 @@ const PRODUCT_METADATA: Record<string, ProductStaticMetadata> = {
     nameEn: "Gabardine trench coat with architectural cut"
   },
   "flux-knit": {
-    collection: "GÃƒÂªnesis",
+    collection: "Gênesis",
     category: "Ready-to-Wear",
     subcategory: "Camisetas",
-    material: "LÃƒÂ£ merino",
+    material: "L? merino",
     sizes: ["P", "M", "G", "GG"],
     colors: ["Off white", "Cinza"],
     gender: "Masculino",
@@ -234,7 +234,7 @@ const PRODUCT_METADATA: Record<string, ProductStaticMetadata> = {
     nameEn: "Ultrafine merino wool knitwear"
   },
   "noir-dress": {
-    collection: "GÃƒÂªnesis",
+    collection: "Gênesis",
     category: "Ready-to-Wear",
     subcategory: "Vestidos",
     material: "Crepe de seda",
@@ -249,7 +249,7 @@ const PRODUCT_METADATA: Record<string, ProductStaticMetadata> = {
     collection: "Alicerce",
     category: "Ready-to-Wear",
     subcategory: "Camisetas",
-    material: "Nylon tÃƒÂ©cnico",
+    material: "Nylon técnico",
     sizes: ["37", "38", "39", "40", "41", "42"],
     colors: ["Preto", "Branco"],
     gender: "Unissex",
@@ -270,7 +270,7 @@ const PRODUCT_METADATA: Record<string, ProductStaticMetadata> = {
     nameEn: "Premium linen blazer with precision tailoring"
   },
   "essence-trousers": {
-    collection: "GÃƒÂªnesis",
+    collection: "Gênesis",
     category: "Ready-to-Wear",
     subcategory: "Calças",
     material: "Linho premium",
@@ -522,7 +522,7 @@ const PRODUCT_METADATA: Record<string, ProductStaticMetadata> = {
     nameEn: "Solstice jacket"
   },
   "genesis-hobo-bag": {
-    collection: "G?nesis",
+    collection: "Gênesis",
     category: "Accessories",
     subcategory: "Bolsas",
     material: "Couro",
@@ -548,7 +548,7 @@ const PRODUCT_METADATA: Record<string, ProductStaticMetadata> = {
     nameEn: "Alicerce mini bag"
   },
   "fleur-silk-scarf": {
-    collection: "G?nesis",
+    collection: "Gênesis",
     category: "Accessories",
     subcategory: "Lenços",
     material: "Seda",
@@ -587,7 +587,7 @@ const PRODUCT_METADATA: Record<string, ProductStaticMetadata> = {
     nameEn: "Aura thin belt"
   },
   "marco-duffle-bag": {
-    collection: "G?nesis",
+    collection: "Gênesis",
     category: "Accessories",
     subcategory: "Bolsas",
     material: "Couro",
@@ -613,7 +613,7 @@ const PRODUCT_METADATA: Record<string, ProductStaticMetadata> = {
     nameEn: "Atlas crossbody bag"
   },
   "pulse-leather-wallet": {
-    collection: "G?nesis",
+    collection: "Gênesis",
     category: "Accessories",
     subcategory: "Carteiras",
     material: "Couro",
@@ -705,8 +705,8 @@ function sanitizeVariantStockMap(value: unknown, validColors: string[] = [], val
 
 function normalizeProductMetadata(value: unknown, fallback: ProductStaticMetadata = {}): ProductMetadata {
   const raw = asRecord(value);
-  const fallbackSizes = normalizeTextList(fallback.sizes, ["ÃƒÅ¡nico"]);
-  const fallbackColors = normalizeTextList(fallback.colors, ["ÃƒÅ¡nico"]);
+  const fallbackSizes = normalizeTextList(fallback.sizes, ["?nico"]);
+  const fallbackColors = normalizeTextList(fallback.colors, ["?nico"]);
   const rawVariantStock = asRecord(raw.variantStock);
 
   const extractedColors: string[] = [];
@@ -724,11 +724,11 @@ function normalizeProductMetadata(value: unknown, fallback: ProductStaticMetadat
 
   let sizes = normalizeTextList(
     [...normalizeTextList(raw.sizes, []), ...normalizeTextList(extractedSizes, [])],
-    fallbackSizes.length ? fallbackSizes : ["ÃƒÅ¡nico"]
+    fallbackSizes.length ? fallbackSizes : ["?nico"]
   );
   let colors = normalizeTextList(
     [...normalizeTextList(raw.colors, []), ...normalizeTextList(extractedColors, [])],
-    fallbackColors.length ? fallbackColors : ["ÃƒÅ¡nico"]
+    fallbackColors.length ? fallbackColors : ["?nico"]
   );
   let variantStock = sanitizeVariantStockMap(raw.variantStock ?? raw.variant_stock, colors, sizes);
 
@@ -745,8 +745,8 @@ function normalizeProductMetadata(value: unknown, fallback: ProductStaticMetadat
   }
 
   return {
-    sizes: sizes.length ? sizes : ["ÃƒÅ¡nico"],
-    colors: colors.length ? colors : ["ÃƒÅ¡nico"],
+    sizes: sizes.length ? sizes : ["?nico"],
+    colors: colors.length ? colors : ["?nico"],
     variantStock
   };
 }
@@ -808,6 +808,13 @@ const NEW_SKUS = new Set<string>([
   "eclipse-shirt",
   "essence-blazer",
   "essence-trousers",
+  "areia-top",
+  "lunar-blazer",
+  "prisma-skirt",
+  "serif-dress",
+  "nebula-tee",
+  "coral-pants",
+  "birch-cardigan",
   "origem-shirt",
   "atelier-bag",
   "atelier-heels",
@@ -816,6 +823,13 @@ const NEW_SKUS = new Set<string>([
   "noir-sneaker",
   "oslo-parka",
   "riviera-shorts",
+  "vento-trousers",
+  "delta-jeans",
+  "atlas-hoodie",
+  "marco-trench",
+  "vento-knit",
+  "cairo-vest",
+  "pixel-bag",
   "genesis-hobo-bag",
   "fleur-silk-scarf",
   "marco-duffle-bag",

@@ -58,7 +58,7 @@ function resolveLoginFailure(error: unknown, fallback: string): { reason: Studio
     const stage = readErrorStage(error).toLowerCase();
 
     if (code === "FORBIDDEN" || code === "ADMIN_NOT_CONFIGURED") {
-      return { reason: "not_admin", message: "Este usuario nao possui permissao de admin no Studio." };
+      return { reason: "not_admin", message: "Este usuário não possui permissão de admin no Studio." };
     }
     if (stage === "mfa_required" || code === "INVALID_MFA_CODE") {
       return { reason: "mfa_required", message: "Sua conta exige MFA. Complete a verificacao para continuar." };
@@ -77,7 +77,7 @@ function resolveLoginFailure(error: unknown, fallback: string): { reason: Studio
       return { reason: "invalid_credentials", message: "Email ou senha invalidos." };
     }
     if (error.status === 403) {
-      return { reason: "not_admin", message: "Acesso negado para este usuario admin." };
+      return { reason: "not_admin", message: "Acesso negado para este usuário admin." };
     }
     return { reason: "unknown", message: error.message || fallback };
   }

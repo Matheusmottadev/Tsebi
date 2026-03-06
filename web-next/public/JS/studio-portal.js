@@ -661,9 +661,9 @@
     }
 
     if (entityType === "user") {
-      if (action === "delete") return "apagou usuario";
-      if (action === "create") return "criou usuario";
-      return "salvou usuario";
+      if (action === "delete") return "apagou usuário";
+      if (action === "create") return "criou usuário";
+      return "salvou usuário";
     }
 
     if (entityType === "vip_subscriber") {
@@ -830,7 +830,7 @@
           redirectToStudioLogin(session.stage);
           return false;
         }
-        dom.adminIdentity.textContent = "Voce nao esta autenticado no Studio.";
+        dom.adminIdentity.textContent = "Você não esta autenticado no Studio.";
         dom.adminApp.hidden = true;
         dom.adminLocked.hidden = false;
         setHeadActionsVisible(false);
@@ -881,7 +881,7 @@
       await loadUsers();
       setStatus("Usuario criado com sucesso.", "ok");
     } catch (error) {
-      setStatus(`Falha ao criar usuario: ${error.code || error.message}`, "error");
+      setStatus(`Falha ao criar usuário: ${error.code || error.message}`, "error");
     }
   }
 
@@ -896,8 +896,8 @@
 
     if (action === "user-delete") {
       const confirmed = await confirmAction({
-        title: "Remover usuario",
-        message: "Deseja remover este usuario agora?",
+        title: "Remover usuário",
+        message: "Deseja remover este usuário agora?",
         confirmLabel: "Remover",
         tone: "danger"
       });
@@ -907,7 +907,7 @@
         await loadUsers();
         setStatus("Usuario removido.", "ok");
       } catch (error) {
-        setStatus(`Falha ao remover usuario: ${error.code || error.message}`, "error");
+        setStatus(`Falha ao remover usuário: ${error.code || error.message}`, "error");
       }
       return;
     }
@@ -917,7 +917,7 @@
       if (!current) return;
 
       const values = await promptActionFields({
-        title: "Editar usuario",
+        title: "Editar usuário",
         message: "Atualize os campos e confirme.",
         confirmLabel: "Salvar alteracoes",
         tone: "ok",
@@ -945,7 +945,7 @@
         await loadUsers();
         setStatus("Usuario atualizado.", "ok");
       } catch (error) {
-        setStatus(`Falha ao editar usuario: ${error.code || error.message}`, "error");
+        setStatus(`Falha ao editar usuário: ${error.code || error.message}`, "error");
       }
     }
   }

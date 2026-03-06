@@ -397,7 +397,7 @@ async function handleRegister(event) {
     }
 
     if (password !== passwordConfirm) {
-      setFeedback("As senhas nao coincidem.", true);
+      setFeedback("As senhas não coincidem.", true);
       return;
     }
 

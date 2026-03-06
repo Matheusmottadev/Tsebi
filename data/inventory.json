@@ -8,7 +8,7 @@
   },
   {
     "id": "genesis-tailored",
-    "name": "Cal?a de alfaiataria em sarja premium estruturada",
+    "name": "Calça de alfaiataria em sarja premium estruturada",
     "unitAmount": 220000,
     "currency": "brl",
     "stock": 14
@@ -43,7 +43,7 @@
   },
   {
     "id": "flux-trench",
-    "name": "Casaco trench em gabardine com corte arquitet?nico",
+    "name": "Casaco trench em gabardine com corte arquitetônico",
     "unitAmount": 395000,
     "currency": "brl",
     "stock": 7
@@ -71,14 +71,14 @@
   },
   {
     "id": "essence-blazer",
-    "name": "Blazer em linho premium com alfaiataria de precis?o",
+    "name": "Blazer em linho premium com alfaiataria de precisão",
     "unitAmount": 335000,
     "currency": "brl",
     "stock": 8
   },
   {
     "id": "essence-trousers",
-    "name": "Cal?a pantalona em linho premium com prega profunda",
+    "name": "Calça pantalona em linho premium com prega profunda",
     "unitAmount": 225000,
     "currency": "brl",
     "stock": 10
@@ -99,7 +99,7 @@
   },
   {
     "id": "vento-trousers",
-    "name": "Cal?a Vento",
+    "name": "Calça Vento",
     "unitAmount": 500,
     "currency": "brl",
     "stock": 5
@@ -127,7 +127,7 @@
   },
   {
     "id": "delta-jeans",
-    "name": "Cal?a jeans Delta",
+    "name": "Calça jeans Delta",
     "unitAmount": 500,
     "currency": "brl",
     "stock": 5
@@ -190,7 +190,7 @@
   },
   {
     "id": "coral-pants",
-    "name": "Cal?a Coral",
+    "name": "Calça Coral",
     "unitAmount": 500,
     "currency": "brl",
     "stock": 5
@@ -225,7 +225,7 @@
   },
   {
     "id": "genesis-hobo-bag",
-    "name": "Bolsa hobo G?nesis",
+    "name": "Bolsa hobo Gênesis",
     "unitAmount": 500,
     "currency": "brl",
     "stock": 5
@@ -239,14 +239,14 @@
   },
   {
     "id": "fleur-silk-scarf",
-    "name": "Len?o de seda Fleur",
+    "name": "Lenão de seda Fleur",
     "unitAmount": 500,
     "currency": "brl",
     "stock": 5
   },
   {
     "id": "nox-card-wallet",
-    "name": "Carteira porta-cart?es Nox",
+    "name": "Carteira porta-cartões Nox",
     "unitAmount": 500,
     "currency": "brl",
     "stock": 5
@@ -281,14 +281,14 @@
   },
   {
     "id": "vento-wool-scarf",
-    "name": "Len?o Vento em l?",
+    "name": "Lenão Vento em l?",
     "unitAmount": 500,
     "currency": "brl",
     "stock": 5
   },
   {
     "id": "titan-buckle-belt",
-    "name": "Cinto Titan com fivela met?lica",
+    "name": "Cinto Titan com fivela metálica",
     "unitAmount": 500,
     "currency": "brl",
     "stock": 5

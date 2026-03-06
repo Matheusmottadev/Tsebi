@@ -44,7 +44,7 @@ export default async function StudioVipPage({ searchParams }: StudioVipPageProps
   } catch (error) {
     if (error instanceof HttpError) {
       if (error.status === 500) {
-        errorMessage = "Banco VIP nao configurado no backend.";
+        errorMessage = "Banco VIP não configurado no backend.";
       } else {
         errorMessage = error.message || "Falha ao carregar lista VIP.";
       }
@@ -80,7 +80,7 @@ export default async function StudioVipPage({ searchParams }: StudioVipPageProps
                 <td>{row.email || "-"}</td>
                 <td>{row.source || "-"}</td>
                 <td>{formatDate(row.subscribedAt)}</td>
-                <td>{row.accountCreated ? "conta criada" : "nao"}</td>
+                <td>{row.accountCreated ? "conta criada" : "não"}</td>
               </tr>
             ))}
             {result.rows.length === 0 ? (

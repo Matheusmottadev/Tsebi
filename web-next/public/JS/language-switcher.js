@@ -266,7 +266,7 @@
     "Tsebi Careers": "Tsebi Careers",
     "Candidatura | Tsebi Careers": "Application | Tsebi Careers",
     "Processos | TSEBI": "Processes | TSEBI",
-    "Colecao Genesis | Tsebi Brasil": "Genesis Collection | Tsebi Brazil",
+    "Coleção Genesis | Tsebi Brasil": "Genesis Collection | Tsebi Brazil",
     "Coleção Genesis | Tsebi Brasil": "Genesis Collection | Tsebi Brazil"
   };
 

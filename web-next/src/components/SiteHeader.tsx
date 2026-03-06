@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { cartSelectors, useCartStore } from "@/lib/cart/cartStore";
 import { startSearchPlaceholderRotator } from "@/lib/searchPlaceholderRotator";
 import { SearchOverlayRecommendations } from "@/components/SearchOverlayRecommendations";
@@ -17,8 +17,8 @@ const TOP_MESSAGES = [
   "Produção em pequena escala. Qualidade em cada detalhe.",
 ];
 
-const SEARCH_CATEGORIES = ["Feminino", "Masculino", "CalÃ§as", "Camisas", "Blazers", "Bolsas"] as const;
-const MENU_NAV_ITEMS = ["Novidades", "Presentes", "Feminino", "Masculino", "Bolsas e Acessorios", "Seleção Tsebi"] as const;
+const SEARCH_CATEGORIES = ["Feminino", "Masculino", "Calças", "Camisas", "Blazers", "Bolsas"] as const;
+const MENU_NAV_ITEMS = ["Novidades", "Presentes", "Feminino", "Masculino", "Bolsas e Acessórios", "Seleção Tsebi"] as const;
 const MENU_NOVIDADES_GALLERY_ITEMS = [
   { name: "Origem Shirt", image: "/images/product/origem-shirt-1.jpg", href: "/product/origem-shirt" },
   { name: "Genesis Bomber", image: "/images/product/genesis-bomber-1.jpg", href: "/product/genesis-bomber" },
@@ -114,7 +114,16 @@ const MENU_SELECAO_TSEBI_LOOK = {
 export function SiteHeader() {
   const router = useRouter();
   const pathname = usePathname();
+  const searchParams = useSearchParams();
   const isProductPage = pathname === "/product" || String(pathname || "").startsWith("/product/");
+  const currentPath = String(pathname || "").trim();
+  const novidadesToken = String(searchParams?.get("n") || "").trim().toLowerCase();
+  const novidadesView = String(searchParams?.get("view") || "").trim().toLowerCase();
+  const isNovidadesListingPage =
+    currentPath === "/products" &&
+    (["e", "a", "ele", "ela", "m", "f", "masculino", "feminino"].includes(novidadesToken) ||
+      novidadesView === "novidades-para-ele" ||
+      novidadesView === "novidades-para-ela");
   const hasHydrated = useCartStore(cartSelectors.hasHydrated);
   const itemCount = useCartStore(cartSelectors.itemCount);
   const addItem = useCartStore((state) => state.addItem);
@@ -515,7 +524,7 @@ export function SiteHeader() {
       </div>
 
       <header
-        className={`home-header is-scrolled${isProductPage ? " product-mode" : ""}${isProductPage && (isHeaderHidden || isHeaderForcedHidden) ? " header--hidden" : ""}`}
+        className={`home-header is-scrolled${isProductPage ? " product-mode" : ""}${isNovidadesListingPage ? " novidades-listing-mode" : ""}${isProductPage && (isHeaderHidden || isHeaderForcedHidden) ? " header--hidden" : ""}`}
       >
         <div className="header-row">
           <div className="header-left">
@@ -699,7 +708,7 @@ export function SiteHeader() {
                         <span className="header-menu-subpanel-category-title">Para ele</span>
                         <div className="header-menu-subpanel-category-links">
                           <a
-                            href={item === "Novidades" ? "/products?view=novidades-para-ele" : "#"}
+                            href={item === "Novidades" ? "/products?n=e" : "#"}
                             onClick={(event) => {
                               if (item !== "Novidades") event.preventDefault();
                             }}
@@ -714,7 +723,7 @@ export function SiteHeader() {
                         <span className="header-menu-subpanel-category-title">Para ela</span>
                         <div className="header-menu-subpanel-category-links">
                           <a
-                            href={item === "Novidades" ? "/products?view=novidades-para-ela" : "#"}
+                            href={item === "Novidades" ? "/products?n=a" : "#"}
                             onClick={(event) => {
                               if (item !== "Novidades") event.preventDefault();
                             }}
@@ -746,7 +755,7 @@ export function SiteHeader() {
                         ))}
                       </div>
                     </div>
-                  ) : item === "Bolsas e Acessorios" ? (
+                  ) : item === "Bolsas e Acessórios" ? (
                     <div className="header-menu-subpanel-categories">
                       <div className="header-menu-subpanel-category-group">
                         <span className="header-menu-subpanel-category-title">BOLSAS</span>
@@ -774,12 +783,12 @@ export function SiteHeader() {
                         href="#"
                         onClick={(event) => event.preventDefault()}
                         className="header-menu-subpanel-single-image header-menu-subpanel-single-image--clean"
-                        aria-label="Imagem destaque Bolsas e Acessorios"
+                        aria-label="Imagem destaque Bolsas e Acessórios"
                       >
                         {/* eslint-disable-next-line @next/next/no-img-element */}
                         <img
                           src="https://media.tsebi.com.br/Pin%20on%20IN%20EYE%2C%20EAR%2C%20MOUTH.jpg"
-                          alt="Destaque Bolsas e Acessorios"
+                          alt="Destaque Bolsas e Acessórios"
                         />
                       </a>
                     </div>
@@ -965,7 +974,7 @@ export function SiteHeader() {
               isOpen={isSearchOpen}
               query={searchQuery}
               placement="search_overlay_header"
-              title="Recomendado para vocÃª"
+              title="Recomendado para você"
               limit={6}
               mode="personalized"
             />
@@ -977,7 +986,7 @@ export function SiteHeader() {
               limit={6}
               mode="best_sellers"
             />
-            <p className="tsebi-search-footer-quote">Se torne a sua melhor versÃ£o!</p>
+            <p className="tsebi-search-footer-quote">Se torne a sua melhor versão!</p>
           </div>
         </section>
       </div>
