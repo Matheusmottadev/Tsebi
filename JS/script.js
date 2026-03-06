@@ -1416,30 +1416,30 @@ function initHeaderMenu() {
         gallery.setAttribute("aria-label", isPresentes ? "Destaques Presentes" : "Destaques Novidades");
         const galleryItems = isPresentes
           ? [
-              "Cinto em couro natural",
-              "Carteira em couro premium",
-              "LenÃ§o em seda pura",
-              "Bolsa em couro natural"
+              { name: "Atelier Bag", image: "/images/product/atelier-bag-1.jpg", href: "produto.html?id=atelier-bag" },
+              { name: "Atelier Heels", image: "/images/product/atelier-heels-1.jpg", href: "produto.html?id=atelier-heels" },
+              { name: "Noir Sneaker", image: "/images/product/noir-sneaker-1.jpg", href: "produto.html?id=noir-sneaker" },
+              { name: "Noir Dress", image: "/images/product/noir-dress-1.jpg", href: "produto.html?id=noir-dress" }
             ]
           : [
-              "Saia estruturada em lÃ£ fria",
-              "CalÃ§a de alfaiataria premium",
-              "Scarpin em couro envernizado",
-              "Blazer em linho premium"
+              { name: "Origem Shirt", image: "/images/product/origem-shirt-1.jpg", href: "produto.html?id=origem-shirt" },
+              { name: "Genesis Bomber", image: "/images/product/genesis-bomber-1.jpg", href: "produto.html?id=genesis-bomber" },
+              { name: "Essence Trousers", image: "/images/product/essence-trousers-1.jpg", href: "produto.html?id=essence-trousers" },
+              { name: "Origem Skirt", image: "/images/product/origem-skirt-1.jpg", href: "produto.html?id=origem-skirt" }
             ];
         for (let index = 0; index < galleryItems.length; index += 1) {
+          const galleryItem = galleryItems[index];
           const item = document.createElement("a");
           item.className = "header-menu-subpanel-gallery-item";
-          item.href = "#";
-          item.addEventListener("click", (event) => event.preventDefault());
+          item.href = galleryItem.href;
           const image = document.createElement("img");
-          image.src = "/images/placeholderreal.webp";
+          image.src = galleryItem.image;
           image.alt = `Imagem destaque ${index + 1}`;
           const meta = document.createElement("div");
           meta.className = "header-menu-subpanel-gallery-meta";
           const name = document.createElement("p");
           name.className = "header-menu-subpanel-gallery-name";
-          name.textContent = galleryItems[index];
+          name.textContent = galleryItem.name;
           meta.appendChild(name);
           item.appendChild(image);
           item.appendChild(meta);
@@ -1559,10 +1559,10 @@ function initHeaderMenu() {
         const productsGrid = document.createElement("div");
         productsGrid.className = "header-menu-subpanel-curation-grid";
         const lookProducts = [
-          { id: "genesis-jacket", name: "Jaqueta Genesis", priceLabel: "R$ 2.990", image: "images/placeholderreal.webp", href: "/products?q=Jaqueta%20Genesis" },
-          { id: "genesis-tee", name: "Camiseta", priceLabel: "R$ 590", image: "images/placeholderreal.webp", href: "/products?q=Camiseta" },
-          { id: "genesis-trousers", name: "CalÃ§a", priceLabel: "R$ 1.490", image: "images/placeholderreal.webp", href: "/products?q=Cal%C3%A7a" },
-          { id: "genesis-bag", name: "Bolsa Genesis", priceLabel: "R$ 3.490", image: "images/placeholderreal.webp", href: "/products?q=Genesis%20Bag" }
+          { id: "genesis-bomber", name: "Genesis Bomber", priceLabel: "R$ 2.990", image: "/images/product/genesis-bomber-1.jpg", href: "produto.html?id=genesis-bomber" },
+          { id: "origem-shirt", name: "Origem Shirt", priceLabel: "R$ 590", image: "/images/product/origem-shirt-1.jpg", href: "produto.html?id=origem-shirt" },
+          { id: "essence-trousers", name: "Essence Trousers", priceLabel: "R$ 1.490", image: "/images/product/essence-trousers-1.jpg", href: "produto.html?id=essence-trousers" },
+          { id: "atelier-bag", name: "Atelier Bag", priceLabel: "R$ 3.490", image: "/images/product/atelier-bag-1.jpg", href: "produto.html?id=atelier-bag" }
         ];
 
         lookProducts.forEach((product, index) => {

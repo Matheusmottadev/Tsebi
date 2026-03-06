@@ -58,16 +58,16 @@ const SEARCH_CHIPS = [
 const SEARCH_CATEGORIES = ["Feminino", "Masculino", "CalÃ§as", "Camisas", "Blazers", "Bolsas"] as const;
 const MENU_NAV_ITEMS = ["Novidades", "Presentes", "Feminino", "Masculino", "Bolsas e Acessorios", "Seleção Tsebi"] as const;
 const MENU_NOVIDADES_GALLERY_ITEMS = [
-  { name: "Saia estruturada em lã fria" },
-  { name: "Calça de alfaiataria premium" },
-  { name: "Scarpin em couro envernizado" },
-  { name: "Blazer em linho premium" },
+  { name: "Origem Shirt", image: "/images/product/origem-shirt-1.jpg", href: "/product/origem-shirt" },
+  { name: "Genesis Bomber", image: "/images/product/genesis-bomber-1.jpg", href: "/product/genesis-bomber" },
+  { name: "Essence Trousers", image: "/images/product/essence-trousers-1.jpg", href: "/product/essence-trousers" },
+  { name: "Origem Skirt", image: "/images/product/origem-skirt-1.jpg", href: "/product/origem-skirt" },
 ] as const;
 const MENU_PRESENTES_GALLERY_ITEMS = [
-  { name: "Cinto em couro natural" },
-  { name: "Carteira em couro premium" },
-  { name: "Lenço em seda pura" },
-  { name: "Bolsa em couro natural" },
+  { name: "Atelier Bag", image: "/images/product/atelier-bag-1.jpg", href: "/product/atelier-bag" },
+  { name: "Atelier Heels", image: "/images/product/atelier-heels-1.jpg", href: "/product/atelier-heels" },
+  { name: "Noir Sneaker", image: "/images/product/noir-sneaker-1.jpg", href: "/product/noir-sneaker" },
+  { name: "Noir Dress", image: "/images/product/noir-dress-1.jpg", href: "/product/noir-dress" },
 ] as const;
 const MENU_FEMININO_CATEGORIES = [
   {
@@ -111,40 +111,40 @@ const MENU_SELECAO_TSEBI_LOOK = {
   subtitle: "Uma curadoria semanal com peças que representam a essência da marca.",
   products: [
     {
-      id: "genesis-jacket",
-      name: "Jaqueta Genesis",
+      id: "genesis-bomber",
+      name: "Genesis Bomber",
       priceLabel: "R$ 2.990",
       unitAmount: 299000,
       currency: "brl",
-      image: "/images/placeholderreal.webp",
-      href: "/products?q=Jaqueta%20Genesis",
+      image: "/images/product/genesis-bomber-1.jpg",
+      href: "/product/genesis-bomber",
     },
     {
-      id: "genesis-tee",
-      name: "Camiseta",
+      id: "origem-shirt",
+      name: "Origem Shirt",
       priceLabel: "R$ 590",
       unitAmount: 59000,
       currency: "brl",
-      image: "/images/placeholderreal.webp",
-      href: "/products?q=Camiseta",
+      image: "/images/product/origem-shirt-1.jpg",
+      href: "/product/origem-shirt",
     },
     {
-      id: "genesis-trousers",
-      name: "Calça",
+      id: "essence-trousers",
+      name: "Essence Trousers",
       priceLabel: "R$ 1.490",
       unitAmount: 149000,
       currency: "brl",
-      image: "/images/placeholderreal.webp",
-      href: "/products?q=Cal%C3%A7a",
+      image: "/images/product/essence-trousers-1.jpg",
+      href: "/product/essence-trousers",
     },
     {
-      id: "genesis-bag",
-      name: "Bolsa Genesis",
+      id: "atelier-bag",
+      name: "Atelier Bag",
       priceLabel: "R$ 3.490",
       unitAmount: 349000,
       currency: "brl",
-      image: "/images/placeholderreal.webp",
-      href: "/products?q=Genesis%20Bag",
+      image: "/images/product/atelier-bag-1.jpg",
+      href: "/product/atelier-bag",
     },
   ],
 } as const;
@@ -1094,9 +1094,9 @@ export function LegacyHome({ products }: LegacyHomeProps) {
                         {(item === "Presentes"
                           ? MENU_PRESENTES_GALLERY_ITEMS
                           : MENU_NOVIDADES_GALLERY_ITEMS).map((galleryItem, imageIndex) => (
-                          <a key={galleryItem.name} href="#" onClick={(event) => event.preventDefault()} className="header-menu-subpanel-gallery-item">
+                          <a key={galleryItem.name} href={galleryItem.href} className="header-menu-subpanel-gallery-item">
                             {/* eslint-disable-next-line @next/next/no-img-element */}
-                            <img src="/images/placeholderreal.webp" alt={`Imagem destaque ${imageIndex}`} />
+                            <img src={galleryItem.image} alt={`${galleryItem.name} destaque ${imageIndex + 1}`} />
                             <div className="header-menu-subpanel-gallery-meta">
                               <p className="header-menu-subpanel-gallery-name">{galleryItem.name}</p>
                             </div>
