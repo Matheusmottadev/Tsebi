@@ -9,12 +9,12 @@ import { SearchOverlayRecommendations } from "@/components/SearchOverlayRecommen
 import { getMe } from "@/services/auth";
 
 const TOP_MESSAGES = [
-  "Nova ColeÃ§Ã£o Genesis",
-  "VocÃª merece vestir algo a sua altura.",
-  "Cadastre-se para receber lanÃ§amentos",
-  "Exclusividade para quem valoriza o que Ã© Ãºnico.",
-  "Acesso antecipado a novas coleÃ§Ãµes.",
-  "ProduÃ§Ã£o em pequena escala. Qualidade em cada detalhe.",
+  "Nova Coleção Genesis",
+  "Você merece vestir algo a sua altura.",
+  "Cadastre-se para receber lançamentos",
+  "Exclusividade para quem valoriza o que é único.",
+  "Acesso antecipado a novas coleções.",
+  "Produção em pequena escala. Qualidade em cada detalhe.",
 ];
 
 const SEARCH_CATEGORIES = ["Feminino", "Masculino", "CalÃ§as", "Camisas", "Blazers", "Bolsas"] as const;
@@ -507,7 +507,7 @@ export function SiteHeader() {
             type="button"
             ref={rightArrowRef}
             onClick={() => stepTopMessage("right", 1)}
-            aria-label="PrÃ³xima mensagem"
+            aria-label="Próxima mensagem"
           >
             &#10095;
           </button>
@@ -698,7 +698,12 @@ export function SiteHeader() {
                       <div className="header-menu-subpanel-category-group">
                         <span className="header-menu-subpanel-category-title">Para ele</span>
                         <div className="header-menu-subpanel-category-links">
-                          <a href="#" onClick={(event) => event.preventDefault()}>
+                          <a
+                            href={item === "Novidades" ? "/products?view=novidades-para-ele" : "#"}
+                            onClick={(event) => {
+                              if (item !== "Novidades") event.preventDefault();
+                            }}
+                          >
                             {item === "Presentes" ? "Presentes para homens" : "Novidades para homens"}
                           </a>
                           <a href="#" onClick={(event) => event.preventDefault()}>Coleção Gênesis</a>
@@ -708,7 +713,12 @@ export function SiteHeader() {
                       <div className="header-menu-subpanel-category-group">
                         <span className="header-menu-subpanel-category-title">Para ela</span>
                         <div className="header-menu-subpanel-category-links">
-                          <a href="#" onClick={(event) => event.preventDefault()}>
+                          <a
+                            href={item === "Novidades" ? "/products?view=novidades-para-ela" : "#"}
+                            onClick={(event) => {
+                              if (item !== "Novidades") event.preventDefault();
+                            }}
+                          >
                             {item === "Presentes" ? "Presentes para mulheres" : "Novidades para Mulheres"}
                           </a>
                           <a href="#" onClick={(event) => event.preventDefault()}>Coleção Gênesis</a>
@@ -974,8 +984,6 @@ export function SiteHeader() {
     </>
   );
 }
-
-
 
 
 

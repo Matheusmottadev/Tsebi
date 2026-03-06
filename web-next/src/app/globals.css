@@ -64,3 +64,16 @@ body.home-legacy-page > .siteHeader {
   color: #fff;
   background: rgba(0, 0, 0, 0.52);
 }
+
+body.products-novidades-view .home-header,
+body.products-novidades-view .home-header.is-scrolled,
+body.products-novidades-view .home-header:hover,
+body.products-novidades-view .home-header:focus-within {
+  background: #fff !important;
+  border-bottom-color: #ececec !important;
+  box-shadow: none !important;
+}
+
+body.products-novidades-view .home-header .header-row {
+  background: #fff !important;
+}

@@ -3,9 +3,6 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const session = require("express-session");
 const pgSessionFactory = require("connect-pg-simple");
 const { getPool } = require("./lib/db");
-const isProduction = process.env.NODE_ENV === "production";
-const sessionName = process.env.SESSION_COOKIE_NAME || "tsebi.sid";
-const sessionSecret = String(process.env.SESSION_SECRET || "").trim() || "dev-change-this-session-secret";
 const defaultSessionSecret = "dev-change-this-session-secret";
 function parseIntegerEnv(value, fallback) {
     const parsed = Number.parseInt(String(value || "").trim(), 10);
@@ -32,14 +29,23 @@ function createSessionStore() {
     return store;
 }
 function createSessionMiddleware() {
-    if (isProduction) {
-        if (!sessionSecret || sessionSecret === defaultSessionSecret || sessionSecret.length < 32) {
-            throw new Error("SESSION_SECRET_WEAK_OR_MISSING");
-        }
+    const nodeEnv = String(process.env.NODE_ENV || "").trim().toLowerCase();
+    const isProduction = nodeEnv === "production";
+    const isLocalDevelopment = nodeEnv === "development" || nodeEnv === "";
+    const sessionName = process.env.SESSION_COOKIE_NAME || "tsebi.sid";
+    const sessionSecret = String(process.env.SESSION_SECRET || "").trim();
+    const hasStrongSessionSecret = Boolean(sessionSecret) && sessionSecret !== defaultSessionSecret && sessionSecret.length >= 32;
+    if (!hasStrongSessionSecret && !isLocalDevelopment) {
+        throw new Error("SESSION_SECRET_WEAK_OR_MISSING");
     }
+    if (!hasStrongSessionSecret && isLocalDevelopment) {
+        // eslint-disable-next-line no-console
+        console.warn("[session] using local development fallback secret");
+    }
+    const effectiveSessionSecret = hasStrongSessionSecret ? sessionSecret : defaultSessionSecret;
     const config = {
         name: sessionName,
-        secret: sessionSecret,
+        secret: effectiveSessionSecret,
         resave: false,
         saveUninitialized: false,
         rolling: true,

@@ -1,127 +1,522 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 const { query } = require("./db");
-const DEFAULT_IMAGE = "images/placeholder.jpg";
+const DEFAULT_IMAGE = "images/placeholderreal.webp";
+const STOREFRONT_DEFAULT_PRICE_CENTS = 500;
 const PRODUCT_METADATA = {
     "genesis-bomber": {
-        collection: "Gênesis",
-        category: "Jaquetas",
-        material: "Couro e lã",
+        collection: "GÃƒÂªnesis",
+        category: "Outerwear",
+        subcategory: "Jaquetas",
+        material: "Couro e lÃƒÂ£",
         sizes: ["P", "M", "G"],
         colors: ["Vermelho", "Areia"],
         gender: "Unissex",
-        image: "images/placeholder.jpg",
+        image: "images/placeholderreal.webp",
+        secondaryImage: "images/placeholderreal.webp",
         nameEn: "Italian leather bomber jacket with silk lining"
     },
     "genesis-tailored": {
-        collection: "Gênesis",
-        category: "Calças",
+        collection: "GÃƒÂªnesis",
+        category: "Ready-to-Wear",
+        subcategory: "Calças",
         material: "Sarja premium",
         sizes: ["36", "38", "40", "42"],
         colors: ["Grafite", "Preto"],
         gender: "Feminino",
-        image: "images/placeholder.jpg",
+        image: "images/placeholderreal.webp",
+        secondaryImage: "images/placeholderreal.webp",
         nameEn: "Premium structured tailored twill pants"
     },
     "origem-shirt": {
         collection: "Alicerce",
-        category: "Camisas",
-        material: "Algodão egípcio",
+        category: "Ready-to-Wear",
+        subcategory: "Camisas",
+        material: "AlgodÃƒÂ£o egÃƒÂ­pcio",
         sizes: ["P", "M", "G", "GG"],
         colors: ["Branco", "Azul"],
         gender: "Masculino",
-        image: "images/placeholder.jpg",
+        image: "images/placeholderreal.webp",
+        secondaryImage: "images/placeholderreal.webp",
         nameEn: "Croatian cotton shirt with noble weave"
     },
     "origem-skirt": {
         collection: "Alicerce",
-        category: "Saias",
-        material: "Lã fria",
+        category: "Ready-to-Wear",
+        subcategory: "Saias",
+        material: "LÃƒÂ£ fria",
         sizes: ["36", "38", "40"],
         colors: ["Preto", "Marfim"],
         gender: "Feminino",
-        image: "images/placeholder.jpg",
+        image: "images/placeholderreal.webp",
+        secondaryImage: "images/placeholderreal.webp",
         nameEn: "Structured cool wool skirt with impeccable finish"
     },
     "atelier-bag": {
         collection: "Alicerce",
-        category: "Bolsas",
+        category: "Leather",
+        subcategory: "Jaquetas de couro",
         material: "Couro natural",
-        sizes: ["Único"],
+        sizes: ["ÃƒÅ¡nico"],
         colors: ["Caramelo", "Preto"],
         gender: "Unissex",
-        image: "images/placeholder.jpg",
+        image: "images/placeholderreal.webp",
+        secondaryImage: "images/placeholderreal.webp",
         nameEn: "Natural leather bag with plated hardware"
     },
     "atelier-heels": {
-        collection: "Gênesis",
-        category: "Calçados",
+        collection: "GÃƒÂªnesis",
+        category: "Leather",
+        subcategory: "Calças de couro",
         material: "Couro envernizado",
         sizes: ["35", "36", "37", "38", "39"],
         colors: ["Preto", "Vinho"],
         gender: "Feminino",
-        image: "images/placeholder.jpg",
+        image: "images/placeholderreal.webp",
+        secondaryImage: "images/placeholderreal.webp",
         nameEn: "Patent leather pumps with sculpted heel"
     },
     "flux-trench": {
         collection: "Alicerce",
-        category: "Casacos",
+        category: "Outerwear",
+        subcategory: "Casacos",
         material: "Gabardine",
         sizes: ["P", "M", "G"],
         colors: ["Areia", "Oliva"],
         gender: "Unissex",
-        image: "images/placeholder.jpg",
+        image: "images/placeholderreal.webp",
+        secondaryImage: "images/placeholderreal.webp",
         nameEn: "Gabardine trench coat with architectural cut"
     },
     "flux-knit": {
-        collection: "Gênesis",
-        category: "Malhas",
-        material: "Lã merino",
+        collection: "GÃƒÂªnesis",
+        category: "Ready-to-Wear",
+        subcategory: "Camisetas",
+        material: "LÃƒÂ£ merino",
         sizes: ["P", "M", "G", "GG"],
         colors: ["Off white", "Cinza"],
         gender: "Masculino",
-        image: "images/placeholder.jpg",
+        image: "images/placeholderreal.webp",
+        secondaryImage: "images/placeholderreal.webp",
         nameEn: "Ultrafine merino wool knitwear"
     },
     "noir-dress": {
-        collection: "Gênesis",
-        category: "Vestidos",
+        collection: "GÃƒÂªnesis",
+        category: "Ready-to-Wear",
+        subcategory: "Vestidos",
         material: "Crepe de seda",
         sizes: ["36", "38", "40", "42"],
         colors: ["Preto"],
         gender: "Feminino",
-        image: "images/placeholder.jpg",
+        image: "images/placeholderreal.webp",
+        secondaryImage: "images/placeholderreal.webp",
         nameEn: "Silk crepe column dress with couture drape"
     },
     "noir-sneaker": {
         collection: "Alicerce",
-        category: "Calçados",
-        material: "Nylon técnico",
+        category: "Ready-to-Wear",
+        subcategory: "Camisetas",
+        material: "Nylon tÃƒÂ©cnico",
         sizes: ["37", "38", "39", "40", "41", "42"],
         colors: ["Preto", "Branco"],
         gender: "Unissex",
-        image: "images/placeholder.jpg",
+        image: "images/placeholderreal.webp",
+        secondaryImage: "images/placeholderreal.webp",
         nameEn: "Technical nylon and premium-finish leather sneaker"
     },
     "essence-blazer": {
         collection: "Alicerce",
-        category: "Blazers",
+        category: "Outerwear",
+        subcategory: "Jaquetas",
         material: "Linho premium",
         sizes: ["P", "M", "G"],
         colors: ["Marfim", "Bege"],
         gender: "Feminino",
-        image: "images/placeholder.jpg",
+        image: "images/placeholderreal.webp",
+        secondaryImage: "images/placeholderreal.webp",
         nameEn: "Premium linen blazer with precision tailoring"
     },
     "essence-trousers": {
-        collection: "Gênesis",
-        category: "Calças",
+        collection: "GÃƒÂªnesis",
+        category: "Ready-to-Wear",
+        subcategory: "Calças",
         material: "Linho premium",
         sizes: ["36", "38", "40", "42", "44"],
         colors: ["Marfim", "Areia"],
         gender: "Feminino",
-        image: "images/placeholder.jpg",
+        image: "images/placeholderreal.webp",
+        secondaryImage: "images/placeholderreal.webp",
         nameEn: "Premium linen wide-leg trousers with deep pleat"
+    },
+    "aurora-coat": {
+        collection: "Alicerce",
+        category: "Outerwear",
+        subcategory: "Casacos",
+        material: "La premium",
+        sizes: ["P", "M", "G"],
+        colors: ["Preto", "Areia"],
+        gender: "Unissex",
+        image: "images/product/aurora-coat-1.jpg",
+        secondaryImage: "images/product/aurora-coat-2.jpg",
+        nameEn: "Aurora coat"
+    },
+    "eclipse-shirt": {
+        collection: "Alicerce",
+        category: "Ready-to-Wear",
+        subcategory: "Camisas",
+        material: "Algodao premium",
+        sizes: ["P", "M", "G", "GG"],
+        colors: ["Branco", "Preto"],
+        gender: "Unissex",
+        image: "images/product/eclipse-shirt-1.jpg",
+        secondaryImage: "images/product/eclipse-shirt-2.jpg",
+        nameEn: "Eclipse shirt"
+    },
+    "vento-trousers": {
+        collection: "Alicerce",
+        category: "Ready-to-Wear",
+        subcategory: "Calças",
+        material: "Sarja",
+        sizes: ["36", "38", "40", "42"],
+        colors: ["Grafite", "Bege"],
+        gender: "Unissex",
+        image: "images/product/vento-trousers-1.jpg",
+        secondaryImage: "images/product/vento-trousers-2.jpg",
+        nameEn: "Vento trousers"
+    },
+    "areia-top": {
+        collection: "Alicerce",
+        category: "Ready-to-Wear",
+        subcategory: "Camisetas",
+        material: "Viscose",
+        sizes: ["P", "M", "G"],
+        colors: ["Areia", "Marfim"],
+        gender: "Feminino",
+        image: "images/product/areia-top-1.jpg",
+        secondaryImage: "images/product/areia-top-2.jpg",
+        nameEn: "Areia top"
+    },
+    "lunar-blazer": {
+        collection: "Alicerce",
+        category: "Outerwear",
+        subcategory: "Jaquetas",
+        material: "Linho",
+        sizes: ["P", "M", "G"],
+        colors: ["Preto", "Cinza"],
+        gender: "Feminino",
+        image: "images/product/lunar-blazer-1.jpg",
+        secondaryImage: "images/product/lunar-blazer-2.jpg",
+        nameEn: "Lunar blazer"
+    },
+    "prisma-skirt": {
+        collection: "Alicerce",
+        category: "Ready-to-Wear",
+        subcategory: "Saias",
+        material: "Crepe",
+        sizes: ["36", "38", "40"],
+        colors: ["Preto", "Azul"],
+        gender: "Feminino",
+        image: "images/product/prisma-skirt-1.jpg",
+        secondaryImage: "images/product/prisma-skirt-2.jpg",
+        nameEn: "Prisma skirt"
+    },
+    "delta-jeans": {
+        collection: "Alicerce",
+        category: "Ready-to-Wear",
+        subcategory: "Calças",
+        material: "Denim",
+        sizes: ["36", "38", "40", "42", "44"],
+        colors: ["Azul", "Preto"],
+        gender: "Unissex",
+        image: "images/product/delta-jeans-1.jpg",
+        secondaryImage: "images/product/delta-jeans-2.jpg",
+        nameEn: "Delta jeans"
+    },
+    "atlas-hoodie": {
+        collection: "Alicerce",
+        category: "Ready-to-Wear",
+        subcategory: "Camisetas",
+        material: "Algodao",
+        sizes: ["P", "M", "G", "GG"],
+        colors: ["Preto", "Cinza"],
+        gender: "Unissex",
+        image: "images/product/atlas-hoodie-1.jpg",
+        secondaryImage: "images/product/atlas-hoodie-2.jpg",
+        nameEn: "Atlas hoodie"
+    },
+    "serif-dress": {
+        collection: "Alicerce",
+        category: "Ready-to-Wear",
+        subcategory: "Vestidos",
+        material: "Seda",
+        sizes: ["36", "38", "40", "42"],
+        colors: ["Preto", "Marfim"],
+        gender: "Feminino",
+        image: "images/product/serif-dress-1.jpg",
+        secondaryImage: "images/product/serif-dress-2.jpg",
+        nameEn: "Serif dress"
+    },
+    "marco-trench": {
+        collection: "Alicerce",
+        category: "Outerwear",
+        subcategory: "Casacos",
+        material: "Gabardine",
+        sizes: ["P", "M", "G"],
+        colors: ["Areia", "Preto"],
+        gender: "Unissex",
+        image: "images/product/marco-trench-1.jpg",
+        secondaryImage: "images/product/marco-trench-2.jpg",
+        nameEn: "Marco trench"
+    },
+    "vento-knit": {
+        collection: "Alicerce",
+        category: "Ready-to-Wear",
+        subcategory: "Camisetas",
+        material: "La merino",
+        sizes: ["P", "M", "G", "GG"],
+        colors: ["Cinza", "Off white"],
+        gender: "Unissex",
+        image: "images/product/vento-knit-1.jpg",
+        secondaryImage: "images/product/vento-knit-2.jpg",
+        nameEn: "Vento knit"
+    },
+    "cairo-vest": {
+        collection: "Alicerce",
+        category: "Ready-to-Wear",
+        subcategory: "Camisas",
+        material: "Linho",
+        sizes: ["P", "M", "G"],
+        colors: ["Areia", "Preto"],
+        gender: "Unissex",
+        image: "images/product/cairo-vest-1.jpg",
+        secondaryImage: "images/product/cairo-vest-2.jpg",
+        nameEn: "Cairo vest"
+    },
+    "oslo-parka": {
+        collection: "Alicerce",
+        category: "Outerwear",
+        subcategory: "Jaquetas",
+        material: "Nylon",
+        sizes: ["P", "M", "G", "GG"],
+        colors: ["Oliva", "Preto"],
+        gender: "Masculino",
+        image: "images/product/oslo-parka-1.jpg",
+        secondaryImage: "images/product/oslo-parka-2.jpg",
+        nameEn: "Oslo parka"
+    },
+    "riviera-shorts": {
+        collection: "Alicerce",
+        category: "Ready-to-Wear",
+        subcategory: "Bermudas",
+        material: "Algodao",
+        sizes: ["36", "38", "40", "42"],
+        colors: ["Areia", "Preto"],
+        gender: "Masculino",
+        image: "images/product/riviera-shorts-1.jpg",
+        secondaryImage: "images/product/riviera-shorts-2.jpg",
+        nameEn: "Riviera shorts"
+    },
+    "nebula-tee": {
+        collection: "Alicerce",
+        category: "Ready-to-Wear",
+        subcategory: "Camisetas",
+        material: "Algodao",
+        sizes: ["P", "M", "G", "GG"],
+        colors: ["Branco", "Preto"],
+        gender: "Unissex",
+        image: "images/product/nebula-tee-1.jpg",
+        secondaryImage: "images/product/nebula-tee-2.jpg",
+        nameEn: "Nebula tee"
+    },
+    "coral-pants": {
+        collection: "Alicerce",
+        category: "Ready-to-Wear",
+        subcategory: "Calças",
+        material: "Linho",
+        sizes: ["36", "38", "40", "42"],
+        colors: ["Marfim", "Preto"],
+        gender: "Feminino",
+        image: "images/product/coral-pants-1.jpg",
+        secondaryImage: "images/product/coral-pants-2.jpg",
+        nameEn: "Coral pants"
+    },
+    "birch-cardigan": {
+        collection: "Alicerce",
+        category: "Outerwear",
+        subcategory: "Jaquetas",
+        material: "La",
+        sizes: ["P", "M", "G"],
+        colors: ["Bege", "Cinza"],
+        gender: "Feminino",
+        image: "images/product/birch-cardigan-1.jpg",
+        secondaryImage: "images/product/birch-cardigan-2.jpg",
+        nameEn: "Birch cardigan"
+    },
+    "pixel-bag": {
+        collection: "Alicerce",
+        category: "Leather",
+        subcategory: "Jaquetas de couro",
+        material: "Couro",
+        sizes: ["Unico"],
+        colors: ["Preto", "Caramelo"],
+        gender: "Feminino",
+        image: "images/product/pixel-bag-1.jpg",
+        secondaryImage: "images/product/pixel-bag-2.jpg",
+        nameEn: "Pixel bag"
+    },
+    "metro-belt": {
+        collection: "Alicerce",
+        category: "Leather",
+        subcategory: "Calças de couro",
+        material: "Couro",
+        sizes: ["P", "M", "G"],
+        colors: ["Preto", "Marrom"],
+        gender: "Unissex",
+        image: "images/product/metro-belt-1.jpg",
+        secondaryImage: "images/product/metro-belt-2.jpg",
+        nameEn: "Metro belt"
+    },
+    "solstice-jacket": {
+        collection: "Alicerce",
+        category: "Leather",
+        subcategory: "Jaquetas de couro",
+        material: "Couro",
+        sizes: ["P", "M", "G", "GG"],
+        colors: ["Preto", "Areia"],
+        gender: "Unissex",
+        image: "images/product/solstice-jacket-1.jpg",
+        secondaryImage: "images/product/solstice-jacket-2.jpg",
+        nameEn: "Solstice jacket"
+    },
+    "genesis-hobo-bag": {
+        collection: "G?nesis",
+        category: "Accessories",
+        subcategory: "Bolsas",
+        material: "Couro",
+        sizes: ["Unico"],
+        colors: ["Preto", "Vinho"],
+        gender: "Feminino",
+        tags: ["acessorios", "bolsas", "signature-pieces"],
+        image: "images/product/genesis-hobo-bag-1.jpg",
+        secondaryImage: "images/product/genesis-hobo-bag-2.jpg",
+        nameEn: "Genesis hobo bag"
+    },
+    "alicerce-mini-bag": {
+        collection: "Alicerce",
+        category: "Accessories",
+        subcategory: "Bolsas",
+        material: "Couro",
+        sizes: ["Unico"],
+        colors: ["Areia", "Marrom"],
+        gender: "Feminino",
+        tags: ["acessorios", "bolsas", "new-arrivals"],
+        image: "images/product/alicerce-mini-bag-1.jpg",
+        secondaryImage: "images/product/alicerce-mini-bag-2.jpg",
+        nameEn: "Alicerce mini bag"
+    },
+    "fleur-silk-scarf": {
+        collection: "G?nesis",
+        category: "Accessories",
+        subcategory: "Len?os",
+        material: "Seda",
+        sizes: ["Unico"],
+        colors: ["Marfim", "Preto"],
+        gender: "Feminino",
+        tags: ["acessorios", "lencos", "featured"],
+        image: "images/product/fleur-silk-scarf-1.jpg",
+        secondaryImage: "images/product/fleur-silk-scarf-2.jpg",
+        nameEn: "Fleur silk scarf"
+    },
+    "nox-card-wallet": {
+        collection: "Alicerce",
+        category: "Accessories",
+        subcategory: "Carteiras",
+        material: "Couro",
+        sizes: ["Unico"],
+        colors: ["Preto"],
+        gender: "Feminino",
+        tags: ["acessorios", "carteiras"],
+        image: "images/product/nox-card-wallet-1.jpg",
+        secondaryImage: "images/product/nox-card-wallet-2.jpg",
+        nameEn: "Nox card wallet"
+    },
+    "aura-thin-belt": {
+        collection: "Alicerce",
+        category: "Accessories",
+        subcategory: "Cintos",
+        material: "Couro",
+        sizes: ["P", "M", "G"],
+        colors: ["Caramelo", "Preto"],
+        gender: "Feminino",
+        tags: ["acessorios", "cintos"],
+        image: "images/product/aura-thin-belt-1.jpg",
+        secondaryImage: "images/product/aura-thin-belt-2.jpg",
+        nameEn: "Aura thin belt"
+    },
+    "marco-duffle-bag": {
+        collection: "G?nesis",
+        category: "Accessories",
+        subcategory: "Bolsas",
+        material: "Couro",
+        sizes: ["Unico"],
+        colors: ["Preto", "Oliva"],
+        gender: "Masculino",
+        tags: ["acessorios", "bolsas", "travel"],
+        image: "images/product/marco-duffle-bag-1.jpg",
+        secondaryImage: "images/product/marco-duffle-bag-2.jpg",
+        nameEn: "Marco duffle bag"
+    },
+    "atlas-crossbody-bag": {
+        collection: "Alicerce",
+        category: "Accessories",
+        subcategory: "Bolsas",
+        material: "Couro",
+        sizes: ["Unico"],
+        colors: ["Grafite", "Preto"],
+        gender: "Masculino",
+        tags: ["acessorios", "bolsas"],
+        image: "images/product/atlas-crossbody-bag-1.jpg",
+        secondaryImage: "images/product/atlas-crossbody-bag-2.jpg",
+        nameEn: "Atlas crossbody bag"
+    },
+    "pulse-leather-wallet": {
+        collection: "G?nesis",
+        category: "Accessories",
+        subcategory: "Carteiras",
+        material: "Couro",
+        sizes: ["Unico"],
+        colors: ["Preto", "Marrom"],
+        gender: "Masculino",
+        tags: ["acessorios", "carteiras", "signature-pieces"],
+        image: "images/product/pulse-leather-wallet-1.jpg",
+        secondaryImage: "images/product/pulse-leather-wallet-2.jpg",
+        nameEn: "Pulse leather wallet"
+    },
+    "vento-wool-scarf": {
+        collection: "Alicerce",
+        category: "Accessories",
+        subcategory: "Lenços",
+        material: "La",
+        sizes: ["Unico"],
+        colors: ["Cinza", "Azul"],
+        gender: "Masculino",
+        tags: ["acessorios", "lencos"],
+        image: "images/product/vento-wool-scarf-1.jpg",
+        secondaryImage: "images/product/vento-wool-scarf-2.jpg",
+        nameEn: "Vento wool scarf"
+    },
+    "titan-buckle-belt": {
+        collection: "Alicerce",
+        category: "Accessories",
+        subcategory: "Cintos",
+        material: "Couro",
+        sizes: ["P", "M", "G", "GG"],
+        colors: ["Preto", "Cafe"],
+        gender: "Masculino",
+        tags: ["acessorios", "cintos"],
+        image: "images/product/titan-buckle-belt-1.jpg",
+        secondaryImage: "images/product/titan-buckle-belt-2.jpg",
+        nameEn: "Titan buckle belt"
     }
 };
 function asRecord(value) {
@@ -172,8 +567,8 @@ function sanitizeVariantStockMap(value, validColors = [], validSizes = []) {
 }
 function normalizeProductMetadata(value, fallback = {}) {
     const raw = asRecord(value);
-    const fallbackSizes = normalizeTextList(fallback.sizes, ["Único"]);
-    const fallbackColors = normalizeTextList(fallback.colors, ["Único"]);
+    const fallbackSizes = normalizeTextList(fallback.sizes, ["ÃƒÅ¡nico"]);
+    const fallbackColors = normalizeTextList(fallback.colors, ["ÃƒÅ¡nico"]);
     const rawVariantStock = asRecord(raw.variantStock);
     const extractedColors = [];
     const extractedSizes = [];
@@ -191,8 +586,8 @@ function normalizeProductMetadata(value, fallback = {}) {
         if (size)
             extractedSizes.push(size);
     });
-    let sizes = normalizeTextList([...normalizeTextList(raw.sizes, []), ...normalizeTextList(extractedSizes, [])], fallbackSizes.length ? fallbackSizes : ["Único"]);
-    let colors = normalizeTextList([...normalizeTextList(raw.colors, []), ...normalizeTextList(extractedColors, [])], fallbackColors.length ? fallbackColors : ["Único"]);
+    let sizes = normalizeTextList([...normalizeTextList(raw.sizes, []), ...normalizeTextList(extractedSizes, [])], fallbackSizes.length ? fallbackSizes : ["ÃƒÅ¡nico"]);
+    let colors = normalizeTextList([...normalizeTextList(raw.colors, []), ...normalizeTextList(extractedColors, [])], fallbackColors.length ? fallbackColors : ["ÃƒÅ¡nico"]);
     let variantStock = sanitizeVariantStockMap(raw.variantStock ?? raw.variant_stock, colors, sizes);
     const looksLikeLegacyBlackOnly = colors.length === 1 &&
         String(colors[0] || "").trim().toLowerCase() === "preto" &&
@@ -204,49 +599,192 @@ function normalizeProductMetadata(value, fallback = {}) {
         variantStock = sanitizeVariantStockMap(raw.variantStock ?? raw.variant_stock, colors, sizes);
     }
     return {
-        sizes: sizes.length ? sizes : ["Único"],
-        colors: colors.length ? colors : ["Único"],
+        sizes: sizes.length ? sizes : ["ÃƒÅ¡nico"],
+        colors: colors.length ? colors : ["ÃƒÅ¡nico"],
         variantStock
     };
 }
+const FEMALE_SKUS = new Set([
+    "genesis-bomber",
+    "genesis-tailored",
+    "eclipse-shirt",
+    "origem-skirt",
+    "noir-dress",
+    "essence-blazer",
+    "essence-trousers",
+    "aurora-coat",
+    "areia-top",
+    "lunar-blazer",
+    "prisma-skirt",
+    "serif-dress",
+    "nebula-tee",
+    "coral-pants",
+    "birch-cardigan",
+    "solstice-jacket",
+    "genesis-hobo-bag",
+    "alicerce-mini-bag",
+    "fleur-silk-scarf",
+    "nox-card-wallet",
+    "aura-thin-belt"
+]);
+const MALE_SKUS = new Set([
+    "origem-shirt",
+    "atelier-bag",
+    "atelier-heels",
+    "flux-trench",
+    "flux-knit",
+    "noir-sneaker",
+    "vento-trousers",
+    "delta-jeans",
+    "atlas-hoodie",
+    "marco-trench",
+    "vento-knit",
+    "cairo-vest",
+    "oslo-parka",
+    "riviera-shorts",
+    "pixel-bag",
+    "metro-belt",
+    "marco-duffle-bag",
+    "atlas-crossbody-bag",
+    "pulse-leather-wallet",
+    "vento-wool-scarf",
+    "titan-buckle-belt"
+]);
+const NEW_SKUS = new Set([
+    "genesis-bomber",
+    "genesis-tailored",
+    "origem-skirt",
+    "noir-dress",
+    "aurora-coat",
+    "eclipse-shirt",
+    "essence-blazer",
+    "essence-trousers",
+    "origem-shirt",
+    "atelier-bag",
+    "atelier-heels",
+    "flux-trench",
+    "flux-knit",
+    "noir-sneaker",
+    "oslo-parka",
+    "riviera-shorts",
+    "genesis-hobo-bag",
+    "fleur-silk-scarf",
+    "marco-duffle-bag",
+    "pulse-leather-wallet"
+]);
+const BEST_SELLER_SKUS = new Set([
+    "origem-shirt",
+    "origem-skirt",
+    "atelier-bag",
+    "atelier-heels",
+    "essence-blazer",
+    "essence-trousers",
+    "flux-knit",
+    "noir-sneaker"
+]);
+const FEATURED_SKUS = new Set([
+    "genesis-bomber",
+    "genesis-tailored",
+    "atelier-bag",
+    "noir-dress",
+    "oslo-parka",
+    "pixel-bag"
+]);
+function normalizeTag(value) {
+    return String(value || "")
+        .trim()
+        .toLowerCase()
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .replace(/[^a-z0-9]+/g, "-")
+        .replace(/^-+|-+$/g, "");
+}
+function resolveProductGenderBySku(sku, fallback) {
+    if (FEMALE_SKUS.has(sku))
+        return "Feminino";
+    if (MALE_SKUS.has(sku))
+        return "Masculino";
+    return String(fallback || "").trim().toLowerCase() === "feminino" ? "Feminino" : "Masculino";
+}
+function buildCollectionsArray(staticMetadata) {
+    const primary = String(staticMetadata.collection || "Alicerce").trim() || "Alicerce";
+    const merged = normalizeTextList([primary, ...normalizeTextList(staticMetadata.collections, [])], []);
+    return merged.length ? merged : ["Alicerce"];
+}
+function buildProductTags(staticMetadata, gender, isNew, isBestSeller, isFeatured) {
+    const result = new Set(normalizeTextList(staticMetadata.tags, []).map((tag) => normalizeTag(tag)).filter(Boolean));
+    if (gender === "Feminino")
+        result.add("presente-para-ela");
+    if (gender === "Masculino")
+        result.add("presente-para-ele");
+    if (isNew && gender === "Feminino")
+        result.add("novidade-para-ela");
+    if (isNew && gender === "Masculino")
+        result.add("novidade-para-ele");
+    if (isBestSeller)
+        result.add("mais-vendidos");
+    if (isFeatured)
+        result.add("destaque");
+    return Array.from(result);
+}
 function formatPriceLabelFromCents(priceCents) {
-    const value = Math.max(0, Math.round(Number(priceCents || 0) / 100));
+    const value = Math.max(0, Number(priceCents || 0) / 100);
     return value.toLocaleString("pt-BR", {
         style: "currency",
         currency: "BRL",
-        minimumFractionDigits: 0,
-        maximumFractionDigits: 0
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2
     });
 }
 function mapProduct(row) {
     const sku = String(row?.sku || "").trim();
     const staticMetadata = PRODUCT_METADATA[sku] || {};
     const metadata = normalizeProductMetadata(row?.metadata, staticMetadata);
-    const priceValue = Math.max(0, Math.round(Number(row?.price_cents || 0) / 100));
+    const metadataRecord = asRecord(row?.metadata);
+    const effectivePriceCents = STOREFRONT_DEFAULT_PRICE_CENTS;
+    const priceValue = effectivePriceCents / 100;
     const dbImage = String(row?.image_url || "").trim();
-    const staticImage = String(staticMetadata.image || "").trim();
-    const dbLooksLikeLegacyLocalProductImage = /^images\/produtos\/sug[1-9]\d*\.jpeg$/i.test(dbImage) && dbImage !== staticImage;
-    const resolvedImage = dbLooksLikeLegacyLocalProductImage ? staticImage || dbImage : dbImage || staticImage || DEFAULT_IMAGE;
+    const metadataImage = String(metadataRecord.image || metadataRecord.image_url || metadataRecord.imageUrl || "").trim();
+    const metadataSecondaryImage = String(metadataRecord.secondaryImage || metadataRecord.secondary_image || metadataRecord.image2 || metadataRecord.hoverImage || "").trim();
+    const resolvedImage = dbImage || metadataImage || DEFAULT_IMAGE;
+    const resolvedSecondaryImage = metadataSecondaryImage;
+    const collections = buildCollectionsArray(staticMetadata);
+    const resolvedGender = resolveProductGenderBySku(sku, staticMetadata.gender);
+    const category = String(staticMetadata.category || "Colecao");
+    const subcategory = String(staticMetadata.subcategory || category);
+    const isNew = Boolean(staticMetadata.isNew ?? NEW_SKUS.has(sku));
+    const isBestSeller = Boolean(staticMetadata.isBestSeller ?? BEST_SELLER_SKUS.has(sku));
+    const isFeatured = Boolean(staticMetadata.isFeatured ?? FEATURED_SKUS.has(sku));
+    const tags = buildProductTags(staticMetadata, resolvedGender, isNew, isBestSeller, isFeatured);
     return {
         id: sku,
         sku,
+        slug: sku,
         dbId: row?.id,
         name: String(row?.name || sku),
         nameEn: String(staticMetadata.nameEn || row?.name || sku),
-        collection: String(staticMetadata.collection || "Alicerce"),
-        category: String(staticMetadata.category || "Coleção"),
+        collection: collections[0],
+        collections,
+        category,
+        subcategory,
         material: String(staticMetadata.material || "Material premium"),
         sizes: metadata.sizes,
         colors: metadata.colors,
         variantStock: metadata.variantStock,
-        gender: String(staticMetadata.gender || "Unissex"),
-        priceLabel: formatPriceLabelFromCents(row?.price_cents),
+        gender: resolvedGender,
+        price: priceValue,
+        priceLabel: formatPriceLabelFromCents(effectivePriceCents),
         priceValue,
-        unitAmount: Math.max(0, Number(row?.price_cents || 0)),
+        unitAmount: effectivePriceCents,
         currency: String(row?.currency || "brl").toLowerCase(),
         stock: Math.max(0, Number(row?.stock_qty || 0)),
+        isNew,
+        isBestSeller,
+        isFeatured,
+        tags,
         active: Boolean(row?.active),
         image: resolvedImage,
+        secondaryImage: resolvedSecondaryImage || undefined,
         createdAt: row?.created_at || null,
         updatedAt: row?.updated_at || null,
         href: `produto.html?id=${encodeURIComponent(sku)}`
@@ -307,6 +845,331 @@ async function listProducts() {
     ORDER BY created_at DESC
     `);
     return result.rows.map(mapProduct);
+}
+function foldText(value) {
+    return String(value || "")
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .toLowerCase()
+        .trim();
+}
+function tokenizeSearch(value) {
+    const seen = new Set();
+    const tokens = [];
+    foldText(value)
+        .split(/[^a-z0-9]+/g)
+        .map((item) => item.trim())
+        .filter((item) => item.length >= 2)
+        .forEach((item) => {
+        if (seen.has(item))
+            return;
+        seen.add(item);
+        tokens.push(item);
+    });
+    return tokens;
+}
+function buildSearchHaystack(product) {
+    const sku = foldText(product.sku);
+    const name = foldText(product.name);
+    const category = foldText(product.category);
+    const collection = foldText(product.collection);
+    const material = foldText(product.material);
+    const gender = foldText(product.gender);
+    const colors = (Array.isArray(product.colors) ? product.colors : []).map((item) => foldText(item)).filter(Boolean);
+    const sizes = (Array.isArray(product.sizes) ? product.sizes : []).map((item) => foldText(item)).filter(Boolean);
+    const all = [sku, name, category, collection, material, gender, ...colors, ...sizes].filter(Boolean).join(" ");
+    return { sku, name, category, collection, material, gender, colors, sizes, all };
+}
+function matchesStrictSearch(product, query, tokens) {
+    const normalizedQuery = foldText(query);
+    if (!normalizedQuery)
+        return true;
+    const h = buildSearchHaystack(product);
+    const strictFields = [h.name, h.category, h.sku];
+    if (strictFields.some((field) => field.includes(normalizedQuery)))
+        return true;
+    if (!tokens.length)
+        return false;
+    return tokens.every((token) => strictFields.some((field) => field.includes(token)));
+}
+const PRODUCT_TYPE_TOKENS = new Set([
+    "calca",
+    "calcas",
+    "camisa",
+    "camisas",
+    "camiseta",
+    "camisetas",
+    "jaqueta",
+    "jaquetas",
+    "blazer",
+    "blazers",
+    "saia",
+    "saias",
+    "vestido",
+    "vestidos",
+    "tenis",
+    "sapato",
+    "sapatos",
+    "bolsa",
+    "bolsas",
+    "acessorio",
+    "acessorios",
+    "casaco",
+    "casacos"
+]);
+function hasProductTypeIntent(query, tokens) {
+    const normalizedQuery = foldText(query);
+    if (PRODUCT_TYPE_TOKENS.has(normalizedQuery))
+        return true;
+    return tokens.some((token) => PRODUCT_TYPE_TOKENS.has(token));
+}
+function matchesFlexibleAttributesSearch(product, query, tokens) {
+    const normalizedQuery = foldText(query);
+    if (!normalizedQuery)
+        return true;
+    const h = buildSearchHaystack(product);
+    const broadFields = [h.name, h.category, h.sku, h.collection, h.material, h.gender, ...h.colors, ...h.sizes];
+    if (broadFields.some((field) => field.includes(normalizedQuery)))
+        return true;
+    if (!tokens.length)
+        return false;
+    return tokens.every((token) => broadFields.some((field) => field.includes(token)));
+}
+function matchesStorefrontSearch(product, query, tokens) {
+    if (hasProductTypeIntent(query, tokens)) {
+        return matchesStrictSearch(product, query, tokens);
+    }
+    return matchesFlexibleAttributesSearch(product, query, tokens);
+}
+function scoreProductSearch(product, query, tokens) {
+    const normalizedQuery = foldText(query);
+    if (!normalizedQuery)
+        return 0;
+    const h = buildSearchHaystack(product);
+    let score = 0;
+    if (h.sku === normalizedQuery)
+        score += 200;
+    if (h.name === normalizedQuery)
+        score += 170;
+    if (h.sku.startsWith(normalizedQuery))
+        score += 130;
+    if (h.name.startsWith(normalizedQuery))
+        score += 120;
+    if (h.name.includes(normalizedQuery))
+        score += 80;
+    if (h.sku.includes(normalizedQuery))
+        score += 60;
+    if (h.category.includes(normalizedQuery))
+        score += 36;
+    if (h.collection.includes(normalizedQuery))
+        score += 32;
+    if (h.material.includes(normalizedQuery))
+        score += 24;
+    if (h.gender.includes(normalizedQuery))
+        score += 16;
+    if (h.colors.some((item) => item.includes(normalizedQuery)))
+        score += 24;
+    if (h.sizes.some((item) => item.includes(normalizedQuery)))
+        score += 12;
+    let tokenMatches = 0;
+    tokens.forEach((token) => {
+        const inNamePrefix = h.name.startsWith(token);
+        const inSkuPrefix = h.sku.startsWith(token);
+        const inAll = h.all.includes(token);
+        if (inNamePrefix) {
+            score += 45;
+            tokenMatches += 1;
+            return;
+        }
+        if (inSkuPrefix) {
+            score += 35;
+            tokenMatches += 1;
+            return;
+        }
+        if (inAll) {
+            score += 18;
+            tokenMatches += 1;
+        }
+    });
+    if (tokens.length > 1 && tokenMatches === tokens.length) {
+        score += 32;
+    }
+    else if (tokens.length > 1 && tokenMatches > 0) {
+        score += 8;
+    }
+    if (product.stock > 0)
+        score += 4;
+    return score;
+}
+function uniqueTextList(values) {
+    const seen = new Set();
+    const output = [];
+    values.forEach((value) => {
+        const normalized = String(value || "").trim();
+        if (!normalized)
+            return;
+        const key = foldText(normalized);
+        if (!key || seen.has(key))
+            return;
+        seen.add(key);
+        output.push(normalized);
+    });
+    return output;
+}
+function levenshteinDistance(a, b) {
+    const left = foldText(a);
+    const right = foldText(b);
+    if (left === right)
+        return 0;
+    if (!left.length)
+        return right.length;
+    if (!right.length)
+        return left.length;
+    const rows = left.length + 1;
+    const cols = right.length + 1;
+    const dp = Array.from({ length: rows }, () => new Array(cols).fill(0));
+    for (let i = 0; i < rows; i += 1)
+        dp[i][0] = i;
+    for (let j = 0; j < cols; j += 1)
+        dp[0][j] = j;
+    for (let i = 1; i < rows; i += 1) {
+        for (let j = 1; j < cols; j += 1) {
+            const cost = left[i - 1] === right[j - 1] ? 0 : 1;
+            dp[i][j] = Math.min(dp[i - 1][j] + 1, dp[i][j - 1] + 1, dp[i - 1][j - 1] + cost);
+        }
+    }
+    return dp[rows - 1][cols - 1];
+}
+function extractSearchDictionary(products) {
+    const terms = [];
+    products.forEach((product) => {
+        terms.push(product.name, product.sku, product.category, product.collection, product.material, product.gender);
+        (Array.isArray(product.colors) ? product.colors : []).forEach((item) => terms.push(String(item || "")));
+        (Array.isArray(product.sizes) ? product.sizes : []).forEach((item) => terms.push(String(item || "")));
+    });
+    return uniqueTextList(terms);
+}
+function resolveDidYouMean(query, dictionary) {
+    const normalized = foldText(query);
+    if (!normalized || normalized.length < 3)
+        return null;
+    let bestTerm = "";
+    let bestDistance = Number.POSITIVE_INFINITY;
+    dictionary.forEach((term) => {
+        const folded = foldText(term);
+        if (!folded || folded === normalized)
+            return;
+        const distance = levenshteinDistance(normalized, folded);
+        const maxAllowed = Math.max(1, Math.floor(Math.min(3, folded.length * 0.34)));
+        if (distance > maxAllowed)
+            return;
+        if (distance < bestDistance) {
+            bestDistance = distance;
+            bestTerm = term;
+        }
+    });
+    return bestTerm || null;
+}
+function mapSuggestionProduct(product) {
+    return {
+        id: product.id,
+        sku: product.sku,
+        name: product.name,
+        image: product.image,
+        secondaryImage: product.secondaryImage,
+        category: product.category,
+        collection: product.collection,
+        stock: product.stock,
+        active: product.active
+    };
+}
+async function searchStorefrontSuggestions({ query: q = "", limit = 8 } = {}) {
+    const normalized = String(q || "").trim();
+    const safeLimit = Math.max(1, Math.min(12, Number(limit) || 8));
+    if (normalized.length < 2)
+        return { terms: [], didYouMean: null, products: [] };
+    const products = await listProducts();
+    const activeProducts = products.filter((item) => item && item.active !== false);
+    const foldedQuery = foldText(normalized);
+    const dictionary = extractSearchDictionary(activeProducts);
+    const terms = dictionary
+        .map((term) => {
+        const folded = foldText(term);
+        let score = 0;
+        if (folded === foldedQuery)
+            score += 120;
+        if (folded.startsWith(foldedQuery))
+            score += 80;
+        if (folded.includes(foldedQuery))
+            score += 42;
+        return { term, score };
+    })
+        .filter((entry) => entry.score > 0)
+        .sort((a, b) => b.score - a.score || a.term.localeCompare(b.term))
+        .slice(0, safeLimit)
+        .map((entry) => entry.term);
+    const didYouMean = resolveDidYouMean(normalized, dictionary);
+    const tokens = tokenizeSearch(normalized);
+    const suggestedProducts = activeProducts
+        .map((product) => ({ product, score: scoreProductSearch(product, normalized, tokens) }))
+        .filter((entry) => entry.score > 0 && matchesStorefrontSearch(entry.product, normalized, tokens))
+        .sort((a, b) => b.score - a.score)
+        .slice(0, safeLimit)
+        .map((entry) => mapSuggestionProduct(entry.product));
+    return { terms, didYouMean, products: suggestedProducts };
+}
+async function searchStorefrontProducts({ query: q = "", page = 1, limit = 8, category = "", collection = "", gender = "", inStock = false, sort = "relevance" } = {}) {
+    const normalizedQuery = String(q || "").trim();
+    const safePage = Math.max(1, Number(page) || 1);
+    const safeLimit = Math.max(1, Math.min(24, Number(limit) || 8));
+    const offset = (safePage - 1) * safeLimit;
+    const products = await listProducts();
+    const normalizedCategory = foldText(category);
+    const normalizedCollection = foldText(collection);
+    const normalizedGender = foldText(gender);
+    const tokens = tokenizeSearch(normalizedQuery);
+    const filtered = products.filter((product) => {
+        if (!product || product.active === false)
+            return false;
+        if (inStock && Number(product.stock || 0) <= 0)
+            return false;
+        if (normalizedCategory && foldText(product.category) !== normalizedCategory)
+            return false;
+        if (normalizedCollection && foldText(product.collection) !== normalizedCollection)
+            return false;
+        if (normalizedGender && foldText(product.gender) !== normalizedGender)
+            return false;
+        return true;
+    });
+    const scored = normalizedQuery
+        ? filtered
+            .map((product) => ({ product, score: scoreProductSearch(product, normalizedQuery, tokens) }))
+            .filter((entry) => entry.score > 0 && matchesStorefrontSearch(entry.product, normalizedQuery, tokens))
+        : filtered.map((product) => ({ product, score: 0 }));
+    scored.sort((a, b) => {
+        if (sort === "price_asc")
+            return a.product.priceValue - b.product.priceValue;
+        if (sort === "price_desc")
+            return b.product.priceValue - a.product.priceValue;
+        if (sort === "newest") {
+            const aTime = new Date(a.product.createdAt || 0).getTime();
+            const bTime = new Date(b.product.createdAt || 0).getTime();
+            return bTime - aTime;
+        }
+        if (b.score !== a.score)
+            return b.score - a.score;
+        if (b.product.stock !== a.product.stock)
+            return b.product.stock - a.product.stock;
+        const aTime = new Date(a.product.createdAt || 0).getTime();
+        const bTime = new Date(b.product.createdAt || 0).getTime();
+        return bTime - aTime;
+    });
+    return {
+        rows: scored.slice(offset, offset + safeLimit).map((entry) => entry.product),
+        total: scored.length,
+        page: safePage,
+        limit: safeLimit
+    };
 }
 async function listAdminProducts({ limit = 200, offset = 0, search = "", includeInactive = true } = {}) {
     const safeLimit = Math.max(1, Math.min(500, Number(limit) || 200));
@@ -654,6 +1517,8 @@ async function restoreProductFromSnapshot(snapshotInput = {}) {
 }
 module.exports = {
     listProducts,
+    searchStorefrontProducts,
+    searchStorefrontSuggestions,
     listAdminProducts,
     searchAdminProducts,
     getProductByIdentifier,

@@ -36,12 +36,12 @@ type SearchPiece = {
 };
 
 const TOP_MESSAGES = [
-  "Nova ColeÃ§Ã£o Genesis",
-  "VocÃª merece vestir algo a sua altura.",
-  "Cadastre-se para receber lanÃ§amentos",
-  "Exclusividade para quem valoriza o que Ã© Ãºnico.",
-  "Acesso antecipado a novas coleÃ§Ãµes.",
-  "ProduÃ§Ã£o em pequena escala. Qualidade em cada detalhe.",
+  "Nova Coleção Genesis",
+  "Você merece vestir algo a sua altura.",
+  "Cadastre-se para receber lançamentos",
+  "Exclusividade para quem valoriza o que é único.",
+  "Acesso antecipado a novas coleções.",
+  "Produção em pequena escala. Qualidade em cada detalhe.",
 ];
 
 const SEARCH_CHIPS = [
@@ -856,7 +856,7 @@ export function LegacyHome({ products }: LegacyHomeProps) {
             type="button"
             ref={rightArrowRef}
             onClick={() => stepTopMessage("right", 1)}
-            aria-label="PrÃ³xima mensagem"
+            aria-label="Próxima mensagem"
           >
             &#10095;
           </button>
@@ -1066,7 +1066,12 @@ export function LegacyHome({ products }: LegacyHomeProps) {
                       <div className="header-menu-subpanel-category-group">
                         <span className="header-menu-subpanel-category-title">Para ele</span>
                         <div className="header-menu-subpanel-category-links">
-                          <a href="#" onClick={(event) => event.preventDefault()}>
+                          <a
+                            href={item === "Novidades" ? "/products?view=novidades-para-ele" : "#"}
+                            onClick={(event) => {
+                              if (item !== "Novidades") event.preventDefault();
+                            }}
+                          >
                             {item === "Presentes" ? "Presentes para homens" : "Novidades para homens"}
                           </a>
                           <a href="#" onClick={(event) => event.preventDefault()}>Coleção Gênesis</a>
@@ -1076,7 +1081,12 @@ export function LegacyHome({ products }: LegacyHomeProps) {
                       <div className="header-menu-subpanel-category-group">
                         <span className="header-menu-subpanel-category-title">Para ela</span>
                         <div className="header-menu-subpanel-category-links">
-                          <a href="#" onClick={(event) => event.preventDefault()}>
+                          <a
+                            href={item === "Novidades" ? "/products?view=novidades-para-ela" : "#"}
+                            onClick={(event) => {
+                              if (item !== "Novidades") event.preventDefault();
+                            }}
+                          >
                             {item === "Presentes" ? "Presentes para mulheres" : "Novidades para Mulheres"}
                           </a>
                           <a href="#" onClick={(event) => event.preventDefault()}>Coleção Gênesis</a>
@@ -1336,7 +1346,7 @@ export function LegacyHome({ products }: LegacyHomeProps) {
 
       <GenderShowcase products={safeProducts} />
 
-      <section className="new-drop collection-drop" aria-label="Nova ColeÃ§Ã£o em vÃ­deo">
+      <section className="new-drop collection-drop" aria-label="Nova Coleção em vídeo">
         <div className="new-drop-inner">
           <div className="new-drop-media">
             {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -1360,7 +1370,7 @@ export function LegacyHome({ products }: LegacyHomeProps) {
         </div>
       </section>
 
-      <section className="category-switch" data-category-switch="popular" aria-label="PeÃ§as mais clicadas">
+      <section className="category-switch" data-category-switch="popular" aria-label="Peças mais clicadas">
         <div className="category-grid" id="popularGrid">
           {popularProducts.map((product) => {
             const href = resolveProductHref(product);
@@ -1477,8 +1487,6 @@ export function LegacyHome({ products }: LegacyHomeProps) {
     </div>
   );
 }
-
-
 
 
 

@@ -51,6 +51,19 @@ function maskEmailForLog(email) {
     const maskedLocal = `${local.slice(0, 2)}***`;
     return domain ? `${maskedLocal}@${domain}` : maskedLocal;
 }
+function resolveConfiguredEmailProvider() {
+    const explicit = String(process.env.EMAIL_PROVIDER || "").trim().toLowerCase();
+    const hasResendKey = Boolean(String(process.env.RESEND_API_KEY || "").trim());
+    if (explicit === "resend")
+        return "resend";
+    if (explicit === "console" && !hasResendKey)
+        return "console";
+    if (hasResendKey)
+        return "resend";
+    if (explicit)
+        return explicit;
+    return "console";
+}
 const authRateLimit = rateLimit({
     windowMs: 15 * 60 * 1000,
     max: 10,
@@ -138,9 +151,17 @@ const resetPasswordSchema = z.object({
 const profileSchema = z.object({
     title: titleSchema.optional(),
     name: z.string().trim().min(2).max(120),
-    birthDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
-    cpf: z.string().transform((value) => String(value || "").replace(/\D/g, "")).refine((value) => /^\d{11}$/.test(value)),
-    cep: z.string().transform((value) => String(value || "").replace(/\D/g, "")).refine((value) => /^\d{8}$/.test(value))
+    birthDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
+    cpf: z
+        .string()
+        .transform((value) => String(value || "").replace(/\D/g, ""))
+        .refine((value) => /^\d{11}$/.test(value))
+        .optional(),
+    cep: z
+        .string()
+        .transform((value) => String(value || "").replace(/\D/g, ""))
+        .refine((value) => /^\d{8}$/.test(value))
+        .optional()
 });
 const addressSchema = z.object({
     label: z.string().trim().min(2).max(40),
@@ -648,14 +669,15 @@ authRouter.post("/passkey/login/options", authRateLimit, async (req, res) => {
     const parsed = passkeyLoginOptionsSchema.safeParse(req.body || {});
     if (!parsed.success)
         return res.status(400).json({ error: "INVALID_INPUT" });
+    const genericInvalidResponse = () => res.status(401).json({ error: "INVALID_CREDENTIALS" });
     const user = await findUserByEmail(parsed.data.email);
     if (!user)
-        return res.status(404).json({ error: "EMAIL_NOT_FOUND" });
+        return genericInvalidResponse();
     if (user.passwordResetRequired)
         return res.status(403).json({ error: "PASSWORD_RESET_REQUIRED" });
     const credentials = await listPasskeysByUserId(user.id);
     if (!credentials.length) {
-        return res.status(404).json({ error: "PASSKEY_NOT_FOUND" });
+        return genericInvalidResponse();
     }
     const options = await generateAuthenticationOptions({
         rpID: config.rpId,
@@ -756,7 +778,7 @@ async function issueAndSendLoginVerifyCode(user) {
     await sendLoginVerificationEmail({
         to: user.email,
         code: issued.code,
-        minutes: 10
+        minutes: 20
     });
     return { ok: true, issued };
 }
@@ -878,7 +900,7 @@ authRouter.post("/email/start", authRateLimit, async (req, res) => {
     const email = normalizeEmail(parsed.data.email);
     const user = await findUserByEmail(email);
     if (!user)
-        return res.status(404).json({ error: "EMAIL_NOT_FOUND" });
+        return res.status(200).json(buildEmailCodeResponseBase(email, "login_code_required", null));
     try {
         if (!user.emailVerified) {
             const accountCode = await issueAndSendAccountVerifyCode(user);
@@ -897,7 +919,13 @@ authRouter.post("/email/start", authRateLimit, async (req, res) => {
             return res.status(500).json({ error: "AUTH_CODE_ISSUE_FAILED" });
         return res.json(buildEmailCodeResponseBase(user.email, "login_code_required", loginCode.issued));
     }
-    catch {
+    catch (error) {
+        // eslint-disable-next-line no-console
+        console.error("[auth/email-start] email delivery failed", {
+            email: maskEmailForLog(email),
+            provider: resolveConfiguredEmailProvider(),
+            message: String(error?.message || "unknown_error")
+        });
         return res.status(500).json({ error: "EMAIL_DELIVERY_FAILED" });
     }
 });
@@ -988,7 +1016,13 @@ async (req, res) => {
             return res.status(500).json({ error: "AUTH_CODE_ISSUE_FAILED" });
         return res.json(buildEmailCodeResponseBase(user.email, "login_code_required", loginCode.issued));
     }
-    catch {
+    catch (error) {
+        // eslint-disable-next-line no-console
+        console.error("[auth/login] email delivery failed", {
+            email: maskEmailForLog(email),
+            provider: resolveConfiguredEmailProvider(),
+            message: String(error?.message || "unknown_error")
+        });
         return res.status(500).json({ error: "EMAIL_DELIVERY_FAILED" });
     }
 });
@@ -1304,19 +1338,70 @@ myRouter.put("/profile", requireAuth, async (req, res) => {
     if (!parsed.success) {
         return res.status(400).json({ error: "INVALID_INPUT" });
     }
-    if (!parseBirthDate(parsed.data.birthDate)) {
+    const currentUser = await findUserById(req.session.userId);
+    if (!currentUser)
+        return res.status(404).json({ error: "USER_NOT_FOUND" });
+    if (parsed.data.birthDate && !parseBirthDate(parsed.data.birthDate)) {
         return res.status(400).json({ error: "INVALID_INPUT" });
     }
     const updated = await updateUser(req.session.userId, {
         title: parsed.data.title,
         name: parsed.data.name,
-        birthDate: parsed.data.birthDate,
-        cpf: parsed.data.cpf,
-        cep: parsed.data.cep
+        birthDate: parsed.data.birthDate || currentUser.birthDate,
+        cpf: parsed.data.cpf || currentUser.cpf,
+        cep: parsed.data.cep || currentUser.cep
     });
     if (!updated)
         return res.status(404).json({ error: "USER_NOT_FOUND" });
     return res.json({ user: publicUser(updated) });
+});
+myRouter.get("/checkout-prefill", requireAuth, async (req, res) => {
+    const user = await findUserById(req.session.userId);
+    if (!user)
+        return res.status(404).json({ error: "USER_NOT_FOUND" });
+    const normalizeDigits = (value) => String(value || "").replace(/\D/g, "");
+    const normalizePhone = (value) => normalizeDigits(value).slice(0, 11);
+    const normalizeCpf = (value) => normalizeDigits(value).slice(0, 11);
+    const normalizeName = (value) => String(value || "").trim();
+    let historyPhone = "";
+    let historyCpf = "";
+    let historyName = "";
+    try {
+        const orderResult = await query(`
+      SELECT shipping_json
+      FROM orders
+      WHERE lower(COALESCE(user_email, '')) = lower($1)
+      ORDER BY COALESCE(paid_at, created_at) DESC
+      LIMIT 20
+      `, [normalizeEmail(user.email || "")]);
+        for (const row of orderResult.rows || []) {
+            const shipping = row?.shipping_json && typeof row.shipping_json === "object" ? row.shipping_json : {};
+            if (!historyPhone)
+                historyPhone = normalizePhone(shipping.phone || "");
+            if (!historyCpf)
+                historyCpf = normalizeCpf(shipping.cpf || "");
+            if (!historyName)
+                historyName = normalizeName(shipping.fullName || "");
+            if (historyPhone && historyCpf && historyName)
+                break;
+        }
+    }
+    catch {
+        // Se histórico falhar, retorna o que houver no perfil.
+    }
+    const phone = normalizePhone(user.phone || historyPhone || "");
+    const cpf = normalizeCpf(user.cpf || historyCpf || "");
+    const fullName = normalizeName(user.name || historyName || "");
+    return res.json({
+        phone,
+        cpf,
+        fullName,
+        sources: {
+            phone: normalizePhone(user.phone || "") ? "account" : historyPhone ? "orders" : "",
+            cpf: normalizeCpf(user.cpf || "") ? "account" : historyCpf ? "orders" : "",
+            fullName: normalizeName(user.name || "") ? "account" : historyName ? "orders" : ""
+        }
+    });
 });
 myRouter.get("/addresses", requireAuth, async (req, res) => {
     const user = await findUserById(req.session.userId);
@@ -1436,8 +1521,10 @@ myRouter.get("/favorites", requireAuth, async (req, res) => {
     const row = await getAccountDataRow(req.session.userId);
     if (!row)
         return res.status(404).json({ error: "USER_NOT_FOUND" });
+    const csrfToken = String(req.session?.userCsrfToken || "").trim();
     return res.json({
-        favorites: normalizeFavoriteIds(row.account_favorites)
+        favorites: normalizeFavoriteIds(row.account_favorites),
+        csrfToken: csrfToken || undefined
     });
 });
 myRouter.put("/favorites", requireAuth, async (req, res) => {
@@ -1455,7 +1542,11 @@ myRouter.put("/favorites", requireAuth, async (req, res) => {
     `, [req.session.userId, JSON.stringify(favorites)]);
     if (!updated.rowCount)
         return res.status(404).json({ error: "USER_NOT_FOUND" });
-    return res.json({ favorites });
+    const csrfToken = String(req.session?.userCsrfToken || "").trim();
+    return res.json({
+        favorites,
+        csrfToken: csrfToken || undefined
+    });
 });
 myRouter.get("/preferences", requireAuth, async (req, res) => {
     const row = await getAccountDataRow(req.session.userId);

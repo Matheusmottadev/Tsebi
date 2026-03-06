@@ -24,6 +24,12 @@ async function ensureOrderSchema() {
           ADD COLUMN IF NOT EXISTS shipped_at TIMESTAMPTZ,
           ADD COLUMN IF NOT EXISTS delivered_at TIMESTAMPTZ;
       `);
+            await query(`
+        ALTER TABLE order_items
+          ADD COLUMN IF NOT EXISTS variant_color TEXT,
+          ADD COLUMN IF NOT EXISTS variant_size TEXT,
+          ADD COLUMN IF NOT EXISTS variant_key TEXT;
+      `);
         })().catch((error) => {
             orderSchemaPromise = null;
             throw error;
@@ -85,14 +91,17 @@ function mapOrderItemRow(row) {
         name: String(row.name || row.product_sku || row.product_id || ""),
         qty: Number(row.qty || 0),
         unitAmount: Number(row.price_cents || 0),
-        currency: String(row.currency || "brl")
+        currency: String(row.currency || "brl"),
+        variantColor: row.variant_color || null,
+        variantSize: row.variant_size || null,
+        variantKey: row.variant_key || null
     };
 }
 async function listItemsByOrderIds(orderIds) {
     if (!Array.isArray(orderIds) || orderIds.length === 0)
         return new Map();
     const result = await query(`
-    SELECT order_id, product_sku, product_id, name, qty, price_cents, currency
+    SELECT order_id, product_sku, product_id, name, qty, price_cents, currency, variant_color, variant_size, variant_key
     FROM order_items
     WHERE order_id = ANY($1::uuid[])
     ORDER BY id ASC
@@ -117,9 +126,9 @@ async function insertOrderItems(client, orderId, items) {
         const productId = productResult.rows[0]?.id || null;
         await client.query(`
       INSERT INTO order_items (
-        order_id, product_id, product_sku, name, qty, price_cents, currency
+        order_id, product_id, product_sku, name, qty, price_cents, currency, variant_color, variant_size, variant_key
       ) VALUES (
-        $1, $2::uuid, $3, $4, $5, $6, $7
+        $1, $2::uuid, $3, $4, $5, $6, $7, $8, $9, $10
       )
       `, [
             orderId,
@@ -128,11 +137,15 @@ async function insertOrderItems(client, orderId, items) {
             String(item.name || sku),
             Math.max(1, Number(item.qty || 1)),
             Math.max(0, Number(item.unitAmount || 0)),
-            String(item.currency || "brl").toLowerCase()
+            String(item.currency || "brl").toLowerCase(),
+            item.variantColor ? String(item.variantColor).trim() : null,
+            item.variantSize ? String(item.variantSize).trim() : null,
+            item.variantKey ? String(item.variantKey).trim() : null
         ]);
     }
 }
 async function createOrder(payload) {
+    await ensureOrderSchema();
     return withTransaction(async (client) => {
         const generatedOrderId = crypto.randomUUID();
         const generatedOrderNumber = `PED-${String(generatedOrderId).replace(/-/g, "").slice(0, 10).toUpperCase()}`;
@@ -185,7 +198,7 @@ async function createOrder(payload) {
         if (Array.isArray(payload.items) && payload.items.length > 0) {
             await insertOrderItems(client, orderRow.id, payload.items);
         }
-        const itemResult = await client.query(`SELECT order_id, product_sku, product_id, name, qty, price_cents, currency FROM order_items WHERE order_id = $1`, [orderRow.id]);
+        const itemResult = await client.query(`SELECT order_id, product_sku, product_id, name, qty, price_cents, currency, variant_color, variant_size, variant_key FROM order_items WHERE order_id = $1`, [orderRow.id]);
         return mapOrderRow(orderRow, itemResult.rows.map(mapOrderItemRow));
     });
 }
@@ -255,7 +268,7 @@ async function updateOrder(orderId, patch) {
     const row = result.rows[0];
     if (!row)
         return null;
-    const itemResult = await query(`SELECT order_id, product_sku, product_id, name, qty, price_cents, currency FROM order_items WHERE order_id = $1`, [row.id]);
+    const itemResult = await query(`SELECT order_id, product_sku, product_id, name, qty, price_cents, currency, variant_color, variant_size, variant_key FROM order_items WHERE order_id = $1`, [row.id]);
     return mapOrderRow(row, itemResult.rows.map(mapOrderItemRow));
 }
 async function findOrderById(orderId) {
@@ -266,7 +279,7 @@ async function findOrderById(orderId) {
     const row = result.rows[0];
     if (!row)
         return null;
-    const itemResult = await query(`SELECT order_id, product_sku, product_id, name, qty, price_cents, currency FROM order_items WHERE order_id = $1`, [row.id]);
+    const itemResult = await query(`SELECT order_id, product_sku, product_id, name, qty, price_cents, currency, variant_color, variant_size, variant_key FROM order_items WHERE order_id = $1`, [row.id]);
     return mapOrderRow(row, itemResult.rows.map(mapOrderItemRow));
 }
 async function deleteOrderById(orderId) {
@@ -290,7 +303,7 @@ async function findOrderByPaymentIntentId(paymentIntentId) {
     const row = result.rows[0];
     if (!row)
         return null;
-    const itemResult = await query(`SELECT order_id, product_sku, product_id, name, qty, price_cents, currency FROM order_items WHERE order_id = $1`, [row.id]);
+    const itemResult = await query(`SELECT order_id, product_sku, product_id, name, qty, price_cents, currency, variant_color, variant_size, variant_key FROM order_items WHERE order_id = $1`, [row.id]);
     return mapOrderRow(row, itemResult.rows.map(mapOrderItemRow));
 }
 async function listOrders() {

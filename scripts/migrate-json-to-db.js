@@ -1,7 +1,13 @@
 const fs = require("node:fs/promises");
 const path = require("node:path");
 const dotenv = require("dotenv");
-const { getPool, withTransaction } = require("../server/lib/db");
+let dbModule = null;
+try {
+  dbModule = require("../server/lib/db");
+} catch {
+  dbModule = require("../dist/server/lib/db");
+}
+const { getPool, withTransaction } = dbModule;
 
 dotenv.config();
 
@@ -19,6 +25,37 @@ function isoOrNow(value) {
   const date = new Date(String(value || ""));
   if (Number.isNaN(date.getTime())) return new Date().toISOString();
   return date.toISOString();
+}
+
+function normalizeOrderNumberValue(value) {
+  const raw = String(value || "").trim().toUpperCase();
+  if (!raw) return "";
+
+  const compact = raw.replace(/[^A-Z0-9-]/g, "");
+  const noPrefix = compact.replace(/^PED-?/, "").replace(/[^A-Z0-9]/g, "");
+  if (!noPrefix) return "";
+
+  return `PED-${noPrefix.slice(0, 10)}`;
+}
+
+function buildOrderNumber(order) {
+  const providedNormalized = normalizeOrderNumberValue(order?.orderNumber || order?.order_number);
+  if (providedNormalized) return providedNormalized;
+
+  const seed = String(order?.id || "")
+    .replace(/-/g, "")
+    .replace(/[^a-zA-Z0-9]/g, "")
+    .toUpperCase()
+    .slice(0, 10);
+  if (seed) return `PED-${seed}`;
+
+  const createdSeed = String(order?.createdAt || "")
+    .replace(/[^0-9]/g, "")
+    .slice(-10);
+  if (createdSeed) return `PED-${createdSeed}`;
+
+  const randomSeed = Math.random().toString(36).replace(/[^a-z0-9]/gi, "").slice(0, 10).toUpperCase();
+  return `PED-${randomSeed}`;
 }
 
 async function readJson(filePath, fallback) {
@@ -118,18 +155,19 @@ async function migrateOrders(client, orders) {
     await client.query(
       `
       INSERT INTO orders (
-        id, user_id, status, total_cents, items_cents, shipping_cents, currency,
+        id, order_number, user_id, status, total_cents, items_cents, shipping_cents, currency,
         payment_method, installments, shipping_json, stock_committed, stock_issues,
         failure_reason, cancellation_reason, stripe_payment_intent_id, stripe_refund_id,
         paid_at, canceled_at, refunded_at, user_email, user_name, created_at, updated_at
       ) VALUES (
-        $1, NULLIF($2, '')::uuid, $3, $4, $5, $6, $7,
-        $8, $9, $10::jsonb, $11, $12::jsonb,
-        $13, $14, $15, $16,
-        NULLIF($17, '')::timestamptz, NULLIF($18, '')::timestamptz, NULLIF($19, '')::timestamptz,
-        $20, $21, $22, $23
+        $1, $2, NULLIF($3, '')::uuid, $4, $5, $6, $7, $8,
+        $9, $10, $11::jsonb, $12, $13::jsonb,
+        $14, $15, $16, $17,
+        NULLIF($18, '')::timestamptz, NULLIF($19, '')::timestamptz, NULLIF($20, '')::timestamptz,
+        $21, $22, $23, $24
       )
       ON CONFLICT (id) DO UPDATE SET
+        order_number = EXCLUDED.order_number,
         user_id = EXCLUDED.user_id,
         status = EXCLUDED.status,
         total_cents = EXCLUDED.total_cents,
@@ -154,6 +192,7 @@ async function migrateOrders(client, orders) {
       `,
       [
         order.id,
+        buildOrderNumber(order),
         String(order.userId || ""),
         String(order.status || "pending_payment"),
         totalCents,

@@ -1,10 +1,10 @@
 ﻿const messages = [
-  "Nova ColeÃ§Ã£o GÃªnesis",
-  "VocÃª merece vestir algo Ã  sua altura.",
-  "Cadastre-se para receber lanÃ§amentos",
-  "Exclusividade para quem valoriza o que Ã© Ãºnico.",
-  "Acesso antecipado a novas coleÃ§Ãµes.",
-  "ProduÃ§Ã£o em pequena escala. Qualidade em cada detalhe."
+  "Nova Coleção Gênesis",
+  "Você merece vestir algo à sua altura.",
+  "Cadastre-se para receber lançamentos",
+  "Exclusividade para quem valoriza o que é único.",
+  "Acesso antecipado a novas coleções.",
+  "Produção em pequena escala. Qualidade em cada detalhe."
 ];
 const searchTopPieces = [
   { id: "origem-skirt", href: "produto.html?id=origem-skirt", src: "images/placeholder.jpg", alt: "Sabrina charmosa", tag: "NOVO", name: "Sabrina charmosa" },

@@ -2,6 +2,17 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 const nodeCrypto = require("node:crypto");
 const isProduction = process.env.NODE_ENV === "production";
+const appBaseOrigin = (() => {
+    const raw = String(process.env.APP_BASE_URL || "").trim();
+    if (!raw)
+        return "";
+    try {
+        return new URL(raw).origin;
+    }
+    catch {
+        return "";
+    }
+})();
 function sanitizeCookieName(value, fallback = "tsebi.csrf") {
     const raw = String(value || "").trim();
     if (/^[!#$%&'*+\-.^_`|~0-9A-Za-z]+$/.test(raw))
@@ -17,7 +28,13 @@ function parseCookieHeader(cookieHeader) {
         const key = String(rawKey || "").trim();
         if (!key)
             return;
-        out[key] = decodeURIComponent(rawValue.join("=").trim());
+        const value = rawValue.join("=").trim();
+        try {
+            out[key] = decodeURIComponent(value);
+        }
+        catch {
+            out[key] = value;
+        }
     });
     return out;
 }
@@ -27,7 +44,7 @@ function generateCsrfToken() {
 function setUserCsrfCookie(res, token) {
     res.cookie(userCsrfCookieName, String(token || ""), {
         httpOnly: false,
-        sameSite: "lax",
+        sameSite: "strict",
         secure: isProduction,
         path: "/",
     });
@@ -35,7 +52,7 @@ function setUserCsrfCookie(res, token) {
 function clearUserCsrfCookie(res) {
     res.clearCookie(userCsrfCookieName, {
         httpOnly: false,
-        sameSite: "lax",
+        sameSite: "strict",
         secure: isProduction,
         path: "/",
     });
@@ -53,6 +70,32 @@ function ensureSessionCsrfToken(req) {
 function isMutationMethod(method) {
     const normalized = String(method || "").toUpperCase();
     return normalized === "POST" || normalized === "PUT" || normalized === "PATCH" || normalized === "DELETE";
+}
+function isAllowedSameOriginMutation(req) {
+    const requestOrigin = String(req.get("origin") || "").trim();
+    const referer = String(req.get("referer") || "").trim();
+    if (!requestOrigin && !referer)
+        return true;
+    const allowedOrigins = new Set();
+    if (appBaseOrigin)
+        allowedOrigins.add(appBaseOrigin);
+    const host = String(req.get("host") || "").trim();
+    if (host) {
+        const scheme = isProduction ? "https" : String(req.protocol || "http");
+        allowedOrigins.add(`${scheme}://${host}`);
+    }
+    const validate = (value) => {
+        if (!value)
+            return true;
+        try {
+            const parsed = new URL(value);
+            return allowedOrigins.has(parsed.origin);
+        }
+        catch {
+            return false;
+        }
+    };
+    return validate(requestOrigin) && validate(referer);
 }
 function isPublicAuthMutationPath(req) {
     const baseUrl = String(req.baseUrl || "").trim().toLowerCase();
@@ -99,6 +142,9 @@ function requireUserCsrfForMutations(req, res, next) {
     const sessionUserId = String(req.session?.userId || "").trim();
     if (!sessionUserId)
         return next();
+    if (!isAllowedSameOriginMutation(req)) {
+        return res.status(403).json({ error: "CSRF_ORIGIN_INVALID" });
+    }
     const headerToken = String(req.get("x-csrf-token") || "").trim();
     const cookieToken = String(parseCookieHeader(req.headers.cookie || "")[userCsrfCookieName] || "").trim();
     const sessionToken = String(req.session?.userCsrfToken || "").trim();

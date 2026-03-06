@@ -1,4 +1,4 @@
-export {};
+﻿export {};
 type JsonRecord = Record<string, unknown>;
 
 type QueryResult<TRow extends JsonRecord> = {
@@ -66,11 +66,17 @@ export type ProductWritePayload = {
 
 type ProductStaticMetadata = {
   collection?: string;
+  collections?: string[];
   category?: string;
+  subcategory?: string;
   material?: string;
   sizes?: string[];
   colors?: string[];
   gender?: string;
+  tags?: string[];
+  isNew?: boolean;
+  isBestSeller?: boolean;
+  isFeatured?: boolean;
   image?: string;
   secondaryImage?: string;
   nameEn?: string;
@@ -99,21 +105,29 @@ type ProductRow = JsonRecord & {
 export type Product = {
   id: string;
   sku: string;
+  slug: string;
   dbId?: string;
   name: string;
   nameEn: string;
   collection: string;
+  collections: string[];
   category: string;
+  subcategory: string;
   material: string;
   sizes: string[];
   colors: string[];
   variantStock: VariantStockMap;
   gender: string;
+  price: number;
   priceLabel: string;
   priceValue: number;
   unitAmount: number;
   currency: string;
   stock: number;
+  isNew: boolean;
+  isBestSeller: boolean;
+  isFeatured: boolean;
+  tags: string[];
   active: boolean;
   image: string;
   secondaryImage?: string;
@@ -124,9 +138,10 @@ export type Product = {
 
 const PRODUCT_METADATA: Record<string, ProductStaticMetadata> = {
   "genesis-bomber": {
-    collection: "GÃªnesis",
-    category: "Jaquetas",
-    material: "Couro e lÃ£",
+    collection: "GÃƒÂªnesis",
+    category: "Outerwear",
+    subcategory: "Jaquetas",
+    material: "Couro e lÃƒÂ£",
     sizes: ["P", "M", "G"],
     colors: ["Vermelho", "Areia"],
     gender: "Unissex",
@@ -135,8 +150,9 @@ const PRODUCT_METADATA: Record<string, ProductStaticMetadata> = {
     nameEn: "Italian leather bomber jacket with silk lining"
   },
   "genesis-tailored": {
-    collection: "GÃªnesis",
-    category: "CalÃ§as",
+    collection: "GÃƒÂªnesis",
+    category: "Ready-to-Wear",
+    subcategory: "Calças",
     material: "Sarja premium",
     sizes: ["36", "38", "40", "42"],
     colors: ["Grafite", "Preto"],
@@ -147,8 +163,9 @@ const PRODUCT_METADATA: Record<string, ProductStaticMetadata> = {
   },
   "origem-shirt": {
     collection: "Alicerce",
-    category: "Camisas",
-    material: "AlgodÃ£o egÃ­pcio",
+    category: "Ready-to-Wear",
+    subcategory: "Camisas",
+    material: "AlgodÃƒÂ£o egÃƒÂ­pcio",
     sizes: ["P", "M", "G", "GG"],
     colors: ["Branco", "Azul"],
     gender: "Masculino",
@@ -158,8 +175,9 @@ const PRODUCT_METADATA: Record<string, ProductStaticMetadata> = {
   },
   "origem-skirt": {
     collection: "Alicerce",
-    category: "Saias",
-    material: "LÃ£ fria",
+    category: "Ready-to-Wear",
+    subcategory: "Saias",
+    material: "LÃƒÂ£ fria",
     sizes: ["36", "38", "40"],
     colors: ["Preto", "Marfim"],
     gender: "Feminino",
@@ -169,9 +187,10 @@ const PRODUCT_METADATA: Record<string, ProductStaticMetadata> = {
   },
   "atelier-bag": {
     collection: "Alicerce",
-    category: "Bolsas",
+    category: "Leather",
+    subcategory: "Jaquetas de couro",
     material: "Couro natural",
-    sizes: ["Ãšnico"],
+    sizes: ["ÃƒÅ¡nico"],
     colors: ["Caramelo", "Preto"],
     gender: "Unissex",
     image: "images/placeholderreal.webp",
@@ -179,8 +198,9 @@ const PRODUCT_METADATA: Record<string, ProductStaticMetadata> = {
     nameEn: "Natural leather bag with plated hardware"
   },
   "atelier-heels": {
-    collection: "GÃªnesis",
-    category: "CalÃ§ados",
+    collection: "GÃƒÂªnesis",
+    category: "Leather",
+    subcategory: "Calças de couro",
     material: "Couro envernizado",
     sizes: ["35", "36", "37", "38", "39"],
     colors: ["Preto", "Vinho"],
@@ -191,7 +211,8 @@ const PRODUCT_METADATA: Record<string, ProductStaticMetadata> = {
   },
   "flux-trench": {
     collection: "Alicerce",
-    category: "Casacos",
+    category: "Outerwear",
+    subcategory: "Casacos",
     material: "Gabardine",
     sizes: ["P", "M", "G"],
     colors: ["Areia", "Oliva"],
@@ -201,9 +222,10 @@ const PRODUCT_METADATA: Record<string, ProductStaticMetadata> = {
     nameEn: "Gabardine trench coat with architectural cut"
   },
   "flux-knit": {
-    collection: "GÃªnesis",
-    category: "Malhas",
-    material: "LÃ£ merino",
+    collection: "GÃƒÂªnesis",
+    category: "Ready-to-Wear",
+    subcategory: "Camisetas",
+    material: "LÃƒÂ£ merino",
     sizes: ["P", "M", "G", "GG"],
     colors: ["Off white", "Cinza"],
     gender: "Masculino",
@@ -212,8 +234,9 @@ const PRODUCT_METADATA: Record<string, ProductStaticMetadata> = {
     nameEn: "Ultrafine merino wool knitwear"
   },
   "noir-dress": {
-    collection: "GÃªnesis",
-    category: "Vestidos",
+    collection: "GÃƒÂªnesis",
+    category: "Ready-to-Wear",
+    subcategory: "Vestidos",
     material: "Crepe de seda",
     sizes: ["36", "38", "40", "42"],
     colors: ["Preto"],
@@ -224,8 +247,9 @@ const PRODUCT_METADATA: Record<string, ProductStaticMetadata> = {
   },
   "noir-sneaker": {
     collection: "Alicerce",
-    category: "CalÃ§ados",
-    material: "Nylon tÃ©cnico",
+    category: "Ready-to-Wear",
+    subcategory: "Camisetas",
+    material: "Nylon tÃƒÂ©cnico",
     sizes: ["37", "38", "39", "40", "41", "42"],
     colors: ["Preto", "Branco"],
     gender: "Unissex",
@@ -235,7 +259,8 @@ const PRODUCT_METADATA: Record<string, ProductStaticMetadata> = {
   },
   "essence-blazer": {
     collection: "Alicerce",
-    category: "Blazers",
+    category: "Outerwear",
+    subcategory: "Jaquetas",
     material: "Linho premium",
     sizes: ["P", "M", "G"],
     colors: ["Marfim", "Bege"],
@@ -245,8 +270,9 @@ const PRODUCT_METADATA: Record<string, ProductStaticMetadata> = {
     nameEn: "Premium linen blazer with precision tailoring"
   },
   "essence-trousers": {
-    collection: "GÃªnesis",
-    category: "CalÃ§as",
+    collection: "GÃƒÂªnesis",
+    category: "Ready-to-Wear",
+    subcategory: "Calças",
     material: "Linho premium",
     sizes: ["36", "38", "40", "42", "44"],
     colors: ["Marfim", "Areia"],
@@ -254,6 +280,376 @@ const PRODUCT_METADATA: Record<string, ProductStaticMetadata> = {
     image: "images/placeholderreal.webp",
     secondaryImage: "images/placeholderreal.webp",
     nameEn: "Premium linen wide-leg trousers with deep pleat"
+  },
+  "aurora-coat": {
+    collection: "Alicerce",
+    category: "Outerwear",
+    subcategory: "Casacos",
+    material: "La premium",
+    sizes: ["P", "M", "G"],
+    colors: ["Preto", "Areia"],
+    gender: "Unissex",
+    image: "images/product/aurora-coat-1.jpg",
+    secondaryImage: "images/product/aurora-coat-2.jpg",
+    nameEn: "Aurora coat"
+  },
+  "eclipse-shirt": {
+    collection: "Alicerce",
+    category: "Ready-to-Wear",
+    subcategory: "Camisas",
+    material: "Algodao premium",
+    sizes: ["P", "M", "G", "GG"],
+    colors: ["Branco", "Preto"],
+    gender: "Unissex",
+    image: "images/product/eclipse-shirt-1.jpg",
+    secondaryImage: "images/product/eclipse-shirt-2.jpg",
+    nameEn: "Eclipse shirt"
+  },
+  "vento-trousers": {
+    collection: "Alicerce",
+    category: "Ready-to-Wear",
+    subcategory: "Calças",
+    material: "Sarja",
+    sizes: ["36", "38", "40", "42"],
+    colors: ["Grafite", "Bege"],
+    gender: "Unissex",
+    image: "images/product/vento-trousers-1.jpg",
+    secondaryImage: "images/product/vento-trousers-2.jpg",
+    nameEn: "Vento trousers"
+  },
+  "areia-top": {
+    collection: "Alicerce",
+    category: "Ready-to-Wear",
+    subcategory: "Camisetas",
+    material: "Viscose",
+    sizes: ["P", "M", "G"],
+    colors: ["Areia", "Marfim"],
+    gender: "Feminino",
+    image: "images/product/areia-top-1.jpg",
+    secondaryImage: "images/product/areia-top-2.jpg",
+    nameEn: "Areia top"
+  },
+  "lunar-blazer": {
+    collection: "Alicerce",
+    category: "Outerwear",
+    subcategory: "Jaquetas",
+    material: "Linho",
+    sizes: ["P", "M", "G"],
+    colors: ["Preto", "Cinza"],
+    gender: "Feminino",
+    image: "images/product/lunar-blazer-1.jpg",
+    secondaryImage: "images/product/lunar-blazer-2.jpg",
+    nameEn: "Lunar blazer"
+  },
+  "prisma-skirt": {
+    collection: "Alicerce",
+    category: "Ready-to-Wear",
+    subcategory: "Saias",
+    material: "Crepe",
+    sizes: ["36", "38", "40"],
+    colors: ["Preto", "Azul"],
+    gender: "Feminino",
+    image: "images/product/prisma-skirt-1.jpg",
+    secondaryImage: "images/product/prisma-skirt-2.jpg",
+    nameEn: "Prisma skirt"
+  },
+  "delta-jeans": {
+    collection: "Alicerce",
+    category: "Ready-to-Wear",
+    subcategory: "Calças",
+    material: "Denim",
+    sizes: ["36", "38", "40", "42", "44"],
+    colors: ["Azul", "Preto"],
+    gender: "Unissex",
+    image: "images/product/delta-jeans-1.jpg",
+    secondaryImage: "images/product/delta-jeans-2.jpg",
+    nameEn: "Delta jeans"
+  },
+  "atlas-hoodie": {
+    collection: "Alicerce",
+    category: "Ready-to-Wear",
+    subcategory: "Camisetas",
+    material: "Algodao",
+    sizes: ["P", "M", "G", "GG"],
+    colors: ["Preto", "Cinza"],
+    gender: "Unissex",
+    image: "images/product/atlas-hoodie-1.jpg",
+    secondaryImage: "images/product/atlas-hoodie-2.jpg",
+    nameEn: "Atlas hoodie"
+  },
+  "serif-dress": {
+    collection: "Alicerce",
+    category: "Ready-to-Wear",
+    subcategory: "Vestidos",
+    material: "Seda",
+    sizes: ["36", "38", "40", "42"],
+    colors: ["Preto", "Marfim"],
+    gender: "Feminino",
+    image: "images/product/serif-dress-1.jpg",
+    secondaryImage: "images/product/serif-dress-2.jpg",
+    nameEn: "Serif dress"
+  },
+  "marco-trench": {
+    collection: "Alicerce",
+    category: "Outerwear",
+    subcategory: "Casacos",
+    material: "Gabardine",
+    sizes: ["P", "M", "G"],
+    colors: ["Areia", "Preto"],
+    gender: "Unissex",
+    image: "images/product/marco-trench-1.jpg",
+    secondaryImage: "images/product/marco-trench-2.jpg",
+    nameEn: "Marco trench"
+  },
+  "vento-knit": {
+    collection: "Alicerce",
+    category: "Ready-to-Wear",
+    subcategory: "Camisetas",
+    material: "La merino",
+    sizes: ["P", "M", "G", "GG"],
+    colors: ["Cinza", "Off white"],
+    gender: "Unissex",
+    image: "images/product/vento-knit-1.jpg",
+    secondaryImage: "images/product/vento-knit-2.jpg",
+    nameEn: "Vento knit"
+  },
+  "cairo-vest": {
+    collection: "Alicerce",
+    category: "Ready-to-Wear",
+    subcategory: "Camisas",
+    material: "Linho",
+    sizes: ["P", "M", "G"],
+    colors: ["Areia", "Preto"],
+    gender: "Unissex",
+    image: "images/product/cairo-vest-1.jpg",
+    secondaryImage: "images/product/cairo-vest-2.jpg",
+    nameEn: "Cairo vest"
+  },
+  "oslo-parka": {
+    collection: "Alicerce",
+    category: "Outerwear",
+    subcategory: "Jaquetas",
+    material: "Nylon",
+    sizes: ["P", "M", "G", "GG"],
+    colors: ["Oliva", "Preto"],
+    gender: "Masculino",
+    image: "images/product/oslo-parka-1.jpg",
+    secondaryImage: "images/product/oslo-parka-2.jpg",
+    nameEn: "Oslo parka"
+  },
+  "riviera-shorts": {
+    collection: "Alicerce",
+    category: "Ready-to-Wear",
+    subcategory: "Bermudas",
+    material: "Algodao",
+    sizes: ["36", "38", "40", "42"],
+    colors: ["Areia", "Preto"],
+    gender: "Masculino",
+    image: "images/product/riviera-shorts-1.jpg",
+    secondaryImage: "images/product/riviera-shorts-2.jpg",
+    nameEn: "Riviera shorts"
+  },
+  "nebula-tee": {
+    collection: "Alicerce",
+    category: "Ready-to-Wear",
+    subcategory: "Camisetas",
+    material: "Algodao",
+    sizes: ["P", "M", "G", "GG"],
+    colors: ["Branco", "Preto"],
+    gender: "Unissex",
+    image: "images/product/nebula-tee-1.jpg",
+    secondaryImage: "images/product/nebula-tee-2.jpg",
+    nameEn: "Nebula tee"
+  },
+  "coral-pants": {
+    collection: "Alicerce",
+    category: "Ready-to-Wear",
+    subcategory: "Calças",
+    material: "Linho",
+    sizes: ["36", "38", "40", "42"],
+    colors: ["Marfim", "Preto"],
+    gender: "Feminino",
+    image: "images/product/coral-pants-1.jpg",
+    secondaryImage: "images/product/coral-pants-2.jpg",
+    nameEn: "Coral pants"
+  },
+  "birch-cardigan": {
+    collection: "Alicerce",
+    category: "Outerwear",
+    subcategory: "Jaquetas",
+    material: "La",
+    sizes: ["P", "M", "G"],
+    colors: ["Bege", "Cinza"],
+    gender: "Feminino",
+    image: "images/product/birch-cardigan-1.jpg",
+    secondaryImage: "images/product/birch-cardigan-2.jpg",
+    nameEn: "Birch cardigan"
+  },
+  "pixel-bag": {
+    collection: "Alicerce",
+    category: "Leather",
+    subcategory: "Jaquetas de couro",
+    material: "Couro",
+    sizes: ["Unico"],
+    colors: ["Preto", "Caramelo"],
+    gender: "Feminino",
+    image: "images/product/pixel-bag-1.jpg",
+    secondaryImage: "images/product/pixel-bag-2.jpg",
+    nameEn: "Pixel bag"
+  },
+  "metro-belt": {
+    collection: "Alicerce",
+    category: "Leather",
+    subcategory: "Calças de couro",
+    material: "Couro",
+    sizes: ["P", "M", "G"],
+    colors: ["Preto", "Marrom"],
+    gender: "Unissex",
+    image: "images/product/metro-belt-1.jpg",
+    secondaryImage: "images/product/metro-belt-2.jpg",
+    nameEn: "Metro belt"
+  },
+  "solstice-jacket": {
+    collection: "Alicerce",
+    category: "Leather",
+    subcategory: "Jaquetas de couro",
+    material: "Couro",
+    sizes: ["P", "M", "G", "GG"],
+    colors: ["Preto", "Areia"],
+    gender: "Unissex",
+    image: "images/product/solstice-jacket-1.jpg",
+    secondaryImage: "images/product/solstice-jacket-2.jpg",
+    nameEn: "Solstice jacket"
+  },
+  "genesis-hobo-bag": {
+    collection: "G?nesis",
+    category: "Accessories",
+    subcategory: "Bolsas",
+    material: "Couro",
+    sizes: ["Unico"],
+    colors: ["Preto", "Vinho"],
+    gender: "Feminino",
+    tags: ["acessorios", "bolsas", "signature-pieces"],
+    image: "images/product/genesis-hobo-bag-1.jpg",
+    secondaryImage: "images/product/genesis-hobo-bag-2.jpg",
+    nameEn: "Genesis hobo bag"
+  },
+  "alicerce-mini-bag": {
+    collection: "Alicerce",
+    category: "Accessories",
+    subcategory: "Bolsas",
+    material: "Couro",
+    sizes: ["Unico"],
+    colors: ["Areia", "Marrom"],
+    gender: "Feminino",
+    tags: ["acessorios", "bolsas", "new-arrivals"],
+    image: "images/product/alicerce-mini-bag-1.jpg",
+    secondaryImage: "images/product/alicerce-mini-bag-2.jpg",
+    nameEn: "Alicerce mini bag"
+  },
+  "fleur-silk-scarf": {
+    collection: "G?nesis",
+    category: "Accessories",
+    subcategory: "Lenços",
+    material: "Seda",
+    sizes: ["Unico"],
+    colors: ["Marfim", "Preto"],
+    gender: "Feminino",
+    tags: ["acessorios", "lencos", "featured"],
+    image: "images/product/fleur-silk-scarf-1.jpg",
+    secondaryImage: "images/product/fleur-silk-scarf-2.jpg",
+    nameEn: "Fleur silk scarf"
+  },
+  "nox-card-wallet": {
+    collection: "Alicerce",
+    category: "Accessories",
+    subcategory: "Carteiras",
+    material: "Couro",
+    sizes: ["Unico"],
+    colors: ["Preto"],
+    gender: "Feminino",
+    tags: ["acessorios", "carteiras"],
+    image: "images/product/nox-card-wallet-1.jpg",
+    secondaryImage: "images/product/nox-card-wallet-2.jpg",
+    nameEn: "Nox card wallet"
+  },
+  "aura-thin-belt": {
+    collection: "Alicerce",
+    category: "Accessories",
+    subcategory: "Cintos",
+    material: "Couro",
+    sizes: ["P", "M", "G"],
+    colors: ["Caramelo", "Preto"],
+    gender: "Feminino",
+    tags: ["acessorios", "cintos"],
+    image: "images/product/aura-thin-belt-1.jpg",
+    secondaryImage: "images/product/aura-thin-belt-2.jpg",
+    nameEn: "Aura thin belt"
+  },
+  "marco-duffle-bag": {
+    collection: "G?nesis",
+    category: "Accessories",
+    subcategory: "Bolsas",
+    material: "Couro",
+    sizes: ["Unico"],
+    colors: ["Preto", "Oliva"],
+    gender: "Masculino",
+    tags: ["acessorios", "bolsas", "travel"],
+    image: "images/product/marco-duffle-bag-1.jpg",
+    secondaryImage: "images/product/marco-duffle-bag-2.jpg",
+    nameEn: "Marco duffle bag"
+  },
+  "atlas-crossbody-bag": {
+    collection: "Alicerce",
+    category: "Accessories",
+    subcategory: "Bolsas",
+    material: "Couro",
+    sizes: ["Unico"],
+    colors: ["Grafite", "Preto"],
+    gender: "Masculino",
+    tags: ["acessorios", "bolsas"],
+    image: "images/product/atlas-crossbody-bag-1.jpg",
+    secondaryImage: "images/product/atlas-crossbody-bag-2.jpg",
+    nameEn: "Atlas crossbody bag"
+  },
+  "pulse-leather-wallet": {
+    collection: "G?nesis",
+    category: "Accessories",
+    subcategory: "Carteiras",
+    material: "Couro",
+    sizes: ["Unico"],
+    colors: ["Preto", "Marrom"],
+    gender: "Masculino",
+    tags: ["acessorios", "carteiras", "signature-pieces"],
+    image: "images/product/pulse-leather-wallet-1.jpg",
+    secondaryImage: "images/product/pulse-leather-wallet-2.jpg",
+    nameEn: "Pulse leather wallet"
+  },
+  "vento-wool-scarf": {
+    collection: "Alicerce",
+    category: "Accessories",
+    subcategory: "Lenços",
+    material: "La",
+    sizes: ["Unico"],
+    colors: ["Cinza", "Azul"],
+    gender: "Masculino",
+    tags: ["acessorios", "lencos"],
+    image: "images/product/vento-wool-scarf-1.jpg",
+    secondaryImage: "images/product/vento-wool-scarf-2.jpg",
+    nameEn: "Vento wool scarf"
+  },
+  "titan-buckle-belt": {
+    collection: "Alicerce",
+    category: "Accessories",
+    subcategory: "Cintos",
+    material: "Couro",
+    sizes: ["P", "M", "G", "GG"],
+    colors: ["Preto", "Cafe"],
+    gender: "Masculino",
+    tags: ["acessorios", "cintos"],
+    image: "images/product/titan-buckle-belt-1.jpg",
+    secondaryImage: "images/product/titan-buckle-belt-2.jpg",
+    nameEn: "Titan buckle belt"
   }
 };
 
@@ -309,8 +705,8 @@ function sanitizeVariantStockMap(value: unknown, validColors: string[] = [], val
 
 function normalizeProductMetadata(value: unknown, fallback: ProductStaticMetadata = {}): ProductMetadata {
   const raw = asRecord(value);
-  const fallbackSizes = normalizeTextList(fallback.sizes, ["Ãšnico"]);
-  const fallbackColors = normalizeTextList(fallback.colors, ["Ãšnico"]);
+  const fallbackSizes = normalizeTextList(fallback.sizes, ["ÃƒÅ¡nico"]);
+  const fallbackColors = normalizeTextList(fallback.colors, ["ÃƒÅ¡nico"]);
   const rawVariantStock = asRecord(raw.variantStock);
 
   const extractedColors: string[] = [];
@@ -328,11 +724,11 @@ function normalizeProductMetadata(value: unknown, fallback: ProductStaticMetadat
 
   let sizes = normalizeTextList(
     [...normalizeTextList(raw.sizes, []), ...normalizeTextList(extractedSizes, [])],
-    fallbackSizes.length ? fallbackSizes : ["Ãšnico"]
+    fallbackSizes.length ? fallbackSizes : ["ÃƒÅ¡nico"]
   );
   let colors = normalizeTextList(
     [...normalizeTextList(raw.colors, []), ...normalizeTextList(extractedColors, [])],
-    fallbackColors.length ? fallbackColors : ["Ãšnico"]
+    fallbackColors.length ? fallbackColors : ["ÃƒÅ¡nico"]
   );
   let variantStock = sanitizeVariantStockMap(raw.variantStock ?? raw.variant_stock, colors, sizes);
 
@@ -349,10 +745,144 @@ function normalizeProductMetadata(value: unknown, fallback: ProductStaticMetadat
   }
 
   return {
-    sizes: sizes.length ? sizes : ["Ãšnico"],
-    colors: colors.length ? colors : ["Ãšnico"],
+    sizes: sizes.length ? sizes : ["ÃƒÅ¡nico"],
+    colors: colors.length ? colors : ["ÃƒÅ¡nico"],
     variantStock
   };
+}
+
+const FEMALE_SKUS = new Set<string>([
+  "genesis-bomber",
+  "genesis-tailored",
+  "eclipse-shirt",
+  "origem-skirt",
+  "noir-dress",
+  "essence-blazer",
+  "essence-trousers",
+  "aurora-coat",
+  "areia-top",
+  "lunar-blazer",
+  "prisma-skirt",
+  "serif-dress",
+  "nebula-tee",
+  "coral-pants",
+  "birch-cardigan",
+  "solstice-jacket",
+  "genesis-hobo-bag",
+  "alicerce-mini-bag",
+  "fleur-silk-scarf",
+  "nox-card-wallet",
+  "aura-thin-belt"
+]);
+
+const MALE_SKUS = new Set<string>([
+  "origem-shirt",
+  "atelier-bag",
+  "atelier-heels",
+  "flux-trench",
+  "flux-knit",
+  "noir-sneaker",
+  "vento-trousers",
+  "delta-jeans",
+  "atlas-hoodie",
+  "marco-trench",
+  "vento-knit",
+  "cairo-vest",
+  "oslo-parka",
+  "riviera-shorts",
+  "pixel-bag",
+  "metro-belt",
+  "marco-duffle-bag",
+  "atlas-crossbody-bag",
+  "pulse-leather-wallet",
+  "vento-wool-scarf",
+  "titan-buckle-belt"
+]);
+
+const NEW_SKUS = new Set<string>([
+  "genesis-bomber",
+  "genesis-tailored",
+  "origem-skirt",
+  "noir-dress",
+  "aurora-coat",
+  "eclipse-shirt",
+  "essence-blazer",
+  "essence-trousers",
+  "origem-shirt",
+  "atelier-bag",
+  "atelier-heels",
+  "flux-trench",
+  "flux-knit",
+  "noir-sneaker",
+  "oslo-parka",
+  "riviera-shorts",
+  "genesis-hobo-bag",
+  "fleur-silk-scarf",
+  "marco-duffle-bag",
+  "pulse-leather-wallet"
+]);
+
+const BEST_SELLER_SKUS = new Set<string>([
+  "origem-shirt",
+  "origem-skirt",
+  "atelier-bag",
+  "atelier-heels",
+  "essence-blazer",
+  "essence-trousers",
+  "flux-knit",
+  "noir-sneaker"
+]);
+
+const FEATURED_SKUS = new Set<string>([
+  "genesis-bomber",
+  "genesis-tailored",
+  "atelier-bag",
+  "noir-dress",
+  "oslo-parka",
+  "pixel-bag"
+]);
+
+function normalizeTag(value: unknown): string {
+  return String(value || "")
+    .trim()
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+}
+
+function resolveProductGenderBySku(sku: string, fallback: unknown): "Feminino" | "Masculino" {
+  if (FEMALE_SKUS.has(sku)) return "Feminino";
+  if (MALE_SKUS.has(sku)) return "Masculino";
+  return String(fallback || "").trim().toLowerCase() === "feminino" ? "Feminino" : "Masculino";
+}
+
+function buildCollectionsArray(staticMetadata: ProductStaticMetadata): string[] {
+  const primary = String(staticMetadata.collection || "Alicerce").trim() || "Alicerce";
+  const merged = normalizeTextList([primary, ...normalizeTextList(staticMetadata.collections, [])], []);
+  return merged.length ? merged : ["Alicerce"];
+}
+
+function buildProductTags(
+  staticMetadata: ProductStaticMetadata,
+  gender: "Feminino" | "Masculino",
+  isNew: boolean,
+  isBestSeller: boolean,
+  isFeatured: boolean
+): string[] {
+  const result = new Set<string>(normalizeTextList(staticMetadata.tags, []).map((tag) => normalizeTag(tag)).filter(Boolean));
+
+  if (gender === "Feminino") result.add("presente-para-ela");
+  if (gender === "Masculino") result.add("presente-para-ele");
+
+  if (isNew && gender === "Feminino") result.add("novidade-para-ela");
+  if (isNew && gender === "Masculino") result.add("novidade-para-ele");
+
+  if (isBestSeller) result.add("mais-vendidos");
+  if (isFeatured) result.add("destaque");
+
+  return Array.from(result);
 }
 
 function formatPriceLabelFromCents(priceCents: unknown): string {
@@ -379,25 +909,41 @@ function mapProduct(row: ProductRow | null | undefined): Product {
   ).trim();
   const resolvedImage = dbImage || metadataImage || DEFAULT_IMAGE;
   const resolvedSecondaryImage = metadataSecondaryImage;
+  const collections = buildCollectionsArray(staticMetadata);
+  const resolvedGender = resolveProductGenderBySku(sku, staticMetadata.gender);
+  const category = String(staticMetadata.category || "Colecao");
+  const subcategory = String(staticMetadata.subcategory || category);
+  const isNew = Boolean(staticMetadata.isNew ?? NEW_SKUS.has(sku));
+  const isBestSeller = Boolean(staticMetadata.isBestSeller ?? BEST_SELLER_SKUS.has(sku));
+  const isFeatured = Boolean(staticMetadata.isFeatured ?? FEATURED_SKUS.has(sku));
+  const tags = buildProductTags(staticMetadata, resolvedGender, isNew, isBestSeller, isFeatured);
 
   return {
     id: sku,
     sku,
+    slug: sku,
     dbId: row?.id,
     name: String(row?.name || sku),
     nameEn: String(staticMetadata.nameEn || row?.name || sku),
-    collection: String(staticMetadata.collection || "Alicerce"),
-    category: String(staticMetadata.category || "ColeÃ§Ã£o"),
+    collection: collections[0],
+    collections,
+    category,
+    subcategory,
     material: String(staticMetadata.material || "Material premium"),
     sizes: metadata.sizes,
     colors: metadata.colors,
     variantStock: metadata.variantStock,
-    gender: String(staticMetadata.gender || "Unissex"),
+    gender: resolvedGender,
+    price: priceValue,
     priceLabel: formatPriceLabelFromCents(effectivePriceCents),
     priceValue,
     unitAmount: effectivePriceCents,
     currency: String(row?.currency || "brl").toLowerCase(),
     stock: Math.max(0, Number(row?.stock_qty || 0)),
+    isNew,
+    isBestSeller,
+    isFeatured,
+    tags,
     active: Boolean(row?.active),
     image: resolvedImage,
     secondaryImage: resolvedSecondaryImage || undefined,
@@ -1254,5 +1800,11 @@ module.exports = {
   deleteProductByIdentifier,
   restoreProductFromSnapshot
 };
+
+
+
+
+
+
 
 

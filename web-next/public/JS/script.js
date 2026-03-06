@@ -1,10 +1,10 @@
 ﻿const messages = [
-  "Nova ColeÃ§Ã£o GÃªnesis",
-  "VocÃª merece vestir algo Ã  sua altura.",
-  "Cadastre-se para receber lanÃ§amentos",
-  "Exclusividade para quem valoriza o que Ã© Ãºnico.",
-  "Acesso antecipado a novas coleÃ§Ãµes.",
-  "ProduÃ§Ã£o em pequena escala. Qualidade em cada detalhe."
+  "Nova Coleção Gênesis",
+  "Você merece vestir algo à sua altura.",
+  "Cadastre-se para receber lançamentos",
+  "Exclusividade para quem valoriza o que é único.",
+  "Acesso antecipado a novas coleções.",
+  "Produção em pequena escala. Qualidade em cada detalhe."
 ];
 const searchTopPieces = [
   { id: "origem-skirt", href: "produto.html?id=origem-skirt", src: "images/placeholder.jpg", alt: "Sabrina charmosa", tag: "NOVO", name: "Sabrina charmosa" },
@@ -1374,11 +1374,13 @@ function initHeaderMenu() {
         categories.className = "header-menu-subpanel-categories";
         const isPresentes = panelKey === "Presentes";
 
-        const makeItem = (label) => {
+        const makeItem = (label, href = "#", preventDefault = true) => {
           const link = document.createElement("a");
-          link.href = "#";
+          link.href = href;
           link.textContent = label;
-          link.addEventListener("click", (event) => event.preventDefault());
+          if (preventDefault) {
+            link.addEventListener("click", (event) => event.preventDefault());
+          }
           return link;
         };
 
@@ -1389,7 +1391,13 @@ function initHeaderMenu() {
         forHim.className = "header-menu-subpanel-category-title";
         const forHimLinks = document.createElement("div");
         forHimLinks.className = "header-menu-subpanel-category-links";
-        forHimLinks.appendChild(makeItem(isPresentes ? "Presentes para homens" : "Novidades para homens"));
+        forHimLinks.appendChild(
+          makeItem(
+            isPresentes ? "Presentes para homens" : "Novidades para homens",
+            isPresentes ? "#" : "/products?view=novidades-para-ele",
+            isPresentes
+          )
+        );
         forHimLinks.appendChild(makeItem("ColeÃ§Ã£o GÃªnesis"));
         forHimLinks.appendChild(makeItem("ColeÃ§Ã£o Alicerce"));
         groupForHim.appendChild(forHim);
@@ -1402,7 +1410,13 @@ function initHeaderMenu() {
         forHer.className = "header-menu-subpanel-category-title";
         const forHerLinks = document.createElement("div");
         forHerLinks.className = "header-menu-subpanel-category-links";
-        forHerLinks.appendChild(makeItem(isPresentes ? "Presentes para mulheres" : "Novidades para Mulheres"));
+        forHerLinks.appendChild(
+          makeItem(
+            isPresentes ? "Presentes para mulheres" : "Novidades para Mulheres",
+            isPresentes ? "#" : "/products?view=novidades-para-ela",
+            isPresentes
+          )
+        );
         forHerLinks.appendChild(makeItem("ColeÃ§Ã£o GÃªnesis"));
         forHerLinks.appendChild(makeItem("ColeÃ§Ã£o Alicerce"));
         groupForHer.appendChild(forHer);
@@ -2256,4 +2270,3 @@ function initNewsletterPopup() {
     }
   });
 }
-

@@ -83,7 +83,7 @@ function getAdminTokenFromRequest(req) {
     if (bearer.toLowerCase().startsWith("bearer ")) {
         return bearer.slice(7).trim();
     }
-    return String(req.headers["x-vip-admin-token"] || req.query.token || "").trim();
+    return String(req.headers["x-vip-admin-token"] || "").trim();
 }
 function requireVipAdmin(req, res, next) {
     const expected = String(process.env.VIP_ADMIN_TOKEN || "").trim();
