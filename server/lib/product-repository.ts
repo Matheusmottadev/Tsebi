@@ -168,8 +168,8 @@ const PRODUCT_METADATA: Record<string, ProductStaticMetadata> = {
     sizes: ["P", "M", "G"],
     colors: ["Vermelho", "Areia"],
     gender: "Unissex",
-    image: "images/placeholderreal.webp",
-    secondaryImage: "images/placeholderreal.webp",
+    image: "images/product/genesis-bomber-1.jpg",
+    secondaryImage: "images/product/genesis-bomber-2.jpg",
     nameEn: "Italian leather bomber jacket with silk lining"
   },
   "genesis-tailored": {
@@ -180,8 +180,8 @@ const PRODUCT_METADATA: Record<string, ProductStaticMetadata> = {
     sizes: ["36", "38", "40", "42"],
     colors: ["Grafite", "Preto"],
     gender: "Feminino",
-    image: "images/placeholderreal.webp",
-    secondaryImage: "images/placeholderreal.webp",
+    image: "images/product/genesis-tailored-1.jpg",
+    secondaryImage: "images/product/genesis-tailored-2.jpg",
     nameEn: "Premium structured tailored twill pants"
   },
   "origem-shirt": {
@@ -192,8 +192,8 @@ const PRODUCT_METADATA: Record<string, ProductStaticMetadata> = {
     sizes: ["P", "M", "G", "GG"],
     colors: ["Branco", "Azul"],
     gender: "Masculino",
-    image: "images/placeholderreal.webp",
-    secondaryImage: "images/placeholderreal.webp",
+    image: "images/product/origem-shirt-1.jpg",
+    secondaryImage: "images/product/origem-shirt-2.jpg",
     nameEn: "Croatian cotton shirt with noble weave"
   },
   "origem-skirt": {
@@ -204,8 +204,8 @@ const PRODUCT_METADATA: Record<string, ProductStaticMetadata> = {
     sizes: ["36", "38", "40"],
     colors: ["Preto", "Marfim"],
     gender: "Feminino",
-    image: "images/placeholderreal.webp",
-    secondaryImage: "images/placeholderreal.webp",
+    image: "images/product/origem-skirt-1.jpg",
+    secondaryImage: "images/product/origem-skirt-2.jpg",
     nameEn: "Structured cool wool skirt with impeccable finish"
   },
   "atelier-bag": {
@@ -216,8 +216,8 @@ const PRODUCT_METADATA: Record<string, ProductStaticMetadata> = {
     sizes: ["?nico"],
     colors: ["Caramelo", "Preto"],
     gender: "Unissex",
-    image: "images/placeholderreal.webp",
-    secondaryImage: "images/placeholderreal.webp",
+    image: "images/product/atelier-bag-1.jpg",
+    secondaryImage: "images/product/atelier-bag-2.jpg",
     nameEn: "Natural leather bag with plated hardware"
   },
   "atelier-heels": {
@@ -228,8 +228,8 @@ const PRODUCT_METADATA: Record<string, ProductStaticMetadata> = {
     sizes: ["35", "36", "37", "38", "39"],
     colors: ["Preto", "Vinho"],
     gender: "Feminino",
-    image: "images/placeholderreal.webp",
-    secondaryImage: "images/placeholderreal.webp",
+    image: "images/product/atelier-heels-1.jpg",
+    secondaryImage: "images/product/atelier-heels-2.jpg",
     nameEn: "Patent leather pumps with sculpted heel"
   },
   "flux-trench": {
@@ -240,8 +240,8 @@ const PRODUCT_METADATA: Record<string, ProductStaticMetadata> = {
     sizes: ["P", "M", "G"],
     colors: ["Areia", "Oliva"],
     gender: "Unissex",
-    image: "images/placeholderreal.webp",
-    secondaryImage: "images/placeholderreal.webp",
+    image: "images/product/flux-trench-1.jpg",
+    secondaryImage: "images/product/flux-trench-2.jpg",
     nameEn: "Gabardine trench coat with architectural cut"
   },
   "flux-knit": {
@@ -252,8 +252,8 @@ const PRODUCT_METADATA: Record<string, ProductStaticMetadata> = {
     sizes: ["P", "M", "G", "GG"],
     colors: ["Off white", "Cinza"],
     gender: "Masculino",
-    image: "images/placeholderreal.webp",
-    secondaryImage: "images/placeholderreal.webp",
+    image: "images/product/flux-knit-1.jpg",
+    secondaryImage: "images/product/flux-knit-2.jpg",
     nameEn: "Ultrafine merino wool knitwear"
   },
   "noir-dress": {
@@ -264,8 +264,8 @@ const PRODUCT_METADATA: Record<string, ProductStaticMetadata> = {
     sizes: ["36", "38", "40", "42"],
     colors: ["Preto"],
     gender: "Feminino",
-    image: "images/placeholderreal.webp",
-    secondaryImage: "images/placeholderreal.webp",
+    image: "images/product/noir-dress-1.jpg",
+    secondaryImage: "images/product/noir-dress-2.jpg",
     nameEn: "Silk crepe column dress with couture drape"
   },
   "noir-sneaker": {
@@ -276,8 +276,8 @@ const PRODUCT_METADATA: Record<string, ProductStaticMetadata> = {
     sizes: ["37", "38", "39", "40", "41", "42"],
     colors: ["Preto", "Branco"],
     gender: "Unissex",
-    image: "images/placeholderreal.webp",
-    secondaryImage: "images/placeholderreal.webp",
+    image: "images/product/noir-sneaker-1.jpg",
+    secondaryImage: "images/product/noir-sneaker-2.jpg",
     nameEn: "Technical nylon and premium-finish leather sneaker"
   },
   "essence-blazer": {
@@ -288,8 +288,8 @@ const PRODUCT_METADATA: Record<string, ProductStaticMetadata> = {
     sizes: ["P", "M", "G"],
     colors: ["Marfim", "Bege"],
     gender: "Feminino",
-    image: "images/placeholderreal.webp",
-    secondaryImage: "images/placeholderreal.webp",
+    image: "images/product/essence-blazer-1.jpg",
+    secondaryImage: "images/product/essence-blazer-2.jpg",
     nameEn: "Premium linen blazer with precision tailoring"
   },
   "essence-trousers": {
@@ -300,8 +300,8 @@ const PRODUCT_METADATA: Record<string, ProductStaticMetadata> = {
     sizes: ["36", "38", "40", "42", "44"],
     colors: ["Marfim", "Areia"],
     gender: "Feminino",
-    image: "images/placeholderreal.webp",
-    secondaryImage: "images/placeholderreal.webp",
+    image: "images/product/essence-trousers-1.jpg",
+    secondaryImage: "images/product/essence-trousers-2.jpg",
     nameEn: "Premium linen wide-leg trousers with deep pleat"
   },
   "aurora-coat": {
@@ -941,11 +941,13 @@ function mapProduct(row: ProductRow | null | undefined): Product {
   const priceValue = effectivePriceCents / 100;
   const dbImage = String(row?.image_url || "").trim();
   const metadataImage = String(metadataRecord.image || metadataRecord.image_url || metadataRecord.imageUrl || "").trim();
+  const staticImage = String(staticMetadata.image || "").trim();
   const metadataSecondaryImage = String(
     metadataRecord.secondaryImage || metadataRecord.secondary_image || metadataRecord.image2 || metadataRecord.hoverImage || ""
   ).trim();
-  const resolvedImage = dbImage || metadataImage || DEFAULT_IMAGE;
-  const resolvedSecondaryImage = metadataSecondaryImage;
+  const staticSecondaryImage = String(staticMetadata.secondaryImage || "").trim();
+  const resolvedImage = dbImage || metadataImage || staticImage || DEFAULT_IMAGE;
+  const resolvedSecondaryImage = metadataSecondaryImage || staticSecondaryImage;
   const collections = buildCollectionsArray(staticMetadata);
   const resolvedGender = resolveProductGenderBySku(sku, staticMetadata.gender);
   const category = String(staticMetadata.category || "Colecao");
