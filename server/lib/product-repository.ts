@@ -6,12 +6,27 @@ type QueryResult<TRow extends JsonRecord> = {
   rowCount: number;
 };
 
+const fs = require("node:fs/promises") as typeof import("node:fs/promises");
+const path = require("node:path") as typeof import("node:path");
 const { query } = require("./db") as {
   query: <TRow extends JsonRecord = JsonRecord>(text: string, params?: unknown[]) => Promise<QueryResult<TRow>>;
 };
 
 const DEFAULT_IMAGE = "images/placeholderreal.webp";
 const STOREFRONT_DEFAULT_PRICE_CENTS = 500;
+const INVENTORY_FILE_CANDIDATES = [
+  path.resolve(__dirname, "..", "..", "data", "inventory.json"),
+  path.resolve(__dirname, "..", "..", "..", "data", "inventory.json")
+];
+const AUTO_SYNC_INVENTORY_ON_READ = (() => {
+  const normalized = String(process.env.PRODUCTS_AUTO_SYNC_FROM_INVENTORY || "1")
+    .trim()
+    .toLowerCase();
+  if (!normalized) return true;
+  if (["0", "false", "no", "off"].includes(normalized)) return false;
+  if (["1", "true", "yes", "on"].includes(normalized)) return true;
+  return true;
+})();
 
 export type VariantStockMap = Record<string, number>;
 
@@ -100,6 +115,14 @@ type ProductRow = JsonRecord & {
   metadata?: unknown;
   created_at?: string | null;
   updated_at?: string | null;
+};
+
+type InventorySeedProduct = {
+  sku: string;
+  name: string;
+  unitAmount: number;
+  stockQty: number;
+  currency: string;
 };
 
 export type Product = {
@@ -980,6 +1003,8 @@ function isMissingMetadataColumnError(error: unknown): boolean {
 }
 
 let ensureMetadataColumnPromise: Promise<void> | null = null;
+let ensureInventorySeedPromise: Promise<void> | null = null;
+let hasEnsuredInventorySeed = false;
 
 async function ensureProductsMetadataColumn(): Promise<void> {
   if (!ensureMetadataColumnPromise) {
@@ -997,6 +1022,108 @@ async function ensureProductsMetadataColumn(): Promise<void> {
   }
 
   await ensureMetadataColumnPromise;
+}
+
+function normalizeInventorySeedProduct(value: unknown): InventorySeedProduct | null {
+  const item = asRecord(value);
+  const sku = normalizeSku(item.id || item.sku || "");
+  if (!sku) return null;
+
+  const name = String(item.name || sku).trim() || sku;
+  const unitAmount = Math.max(0, Math.round(Number(item.unitAmount || item.priceCents || 0)));
+  const stockQty = Math.max(0, Math.floor(Number(item.stock || item.stockQty || 0)));
+  const currency = String(item.currency || "brl").trim().toLowerCase() || "brl";
+
+  return {
+    sku,
+    name,
+    unitAmount,
+    stockQty,
+    currency
+  };
+}
+
+async function readInventorySeedProducts(): Promise<InventorySeedProduct[]> {
+  for (const filePath of INVENTORY_FILE_CANDIDATES) {
+    try {
+      const raw = await fs.readFile(filePath, "utf8");
+      const parsed = JSON.parse(raw);
+      if (!Array.isArray(parsed)) return [];
+
+      const uniqueBySku = new Map<string, InventorySeedProduct>();
+      parsed.forEach((entry) => {
+        const normalized = normalizeInventorySeedProduct(entry);
+        if (!normalized) return;
+        uniqueBySku.set(normalized.sku.toLowerCase(), normalized);
+      });
+      return Array.from(uniqueBySku.values());
+    } catch {}
+  }
+  return [];
+}
+
+async function ensureInventorySeededFromFile(): Promise<void> {
+  if (!AUTO_SYNC_INVENTORY_ON_READ || hasEnsuredInventorySeed) return;
+
+  if (!ensureInventorySeedPromise) {
+    ensureInventorySeedPromise = (async () => {
+      const inventorySeed = await readInventorySeedProducts();
+      if (inventorySeed.length === 0) {
+        hasEnsuredInventorySeed = true;
+        return;
+      }
+
+      const existing = await query<{ sku?: string }>("SELECT sku FROM products");
+      const existingSkus = new Set(
+        existing.rows.map((row) => String(row?.sku || "").trim().toLowerCase()).filter(Boolean)
+      );
+      const missing = inventorySeed.filter((product) => !existingSkus.has(product.sku.toLowerCase()));
+      if (missing.length === 0) {
+        hasEnsuredInventorySeed = true;
+        return;
+      }
+
+      for (const product of missing) {
+        const metadata = JSON.stringify(buildPersistedMetadata(product.sku, {}));
+        const withMetadataParams: unknown[] = [
+          product.sku,
+          product.name,
+          product.unitAmount,
+          product.stockQty,
+          product.currency,
+          true,
+          null,
+          metadata
+        ];
+        const withoutMetadataParams = withMetadataParams.slice(0, 7);
+
+        await queryWithOptionalMetadata(
+          `
+          INSERT INTO products (sku, name, price_cents, stock_qty, currency, active, image_url, metadata)
+          VALUES ($1, $2, $3, $4, $5, $6, $7, $8::jsonb)
+          ON CONFLICT (sku) DO NOTHING
+          `,
+          `
+          INSERT INTO products (sku, name, price_cents, stock_qty, currency, active, image_url)
+          VALUES ($1, $2, $3, $4, $5, $6, $7)
+          ON CONFLICT (sku) DO NOTHING
+          `,
+          withMetadataParams,
+          withoutMetadataParams
+        );
+      }
+
+      hasEnsuredInventorySeed = true;
+    })()
+      .catch((error: unknown) => {
+        console.warn("[catalog-sync] Failed to auto-seed inventory from data/inventory.json:", getErrorMessage(error));
+      })
+      .finally(() => {
+        ensureInventorySeedPromise = null;
+      });
+  }
+
+  await ensureInventorySeedPromise;
 }
 
 async function queryWithOptionalMetadata(
@@ -1022,6 +1149,8 @@ async function queryWithOptionalMetadata(
 }
 
 async function listProducts(): Promise<Product[]> {
+  await ensureInventorySeededFromFile();
+
   const result = await queryWithOptionalMetadata(
     `
     SELECT id, sku, name, price_cents, stock_qty, currency, active, image_url, metadata, created_at, updated_at
@@ -1498,6 +1627,8 @@ async function searchAdminProducts({
 }
 
 async function getProductByIdentifier(identifier: string): Promise<Product | null> {
+  await ensureInventorySeededFromFile();
+
   const normalized = String(identifier || "").trim();
   if (!normalized) return null;
 
