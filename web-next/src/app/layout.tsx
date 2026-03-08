@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Montserrat, Playfair_Display } from "next/font/google";
 import Script from "next/script";
+import { Suspense } from "react";
 import { LayoutChrome } from "@/components/LayoutChrome";
 import { CookieConsentBar } from "@/components/CookieConsentBar";
 import { IdentityBridge } from "@/components/IdentityBridge";
@@ -173,7 +174,9 @@ export default function RootLayout({
         <MetaPixelPageViewTracker />
         <TrackingScripts />
         <IdentityBridge />
-        <LayoutChrome>{children}</LayoutChrome>
+        <Suspense fallback={children}>
+          <LayoutChrome>{children}</LayoutChrome>
+        </Suspense>
         <CookieConsentBar />
         <script
           type="application/ld+json"

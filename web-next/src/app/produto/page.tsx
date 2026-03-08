@@ -1,13 +1,14 @@
 import { redirect } from "next/navigation";
 
 type LegacyProdutoPageProps = {
-  searchParams?: {
+  searchParams?: Promise<{
     id?: string | string[];
-  };
+  }>;
 };
 
-export default function LegacyProdutoPage({ searchParams }: LegacyProdutoPageProps) {
-  const raw = searchParams?.id;
+export default async function LegacyProdutoPage({ searchParams }: LegacyProdutoPageProps) {
+  const resolvedSearchParams = await searchParams;
+  const raw = resolvedSearchParams?.id;
   const id = Array.isArray(raw) ? raw[0] : raw;
 
   if (id && String(id).trim()) {
