@@ -7,11 +7,11 @@ import { listProductsAdmin } from "@/services/admin";
 import styles from "./page.module.css";
 
 type StudioProductsPageProps = {
-  searchParams?: {
+  searchParams?: Promise<{
     query?: string;
     status?: string;
     stock?: string;
-  };
+  }>;
 };
 
 export const metadata: Metadata = {
@@ -25,9 +25,10 @@ export const metadata: Metadata = {
 
 export default async function StudioProductsPage({ searchParams }: StudioProductsPageProps) {
   const session = await readStudioSession("/studio/products");
-  const query = String(searchParams?.query || "").trim();
-  const status = String(searchParams?.status || "").trim();
-  const stock = String(searchParams?.stock || "").trim();
+  const resolvedSearchParams = await searchParams;
+  const query = String(resolvedSearchParams?.query || "").trim();
+  const status = String(resolvedSearchParams?.status || "").trim();
+  const stock = String(resolvedSearchParams?.stock || "").trim();
 
   const result = await listProductsAdmin(
     {

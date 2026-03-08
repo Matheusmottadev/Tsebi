@@ -7,9 +7,9 @@ import { studioAuthMe } from "@/services/admin";
 import styles from "./page.module.css";
 
 type StudioLoginPageProps = {
-  searchParams?: {
+  searchParams?: Promise<{
     returnTo?: string;
-  };
+  }>;
 };
 
 export const metadata: Metadata = {
@@ -29,7 +29,8 @@ function sanitizeReturnTo(value?: string): string {
 }
 
 export default async function StudioLoginPage({ searchParams }: StudioLoginPageProps) {
-  const returnTo = sanitizeReturnTo(searchParams?.returnTo);
+  const resolvedSearchParams = await searchParams;
+  const returnTo = sanitizeReturnTo(resolvedSearchParams?.returnTo);
   const headerStore = await headers();
   const cookie = headerStore.get("cookie") || undefined;
 

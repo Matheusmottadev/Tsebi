@@ -5,9 +5,9 @@ import { StudioShell } from "@/components/studio/StudioShell";
 import styles from "./page.module.css";
 
 type StudioNewsletterPageProps = {
-  searchParams?: {
+  searchParams?: Promise<{
     query?: string;
-  };
+  }>;
 };
 
 export const metadata: Metadata = {
@@ -28,7 +28,8 @@ function formatDate(value: string | null): string {
 
 export default async function StudioNewsletterPage({ searchParams }: StudioNewsletterPageProps) {
   const session = await readStudioSession("/studio/newsletter");
-  const query = String(searchParams?.query || "").trim();
+  const resolvedSearchParams = await searchParams;
+  const query = String(resolvedSearchParams?.query || "").trim();
   const result = await listNewsletterAdmin(
     { query: query || undefined, page: 1, pageSize: 100 },
     { cookie: session.cookie, cache: "no-store" }

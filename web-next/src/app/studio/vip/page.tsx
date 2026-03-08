@@ -6,9 +6,9 @@ import { StudioShell } from "@/components/studio/StudioShell";
 import styles from "./page.module.css";
 
 type StudioVipPageProps = {
-  searchParams?: {
+  searchParams?: Promise<{
     query?: string;
-  };
+  }>;
 };
 
 export const metadata: Metadata = {
@@ -29,7 +29,8 @@ function formatDate(value: string | null): string {
 
 export default async function StudioVipPage({ searchParams }: StudioVipPageProps) {
   const session = await readStudioSession("/studio/vip");
-  const query = String(searchParams?.query || "").trim();
+  const resolvedSearchParams = await searchParams;
+  const query = String(resolvedSearchParams?.query || "").trim();
 
   let errorMessage = "";
   let result: Awaited<ReturnType<typeof listVipAdmin>> = {

@@ -7,10 +7,10 @@ import { listOrdersAdmin } from "@/services/admin";
 import styles from "./page.module.css";
 
 type StudioOrdersPageProps = {
-  searchParams?: {
+  searchParams?: Promise<{
     status?: string;
     query?: string;
-  };
+  }>;
 };
 
 export const metadata: Metadata = {
@@ -31,8 +31,9 @@ function formatDate(value: string | null): string {
 
 export default async function StudioOrdersPage({ searchParams }: StudioOrdersPageProps) {
   const session = await readStudioSession("/studio/orders");
-  const status = String(searchParams?.status || "").trim();
-  const query = String(searchParams?.query || "").trim();
+  const resolvedSearchParams = await searchParams;
+  const status = String(resolvedSearchParams?.status || "").trim();
+  const query = String(resolvedSearchParams?.query || "").trim();
   const result = await listOrdersAdmin(
     { page: 1, pageSize: 100, status: status || undefined, query: query || undefined },
     { cookie: session.cookie, cache: "no-store" }

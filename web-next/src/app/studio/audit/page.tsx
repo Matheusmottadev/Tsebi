@@ -6,10 +6,10 @@ import { getAuditLogAdmin, listAuditLogsAdmin, searchAuditLogsAdmin } from "@/se
 import styles from "./page.module.css";
 
 type StudioAuditPageProps = {
-  searchParams?: {
+  searchParams?: Promise<{
     query?: string;
     id?: string;
-  };
+  }>;
 };
 
 export const metadata: Metadata = {
@@ -30,8 +30,9 @@ function formatDate(value: string | null): string {
 
 export default async function StudioAuditPage({ searchParams }: StudioAuditPageProps) {
   const session = await readStudioSession("/studio/audit");
-  const query = String(searchParams?.query || "").trim();
-  const detailId = String(searchParams?.id || "").trim();
+  const resolvedSearchParams = await searchParams;
+  const query = String(resolvedSearchParams?.query || "").trim();
+  const detailId = String(resolvedSearchParams?.id || "").trim();
 
   const baseOptions = { cookie: session.cookie, cache: "no-store" } as const;
   const logsResult = query
