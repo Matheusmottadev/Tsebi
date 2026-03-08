@@ -299,6 +299,7 @@ async function bootstrap() {
   initNewsCarousel();
   initHomeHeaderScrollState();
   initHeaderMenu();
+  initHeaderContactPanel();
   initHeroVideoLoop();
   initCartEntryPoints();
   initAccountEntryPoints();
@@ -308,6 +309,134 @@ async function bootstrap() {
 }
 
 bootstrap();
+
+function initHeaderContactPanel() {
+  const headerRight = document.querySelector(".home-header .header-right");
+  if (!headerRight) return;
+
+  let trigger = headerRight.querySelector(".quick-action-contact");
+  if (!trigger) {
+    trigger = document.createElement("button");
+    trigger.type = "button";
+    trigger.className = "quick-action-contact";
+    trigger.setAttribute("aria-label", "Fale Conosco");
+    trigger.textContent = "Fale Conosco";
+    const accountLink = headerRight.querySelector('.quick-action:not(.cart-link)');
+    if (accountLink) {
+      headerRight.insertBefore(trigger, accountLink);
+    } else {
+      const cartLink = headerRight.querySelector(".cart-link");
+      if (cartLink) {
+        headerRight.insertBefore(trigger, cartLink);
+      } else {
+        headerRight.appendChild(trigger);
+      }
+    }
+  }
+
+  let backdrop = document.querySelector(".header-contact-backdrop");
+  if (!backdrop) {
+    backdrop = document.createElement("button");
+    backdrop.type = "button";
+    backdrop.className = "header-contact-backdrop";
+    backdrop.setAttribute("aria-label", "Fechar Fale Conosco");
+    document.body.appendChild(backdrop);
+  }
+
+  let panel = document.querySelector(".header-contact-panel");
+  if (!panel) {
+    panel = document.createElement("aside");
+    panel.className = "header-contact-panel";
+    panel.setAttribute("aria-hidden", "true");
+    panel.innerHTML = `
+      <div class="header-contact-panel-inner">
+        <div class="header-contact-panel-head">
+          <h2>Fale Conosco</h2>
+          <button type="button" class="header-contact-panel-close" aria-label="Fechar">&times;</button>
+        </div>
+        <p class="header-contact-panel-copy">
+          A equipe de consultores da Tsebi está à sua disposição. Com atendimento dedicado e discreto, oferecemos orientação na escolha das peças e acesso a informações sobre materiais, coleções e disponibilidade.
+        </p>
+        <nav class="header-contact-panel-links" aria-label="Canais de atendimento">
+          <a href="tel:+5511918596632" class="header-contact-panel-link">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <rect x="7" y="2.5" width="10" height="19" rx="2"></rect>
+              <path d="M11 18.2h2"></path>
+            </svg>
+            +55 (11) 91859-6632
+          </a>
+          <a href="mailto:Contato@tsebi.com.br" class="header-contact-panel-link">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <rect x="3" y="6" width="18" height="12" rx="1.5"></rect>
+              <path d="M4.5 7.5L12 13l7.5-5.5"></path>
+            </svg>
+            Envie um email
+          </a>
+          <a href="https://wa.me/5511918596632" target="_blank" rel="noopener noreferrer" class="header-contact-panel-link">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M12 4.8a7.2 7.2 0 0 0-6.2 10.9"></path>
+              <path d="M5.8 15.7L4.9 19l3.2-.9"></path>
+              <path d="M8.1 18.1A7.2 7.2 0 1 0 12 4.8"></path>
+              <path d="M9.7 9.6c.2-.3.4-.3.6-.3h.4c.2 0 .3.1.4.3l.5 1.3c.1.2.1.3 0 .5l-.4.5c.3.6.8 1.1 1.4 1.4l.5-.4c.1-.1.3-.1.5 0l1.3.5c.2.1.3.2.3.4v.4c0 .3-.1.5-.3.6-.4.2-.9.3-1.5.1-1.6-.5-2.9-1.8-3.4-3.4-.2-.5-.1-1 .1-1.5z"></path>
+            </svg>
+            WhatsApp
+          </a>
+          <a href="sms:+5511918596632" class="header-contact-panel-link">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M19 14a3 3 0 0 1-3 3H9l-4 3v-3a3 3 0 0 1-3-3V8a3 3 0 0 1 3-3h11a3 3 0 0 1 3 3z"></path>
+            </svg>
+            Apple Message
+          </a>
+          <a href="https://www.instagram.com/tsebiofficial/" target="_blank" rel="noopener noreferrer" class="header-contact-panel-link">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <rect x="4" y="4" width="16" height="16" rx="4" ry="4"></rect>
+              <circle cx="12" cy="12" r="3.8"></circle>
+              <circle cx="17.2" cy="6.8" r="1.1"></circle>
+            </svg>
+            Direct Instagram
+          </a>
+        </nav>
+        <div class="header-contact-panel-divider"></div>
+        <div class="header-contact-panel-help">
+          <p>Precisa de ajuda?</p>
+          <a href="/faq">Perguntas Frequentes</a>
+          <a href="/processos">Serviços de Cuidado</a>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(panel);
+  }
+
+  const closeButton = panel.querySelector(".header-contact-panel-close");
+  const menuOpenButton = document.getElementById("openHeaderMenu");
+  const searchTrigger = document.querySelector(".header-search-trigger");
+
+  const openPanel = () => {
+    const panelInner = panel.querySelector(".header-contact-panel-inner");
+    if (panelInner instanceof HTMLElement) panelInner.scrollTop = 0;
+    backdrop.classList.add("is-open");
+    panel.classList.add("is-open");
+    panel.setAttribute("aria-hidden", "false");
+  };
+
+  const closePanel = () => {
+    backdrop.classList.remove("is-open");
+    panel.classList.remove("is-open");
+    panel.setAttribute("aria-hidden", "true");
+  };
+
+  trigger.addEventListener("click", (event) => {
+    event.preventDefault();
+    openPanel();
+  });
+  backdrop.addEventListener("click", closePanel);
+  closeButton?.addEventListener("click", closePanel);
+  menuOpenButton?.addEventListener("click", closePanel);
+  searchTrigger?.addEventListener("click", closePanel);
+  window.addEventListener("keydown", (event) => {
+    if (event.key === "Escape") closePanel();
+  });
+}
 
 function normalizeSearchText(value) {
   return String(value || "")
@@ -2270,3 +2399,4 @@ function initNewsletterPopup() {
     }
   });
 }
+

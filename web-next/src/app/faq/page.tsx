@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+﻿import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { LegacyStaticPageRenderer } from "@/components/LegacyStaticPageRenderer";
 import { loadLegacyStaticPage } from "@/lib/legacy-static-pages";
@@ -31,6 +31,9 @@ export default async function FaqPage() {
       stylesheetHrefs={page.stylesheetHrefs}
       inlineStyles={page.inlineStyles}
       bodyMarkup={page.bodyMarkup}
+      scriptSrcs={page.scriptSrcs}
+      inlineScripts={page.inlineScripts}
     />
   );
 }
+

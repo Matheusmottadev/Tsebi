@@ -1,11 +1,15 @@
 ﻿import type { Metadata } from "next";
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { listProducts } from "@/services/products";
 import { ProductGrid } from "@/components/ProductGrid";
 import { BodyClassName } from "@/components/BodyClassName";
+import { Price } from "@/components/Price";
 import { buildHoverImagePair } from "@/lib/product-media";
 import type { Product } from "@/types";
 import { LegacyFooter } from "@/components/home-legacy/LegacyFooter";
+import { ExclusiveSuggestions, type ExclusiveSuggestionFallbackCard } from "./ExclusiveSuggestions";
+import { ProductsSearchGrid, type ProductsSearchGridItem } from "./ProductsSearchGrid";
 import styles from "./page.module.css";
 import { NovidadesGrid, type NovidadesGridTile } from "./NovidadesGrid";
 
@@ -31,6 +35,7 @@ export const metadata: Metadata = {
 type ProductsSearchParams = {
   view?: string;
   n?: string;
+  p?: string;
   fp?: string;
   q?: string;
   gender?: string;
@@ -170,6 +175,27 @@ const NOVIDADES_CATEGORY_LABEL_TO_SLUG: Record<string, string> = {
   accessories: "acc",
 };
 
+const ACCESSORIES_TAB_SUBCATEGORIES = ["Bolsas", "Carteiras", "Cintos", "Lenços"];
+
+const ACCESSORIES_CATEGORY_ALIASES: Record<string, string> = {
+  accessories: "Accessories",
+  acessorios: "Accessories",
+  "bolsas-e-acessorios": "Accessories",
+};
+
+const ACCESSORIES_SUBCATEGORY_ALIASES: Record<string, string> = {
+  bolsa: "Bolsas",
+  bolsas: "Bolsas",
+  carteira: "Carteiras",
+  carteiras: "Carteiras",
+  cinto: "Cintos",
+  cintos: "Cintos",
+  lenco: "Lencos",
+  lencos: "Lencos",
+  "len\u00e7o": "Lencos",
+  "len\u00e7os": "Lencos",
+};
+
 const NOVIDADES_CATEGORY_HERO_MAP: Record<string, NovidadesCategoryHero> = {
   "ready-to-wear": {
     mediaUrlMasculino: "/images/product/origem-shirt-1.jpg",
@@ -193,41 +219,79 @@ const NOVIDADES_CATEGORY_HERO_MAP: Record<string, NovidadesCategoryHero> = {
   },
 };
 
-const BROKEN_ENCODING_REPLACEMENTS: Array<[string, string]> = [
-  ["Ã¡", "á"],
-  ["Ãà", "à"],
-  ["Ã¢", "â"],
-  ["Ãã", "ã"],
-  ["Ãä", "ä"],
-  ["Ãé", "é"],
-  ["Ãê", "ê"],
-  ["Ãí", "í"],
-  ["Ãó", "ó"],
-  ["Ãô", "ô"],
-  ["Ãõ", "õ"],
-  ["Ãö", "ö"],
-  ["Ãú", "ú"],
-  ["Ãü", "ü"],
-  ["Ãç", "ç"],
-  ["ÃÁ", "Á"],
-  ["ÃÀ", "À"],
-  ["ÃÂ", "Â"],
-  ["ÃÃ", "Ã"],
-  ["ÃÉ", "É"],
-  ["ÃÊ", "Ê"],
-  ["ÃÍ", "Í"],
-  ["ÃÓ", "Ó"],
-  ["ÃÔ", "Ô"],
-  ["ÃÕ", "Õ"],
-  ["ÃÚ", "Ú"],
-  ["ÃÇ", "Ç"],
-  ["â€“", "–"],
-  ["â€”", "—"],
-  ["â€˜", "‘"],
-  ["â€™", "’"],
-  ["â€œ", "“"],
-  ["â€", "”"],
+const BROKEN_ENCODING_REPLACEMENTS: Array<[string, string]> = [];
+
+const QUESTION_MARK_TEXT_REPLACEMENTS: Array<[RegExp, string]> = [
+  [/\?nico/gi, "Único"],
+  [/Cardig\?/gi, "Cardigã"],
+  [/t\?cnico/gi, "técnico"],
+  [/\bL\?\b/g, "Lã"],
+  [/\bl\?\b/g, "lã"],
+  [/Pre\?o/gi, "Preço"],
+  [/Cole\?ao/gi, "Coleção"],
+  [/Se\?ao/gi, "Seção"],
 ];
+
+const ROOT_PRODUCTS_MAIN_CATEGORY_LINKS = [
+  { href: "/products?n=e", label: "Todos", active: true },
+  { href: "/products?n=e&c=rtw", label: "Ready-to-Wear", active: false },
+  { href: "/products?n=e&c=ow", label: "Outerwear", active: false },
+  { href: "/products?n=e&c=le", label: "Leather", active: false },
+  { href: "/products?n=e&c=acc", label: "Accessories", active: false },
+] as const;
+
+const ROOT_PRODUCTS_SORT_LINKS = [
+  { href: "/products?n=e", label: "Ordenação", active: true },
+  { href: "/products?n=e&sort=best_sellers", label: "Mais vendidos", active: false },
+  { href: "/products?n=e&sort=newest", label: "Mais recentes", active: false },
+  { href: "/products?n=e&sort=price_asc", label: "Preço crescente", active: false },
+  { href: "/products?n=e&sort=price_desc", label: "Preço decrescente", active: false },
+] as const;
+
+const ROOT_PRODUCTS_COLLECTION_LINKS = [
+  { href: "/products?n=e&collection=Alicerce&fp=1", label: "Alicerce" },
+  { href: "/products?n=e&collection=G%C3%AAnesis&fp=1", label: "Gênesis" },
+] as const;
+
+const ROOT_PRODUCTS_COLOR_OPTIONS_VISIBLE = [
+  { href: "/products?n=e&co=Areia&fp=1", label: "Areia", color: "#d9d9d9" },
+  { href: "/products?n=e&co=Azul&fp=1", label: "Azul", color: "#1f61d1" },
+  { href: "/products?n=e&co=Bege&fp=1", label: "Bege", color: "#d2b48c" },
+  { href: "/products?n=e&co=Branco&fp=1", label: "Branco", color: "#f5f5f5" },
+] as const;
+
+const ROOT_PRODUCTS_COLOR_OPTIONS_HIDDEN = [
+  { href: "/products?n=e&co=Cafe&fp=1", label: "Cafe", color: "#d9d9d9" },
+  { href: "/products?n=e&co=Caramelo&fp=1", label: "Caramelo", color: "#b56a3b" },
+  { href: "/products?n=e&co=Cinza&fp=1", label: "Cinza", color: "#a8a8a8" },
+  { href: "/products?n=e&co=Grafite&fp=1", label: "Grafite", color: "#d9d9d9" },
+  { href: "/products?n=e&co=Marrom&fp=1", label: "Marrom", color: "#7a4b2a" },
+  { href: "/products?n=e&co=Off+white&fp=1", label: "Off white", color: "#d9d9d9" },
+  { href: "/products?n=e&co=Oliva&fp=1", label: "Oliva", color: "#5c6f3a" },
+  { href: "/products?n=e&co=Preto&fp=1", label: "Preto", color: "#111111" },
+  { href: "/products?n=e&co=Vinho&fp=1", label: "Vinho", color: "#722F37" },
+] as const;
+
+const ROOT_PRODUCTS_MATERIAL_OPTIONS_VISIBLE = [
+  { href: "/products?n=e&mt=Algodao&fp=1", label: "Algodao" },
+  { href: "/products?n=e&mt=Algod%C3%A3o+eg%C3%ADpcio&fp=1", label: "Algodão egípcio" },
+  { href: "/products?n=e&mt=Couro&fp=1", label: "Couro" },
+  { href: "/products?n=e&mt=Couro+envernizado&fp=1", label: "Couro envernizado" },
+] as const;
+
+const ROOT_PRODUCTS_MATERIAL_OPTIONS_HIDDEN = [
+  { href: "/products?n=e&mt=Couro+natural&fp=1", label: "Couro natural" },
+  { href: "/products?n=e&mt=Denim&fp=1", label: "Denim" },
+  { href: "/products?n=e&mt=Gabardine&fp=1", label: "Gabardine" },
+  { href: "/products?n=e&mt=La+merino&fp=1", label: "La merino" },
+  { href: "/products?n=e&mt=Linho&fp=1", label: "Linho" },
+  { href: "/products?n=e&mt=Nylon&fp=1", label: "Nylon" },
+  { href: "/products?n=e&mt=Nylon+t%C3%A9cnico&fp=1", label: "Nylon técnico" },
+  { href: "/products?n=e&mt=Sarja&fp=1", label: "Sarja" },
+] as const;
+
+const ROOT_PRODUCTS_SIZE_OPTIONS_APPAREL = ["P", "M", "G", "GG"] as const;
+const ROOT_PRODUCTS_SIZE_OPTIONS_NUMERIC = ["35", "36", "37", "38", "39", "40", "41", "42", "44", "Unico"] as const;
 
 function sanitizeDisplayText(value: unknown): string {
   let text = String(value || "").trim();
@@ -235,6 +299,9 @@ function sanitizeDisplayText(value: unknown): string {
 
   BROKEN_ENCODING_REPLACEMENTS.forEach(([broken, fixed]) => {
     text = text.split(broken).join(fixed);
+  });
+  QUESTION_MARK_TEXT_REPLACEMENTS.forEach(([pattern, fixed]) => {
+    text = text.replace(pattern, fixed);
   });
 
   text = text.replace(/\uFFFD/g, "").trim();
@@ -258,8 +325,773 @@ function parseBooleanParam(value: string | undefined): boolean | null {
   return null;
 }
 
+function hasAnySearchParam(params: ProductsSearchParams): boolean {
+  return Object.values(params).some((value) => {
+    if (Array.isArray(value)) {
+      return value.some((entry) => String(entry || "").trim().length > 0);
+    }
+    return String(value || "").trim().length > 0;
+  });
+}
+
+function buildSearchSuggestionLinks(
+  params: ProductsSearchParams,
+  catalogProducts: ReadonlyArray<Pick<ExtendedProduct, "name">>
+): Array<{ href: string; label: string; active: boolean }> {
+  const queryValue = sanitizeDisplayText(params.q).trim();
+  const normalizedQuery = normalizeText(queryValue);
+  const stopWords = new Set(["de", "da", "do", "das", "dos", "e", "em", "com", "para", "a", "o", "as", "os"]);
+  const baseKeyword =
+    sanitizeDisplayText(
+      queryValue
+        .replace(/\b(masculino|feminino|tsebi|premium|basica|basico)\b/gi, "")
+        .replace(/\s+/g, " ")
+        .trim()
+    ) || "camisa";
+  const baseKeywordNormalized = normalizeText(baseKeyword);
+  const queryTokens = normalizedQuery
+    .split(/\s+/)
+    .map((token) => token.trim())
+    .filter(Boolean)
+    .filter((token) => !stopWords.has(token));
+
+  const catalogNames = catalogProducts
+    .map((product) => sanitizeDisplayText(product.name).replace(/\s+/g, " ").trim())
+    .filter(Boolean);
+
+  const relevantNames = catalogNames.filter((name) => {
+    if (!queryTokens.length) return true;
+    return fuzzyMatchQueryAgainstSearchable(queryValue || normalizedQuery, [name]);
+  });
+
+  const namesForSuggestions = relevantNames.length > 0 ? relevantNames : catalogNames;
+  const dedupeNormalized = new Set<string>();
+  const finalSuggestions: string[] = [];
+
+  namesForSuggestions.forEach((name) => {
+    if (finalSuggestions.length >= 3) return;
+
+    const displayWords = name.split(/\s+/).filter(Boolean);
+    if (displayWords.length === 0) return;
+
+    const normalizedWords = displayWords.map((word) => normalizeText(word));
+    let anchorIndex = normalizedWords.findIndex((word) => word === baseKeywordNormalized || word.startsWith(baseKeywordNormalized));
+    if (anchorIndex < 0 && queryTokens.length > 0) {
+      anchorIndex = normalizedWords.findIndex((word) => queryTokens.some((token) => word === token || word.startsWith(token)));
+    }
+    if (anchorIndex < 0) anchorIndex = 0;
+
+    const phraseWords: string[] = [displayWords[anchorIndex]];
+    for (let index = anchorIndex + 1; index < displayWords.length && phraseWords.length < 3; index += 1) {
+      const nextWord = displayWords[index];
+      phraseWords.push(nextWord);
+      if (!stopWords.has(normalizeText(nextWord))) break;
+    }
+
+    const suggestion = sanitizeDisplayText(phraseWords.join(" ")).replace(/\s+/g, " ").trim();
+    const normalizedSuggestion = normalizeText(suggestion);
+    if (!normalizedSuggestion || normalizedSuggestion === normalizedQuery) return;
+    if (dedupeNormalized.has(normalizedSuggestion)) return;
+
+    dedupeNormalized.add(normalizedSuggestion);
+    finalSuggestions.push(suggestion);
+  });
+
+  if (finalSuggestions.length === 0) {
+    finalSuggestions.push(baseKeyword);
+  }
+
+  return finalSuggestions.map((term, index) => {
+    const isActive = normalizedQuery ? normalizeText(term) === normalizedQuery : index === 0;
+    return {
+      href: buildProductsHref(params, { q: term }),
+      label: term,
+      active: isActive,
+    };
+  });
+}
+
+function renderRootProductsToolbar(
+  filtersToggleId: string,
+  mainCategoryLinks: ReadonlyArray<{ href: string; label: string; active: boolean }> = ROOT_PRODUCTS_MAIN_CATEGORY_LINKS,
+  showActions: boolean = true,
+  resultsCount?: number
+) {
+  return (
+    <section className={styles.novidadesToolbarSection} aria-label="Filtros de produtos">
+      <div className={styles.novidadesToolbarInner}>
+        <div className={styles.novidadesFiltersLeft}>
+          <div className={styles.novidadesCategoriesRow}>
+            {mainCategoryLinks.map((item) => (
+              <Link
+                key={item.href}
+                href={item.href}
+                className={`${styles.novidadesMainCategoryLink} ${item.active ? styles.novidadesMainCategoryLinkActive : ""}`}
+                scroll={false}
+                prefetch
+              >
+                {sanitizeDisplayText(item.label)}
+              </Link>
+            ))}
+          </div>
+        </div>
+        {showActions ? (
+          <div className={styles.novidadesActionsRight}>
+            <details className={styles.novidadesSortGroup}>
+              <summary className={styles.novidadesSortToggle}>
+                <span>Ordenação</span>
+                <svg viewBox="0 0 24 24" aria-hidden="true" className={styles.novidadesSortActionIcon}>
+                  <path d="M8 6h8"></path>
+                  <path d="M10 3l-2 3 2 3"></path>
+                  <path d="M16 18H8"></path>
+                  <path d="M14 15l2 3-2 3"></path>
+                </svg>
+              </summary>
+              <div className={styles.novidadesSortMenu}>
+                {ROOT_PRODUCTS_SORT_LINKS.map((item) => (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    className={`${styles.novidadesFilterItem} ${item.active ? styles.novidadesFilterItemActive : ""}`}
+                    scroll={false}
+                    prefetch
+                  >
+                    {sanitizeDisplayText(item.label)}
+                  </Link>
+                ))}
+              </div>
+            </details>
+            <div className={styles.novidadesFiltersPopupGroup}>
+              <input
+                id={filtersToggleId}
+                type="checkbox"
+                className={styles.novidadesFiltersPopupCheckbox}
+                aria-label="Abrir filtros"
+              />
+              <label
+                htmlFor={filtersToggleId}
+                className={`${styles.novidadesActionButton} ${styles.novidadesFiltersPopupToggle}`}
+              >
+                <span className={styles.novidadesFiltersLabel}>Filtros</span>
+                <svg viewBox="0 0 24 24" aria-hidden="true" className={styles.novidadesFilterActionIcon}>
+                  <path d="M4 7h16"></path>
+                  <circle cx="9" cy="7" r="1.8"></circle>
+                  <path d="M4 12h16"></path>
+                  <circle cx="15" cy="12" r="1.8"></circle>
+                  <path d="M4 17h16"></path>
+                  <circle cx="11.5" cy="17" r="1.8"></circle>
+                </svg>
+              </label>
+              <div className={styles.novidadesFiltersPopupPanel} role="dialog" aria-label="Filtros">
+                <Link href="/products?n=e&fp=1" className={styles.novidadesFiltersClear} scroll={false} prefetch>
+                  Limpar filtros
+                </Link>
+                <label htmlFor={filtersToggleId} className={styles.novidadesFiltersPopupClose} aria-label="Fechar filtros">
+                  X
+                </label>
+                <div className={styles.novidadesFiltersPopupBody}>
+                  <section className={styles.novidadesFiltersSection}>
+                    <h3 className={styles.novidadesFiltersSectionTitle}>Coleção</h3>
+                    <div className={styles.novidadesFiltersTwoColumns}>
+                      {ROOT_PRODUCTS_COLLECTION_LINKS.map((item) => (
+                        <Link key={item.href} href={item.href} className={styles.novidadesFiltersOption} scroll={false} prefetch>
+                          <span className={styles.novidadesFiltersOptionLabel}>{sanitizeDisplayText(item.label)}</span>
+                        </Link>
+                      ))}
+                    </div>
+                  </section>
+
+                  <section className={styles.novidadesFiltersSection}>
+                    <h3 className={styles.novidadesFiltersSectionTitle}>Cor</h3>
+                    <div className={styles.novidadesFiltersExpandableBlock}>
+                      <div className={styles.novidadesFiltersTwoColumns}>
+                        {ROOT_PRODUCTS_COLOR_OPTIONS_VISIBLE.map((item) => (
+                          <Link key={item.href} href={item.href} className={styles.novidadesFiltersOption} scroll={false} prefetch>
+                            <span
+                              className={styles.novidadesFiltersColorDot}
+                              aria-hidden="true"
+                              style={{ backgroundColor: item.color }}
+                            />
+                            <span className={styles.novidadesFiltersOptionLabel}>{sanitizeDisplayText(item.label)}</span>
+                          </Link>
+                        ))}
+                      </div>
+                      <details className={styles.novidadesFiltersMoreGroup}>
+                        <summary className={styles.novidadesFiltersMoreToggle}>
+                          <span className={styles.novidadesFiltersMoreTextMore}>Exibir mais</span>
+                          <span className={styles.novidadesFiltersMoreTextLess}>Exibir menos</span>
+                        </summary>
+                        <div className={`${styles.novidadesFiltersTwoColumns} ${styles.novidadesFiltersCollapsibleGrid}`}>
+                          {ROOT_PRODUCTS_COLOR_OPTIONS_HIDDEN.map((item) => (
+                            <Link key={item.href} href={item.href} className={styles.novidadesFiltersOption} scroll={false} prefetch>
+                              <span
+                                className={styles.novidadesFiltersColorDot}
+                                aria-hidden="true"
+                                style={{ backgroundColor: item.color }}
+                              />
+                              <span className={styles.novidadesFiltersOptionLabel}>{sanitizeDisplayText(item.label)}</span>
+                            </Link>
+                          ))}
+                        </div>
+                      </details>
+                    </div>
+                  </section>
+
+                  <section className={styles.novidadesFiltersSection}>
+                    <h3 className={styles.novidadesFiltersSectionTitle}>Material</h3>
+                    <div className={styles.novidadesFiltersExpandableBlock}>
+                      <div className={styles.novidadesFiltersTwoColumns}>
+                        {ROOT_PRODUCTS_MATERIAL_OPTIONS_VISIBLE.map((item) => (
+                          <Link key={item.href} href={item.href} className={styles.novidadesFiltersOption} scroll={false} prefetch>
+                            <span className={styles.novidadesFiltersOptionLabel}>{sanitizeDisplayText(item.label)}</span>
+                          </Link>
+                        ))}
+                      </div>
+                      <details className={styles.novidadesFiltersMoreGroup}>
+                        <summary className={styles.novidadesFiltersMoreToggle}>
+                          <span className={styles.novidadesFiltersMoreTextMore}>Exibir mais</span>
+                          <span className={styles.novidadesFiltersMoreTextLess}>Exibir menos</span>
+                        </summary>
+                        <div className={`${styles.novidadesFiltersTwoColumns} ${styles.novidadesFiltersCollapsibleGrid}`}>
+                          {ROOT_PRODUCTS_MATERIAL_OPTIONS_HIDDEN.map((item) => (
+                            <Link key={item.href} href={item.href} className={styles.novidadesFiltersOption} scroll={false} prefetch>
+                              <span className={styles.novidadesFiltersOptionLabel}>{sanitizeDisplayText(item.label)}</span>
+                            </Link>
+                          ))}
+                        </div>
+                      </details>
+                    </div>
+                  </section>
+
+                  <section className={styles.novidadesFiltersSection}>
+                    <h3 className={styles.novidadesFiltersSectionTitle}>Tamanho</h3>
+                    <div className={styles.novidadesFiltersSizesWrap}>
+                      {ROOT_PRODUCTS_SIZE_OPTIONS_APPAREL.map((size) => (
+                        <Link key={size} href={`/products?n=e&sz=${encodeURIComponent(size)}&fp=1`} className={styles.novidadesFiltersSizeChip} scroll={false} prefetch>
+                          {size}
+                        </Link>
+                      ))}
+                      <span className={styles.novidadesFiltersSizeDivider}>|</span>
+                      {ROOT_PRODUCTS_SIZE_OPTIONS_NUMERIC.map((size) => (
+                        <Link key={size} href={`/products?n=e&sz=${encodeURIComponent(size)}&fp=1`} className={styles.novidadesFiltersSizeChip} scroll={false} prefetch>
+                          {size}
+                        </Link>
+                      ))}
+                    </div>
+                  </section>
+                </div>
+              </div>
+            </div>
+          </div>
+        ) : typeof resultsCount === "number" ? (
+          <div className={styles.novidadesActionsRight}>
+            <span className={styles.novidadesResultsCount}>
+              {resultsCount} {resultsCount === 1 ? "peça" : "peças"}
+            </span>
+          </div>
+        ) : null}
+      </div>
+    </section>
+  );
+}
+
+function resolveSortPatchFromLabel(label: string): string | null {
+  const normalized = normalizeText(label);
+  if (!normalized || normalized === "ordenacao") return null;
+  if (normalized.includes("vendidos")) return "best_sellers";
+  if (normalized.includes("recentes")) return "newest";
+  if (normalized.includes("decrescente")) return "price_desc";
+  if (normalized.includes("crescente")) return "price_asc";
+  return null;
+}
+
+function buildExclusiveSuggestionFallbackCards(products: ExtendedProduct[]): ExclusiveSuggestionFallbackCard[] {
+  const ranked = sortProducts(products, "best_sellers");
+  const dedupe = new Set<string>();
+
+  return ranked
+    .map((product) => {
+      const id = String(product.sku || product.id || "").trim();
+      if (!id || dedupe.has(id)) return null;
+      dedupe.add(id);
+      const imagePair = buildHoverImagePair(product);
+      const href = String(product.href || "").trim().startsWith("/")
+        ? String(product.href || "").trim()
+        : `/product/${encodeURIComponent(String(product.id || id).trim())}`;
+      return {
+        id,
+        name: sanitizeDisplayText(product.name) || id,
+        image: imagePair.primary || "/images/placeholderreal.webp",
+        href,
+      } satisfies ExclusiveSuggestionFallbackCard;
+    })
+    .filter((entry): entry is ExclusiveSuggestionFallbackCard => Boolean(entry));
+}
+
+function renderProductsSearchSidebar(
+  params: ProductsSearchParams,
+  collectionOptions: string[],
+  colorOptions: string[],
+  sizeOptions: string[],
+  materialOptions: string[],
+  collectionAvailability: Map<string, boolean>,
+  colorAvailability: Map<string, boolean>,
+  materialAvailability: Map<string, boolean>,
+  sizeAvailability: Map<string, boolean>,
+  exclusiveSuggestions: {
+    query: string;
+    contextHint: string;
+    fallbackCards: ExclusiveSuggestionFallbackCard[];
+  }
+) {
+  const activeGender = normalizeText(params.gender);
+  const masculineHref =
+    activeGender === "masculino" ? buildProductsHref(params, { gender: null }) : buildProductsHref(params, { gender: "Masculino" });
+  const feminineHref =
+    activeGender === "feminino" ? buildProductsHref(params, { gender: null }) : buildProductsHref(params, { gender: "Feminino" });
+  const activeSort = normalizeSortParam(params.sort);
+  const activeCollections = parseMultiSelectParam(params.collection);
+  const activeColors = parseMultiSelectParam(params.color);
+  const activeMaterials = parseMultiSelectParam(params.material);
+  const activeSizes = parseMultiSelectParam(params.size);
+  const activeCollectionsSet = new Set(activeCollections.map((entry) => normalizeText(entry)));
+  const activeColorsSet = new Set(activeColors.map((entry) => normalizeText(entry)));
+  const activeMaterialsSet = new Set(activeMaterials.map((entry) => normalizeText(entry)));
+  const activeSizesSet = new Set(activeSizes.map((entry) => normalizeText(entry)));
+  const renderSelectedMark = () => (
+    <span className={styles.novidadesFiltersSelectedMark} aria-hidden="true">
+      <img src="/images/logo-tsebi.png" alt="" className={styles.novidadesFiltersSelectedLogo} />
+      <svg viewBox="0 0 12 12" className={styles.novidadesFiltersSelectedTick}>
+        <path d="M2.2 6.2 4.8 8.8 9.8 3.8" />
+      </svg>
+    </span>
+  );
+
+  return (
+    <div className={styles.productsSearchSidebarSlot}>
+      <aside className={styles.productsSearchSidebar}>
+        <div className={styles.productsSearchGenderToggle}>
+          <Link
+            href={masculineHref}
+            className={`${styles.productsSearchGenderChip} ${activeGender === "masculino" ? styles.productsSearchGenderChipActive : ""}`}
+            scroll={false}
+            prefetch
+          >
+            Homem
+          </Link>
+          <Link
+            href={feminineHref}
+            className={`${styles.productsSearchGenderChip} ${activeGender === "feminino" ? styles.productsSearchGenderChipActive : ""}`}
+            scroll={false}
+            prefetch
+          >
+            Mulher
+          </Link>
+        </div>
+
+        <ExclusiveSuggestions
+          query={exclusiveSuggestions.query}
+          contextHint={exclusiveSuggestions.contextHint}
+          fallbackCards={exclusiveSuggestions.fallbackCards}
+        />
+
+        <details className={styles.productsSearchSidebarGroup}>
+          <summary className={styles.productsSearchSidebarSummary}>Ordenar por</summary>
+          <div className={styles.productsSearchSidebarBody}>
+            {ROOT_PRODUCTS_SORT_LINKS.map((item) => {
+              const sortPatch = resolveSortPatchFromLabel(item.label);
+              if (!sortPatch) return null;
+              const isActive = sortPatch === activeSort;
+              return (
+                <Link
+                  key={item.label}
+                  href={buildProductsHref(params, { sort: sortPatch })}
+                  className={`${styles.productsSearchSidebarOption} ${isActive ? styles.productsSearchSidebarOptionActive : ""}`}
+                  scroll={false}
+                  prefetch
+                >
+                  {sanitizeDisplayText(item.label)}
+                  {isActive ? renderSelectedMark() : null}
+                </Link>
+              );
+            })}
+          </div>
+        </details>
+
+        <details className={styles.productsSearchSidebarGroup}>
+          <summary className={styles.productsSearchSidebarSummary}>Coleção</summary>
+          <div className={`${styles.productsSearchSidebarBody} ${styles.productsSearchSidebarBodyInline}`}>
+            {collectionOptions.map((collectionOption) => {
+              const isActive = activeCollectionsSet.has(normalizeText(collectionOption));
+              const isUnavailable = !isActive && !collectionAvailability.get(normalizeText(collectionOption));
+              const optionClassName = `${styles.productsSearchSidebarOption} ${isActive ? styles.productsSearchSidebarOptionActive : ""} ${isUnavailable ? styles.productsSearchSidebarOptionUnavailable : ""}`;
+              if (isUnavailable) {
+                return (
+                  <span key={collectionOption} className={optionClassName} aria-disabled="true">
+                    {sanitizeDisplayText(collectionOption)}
+                    {isActive ? renderSelectedMark() : null}
+                  </span>
+                );
+              }
+              return (
+                <Link
+                  key={collectionOption}
+                  href={buildProductsHref(params, {
+                    collection: toggleMultiSelectOption(activeCollections, collectionOption),
+                  })}
+                  className={optionClassName}
+                  scroll={false}
+                  prefetch
+                >
+                  {sanitizeDisplayText(collectionOption)}
+                  {isActive ? renderSelectedMark() : null}
+                </Link>
+              );
+            })}
+          </div>
+        </details>
+
+        <details className={styles.productsSearchSidebarGroup}>
+          <summary className={styles.productsSearchSidebarSummary}>Cor</summary>
+          <div className={styles.productsSearchSidebarBody}>
+            {colorOptions.map((colorOption) => {
+              const isActive = activeColorsSet.has(normalizeText(colorOption));
+              const isUnavailable = !isActive && !colorAvailability.get(normalizeText(colorOption));
+              const optionClassName = `${styles.productsSearchSidebarOption} ${styles.productsSearchSidebarColorOption} ${isActive ? styles.productsSearchSidebarOptionActive : ""} ${isUnavailable ? styles.productsSearchSidebarOptionUnavailable : ""}`;
+              if (isUnavailable) {
+                return (
+                  <span key={colorOption} className={optionClassName} aria-disabled="true">
+                    <span
+                      className={styles.productsSearchSidebarColorDot}
+                      aria-hidden="true"
+                      style={{ backgroundColor: resolveColorSwatch(colorOption) }}
+                    />
+                    <span>{sanitizeDisplayText(colorOption)}</span>
+                    {isActive ? renderSelectedMark() : null}
+                  </span>
+                );
+              }
+              return (
+                <Link
+                  key={colorOption}
+                  href={buildProductsHref(params, {
+                    color: toggleMultiSelectOption(activeColors, colorOption),
+                  })}
+                  className={optionClassName}
+                  scroll={false}
+                  prefetch
+                >
+                  <span
+                    className={styles.productsSearchSidebarColorDot}
+                    aria-hidden="true"
+                    style={{ backgroundColor: resolveColorSwatch(colorOption) }}
+                  />
+                  <span>{sanitizeDisplayText(colorOption)}</span>
+                  {isActive ? renderSelectedMark() : null}
+                </Link>
+              );
+            })}
+          </div>
+        </details>
+
+        {materialOptions.length > 0 ? (
+          <details className={styles.productsSearchSidebarGroup}>
+            <summary className={styles.productsSearchSidebarSummary}>Material</summary>
+            <div className={styles.productsSearchSidebarBody}>
+              {materialOptions.map((material) => {
+                const isActive = activeMaterialsSet.has(normalizeText(material));
+                const isUnavailable = !isActive && !materialAvailability.get(normalizeText(material));
+                const optionClassName = `${styles.productsSearchSidebarOption} ${isActive ? styles.productsSearchSidebarOptionActive : ""} ${isUnavailable ? styles.productsSearchSidebarOptionUnavailable : ""}`;
+                if (isUnavailable) {
+                  return (
+                    <span key={material} className={optionClassName} aria-disabled="true">
+                      {sanitizeDisplayText(material)}
+                      {isActive ? renderSelectedMark() : null}
+                    </span>
+                  );
+                }
+                return (
+                  <Link
+                    key={material}
+                    href={buildProductsHref(params, {
+                      material: toggleMultiSelectOption(activeMaterials, material),
+                    })}
+                    className={optionClassName}
+                    scroll={false}
+                    prefetch
+                  >
+                    {sanitizeDisplayText(material)}
+                    {isActive ? renderSelectedMark() : null}
+                  </Link>
+                );
+              })}
+            </div>
+          </details>
+        ) : null}
+
+        <details className={styles.productsSearchSidebarGroup}>
+          <summary className={styles.productsSearchSidebarSummary}>Tamanho</summary>
+          <div className={styles.productsSearchSidebarBody}>
+            {sizeOptions.map((size) => {
+              const isActive = activeSizesSet.has(normalizeText(size));
+              const isUnavailable = !isActive && !sizeAvailability.get(normalizeText(size));
+              const optionClassName = `${styles.productsSearchSidebarOption} ${isActive ? styles.productsSearchSidebarOptionActive : ""} ${isUnavailable ? styles.productsSearchSidebarOptionUnavailable : ""}`;
+              if (isUnavailable) {
+                return (
+                  <span key={size} className={optionClassName} aria-disabled="true">
+                    {sanitizeDisplayText(size)}
+                    {isActive ? renderSelectedMark() : null}
+                  </span>
+                );
+              }
+              return (
+                <Link
+                  key={size}
+                  href={buildProductsHref(params, {
+                    size: toggleMultiSelectOption(activeSizes, size),
+                  })}
+                  className={optionClassName}
+                  scroll={false}
+                  prefetch
+                >
+                  {sanitizeDisplayText(size)}
+                  {isActive ? renderSelectedMark() : null}
+                </Link>
+              );
+            })}
+          </div>
+        </details>
+      </aside>
+    </div>
+  );
+}
+
 function includesNormalized(haystack: unknown, needle: string): boolean {
   return normalizeText(haystack).includes(needle);
+}
+
+const FUZZY_STOP_WORDS = new Set([
+  "de",
+  "da",
+  "do",
+  "das",
+  "dos",
+  "e",
+  "em",
+  "com",
+  "para",
+  "a",
+  "o",
+  "as",
+  "os",
+]);
+
+const QUERY_SYNONYM_GROUPS = [
+  ["camisa", "camiseta", "tshirt", "t-shirt", "blusa", "blusao", "top"],
+  ["calca", "calcas", "trouser", "trousers", "pants", "pant", "jeans", "pantalona"],
+  ["jaqueta", "jaquetas", "casaco", "casacos", "blazer", "blazers", "outerwear"],
+  ["bolsa", "bolsas", "bag", "bags"],
+  ["carteira", "carteiras", "wallet", "wallets"],
+  ["cinto", "cintos", "belt", "belts"],
+  ["vestido", "vestidos", "dress", "dresses"],
+  ["saia", "saias", "skirt", "skirts"],
+  ["masculino", "homem", "masc", "male", "men", "man"],
+  ["feminino", "mulher", "fem", "female", "women", "woman"],
+] as const;
+
+const GENDER_MASC_TERMS = ["masculino", "homem", "masc", "male", "men", "man"] as const;
+const GENDER_FEM_TERMS = ["feminino", "mulher", "fem", "female", "women", "woman"] as const;
+
+function tokenizeNormalized(value: unknown): string[] {
+  const normalized = normalizeText(value).replace(/[^a-z0-9\s]/g, " ");
+  if (!normalized) return [];
+  return normalized
+    .split(/\s+/)
+    .map((token) => token.trim())
+    .filter(Boolean);
+}
+
+function normalizeTokenForMatch(token: string): string {
+  let value = normalizeText(token).replace(/[^a-z0-9]/g, "");
+  if (value.endsWith("s") && value.length > 4) value = value.slice(0, -1);
+  if (value.endsWith("es") && value.length > 5) value = value.slice(0, -2);
+  return value;
+}
+
+function levenshteinWithin(a: string, b: string, maxDistance: number): number {
+  if (a === b) return 0;
+  const alen = a.length;
+  const blen = b.length;
+  if (!alen) return blen;
+  if (!blen) return alen;
+  if (Math.abs(alen - blen) > maxDistance) return maxDistance + 1;
+
+  let prev = Array.from({ length: blen + 1 }, (_, index) => index);
+  for (let i = 1; i <= alen; i += 1) {
+    const curr = [i];
+    let rowMin = curr[0];
+    for (let j = 1; j <= blen; j += 1) {
+      const cost = a[i - 1] === b[j - 1] ? 0 : 1;
+      const value = Math.min(
+        prev[j] + 1,
+        curr[j - 1] + 1,
+        prev[j - 1] + cost
+      );
+      curr.push(value);
+      if (value < rowMin) rowMin = value;
+    }
+    if (rowMin > maxDistance) return maxDistance + 1;
+    prev = curr;
+  }
+
+  return prev[blen];
+}
+
+function tokenMaxDistance(token: string): number {
+  if (token.length <= 4) return 1;
+  if (token.length <= 8) return 2;
+  return 3;
+}
+
+function tokenIsMatch(queryTokenRaw: string, candidateTokenRaw: string): boolean {
+  const queryToken = normalizeTokenForMatch(queryTokenRaw);
+  const candidateToken = normalizeTokenForMatch(candidateTokenRaw);
+  if (!queryToken || !candidateToken) return false;
+  if (queryToken === candidateToken) return true;
+
+  if (queryToken.length >= 3 && candidateToken.includes(queryToken)) return true;
+  if (candidateToken.length >= 3 && queryToken.includes(candidateToken)) return true;
+
+  const limit = Math.min(tokenMaxDistance(queryToken), tokenMaxDistance(candidateToken));
+  return levenshteinWithin(queryToken, candidateToken, limit) <= limit;
+}
+
+function tokenSimilarityScore(queryTokenRaw: string, candidateTokenRaw: string): number {
+  const queryToken = normalizeTokenForMatch(queryTokenRaw);
+  const candidateToken = normalizeTokenForMatch(candidateTokenRaw);
+  if (!queryToken || !candidateToken) return 0;
+  if (queryToken === candidateToken) return 1;
+  if (candidateToken.startsWith(queryToken) || queryToken.startsWith(candidateToken)) return 0.95;
+  if (candidateToken.includes(queryToken) || queryToken.includes(candidateToken)) return 0.88;
+
+  const limit = Math.min(tokenMaxDistance(queryToken), tokenMaxDistance(candidateToken));
+  const distance = levenshteinWithin(queryToken, candidateToken, limit);
+  if (distance > limit) return 0;
+  return 0.6 + ((limit - distance) / Math.max(1, limit)) * 0.25;
+}
+
+function buildSynonymMap(): Map<string, string[]> {
+  const map = new Map<string, string[]>();
+  QUERY_SYNONYM_GROUPS.forEach((group) => {
+    const normalizedGroup = group.map((entry) => normalizeTokenForMatch(entry)).filter(Boolean);
+    normalizedGroup.forEach((entry) => {
+      map.set(entry, normalizedGroup);
+    });
+  });
+  return map;
+}
+
+const QUERY_SYNONYM_MAP = buildSynonymMap();
+
+function expandQueryToken(token: string): string[] {
+  const normalized = normalizeTokenForMatch(token);
+  if (!normalized) return [];
+  const group = QUERY_SYNONYM_MAP.get(normalized);
+  return group ? Array.from(new Set([normalized, ...group])) : [normalized];
+}
+
+function fuzzyMatchQueryAgainstSearchable(queryValue: string, searchableEntries: unknown[]): boolean {
+  const queryTokens = tokenizeNormalized(queryValue)
+    .map((token) => normalizeTokenForMatch(token))
+    .filter((token) => token.length >= 2 && !FUZZY_STOP_WORDS.has(token));
+
+  if (queryTokens.length === 0) return true;
+
+  const searchableTokens = searchableEntries
+    .flatMap((entry) => tokenizeNormalized(entry))
+    .map((token) => normalizeTokenForMatch(token))
+    .filter(Boolean);
+
+  if (searchableTokens.length === 0) return false;
+
+  return queryTokens.every((queryToken) => {
+    const expanded = expandQueryToken(queryToken);
+    return expanded.some((variant) => searchableTokens.some((candidate) => tokenIsMatch(variant, candidate)));
+  });
+}
+
+function inferGenderFromFuzzyQuery(queryValue: string): "" | "masculino" | "feminino" {
+  const queryTokens = tokenizeNormalized(queryValue)
+    .map((token) => normalizeTokenForMatch(token))
+    .filter(Boolean);
+  if (queryTokens.length === 0) return "";
+
+  const hasMasc = queryTokens.some((queryToken) =>
+    GENDER_MASC_TERMS.some((candidate) => tokenIsMatch(queryToken, candidate))
+  );
+  const hasFem = queryTokens.some((queryToken) =>
+    GENDER_FEM_TERMS.some((candidate) => tokenIsMatch(queryToken, candidate))
+  );
+  if (hasMasc && hasFem) return "";
+  if (hasMasc) return "masculino";
+  if (hasFem) return "feminino";
+  return "";
+}
+
+function extractQueryTokensForRanking(queryValue: string): string[] {
+  return tokenizeNormalized(queryValue)
+    .map((token) => normalizeTokenForMatch(token))
+    .filter((token) => token.length >= 2 && !FUZZY_STOP_WORDS.has(token));
+}
+
+function computeProductFuzzyScore(product: ExtendedProduct, queryValue: string): number {
+  const queryTokens = extractQueryTokensForRanking(queryValue);
+  if (queryTokens.length === 0) return 0;
+
+  const fields: Array<{ values: unknown[]; weight: number }> = [
+    { values: [product.name], weight: 6 },
+    { values: [product.subcategory], weight: 5 },
+    { values: [product.category], weight: 4 },
+    { values: [product.material], weight: 3 },
+    { values: [product.collection, ...(Array.isArray(product.collections) ? product.collections : [])], weight: 2.5 },
+    { values: [product.gender], weight: 2 },
+    { values: [product.sku], weight: 2 },
+    { values: Array.isArray(product.tags) ? product.tags : [], weight: 3 },
+  ];
+
+  const tokenFields = fields
+    .map((field) => ({
+      weight: field.weight,
+      tokens: field.values.flatMap((entry) => tokenizeNormalized(entry)).map((token) => normalizeTokenForMatch(token)).filter(Boolean),
+    }))
+    .filter((entry) => entry.tokens.length > 0);
+
+  let score = 0;
+  for (const queryToken of queryTokens) {
+    const expanded = expandQueryToken(queryToken);
+    let best = 0;
+    for (const field of tokenFields) {
+      for (const variant of expanded) {
+        for (const candidateToken of field.tokens) {
+          const similarity = tokenSimilarityScore(variant, candidateToken);
+          if (!similarity) continue;
+          const weighted = similarity * field.weight;
+          if (weighted > best) best = weighted;
+        }
+      }
+    }
+    score += best;
+  }
+
+  const normalizedQuery = normalizeText(queryValue);
+  const normalizedName = normalizeText(product.name);
+  if (normalizedQuery && normalizedName === normalizedQuery) score += 20;
+  else if (normalizedQuery && normalizedName.startsWith(normalizedQuery)) score += 12;
+  else if (normalizedQuery && normalizedName.includes(normalizedQuery)) score += 8;
+
+  if (Boolean(product.isBestSeller)) score += 0.35;
+  if (Boolean(product.isNew)) score += 0.25;
+  return score;
 }
 
 function matchesArrayField(values: unknown, needle: string): boolean {
@@ -272,6 +1104,8 @@ function buildPageTitle(params: ProductsSearchParams): string {
   const category = String(params.category || "").trim();
   if (view === "novidades-para-ele") return category ? `Novidades para ele - ${category}` : "Novidades para ele";
   if (view === "novidades-para-ela") return category ? `Novidades para ela - ${category}` : "Novidades para ela";
+  if (view === "presentes-para-ele") return category ? `Presentes para ele - ${category}` : "Presentes para ele";
+  if (view === "presentes-para-ela") return category ? `Presentes para ela - ${category}` : "Presentes para ela";
 
   const isNew = parseBooleanParam(params.isNew);
   const gender = normalizeText(params.gender);
@@ -285,22 +1119,38 @@ function buildPageTitle(params: ProductsSearchParams): string {
 }
 
 function resolveCommercialView(params: ProductsSearchParams): ProductsSearchParams {
-  const shortView = normalizeText(params.n);
+  const shortNovidades = normalizeText(params.n);
+  const shortPresentes = normalizeText(params.p);
   const resolvedView =
-    shortView === "e" || shortView === "ele" || shortView === "m" || shortView === "masculino"
+    shortNovidades === "e" || shortNovidades === "ele" || shortNovidades === "m" || shortNovidades === "masculino"
       ? "novidades-para-ele"
-      : shortView === "a" || shortView === "ela" || shortView === "f" || shortView === "feminino"
+      : shortNovidades === "a" || shortNovidades === "ela" || shortNovidades === "f" || shortNovidades === "feminino"
         ? "novidades-para-ela"
-        : params.view;
+        : shortPresentes === "e" || shortPresentes === "ele" || shortPresentes === "m" || shortPresentes === "masculino"
+          ? "presentes-para-ele"
+          : shortPresentes === "a" || shortPresentes === "ela" || shortPresentes === "f" || shortPresentes === "feminino"
+            ? "presentes-para-ela"
+            : params.view;
   const view = normalizeText(resolvedView);
-  const resolvedCategory = resolveNovidadesCategoryParam(params.category ?? params.c);
+  const rawResolvedCategory = resolveNovidadesCategoryParam(params.category ?? params.c);
+  const rawResolvedSubcategory = String(params.subcategory || "").trim();
+  const normalizedCategory = normalizeText(rawResolvedCategory).replace(/\s+/g, "-");
+  const normalizedSubcategory = normalizeText(rawResolvedSubcategory).replace(/\s+/g, "-");
+  const mappedAccessorySubcategoryFromCategory = ACCESSORIES_SUBCATEGORY_ALIASES[normalizedCategory] || "";
+  const mappedAccessorySubcategoryFromSubcategory = ACCESSORIES_SUBCATEGORY_ALIASES[normalizedSubcategory] || "";
+  const mappedAccessoryCategory = ACCESSORIES_CATEGORY_ALIASES[normalizedCategory] || "";
+  const hasAccessorySubcategory = Boolean(mappedAccessorySubcategoryFromCategory || mappedAccessorySubcategoryFromSubcategory);
+  const resolvedCategory = mappedAccessoryCategory || (hasAccessorySubcategory ? "Accessories" : rawResolvedCategory);
   const resolvedColor = String(params.color ?? params.co ?? "").trim();
   const resolvedSize = String(params.size ?? params.sz ?? "").trim();
   const resolvedMaterial = String(params.material ?? params.mt ?? "").trim();
+  const resolvedSubcategory =
+    mappedAccessorySubcategoryFromSubcategory || rawResolvedSubcategory || mappedAccessorySubcategoryFromCategory;
   const baseParams = {
     ...params,
     view: resolvedView,
     category: resolvedCategory,
+    subcategory: resolvedSubcategory,
     color: resolvedColor,
     size: resolvedSize,
     material: resolvedMaterial,
@@ -312,6 +1162,14 @@ function resolveCommercialView(params: ProductsSearchParams): ProductsSearchPara
 
   if (view === "novidades-para-ela") {
     return { ...baseParams, isNew: params.isNew ?? "true", gender: params.gender ?? "Feminino" };
+  }
+
+  if (view === "presentes-para-ele") {
+    return { ...baseParams, gender: params.gender ?? "Masculino" };
+  }
+
+  if (view === "presentes-para-ela") {
+    return { ...baseParams, gender: params.gender ?? "Feminino" };
   }
 
   return baseParams;
@@ -333,6 +1191,8 @@ function resolveHeroConfig(params: ProductsSearchParams): HeroConfig | null {
   const view = normalizeText(params.view);
   const normalizedCategory = normalizeText(params.category);
   const normalizedGender = normalizeText(params.gender);
+  const isGenderCatalogView =
+    !view && (normalizedGender === "masculino" || normalizedGender === "feminino");
   const categoryHeroEntry =
     normalizedCategory && (NOVIDADES_CATEGORY_HERO_MAP[normalizedCategory] || null);
 
@@ -362,6 +1222,41 @@ function resolveHeroConfig(params: ProductsSearchParams): HeroConfig | null {
     };
   }
 
+  if (view === "presentes-para-ele" || view === "presentes-para-ela") {
+    return {
+      mediaUrl: "https://media.tsebi.com.br/generation-57e63375-48cf-4bbf-a7b9-22ce3f1b5a6a.png",
+      mediaType: "image",
+      rotate180: false,
+      objectPosition: "center 28%",
+    };
+  }
+
+  if (isGenderCatalogView && categoryHeroEntry) {
+    return {
+      mediaUrl:
+        normalizedGender === "masculino" ? categoryHeroEntry.mediaUrlMasculino : categoryHeroEntry.mediaUrlFeminino,
+      mediaType: "image",
+      objectPosition: categoryHeroEntry.objectPosition ?? "center center",
+    };
+  }
+
+  if (isGenderCatalogView) {
+    if (normalizedGender === "feminino") {
+      return {
+        mediaUrl: "https://media.tsebi.com.br/generation-8974f666-dacc-437b-a535-77e350085a50.png",
+        mediaType: "image",
+        objectPosition: "center 22%",
+      };
+    }
+
+    return {
+      mediaUrl: "https://media.tsebi.com.br/generation-57e63375-48cf-4bbf-a7b9-22ce3f1b5a6a.png",
+      mediaType: "image",
+      rotate180: false,
+      objectPosition: "center 28%",
+    };
+  }
+
   return null;
 }
 
@@ -369,10 +1264,27 @@ function resolveNovidadesFilterGroups(params: ProductsSearchParams): NovidadesFi
   const view = normalizeText(params.view);
   if (view === "novidades-para-ele") return NOVIDADES_FILTERS_MASCULINO;
   if (view === "novidades-para-ela") return NOVIDADES_FILTERS_FEMININO;
+  if (view === "presentes-para-ele") return NOVIDADES_FILTERS_MASCULINO;
+  if (view === "presentes-para-ela") return NOVIDADES_FILTERS_FEMININO;
 
   const gender = normalizeText(params.gender);
   if (gender === "masculino") return NOVIDADES_FILTERS_MASCULINO;
   if (gender === "feminino") return NOVIDADES_FILTERS_FEMININO;
+
+  const category = normalizeText(params.category).replace(/\s+/g, "-");
+  const subcategory = normalizeText(params.subcategory).replace(/\s+/g, "-");
+  const accessoriesContext =
+    Boolean(ACCESSORIES_CATEGORY_ALIASES[category]) || Boolean(ACCESSORIES_SUBCATEGORY_ALIASES[category]) || Boolean(ACCESSORIES_SUBCATEGORY_ALIASES[subcategory]);
+  if (accessoriesContext) {
+    return [
+      {
+        label: "Bolsas e Acessórios",
+        category: "Accessories",
+        subcategories: ACCESSORIES_TAB_SUBCATEGORIES,
+      },
+    ];
+  }
+
   return [];
 }
 
@@ -396,8 +1308,21 @@ function parseDateValue(value: unknown): number {
   return Number.isFinite(parsed) ? parsed : 0;
 }
 
-function sortProducts(products: ExtendedProduct[], sortValue: NovidadesSortValue): ExtendedProduct[] {
-  if (!sortValue) return products;
+function sortProducts(products: ExtendedProduct[], sortValue: NovidadesSortValue, queryValue = ""): ExtendedProduct[] {
+  if (!sortValue) {
+    const normalizedQuery = normalizeText(queryValue);
+    if (!normalizedQuery) return products;
+
+    const sortedByRelevance = [...products];
+    sortedByRelevance.sort((a, b) => {
+      const scoreDiff = computeProductFuzzyScore(b, queryValue) - computeProductFuzzyScore(a, queryValue);
+      if (scoreDiff !== 0) return scoreDiff;
+      const bestSellerDiff = Number(Boolean(b.isBestSeller)) - Number(Boolean(a.isBestSeller));
+      if (bestSellerDiff !== 0) return bestSellerDiff;
+      return parseDateValue(b.updatedAt || b.createdAt) - parseDateValue(a.updatedAt || a.createdAt);
+    });
+    return sortedByRelevance;
+  }
 
   const sorted = [...products];
 
@@ -434,13 +1359,19 @@ function buildProductsHref(
 ): string {
   const search = new URLSearchParams();
   const nextView = String((patch.view ?? params.view) || "").trim();
-  const isNovidadesView = ["novidades-para-ele", "novidades-para-ela"].includes(normalizeText(nextView));
+  const normalizedNextView = normalizeText(nextView);
+  const isNovidadesView = ["novidades-para-ele", "novidades-para-ela"].includes(normalizedNextView);
+  const isPresentesView = ["presentes-para-ele", "presentes-para-ela"].includes(normalizedNextView);
   if (isNovidadesView) {
-    search.set("n", normalizeText(nextView) === "novidades-para-ele" ? "e" : "a");
+    search.set("n", normalizedNextView === "novidades-para-ele" ? "e" : "a");
+  }
+  if (isPresentesView) {
+    search.set("p", normalizedNextView === "presentes-para-ele" ? "e" : "a");
   }
 
   NOVIDADES_PARAM_KEYS.forEach((key) => {
     if (isNovidadesView && ["view", "gender", "isNew", "isBestSeller", "isFeatured"].includes(key)) return;
+    if (isPresentesView && ["view", "gender"].includes(key)) return;
 
     const incoming = patch[key];
     if (incoming === null) return;
@@ -522,16 +1453,6 @@ function toggleMultiSelectOption(currentValues: string[], option: string): strin
   return serializeMultiSelectParam(nextValues);
 }
 
-function addMultiSelectOption(currentValues: string[], option: string): string | null {
-  const optionSanitized = sanitizeDisplayText(option).trim();
-  const optionNormalized = normalizeText(optionSanitized);
-  if (!optionSanitized || !optionNormalized) return serializeMultiSelectParam(currentValues);
-
-  const exists = currentValues.some((entry) => normalizeText(entry) === optionNormalized);
-  const nextValues = exists ? currentValues : [...currentValues, optionSanitized];
-  return serializeMultiSelectParam(nextValues);
-}
-
 type AvailableFilters = {
   collections: string[];
   colors: string[];
@@ -554,7 +1475,7 @@ const COLOR_SWATCH_MAP: Record<string, string> = {
   "azul-marinho": "#1b2f5d",
   vermelho: "#b21c1c",
   vinho: "#722F37",
-  bordô: "#6d1f2c",
+  "bordo-accent": "#6d1f2c",
   bordo: "#6d1f2c",
   rosa: "#e08fb0",
   roxo: "#6c4ec7",
@@ -580,6 +1501,79 @@ function normalizeOptionValues(values: string[]): string[] {
 
 function sortOptionValues(values: string[]): string[] {
   return [...values].sort((a, b) => a.localeCompare(b, "pt-BR", { sensitivity: "base", numeric: true }));
+}
+
+type VariantStockEntry = {
+  color: string;
+  size: string;
+  qty: number;
+};
+
+function parseVariantStockEntries(product: ExtendedProduct): VariantStockEntry[] {
+  const map =
+    product?.variantStock && typeof product.variantStock === "object" && !Array.isArray(product.variantStock)
+      ? product.variantStock
+      : {};
+
+  return Object.entries(map)
+    .map(([key, value]) => {
+      const parts = String(key || "").split("__");
+      const color = sanitizeDisplayText(parts[0] || "");
+      const size = sanitizeDisplayText(parts[1] || "");
+      const qty = Math.max(0, Number(value || 0));
+      if (!color || !size) return null;
+      return { color, size, qty };
+    })
+    .filter((entry): entry is VariantStockEntry => Boolean(entry));
+}
+
+function productHasAnyStock(product: ExtendedProduct): boolean {
+  const entries = parseVariantStockEntries(product);
+  if (entries.length > 0) return entries.some((entry) => entry.qty > 0);
+  return Math.max(0, Number(product.stock || 0)) > 0;
+}
+
+function productHasStockForColor(product: ExtendedProduct, colorValue: string): boolean {
+  const target = normalizeText(colorValue);
+  if (!target) return false;
+
+  const entries = parseVariantStockEntries(product);
+  if (entries.length > 0) {
+    return entries.some((entry) => entry.qty > 0 && normalizeText(entry.color) === target);
+  }
+
+  const hasColor = Array.isArray(product.colors) && product.colors.some((entry) => normalizeText(entry) === target);
+  return hasColor && productHasAnyStock(product);
+}
+
+function productHasStockForSize(product: ExtendedProduct, sizeValue: string): boolean {
+  const target = normalizeText(sizeValue);
+  if (!target) return false;
+
+  const entries = parseVariantStockEntries(product);
+  if (entries.length > 0) {
+    return entries.some((entry) => entry.qty > 0 && normalizeText(entry.size) === target);
+  }
+
+  const hasSize = Array.isArray(product.sizes) && product.sizes.some((entry) => normalizeText(entry) === target);
+  return hasSize && productHasAnyStock(product);
+}
+
+function productHasStockForVariant(product: ExtendedProduct, colorValue: string, sizeValue: string): boolean {
+  const targetColor = normalizeText(colorValue);
+  const targetSize = normalizeText(sizeValue);
+  if (!targetColor || !targetSize) return false;
+
+  const entries = parseVariantStockEntries(product);
+  if (entries.length > 0) {
+    return entries.some(
+      (entry) => entry.qty > 0 && normalizeText(entry.color) === targetColor && normalizeText(entry.size) === targetSize
+    );
+  }
+
+  const hasColor = Array.isArray(product.colors) && product.colors.some((entry) => normalizeText(entry) === targetColor);
+  const hasSize = Array.isArray(product.sizes) && product.sizes.some((entry) => normalizeText(entry) === targetSize);
+  return hasColor && hasSize && productHasAnyStock(product);
 }
 
 type OrderedSizeFilters = {
@@ -633,9 +1627,115 @@ function orderSizeFilters(values: string[]): OrderedSizeFilters {
   return { apparel, numeric, others: sortOptionValues(others) };
 }
 
+function isNumericSizeLabel(value: string): boolean {
+  const raw = String(value || "").trim();
+  if (!raw) return false;
+  if (parseSizeNumericValue(raw) !== null) return true;
+  return /^\d+\s*[/\-]\s*\d+$/.test(raw);
+}
+
+function isApparelSizeLabel(value: string): boolean {
+  const normalized = normalizeText(value);
+  return [
+    "pp",
+    "p",
+    "m",
+    "g",
+    "gg",
+    "xg",
+    "xgg",
+    "xxg",
+    "xs",
+    "s",
+    "l",
+    "xl",
+    "xxl",
+    "u",
+    "unico",
+    "único",
+  ].includes(normalized);
+}
+
+type SearchSizeMode = "apparel" | "numeric" | "both";
+
+function inferSearchSizeMode(params: ProductsSearchParams, productsContext: ExtendedProduct[], activeSizes: string[]): SearchSizeMode {
+  const activeSizeMode = (() => {
+    if (activeSizes.length === 0) return null;
+    const hasNumeric = activeSizes.some((entry) => isNumericSizeLabel(entry));
+    const hasApparel = activeSizes.some((entry) => isApparelSizeLabel(entry) || !isNumericSizeLabel(entry));
+    if (hasNumeric && !hasApparel) return "numeric" as const;
+    if (hasApparel && !hasNumeric) return "apparel" as const;
+    return "both" as const;
+  })();
+  if (activeSizeMode) return activeSizeMode;
+
+  const contextText = normalizeText([params.q, params.category, params.subcategory].filter(Boolean).join(" "));
+  const numericKeywords = ["calca", "calça", "jeans", "sapato", "tenis", "tênis", "bota", "sandalia", "sandália", "mocassim", "loafer", "scarpin", "sneaker", "rasteira", "salto"];
+  const apparelKeywords = ["camisa", "camiseta", "vestido", "jaqueta", "casaco", "blazer", "saia", "short", "bermuda", "top", "body", "tricot", "tricô", "macacao", "macacão", "polo"];
+  if (numericKeywords.some((entry) => contextText.includes(normalizeText(entry)))) return "numeric";
+  if (apparelKeywords.some((entry) => contextText.includes(normalizeText(entry)))) return "apparel";
+
+  let numericProducts = 0;
+  let apparelProducts = 0;
+
+  productsContext.forEach((product) => {
+    const sizes = Array.isArray(product.sizes) ? product.sizes.map((entry) => String(entry || "").trim()).filter(Boolean) : [];
+    if (sizes.length === 0) return;
+    const hasNumeric = sizes.some((entry) => isNumericSizeLabel(entry));
+    const hasApparel = sizes.some((entry) => isApparelSizeLabel(entry) || !isNumericSizeLabel(entry));
+    if (hasNumeric) numericProducts += 1;
+    if (hasApparel) apparelProducts += 1;
+  });
+
+  if (numericProducts > 0 && apparelProducts === 0) return "numeric";
+  if (apparelProducts > 0 && numericProducts === 0) return "apparel";
+  if (numericProducts >= apparelProducts * 1.25 && numericProducts > 0) return "numeric";
+  if (apparelProducts >= numericProducts * 1.25 && apparelProducts > 0) return "apparel";
+  return "both";
+}
+
+function buildSearchSidebarSizeOptions(
+  params: ProductsSearchParams,
+  productsContext: ExtendedProduct[],
+  orderedSizes: OrderedSizeFilters,
+  activeSizes: string[]
+): string[] {
+  const mode = inferSearchSizeMode(params, productsContext, activeSizes);
+  const numericOthers = orderedSizes.others.filter((entry) => isNumericSizeLabel(entry));
+  const apparelOthers = orderedSizes.others.filter((entry) => !isNumericSizeLabel(entry));
+  const options =
+    mode === "numeric"
+      ? [...orderedSizes.numeric, ...numericOthers]
+      : mode === "apparel"
+        ? [...orderedSizes.apparel, ...apparelOthers]
+        : [...orderedSizes.apparel, ...apparelOthers, ...orderedSizes.numeric, ...numericOthers];
+
+  const dedupe = new Set<string>();
+  const normalizedOptions: string[] = [];
+  options.forEach((entry) => {
+    const label = sanitizeDisplayText(entry).trim();
+    const normalized = normalizeText(label);
+    if (!label || !normalized || dedupe.has(normalized)) return;
+    dedupe.add(normalized);
+    normalizedOptions.push(label);
+  });
+
+  activeSizes.forEach((entry) => {
+    const label = sanitizeDisplayText(entry).trim();
+    const normalized = normalizeText(label);
+    if (!label || !normalized || dedupe.has(normalized)) return;
+    dedupe.add(normalized);
+    normalizedOptions.push(label);
+  });
+
+  return normalizedOptions;
+}
+
 function getAvailableFilters(products: ExtendedProduct[]): AvailableFilters {
+  const inStockProducts = products.filter((product) => productHasAnyStock(product));
+
   const collections = normalizeOptionValues(
-    products.flatMap((product) => {
+    inStockProducts.flatMap((product) => {
       const entries = [sanitizeDisplayText(product.collection)];
       if (Array.isArray(product.collections)) {
         product.collections.forEach((entry) => entries.push(sanitizeDisplayText(entry)));
@@ -644,11 +1744,19 @@ function getAvailableFilters(products: ExtendedProduct[]): AvailableFilters {
     })
   );
   const colors = normalizeOptionValues(
-    products.flatMap((product) => (Array.isArray(product.colors) ? product.colors.map((item) => sanitizeDisplayText(item)) : []))
+    inStockProducts.flatMap((product) =>
+      (Array.isArray(product.colors) ? product.colors : [])
+        .map((item) => sanitizeDisplayText(item))
+        .filter((color) => productHasStockForColor(product, color))
+    )
   );
-  const materials = normalizeOptionValues(products.map((product) => sanitizeDisplayText(product.material)));
+  const materials = normalizeOptionValues(inStockProducts.map((product) => sanitizeDisplayText(product.material)));
   const sizes = normalizeOptionValues(
-    products.flatMap((product) => (Array.isArray(product.sizes) ? product.sizes.map((item) => sanitizeDisplayText(item)) : []))
+    inStockProducts.flatMap((product) =>
+      (Array.isArray(product.sizes) ? product.sizes : [])
+        .map((item) => sanitizeDisplayText(item))
+        .filter((size) => productHasStockForSize(product, size))
+    )
   );
   return {
     collections: sortOptionValues(collections),
@@ -762,8 +1870,19 @@ function filterProducts(
   params: ProductsSearchParams,
   options: { ignoreAttributeFilters?: boolean } = {}
 ): ExtendedProduct[] {
-  const query = normalizeText(params.q);
+  const rawQuery = sanitizeDisplayText(params.q).trim();
+  const query = normalizeText(rawQuery);
   const gender = normalizeText(params.gender);
+  const inferredGenderFromQuery = !gender ? inferGenderFromFuzzyQuery(rawQuery || query) : "";
+  const queryTokens = tokenizeNormalized(rawQuery || query)
+    .flatMap((token) => expandQueryToken(token))
+    .filter(Boolean);
+  const hasNonGenderToken = queryTokens.some(
+    (token) =>
+      !GENDER_MASC_TERMS.some((candidate) => tokenIsMatch(token, candidate)) &&
+      !GENDER_FEM_TERMS.some((candidate) => tokenIsMatch(token, candidate))
+  );
+  const genderOnlyQuery = Boolean(inferredGenderFromQuery) && query.length > 0 && !hasNonGenderToken;
   const category = normalizeText(params.category);
   const collections = parseMultiSelectParam(params.collection).map((value) => normalizeText(value));
   const subcategory = normalizeText(params.subcategory);
@@ -776,7 +1895,8 @@ function filterProducts(
   const ignoreAttributeFilters = Boolean(options.ignoreAttributeFilters);
 
   return products.filter((product) => {
-    if (gender && normalizeText(product.gender) !== gender) return false;
+    const effectiveGender = gender || inferredGenderFromQuery;
+    if (effectiveGender && normalizeText(product.gender) !== effectiveGender) return false;
     if (category && normalizeText(product.category) !== category) return false;
 
     if (collections.length > 0) {
@@ -791,28 +1911,38 @@ function filterProducts(
     if (subcategory && normalizeText(product.subcategory) !== subcategory) return false;
 
     if (!ignoreAttributeFilters && colors.length > 0) {
-      const hasColorMatch = colors.some((color) => matchesArrayField(product.colors, color));
+      const hasColorMatch = colors.some((color) => productHasStockForColor(product, color));
       if (!hasColorMatch) return false;
     }
 
     if (!ignoreAttributeFilters && sizes.length > 0) {
-      const hasSizeMatch = sizes.some((size) => matchesArrayField(product.sizes, size));
+      const hasSizeMatch = sizes.some((size) => productHasStockForSize(product, size));
       if (!hasSizeMatch) return false;
     }
 
     if (!ignoreAttributeFilters && materials.length > 0) {
-      const hasMaterialMatch = materials.some((material) => normalizeText(product.material) === material);
+      const hasMaterialMatch = materials.some(
+        (material) => normalizeText(product.material) === material && productHasAnyStock(product)
+      );
       if (!hasMaterialMatch) return false;
+    }
+
+    if (!ignoreAttributeFilters && colors.length > 0 && sizes.length > 0) {
+      const hasVariantMatch = colors.some((color) =>
+        sizes.some((size) => productHasStockForVariant(product, color, size))
+      );
+      if (!hasVariantMatch) return false;
     }
 
     if (isNew !== null && Boolean(product.isNew) !== isNew) return false;
     if (isBestSeller !== null && Boolean(product.isBestSeller) !== isBestSeller) return false;
     if (isFeatured !== null && Boolean(product.isFeatured) !== isFeatured) return false;
 
-    if (!query) return true;
+    if (!query || genderOnlyQuery) return true;
 
     const searchable = [
       product.name,
+      product.gender,
       product.category,
       product.collection,
       product.material,
@@ -822,7 +1952,7 @@ function filterProducts(
       ...(Array.isArray(product.collections) ? product.collections : []),
     ];
 
-    return searchable.some((entry) => includesNormalized(entry, query));
+    return fuzzyMatchQueryAgainstSearchable(rawQuery || query, searchable);
   });
 }
 
@@ -832,6 +1962,17 @@ export default async function ProductsPage({
   searchParams: Promise<ProductsSearchParams>;
 }) {
   const rawParams = await searchParams;
+  const hasRawParams = hasAnySearchParam(rawParams);
+  const renderRootToolbarOnly = false;
+  if (!hasRawParams && renderRootToolbarOnly) {
+    return (
+      <main>
+        <BodyClassName className="products-novidades-view" />
+        {renderRootProductsToolbar("novidades-filtros-toggle-products-root")}
+      </main>
+    );
+  }
+
   const params = resolveCommercialView(rawParams);
   const normalizedView = normalizeText(params.view);
   const isNovidadesView = normalizedView === "novidades-para-ele" || normalizedView === "novidades-para-ela";
@@ -850,12 +1991,15 @@ export default async function ProductsPage({
     redirect(buildProductsHref(params, {}));
   }
   const products = (await listProducts()) as ExtendedProduct[];
-  const filteredForFacets = filterProducts(products, params, { ignoreAttributeFilters: true });
-  const filtered = filterProducts(products, params);
+  const inStockProducts = products.filter((product) => productHasAnyStock(product));
+  const allStockFilters = getAvailableFilters(inStockProducts);
+  const filteredForFacets = filterProducts(inStockProducts, params, { ignoreAttributeFilters: true });
   const availableFilters = getAvailableFilters(filteredForFacets);
+  const filtered = filterProducts(products, params);
   const sortValue = normalizeSortParam(params.sort);
-  const sorted = sortProducts(filtered, sortValue);
+  const sorted = sortProducts(filtered, sortValue, String(params.q || ""));
   const title = buildPageTitle(params);
+  const hasSearchQuery = String(params.q || "").trim().length > 0;
   const heroConfig = resolveHeroConfig(params);
   const novidadesFilterGroups = resolveNovidadesFilterGroups(params);
   const activeCategory = normalizeText(params.category);
@@ -871,38 +2015,54 @@ export default async function ProductsPage({
   const selectedFiltersCount =
     activeCollections.length + activeColors.length + activeMaterials.length + activeSizes.length;
   const shouldKeepFiltersOpen = String(params.fp || "").trim() === "1";
-  const visibleColors = availableFilters.colors.slice(0, 4);
-  const hiddenColors = availableFilters.colors.slice(4);
-  const visibleMaterials = availableFilters.materials.slice(0, 4);
-  const hiddenMaterials = availableFilters.materials.slice(4);
-  const orderedSizes = orderSizeFilters(availableFilters.sizes);
+  const collectionOptions = sortOptionValues(normalizeOptionValues([...allStockFilters.collections, ...activeCollections]));
+  const colorOptions = sortOptionValues(normalizeOptionValues([...allStockFilters.colors, ...activeColors]));
+  const materialOptions = sortOptionValues(normalizeOptionValues([...allStockFilters.materials, ...activeMaterials]));
+  const sizeOptions = sortOptionValues(normalizeOptionValues([...allStockFilters.sizes, ...activeSizes]));
+  const visibleColors = colorOptions.slice(0, 4);
+  const hiddenColors = colorOptions.slice(4);
+  const visibleMaterials = materialOptions.slice(0, 4);
+  const hiddenMaterials = materialOptions.slice(4);
+  const orderedSizes = orderSizeFilters(sizeOptions);
   const sizeSequence = [...orderedSizes.apparel, ...orderedSizes.numeric, ...orderedSizes.others];
   const hasSizeSeparator = orderedSizes.apparel.length > 0 && orderedSizes.numeric.length > 0;
   const collectionAvailability = new Map(
-    availableFilters.collections.map((option) => {
-      const nextCollection = addMultiSelectOption(activeCollections, option) ?? "";
-      const hasMatch = filterProducts(products, { ...params, collection: nextCollection }).length > 0;
+    collectionOptions.map((option) => {
+      const hasMatch =
+        filterProducts(inStockProducts, {
+          ...params,
+          collection: sanitizeDisplayText(option).trim(),
+        }).length > 0;
       return [normalizeText(option), hasMatch] as const;
     })
   );
   const colorAvailability = new Map(
-    availableFilters.colors.map((option) => {
-      const nextColor = addMultiSelectOption(activeColors, option) ?? "";
-      const hasMatch = filterProducts(products, { ...params, color: nextColor }).length > 0;
+    colorOptions.map((option) => {
+      const hasMatch =
+        filterProducts(inStockProducts, {
+          ...params,
+          color: sanitizeDisplayText(option).trim(),
+        }).length > 0;
       return [normalizeText(option), hasMatch] as const;
     })
   );
   const materialAvailability = new Map(
-    availableFilters.materials.map((option) => {
-      const nextMaterial = addMultiSelectOption(activeMaterials, option) ?? "";
-      const hasMatch = filterProducts(products, { ...params, material: nextMaterial }).length > 0;
+    materialOptions.map((option) => {
+      const hasMatch =
+        filterProducts(inStockProducts, {
+          ...params,
+          material: sanitizeDisplayText(option).trim(),
+        }).length > 0;
       return [normalizeText(option), hasMatch] as const;
     })
   );
   const sizeAvailability = new Map(
     sizeSequence.map((option) => {
-      const nextSize = addMultiSelectOption(activeSizes, option) ?? "";
-      const hasMatch = filterProducts(products, { ...params, size: nextSize }).length > 0;
+      const hasMatch =
+        filterProducts(inStockProducts, {
+          ...params,
+          size: sanitizeDisplayText(option).trim(),
+        }).length > 0;
       return [normalizeText(option), hasMatch] as const;
     })
   );
@@ -911,6 +2071,18 @@ export default async function ProductsPage({
   const novidadesTiles = buildNovidadesTiles(sorted, activeFilterGroup ? "category" : "default");
   const activeSortLabel = getSortLabel(sortValue);
   const novidadesBackLabel = "< Voltar";
+  const shouldKeepCategoryOnBack = novidadesFilterGroups.length === 1;
+  const fallbackSingleGroup = novidadesFilterGroups.length === 1 ? novidadesFilterGroups[0] : null;
+  const allCategoriesHref =
+    fallbackSingleGroup && !normalizeText(params.gender)
+      ? buildProductsHref(params, {
+          category: fallbackSingleGroup.category,
+          subcategory: null,
+        })
+      : buildProductsHref(params, { category: null, subcategory: null });
+  const isGenderMenuView =
+    !normalizedView && (normalizeText(params.gender) === "feminino" || normalizeText(params.gender) === "masculino");
+  const shouldUseExpandedToolbar = Boolean(activeFilterGroup) && !isGenderMenuView;
   const renderSelectedMark = () => (
     <span className={styles.novidadesFiltersSelectedMark} aria-hidden="true">
       <img src="/images/logo-tsebi.png" alt="" className={styles.novidadesFiltersSelectedLogo} />
@@ -920,15 +2092,16 @@ export default async function ProductsPage({
     </span>
   );
 
-  if (heroConfig) {
+  const hasProductsToolbar = novidadesFilterGroups.length > 0;
+
+  if ((heroConfig || hasProductsToolbar) && !hasSearchQuery) {
     const headerStackHeight = "calc(var(--top-bar-height, 38px) + var(--header-height, 84px))";
-    const hasNovidadesToolbar = novidadesFilterGroups.length > 0;
-    const toolbarHeight = hasNovidadesToolbar
-      ? activeFilterGroup
+    const toolbarHeight = hasProductsToolbar
+      ? shouldUseExpandedToolbar
         ? "var(--novidades-toolbar-height-expanded, 64px)"
         : "var(--novidades-toolbar-height, 40px)"
       : "0px";
-    const toolbarAttachOffset = hasNovidadesToolbar ? "var(--novidades-toolbar-attach-offset, 10px)" : "0px";
+    const toolbarAttachOffset = hasProductsToolbar ? "var(--novidades-toolbar-attach-offset, 10px)" : "0px";
     const attachedHeaderHeight = `calc(${headerStackHeight} - ${toolbarAttachOffset})`;
     const heroOffset = `calc(${attachedHeaderHeight} + ${toolbarHeight})`;
     const viewportHeight = `calc(100dvh - ${attachedHeaderHeight} - ${toolbarHeight})`;
@@ -937,14 +2110,14 @@ export default async function ProductsPage({
       <main>
         <BodyClassName className="products-novidades-view" />
 
-        {hasNovidadesToolbar ? (
+        {hasProductsToolbar ? (
           <section
-            className={`${styles.novidadesToolbarSection} ${activeFilterGroup ? styles.novidadesToolbarSectionExpanded : ""}`}
-            aria-label="Filtros de novidades"
+            className={`${styles.novidadesToolbarSection} ${shouldUseExpandedToolbar ? styles.novidadesToolbarSectionExpanded : ""}`}
+            aria-label="Filtros de produtos"
           >
             <div className={styles.novidadesToolbarInner}>
               <div className={styles.novidadesFiltersLeft}>
-                {activeFilterGroup ? (
+                {activeFilterGroup && !isGenderMenuView ? (
                   <div className={styles.novidadesCategoriesRow}>
                     <a
                       href={buildProductsHref(params, {
@@ -956,10 +2129,10 @@ export default async function ProductsPage({
                       {activeFilterGroup.label}
                     </a>
                   </div>
-                ) : (
+                ) : !activeFilterGroup ? (
                   <div className={styles.novidadesCategoriesRow}>
                     <a
-                      href={buildProductsHref(params, { category: null, subcategory: null })}
+                      href={allCategoriesHref}
                       className={`${styles.novidadesMainCategoryLink} ${!activeCategory ? styles.novidadesMainCategoryLinkActive : ""}`}
                     >
                       Todos
@@ -980,13 +2153,15 @@ export default async function ProductsPage({
                       );
                     })}
                   </div>
-                )}
+                ) : null}
 
                 {activeFilterGroup ? (
-                  <div className={styles.novidadesSubcategoriesRow}>
+                  <div
+                    className={`${styles.novidadesSubcategoriesRow} ${isGenderMenuView ? styles.novidadesSubcategoriesRowCompact : ""}`}
+                  >
                     <a
                       href={buildProductsHref(params, {
-                        category: null,
+                        category: shouldKeepCategoryOnBack ? activeFilterGroup.category : null,
                         subcategory: null,
                       })}
                       className={styles.novidadesBackButton}
@@ -1016,7 +2191,7 @@ export default async function ProductsPage({
                           })}
                           className={`${styles.novidadesFlatLink} ${isActive ? styles.novidadesFlatLinkActive : ""}`}
                         >
-                          {subcategory}
+                          {sanitizeDisplayText(subcategory)}
                         </a>
                       );
                     })}
@@ -1027,7 +2202,7 @@ export default async function ProductsPage({
               <div className={styles.novidadesActionsRight}>
                 <details className={styles.novidadesSortGroup}>
                   <summary className={styles.novidadesSortToggle}>
-                    <span>{activeSortLabel}</span>
+                    <span>{sanitizeDisplayText(activeSortLabel)}</span>
                     <svg viewBox="0 0 24 24" aria-hidden="true" className={styles.novidadesSortActionIcon}>
                       <path d="M8 6h8" />
                       <path d="M10 3l-2 3 2 3" />
@@ -1050,7 +2225,7 @@ export default async function ProductsPage({
                           href={buildProductsHref(params, { sort: option.value })}
                           className={`${styles.novidadesFilterItem} ${isActive ? styles.novidadesFilterItemActive : ""}`}
                         >
-                          {option.label}
+                          {sanitizeDisplayText(option.label)}
                         </a>
                       );
                     })}
@@ -1104,16 +2279,16 @@ export default async function ProductsPage({
                     <div className={styles.novidadesFiltersPopupBody}>
                       <section className={styles.novidadesFiltersSection}>
                         <h3 className={styles.novidadesFiltersSectionTitle}>Coleção</h3>
-                        {availableFilters.collections.length > 0 ? (
+                        {collectionOptions.length > 0 ? (
                           <div className={styles.novidadesFiltersTwoColumns}>
-                            {availableFilters.collections.map((collectionOption) => {
+                            {collectionOptions.map((collectionOption) => {
                               const isActive = activeCollectionsSet.has(normalizeText(collectionOption));
                               const isUnavailable = !isActive && !collectionAvailability.get(normalizeText(collectionOption));
                               const optionClassName = `${styles.novidadesFiltersOption} ${isActive ? styles.novidadesFiltersOptionActive : ""} ${isUnavailable ? styles.novidadesFiltersOptionUnavailable : ""}`;
                               if (isUnavailable) {
                                 return (
                                   <span key={collectionOption} className={optionClassName} aria-disabled="true">
-                                    <span className={styles.novidadesFiltersOptionLabel}>{collectionOption}</span>
+                                    <span className={styles.novidadesFiltersOptionLabel}>{sanitizeDisplayText(collectionOption)}</span>
                                   </span>
                                 );
                               }
@@ -1125,7 +2300,7 @@ export default async function ProductsPage({
                                   })}
                                   className={optionClassName}
                                 >
-                                  <span className={styles.novidadesFiltersOptionLabel}>{collectionOption}</span>
+                                  <span className={styles.novidadesFiltersOptionLabel}>{sanitizeDisplayText(collectionOption)}</span>
                                   {isActive ? renderSelectedMark() : null}
                                 </a>
                               );
@@ -1138,7 +2313,7 @@ export default async function ProductsPage({
 
                       <section className={styles.novidadesFiltersSection}>
                         <h3 className={styles.novidadesFiltersSectionTitle}>Cor</h3>
-                        {availableFilters.colors.length > 0 ? (
+                        {colorOptions.length > 0 ? (
                           <div className={styles.novidadesFiltersExpandableBlock}>
                             <div className={styles.novidadesFiltersTwoColumns}>
                               {visibleColors.map((colorOption) => {
@@ -1153,7 +2328,7 @@ export default async function ProductsPage({
                                         aria-hidden="true"
                                         style={{ backgroundColor: resolveColorSwatch(colorOption) }}
                                       />
-                                      <span className={styles.novidadesFiltersOptionLabel}>{colorOption}</span>
+                                      <span className={styles.novidadesFiltersOptionLabel}>{sanitizeDisplayText(colorOption)}</span>
                                     </span>
                                   );
                                 }
@@ -1170,7 +2345,7 @@ export default async function ProductsPage({
                                       aria-hidden="true"
                                       style={{ backgroundColor: resolveColorSwatch(colorOption) }}
                                     />
-                                    <span className={styles.novidadesFiltersOptionLabel}>{colorOption}</span>
+                                    <span className={styles.novidadesFiltersOptionLabel}>{sanitizeDisplayText(colorOption)}</span>
                                     {isActive ? renderSelectedMark() : null}
                                   </a>
                                 );
@@ -1195,7 +2370,7 @@ export default async function ProductsPage({
                                             aria-hidden="true"
                                             style={{ backgroundColor: resolveColorSwatch(colorOption) }}
                                           />
-                                          <span className={styles.novidadesFiltersOptionLabel}>{colorOption}</span>
+                                          <span className={styles.novidadesFiltersOptionLabel}>{sanitizeDisplayText(colorOption)}</span>
                                         </span>
                                       );
                                     }
@@ -1212,7 +2387,7 @@ export default async function ProductsPage({
                                           aria-hidden="true"
                                           style={{ backgroundColor: resolveColorSwatch(colorOption) }}
                                         />
-                                        <span className={styles.novidadesFiltersOptionLabel}>{colorOption}</span>
+                                        <span className={styles.novidadesFiltersOptionLabel}>{sanitizeDisplayText(colorOption)}</span>
                                         {isActive ? renderSelectedMark() : null}
                                       </a>
                                     );
@@ -1228,7 +2403,7 @@ export default async function ProductsPage({
 
                       <section className={styles.novidadesFiltersSection}>
                         <h3 className={styles.novidadesFiltersSectionTitle}>Material</h3>
-                        {availableFilters.materials.length > 0 ? (
+                        {materialOptions.length > 0 ? (
                           <div className={styles.novidadesFiltersExpandableBlock}>
                             <div className={styles.novidadesFiltersTwoColumns}>
                               {visibleMaterials.map((materialOption) => {
@@ -1238,7 +2413,7 @@ export default async function ProductsPage({
                                 if (isUnavailable) {
                                   return (
                                     <span key={materialOption} className={optionClassName} aria-disabled="true">
-                                      <span className={styles.novidadesFiltersOptionLabel}>{materialOption}</span>
+                                      <span className={styles.novidadesFiltersOptionLabel}>{sanitizeDisplayText(materialOption)}</span>
                                     </span>
                                   );
                                 }
@@ -1250,7 +2425,7 @@ export default async function ProductsPage({
                                     })}
                                     className={optionClassName}
                                   >
-                                    <span className={styles.novidadesFiltersOptionLabel}>{materialOption}</span>
+                                    <span className={styles.novidadesFiltersOptionLabel}>{sanitizeDisplayText(materialOption)}</span>
                                     {isActive ? renderSelectedMark() : null}
                                   </a>
                                 );
@@ -1270,7 +2445,7 @@ export default async function ProductsPage({
                                     if (isUnavailable) {
                                       return (
                                         <span key={materialOption} className={optionClassName} aria-disabled="true">
-                                          <span className={styles.novidadesFiltersOptionLabel}>{materialOption}</span>
+                                          <span className={styles.novidadesFiltersOptionLabel}>{sanitizeDisplayText(materialOption)}</span>
                                         </span>
                                       );
                                     }
@@ -1282,7 +2457,7 @@ export default async function ProductsPage({
                                         })}
                                         className={optionClassName}
                                       >
-                                        <span className={styles.novidadesFiltersOptionLabel}>{materialOption}</span>
+                                        <span className={styles.novidadesFiltersOptionLabel}>{sanitizeDisplayText(materialOption)}</span>
                                         {isActive ? renderSelectedMark() : null}
                                       </a>
                                     );
@@ -1307,7 +2482,7 @@ export default async function ProductsPage({
                               if (isUnavailable) {
                                 return (
                                   <span key={sizeOption} className={optionClassName} aria-disabled="true">
-                                    {sizeOption}
+                                    {sanitizeDisplayText(sizeOption)}
                                   </span>
                                 );
                               }
@@ -1319,7 +2494,7 @@ export default async function ProductsPage({
                                   })}
                                   className={optionClassName}
                                 >
-                                  {sizeOption}
+                                  {sanitizeDisplayText(sizeOption)}
                                   {isActive ? renderSelectedMark() : null}
                                 </a>
                               );
@@ -1332,7 +2507,7 @@ export default async function ProductsPage({
                               if (isUnavailable) {
                                 return (
                                   <span key={sizeOption} className={optionClassName} aria-disabled="true">
-                                    {sizeOption}
+                                    {sanitizeDisplayText(sizeOption)}
                                   </span>
                                 );
                               }
@@ -1344,7 +2519,7 @@ export default async function ProductsPage({
                                   })}
                                   className={optionClassName}
                                 >
-                                  {sizeOption}
+                                  {sanitizeDisplayText(sizeOption)}
                                   {isActive ? renderSelectedMark() : null}
                                 </a>
                               );
@@ -1362,62 +2537,133 @@ export default async function ProductsPage({
           </section>
         ) : null}
 
-        <section
-          aria-label={title}
-          style={{
-            position: "relative",
-            width: "100vw",
-            height: viewportHeight,
-            minHeight: viewportHeight,
-            marginLeft: "calc(50% - 50vw)",
-            marginTop: heroOffset,
-            overflow: "hidden",
-          }}
-        >
-          {heroConfig.mediaType === "video" ? (
-            <video
-              autoPlay
-              loop
-              muted
-              playsInline
-              src={heroConfig.mediaUrl}
-              style={{
-                position: "absolute",
-                inset: 0,
-                width: "100%",
-                height: "100%",
-                objectFit: "cover",
-                objectPosition: heroConfig.objectPosition ?? "center center",
-                transform: heroConfig.rotate180 ? "rotate(180deg)" : "none",
-                transformOrigin: "center center",
-              }}
-            />
-          ) : (
-            <img
-              src={heroConfig.mediaUrl}
-              alt={title}
-              style={{
-                position: "absolute",
-                inset: 0,
-                width: "100%",
-                height: "100%",
-                objectFit: "cover",
-                objectPosition: heroConfig.objectPosition ?? "center center",
-                transform: heroConfig.rotate180 ? "rotate(180deg)" : "none",
-                transformOrigin: "center center",
-              }}
-            />
-          )}
-        </section>
+        {heroConfig ? (
+          <section
+            aria-label={title}
+            style={{
+              position: "relative",
+              width: "100vw",
+              height: viewportHeight,
+              minHeight: viewportHeight,
+              marginLeft: "calc(50% - 50vw)",
+              marginTop: heroOffset,
+              overflow: "hidden",
+            }}
+          >
+            {heroConfig.mediaType === "video" ? (
+              <video
+                autoPlay
+                loop
+                muted
+                playsInline
+                src={heroConfig.mediaUrl}
+                style={{
+                  position: "absolute",
+                  inset: 0,
+                  width: "100%",
+                  height: "100%",
+                  objectFit: "cover",
+                  objectPosition: heroConfig.objectPosition ?? "center center",
+                  transform: heroConfig.rotate180 ? "rotate(180deg)" : "none",
+                  transformOrigin: "center center",
+                }}
+              />
+            ) : (
+              <img
+                src={heroConfig.mediaUrl}
+                alt={title}
+                style={{
+                  position: "absolute",
+                  inset: 0,
+                  width: "100%",
+                  height: "100%",
+                  objectFit: "cover",
+                  objectPosition: heroConfig.objectPosition ?? "center center",
+                  transform: heroConfig.rotate180 ? "rotate(180deg)" : "none",
+                  transformOrigin: "center center",
+                }}
+              />
+            )}
+          </section>
+        ) : null}
 
         <section
           aria-label={`Produtos da seção ${title}`}
           className={styles.novidadesSection}
+          style={!heroConfig ? { marginTop: heroOffset } : undefined}
         >
           <NovidadesGrid tiles={novidadesTiles} />
         </section>
 
         <LegacyFooter variant="light" />
+      </main>
+    );
+  }
+
+  if (hasSearchQuery || !hasRawParams) {
+    const searchSuggestionLinks = buildSearchSuggestionLinks(params, sorted.length > 0 ? sorted : products);
+    const searchSidebarSizeOptions = buildSearchSidebarSizeOptions(params, filteredForFacets, orderedSizes, activeSizes);
+    const searchSidebarMaterialOptions = materialOptions;
+    const exclusiveSuggestionFallbackCards = buildExclusiveSuggestionFallbackCards(
+      filteredForFacets.length > 0 ? filteredForFacets : products
+    ).slice(0, 6);
+    const exclusiveSuggestionContextHint = [
+      String(params.q || "").trim(),
+      String(params.gender || "").trim(),
+      String(params.category || "").trim(),
+      String(params.subcategory || "").trim(),
+    ]
+      .filter(Boolean)
+      .join(" ");
+
+    const searchGridItems: ProductsSearchGridItem[] = sorted.map((product, index) => {
+      const imagePair = buildHoverImagePair(product);
+      const productName = sanitizeDisplayText(product.name) || product.id;
+      const productHref = `/product/${encodeURIComponent(product.id)}`;
+      return {
+        key: `${product.id}-${index}`,
+        id: String(product.id || "").trim(),
+        name: productName,
+        href: productHref,
+        category: String(product.category || "").trim(),
+        currency: String(product.currency || "brl"),
+        unitAmount: Number(product.unitAmount || 0),
+        primaryImage: imagePair.primary,
+        secondaryImage: imagePair.secondary || imagePair.primary,
+        isEditorial: index > 0 && index % 9 === 0,
+      };
+    });
+
+    return (
+      <main>
+        <BodyClassName className="products-novidades-view" />
+        {renderRootProductsToolbar("novidades-filtros-toggle", searchSuggestionLinks, false, sorted.length)}
+        <section className={styles.productsSearchLayout} aria-label="Resultado de busca">
+          {renderProductsSearchSidebar(
+            params,
+            collectionOptions,
+            colorOptions,
+            searchSidebarSizeOptions,
+            searchSidebarMaterialOptions,
+            collectionAvailability,
+            colorAvailability,
+            materialAvailability,
+            sizeAvailability,
+            {
+            query: String(params.q || "").trim(),
+            contextHint: exclusiveSuggestionContextHint,
+            fallbackCards: exclusiveSuggestionFallbackCards,
+            }
+          )}
+
+          <div className={styles.productsSearchGridArea}>
+            {sorted.length > 0 ? (
+              <ProductsSearchGrid items={searchGridItems} />
+            ) : (
+              <p className={styles.productsSearchEmpty}>Nenhum produto encontrado para os filtros selecionados.</p>
+            )}
+          </div>
+        </section>
       </main>
     );
   }
@@ -1437,3 +2683,6 @@ export default async function ProductsPage({
     </main>
   );
 }
+
+
+

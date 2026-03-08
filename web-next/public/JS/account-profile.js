@@ -1,4 +1,4 @@
-window.initProfileSection = function initProfileSection(options = {}) {
+﻿window.initProfileSection = function initProfileSection(options = {}) {
   const store = window.TsebiUserStore;
   const profileForm = document.getElementById("profileForm");
   const profileTitle = document.getElementById("profileTitle");
@@ -44,7 +44,7 @@ window.initProfileSection = function initProfileSection(options = {}) {
   });
 
   const monthLabels = [
-    "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
+    "Janeiro", "Fevereiro", "MarÃ§o", "Abril", "Maio", "Junho",
     "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"
   ];
 
@@ -72,6 +72,17 @@ window.initProfileSection = function initProfileSection(options = {}) {
     window.setTimeout(() => {
       toastEl.classList.remove("is-visible");
     }, 1800);
+  }
+
+  function isValidEmail(value) {
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(value || "").trim().toLowerCase());
+  }
+
+  function buildResetCodeUrl(email) {
+    const params = new URLSearchParams();
+    params.set("email", String(email || "").trim().toLowerCase());
+    params.set("cooldown", "60");
+    return `recuperar-senha-codigo.html?${params.toString()}`;
   }
 
   function setPasskeyFeedback(message, isError = false) {
@@ -278,7 +289,7 @@ window.initProfileSection = function initProfileSection(options = {}) {
       const article = document.createElement("article");
       article.className = "address-card";
       article.innerHTML = `
-        <strong>${String(address?.label || address?.fullName || "Endereço")}</strong>
+        <strong>${String(address?.label || address?.fullName || "EndereÃ§o")}</strong>
         <p>${String(address?.street || "")}, ${String(address?.number || "")}</p>
         <p>${String(address?.district || "")} - ${String(address?.city || "")}/${String(address?.state || "")}</p>
         <p>CEP ${String(address?.cep || "")}</p>
@@ -308,9 +319,9 @@ window.initProfileSection = function initProfileSection(options = {}) {
     wrapper.hidden = true;
     wrapper.innerHTML = `
       <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="addressModalTitle">
-        <h3 id="addressModalTitle">Novo endereço</h3>
+        <h3 id="addressModalTitle">Novo endereÃ§o</h3>
         <form id="addressFormModal" class="modal-form">
-          <label for="addressLabelInput">Rótulo</label>
+          <label for="addressLabelInput">RÃ³tulo</label>
           <input id="addressLabelInput" name="label" type="text" placeholder="Casa, Trabalho..." required />
 
           <label for="addressFullNameInput">Nome completo</label>
@@ -322,7 +333,7 @@ window.initProfileSection = function initProfileSection(options = {}) {
           <label for="addressStreetInput">Rua</label>
           <input id="addressStreetInput" name="street" type="text" required />
 
-          <label for="addressNumberInput">Número</label>
+          <label for="addressNumberInput">NÃºmero</label>
           <input id="addressNumberInput" name="number" type="text" required />
 
           <label for="addressComplementInput">Complemento (opcional)</label>
@@ -339,7 +350,7 @@ window.initProfileSection = function initProfileSection(options = {}) {
 
           <div class="modal-actions">
             <button type="button" class="btn-outline" data-address-action="cancel">Cancelar</button>
-            <button type="submit" class="btn-primary" id="addressModalSubmitBtn">Salvar endereço</button>
+            <button type="submit" class="btn-primary" id="addressModalSubmitBtn">Salvar endereÃ§o</button>
           </div>
         </form>
       </div>
@@ -402,7 +413,7 @@ window.initProfileSection = function initProfileSection(options = {}) {
         !payload.city ||
         payload.state.length !== 2
       ) {
-        showToast("Preencha os campos obrigatórios do endereço.");
+        showToast("Preencha os campos obrigatÃ³rios do endereÃ§o.");
         return;
       }
 
@@ -418,7 +429,7 @@ window.initProfileSection = function initProfileSection(options = {}) {
           }
           renderAddresses(currentAddresses);
           addressModal.hidden = true;
-          showToast("Endereço salvo.");
+          showToast("EndereÃ§o salvo.");
           return;
         }
 
@@ -428,14 +439,14 @@ window.initProfileSection = function initProfileSection(options = {}) {
             : await store.createMyAddress(payload);
 
         if (!result?.ok) {
-          showToast(result?.error || "Não foi possível salvar o endereço.");
+          showToast(result?.error || "NÃ£o foi possÃ­vel salvar o endereÃ§o.");
           return;
         }
 
         currentAddresses = Array.isArray(result.addresses) ? result.addresses : currentAddresses;
         renderAddresses(currentAddresses);
         addressModal.hidden = true;
-        showToast("Endereço salvo.");
+        showToast("EndereÃ§o salvo.");
       } finally {
         if (addressSubmitEl) addressSubmitEl.disabled = false;
       }
@@ -464,8 +475,8 @@ window.initProfileSection = function initProfileSection(options = {}) {
       .toUpperCase()
       .slice(0, 2);
 
-    if (addressTitleEl) addressTitleEl.textContent = addressMode === "edit" ? "Editar endereço" : "Novo endereço";
-    if (addressSubmitEl) addressSubmitEl.textContent = addressMode === "edit" ? "Salvar alterações" : "Salvar endereço";
+    if (addressTitleEl) addressTitleEl.textContent = addressMode === "edit" ? "Editar endereÃ§o" : "Novo endereÃ§o";
+    if (addressSubmitEl) addressSubmitEl.textContent = addressMode === "edit" ? "Salvar alteraÃ§Ãµes" : "Salvar endereÃ§o";
     addressModal.hidden = false;
   }
 
@@ -556,19 +567,19 @@ window.initProfileSection = function initProfileSection(options = {}) {
     let valid = true;
 
     if (!data.title) {
-      setError("profileTitle", "Campo obrigatório");
+      setError("profileTitle", "Campo obrigatÃ³rio");
       valid = false;
     }
     if (data.firstName.length < 2) {
-      setError("profileFirstName", "Campo obrigatório");
+      setError("profileFirstName", "Campo obrigatÃ³rio");
       valid = false;
     }
     if (data.lastName.length < 2) {
-      setError("profileLastName", "Campo obrigatório");
+      setError("profileLastName", "Campo obrigatÃ³rio");
       valid = false;
     }
     if (!data.country) {
-      setError("profileCountry", "Campo obrigatório");
+      setError("profileCountry", "Campo obrigatÃ³rio");
       valid = false;
     }
 
@@ -583,10 +594,10 @@ window.initProfileSection = function initProfileSection(options = {}) {
 
       const result = await saveProfile(data);
       if (!result?.ok) {
-        showToast(result?.error || "Não foi possível salvar");
+        showToast(result?.error || "NÃ£o foi possÃ­vel salvar");
         return;
       }
-      showToast("Informações salvas");
+      showToast("InformaÃ§Ãµes salvas");
     });
 
     const prefMap = {
@@ -615,7 +626,7 @@ window.initProfileSection = function initProfileSection(options = {}) {
       const addressId = String(button.getAttribute("data-address-edit") || "");
       const address = currentAddresses.find((item) => String(item?.id || "") === addressId) || null;
       if (!address) {
-        showToast("Endereço não encontrado.");
+        showToast("EndereÃ§o nÃ£o encontrado.");
         return;
       }
       openAddressModal("edit", address);
@@ -633,17 +644,64 @@ window.initProfileSection = function initProfileSection(options = {}) {
       if (event.target === passwordModal) passwordModal.hidden = true;
     });
 
-    passwordForm?.addEventListener("submit", (event) => {
+    passwordForm?.addEventListener("submit", async (event) => {
       event.preventDefault();
-      showToast("TODO: integração para alteração de senha");
+      if (!store) {
+        showToast("Servico de conta indisponivel.");
+        return;
+      }
+
+      const email = String(loginEmail?.value || currentUser?.email || "").trim().toLowerCase();
+      if (!isValidEmail(email)) {
+        showToast("Email da conta invalido para envio do codigo.");
+        return;
+      }
+
+      const currentPassword = String(document.getElementById("currentPassword")?.value || "");
+      const newPassword = String(document.getElementById("newPassword")?.value || "");
+      const confirmPassword = String(document.getElementById("confirmPassword")?.value || "");
+
+      if (!currentPassword) {
+        showToast("Informe sua senha atual.");
+        return;
+      }
+      if (newPassword.length < 8) {
+        showToast("A nova senha deve ter ao menos 8 caracteres.");
+        return;
+      }
+      if (newPassword !== confirmPassword) {
+        showToast("As senhas nao coincidem.");
+        return;
+      }
+
+      const submitButton = passwordForm.querySelector('button[type="submit"]');
+      if (submitButton instanceof HTMLButtonElement) {
+        submitButton.disabled = true;
+        submitButton.textContent = "Enviando codigo...";
+      }
+
+      const sent = await store.requestPasswordReset(email);
+
+      if (submitButton instanceof HTMLButtonElement) {
+        submitButton.disabled = false;
+        submitButton.textContent = "Salvar";
+      }
+
+      if (!sent?.ok) {
+        showToast(sent?.error || "Nao foi possivel enviar o codigo.");
+        return;
+      }
+
+      showToast("Codigo de verificacao enviado por email.");
       if (passwordModal) passwordModal.hidden = true;
       if (passwordForm) passwordForm.reset();
+      window.location.href = buildResetCodeUrl(email);
     });
 
     enablePasskeyBtn?.addEventListener("click", async () => {
       setPasskeyFeedback("");
       if (!(window.PublicKeyCredential && navigator.credentials)) {
-        setPasskeyFeedback("Este navegador não suporta Passkey.", true);
+        setPasskeyFeedback("Este navegador nÃ£o suporta Passkey.", true);
         return;
       }
 
@@ -659,7 +717,7 @@ window.initProfileSection = function initProfileSection(options = {}) {
         });
         const optionsData = await optionsResponse.json().catch(() => ({}));
         if (!optionsResponse.ok || !optionsData?.ok || !optionsData?.options) {
-          setPasskeyFeedback("Não foi possível iniciar a ativação de Passkey.", true);
+          setPasskeyFeedback("NÃ£o foi possÃ­vel iniciar a ativaÃ§Ã£o de Passkey.", true);
           return;
         }
 
@@ -684,9 +742,9 @@ window.initProfileSection = function initProfileSection(options = {}) {
         showToast("Passkey ativada");
       } catch (error) {
         if (error?.name === "NotAllowedError") {
-          setPasskeyFeedback("Ativação de Passkey cancelada.", true);
+          setPasskeyFeedback("AtivaÃ§Ã£o de Passkey cancelada.", true);
         } else {
-          setPasskeyFeedback("Não foi possível ativar a Passkey.", true);
+          setPasskeyFeedback("NÃ£o foi possÃ­vel ativar a Passkey.", true);
         }
       } finally {
         enablePasskeyBtn.disabled = false;
@@ -710,7 +768,7 @@ window.initProfileSection = function initProfileSection(options = {}) {
           street: "Rua Exemplo",
           number: "123",
           district: "Centro",
-          city: "São Paulo",
+          city: "SÃ£o Paulo",
           state: "SP",
           cep: "01000-000"
         }
@@ -750,5 +808,6 @@ window.initProfileSection = function initProfileSection(options = {}) {
   bindEvents();
   loadUserProfile();
 };
+
 
 

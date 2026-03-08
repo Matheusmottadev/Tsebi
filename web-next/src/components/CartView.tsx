@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { ProductImage } from "@/components/ProductImage";
 import { Price } from "@/components/Price";
+import { ContinueShoppingLink } from "@/components/ContinueShoppingLink";
 import { cartSelectors, useCartStore } from "@/lib/cart/cartStore";
 import { isCheckoutEnabled } from "@/lib/env";
 import { getMe } from "@/services/auth";
@@ -168,9 +169,7 @@ export function CartView() {
           </button>
         )}
         <div className={styles.summaryActions}>
-          <Link href="/products" className={styles.continueLink}>
-            Continuar comprando
-          </Link>
+          <ContinueShoppingLink className={styles.continueLink} />
           <button type="button" className={styles.clearButton} onClick={clear}>
             Limpar carrinho
           </button>

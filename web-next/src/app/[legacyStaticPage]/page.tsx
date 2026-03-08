@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+﻿import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { LegacyStaticPageRenderer } from "@/components/LegacyStaticPageRenderer";
 import {
@@ -41,6 +41,9 @@ export default async function LegacyStaticPage({ params }: LegacyStaticPageProps
       stylesheetHrefs={page.stylesheetHrefs}
       inlineStyles={page.inlineStyles}
       bodyMarkup={page.bodyMarkup}
+      scriptSrcs={page.scriptSrcs}
+      inlineScripts={page.inlineScripts}
     />
   );
 }
+

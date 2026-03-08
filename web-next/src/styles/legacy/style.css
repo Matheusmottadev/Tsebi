@@ -709,7 +709,7 @@ body.legal-header-image-default .home-header:not(.is-scrolled):not(:hover):not(:
 .header-menu-subpanel-category-title {
   font-size: 18px !important;
   letter-spacing: .45px;
-  cursor: default;
+  cursor: pointer;
 }
 
 .header-menu-subpanel-category-links {

@@ -28,6 +28,77 @@ const AUTO_SYNC_INVENTORY_ON_READ = (() => {
   return true;
 })();
 
+const BROKEN_ENCODING_REPLACEMENTS: Array<[string, string]> = [
+  ["Ã¡", "á"],
+  ["Ãà", "à"],
+  ["Ã¢", "â"],
+  ["Ãã", "ã"],
+  ["Ãä", "ä"],
+  ["Ãé", "é"],
+  ["Ãê", "ê"],
+  ["Ãí", "í"],
+  ["Ãó", "ó"],
+  ["Ãô", "ô"],
+  ["Ãõ", "õ"],
+  ["Ãö", "ö"],
+  ["Ãú", "ú"],
+  ["Ãü", "ü"],
+  ["Ãç", "ç"],
+  ["ÃÁ", "Á"],
+  ["ÃÀ", "À"],
+  ["ÃÂ", "Â"],
+  ["ÃÃ", "Ã"],
+  ["ÃÉ", "É"],
+  ["ÃÊ", "Ê"],
+  ["ÃÍ", "Í"],
+  ["ÃÓ", "Ó"],
+  ["ÃÔ", "Ô"],
+  ["ÃÕ", "Õ"],
+  ["ÃÚ", "Ú"],
+  ["ÃÇ", "Ç"],
+  ["â€“", "–"],
+  ["â€”", "—"],
+  ["â€˜", "‘"],
+  ["â€™", "’"],
+  ["â€œ", "“"],
+  ["â€", "”"]
+];
+
+const QUESTION_MARK_TEXT_REPLACEMENTS: Array<[RegExp, string]> = [
+  [/\?nico/gi, "Único"],
+  [/Cardig\?/gi, "Cardigã"],
+  [/t\?cnico/gi, "técnico"],
+  [/met\?lica/gi, "metálica"],
+  [/precis\?o/gi, "precisão"],
+  [/arquitet\?nico/gi, "arquitetônico"],
+  [/G\?nesis/gi, "Gênesis"],
+  [/cart\?es/gi, "cartões"],
+  [/Len\?o/gi, "Lenço"],
+  [/Cal\?a/gi, "Calça"],
+  [/\bem l\?\b/gi, "em lã"],
+  [/\bl\?(?=\s|$)/gi, "lã"],
+  [/\bL\?(?=\s|$)/g, "Lã"],
+  [/\bL\?\b/g, "Lã"],
+  [/\bl\?\b/g, "lã"]
+];
+
+function sanitizeCatalogText(value: unknown): string {
+  let text = String(value || "").trim();
+  if (!text) return "";
+
+  BROKEN_ENCODING_REPLACEMENTS.forEach(([broken, fixed]) => {
+    text = text.split(broken).join(fixed);
+  });
+
+  QUESTION_MARK_TEXT_REPLACEMENTS.forEach(([pattern, fixed]) => {
+    text = text.replace(pattern, fixed);
+  });
+
+  text = text.replace(/\uFFFD/g, "").trim();
+  if (/^[\?\uFFFD]nico$/i.test(text)) return "Único";
+  return text;
+}
+
 export type VariantStockMap = Record<string, number>;
 
 export type ListAdminProductsOptions = {
@@ -673,6 +744,97 @@ const PRODUCT_METADATA: Record<string, ProductStaticMetadata> = {
     image: "images/product/titan-buckle-belt-1.jpg",
     secondaryImage: "images/product/titan-buckle-belt-2.jpg",
     nameEn: "Titan buckle belt"
+  },
+  "luna-soft-bag": {
+    collection: "Alicerce",
+    category: "Accessories",
+    subcategory: "Bolsas",
+    material: "Couro",
+    sizes: ["Unico"],
+    colors: ["Marfim", "Preto"],
+    gender: "Feminino",
+    tags: ["acessorios", "bolsas", "new-arrivals"],
+    image: "images/product/genesis-hobo-bag-1.jpg",
+    secondaryImage: "images/product/genesis-hobo-bag-2.jpg",
+    nameEn: "Luna soft bag"
+  },
+  "stella-tote-bag": {
+    collection: "Gênesis",
+    category: "Accessories",
+    subcategory: "Bolsas",
+    material: "Couro",
+    sizes: ["Unico"],
+    colors: ["Areia", "Caramelo"],
+    gender: "Feminino",
+    tags: ["acessorios", "bolsas"],
+    image: "images/product/alicerce-mini-bag-1.jpg",
+    secondaryImage: "images/product/alicerce-mini-bag-2.jpg",
+    nameEn: "Stella tote bag"
+  },
+  "ivy-shoulder-bag": {
+    collection: "Alicerce",
+    category: "Accessories",
+    subcategory: "Bolsas",
+    material: "Couro",
+    sizes: ["Unico"],
+    colors: ["Preto", "Vinho"],
+    gender: "Feminino",
+    tags: ["acessorios", "bolsas"],
+    image: "images/product/atelier-bag-1.jpg",
+    secondaryImage: "images/product/atelier-bag-2.jpg",
+    nameEn: "Ivy shoulder bag"
+  },
+  "drift-bifold-wallet": {
+    collection: "Alicerce",
+    category: "Accessories",
+    subcategory: "Carteiras",
+    material: "Couro",
+    sizes: ["Unico"],
+    colors: ["Preto", "Cafe"],
+    gender: "Masculino",
+    tags: ["acessorios", "carteiras"],
+    image: "images/product/pulse-leather-wallet-1.jpg",
+    secondaryImage: "images/product/pulse-leather-wallet-2.jpg",
+    nameEn: "Drift bifold wallet"
+  },
+  "north-zip-wallet": {
+    collection: "Gênesis",
+    category: "Accessories",
+    subcategory: "Carteiras",
+    material: "Couro",
+    sizes: ["Unico"],
+    colors: ["Grafite", "Preto"],
+    gender: "Masculino",
+    tags: ["acessorios", "carteiras", "signature-pieces"],
+    image: "images/product/nox-card-wallet-1.jpg",
+    secondaryImage: "images/product/nox-card-wallet-2.jpg",
+    nameEn: "North zip wallet"
+  },
+  "orion-buckle-belt": {
+    collection: "Alicerce",
+    category: "Accessories",
+    subcategory: "Cintos",
+    material: "Couro",
+    sizes: ["P", "M", "G", "GG"],
+    colors: ["Preto", "Marrom"],
+    gender: "Masculino",
+    tags: ["acessorios", "cintos"],
+    image: "images/product/titan-buckle-belt-1.jpg",
+    secondaryImage: "images/product/titan-buckle-belt-2.jpg",
+    nameEn: "Orion buckle belt"
+  },
+  "iris-slim-belt": {
+    collection: "Gênesis",
+    category: "Accessories",
+    subcategory: "Cintos",
+    material: "Couro",
+    sizes: ["P", "M", "G"],
+    colors: ["Caramelo", "Preto"],
+    gender: "Feminino",
+    tags: ["acessorios", "cintos"],
+    image: "images/product/aura-thin-belt-1.jpg",
+    secondaryImage: "images/product/aura-thin-belt-2.jpg",
+    nameEn: "Iris slim belt"
   }
 };
 
@@ -686,7 +848,7 @@ function normalizeTextList(value: unknown, fallback: string[] = []): string[] {
   const seen = new Set<string>();
 
   list.forEach((entry) => {
-    const item = String(entry || "").trim();
+    const item = sanitizeCatalogText(entry).trim();
     if (!item) return;
     const key = item.toLowerCase();
     if (seen.has(key)) return;
@@ -795,7 +957,11 @@ const FEMALE_SKUS = new Set<string>([
   "alicerce-mini-bag",
   "fleur-silk-scarf",
   "nox-card-wallet",
-  "aura-thin-belt"
+  "aura-thin-belt",
+  "luna-soft-bag",
+  "stella-tote-bag",
+  "ivy-shoulder-bag",
+  "iris-slim-belt"
 ]);
 
 const MALE_SKUS = new Set<string>([
@@ -819,7 +985,10 @@ const MALE_SKUS = new Set<string>([
   "atlas-crossbody-bag",
   "pulse-leather-wallet",
   "vento-wool-scarf",
-  "titan-buckle-belt"
+  "titan-buckle-belt",
+  "drift-bifold-wallet",
+  "north-zip-wallet",
+  "orion-buckle-belt"
 ]);
 
 const NEW_SKUS = new Set<string>([
@@ -856,7 +1025,14 @@ const NEW_SKUS = new Set<string>([
   "genesis-hobo-bag",
   "fleur-silk-scarf",
   "marco-duffle-bag",
-  "pulse-leather-wallet"
+  "pulse-leather-wallet",
+  "luna-soft-bag",
+  "stella-tote-bag",
+  "ivy-shoulder-bag",
+  "drift-bifold-wallet",
+  "north-zip-wallet",
+  "orion-buckle-belt",
+  "iris-slim-belt"
 ]);
 
 const BEST_SELLER_SKUS = new Set<string>([
@@ -950,8 +1126,8 @@ function mapProduct(row: ProductRow | null | undefined): Product {
   const resolvedSecondaryImage = metadataSecondaryImage || staticSecondaryImage;
   const collections = buildCollectionsArray(staticMetadata);
   const resolvedGender = resolveProductGenderBySku(sku, staticMetadata.gender);
-  const category = String(staticMetadata.category || "Colecao");
-  const subcategory = String(staticMetadata.subcategory || category);
+  const category = sanitizeCatalogText(staticMetadata.category || "Colecao");
+  const subcategory = sanitizeCatalogText(staticMetadata.subcategory || category);
   const isNew = Boolean(staticMetadata.isNew ?? NEW_SKUS.has(sku));
   const isBestSeller = Boolean(staticMetadata.isBestSeller ?? BEST_SELLER_SKUS.has(sku));
   const isFeatured = Boolean(staticMetadata.isFeatured ?? FEATURED_SKUS.has(sku));
@@ -962,13 +1138,13 @@ function mapProduct(row: ProductRow | null | undefined): Product {
     sku,
     slug: sku,
     dbId: row?.id,
-    name: String(row?.name || sku),
-    nameEn: String(staticMetadata.nameEn || row?.name || sku),
-    collection: collections[0],
+    name: sanitizeCatalogText(row?.name || sku),
+    nameEn: sanitizeCatalogText(staticMetadata.nameEn || row?.name || sku),
+    collection: sanitizeCatalogText(collections[0]),
     collections,
     category,
     subcategory,
-    material: String(staticMetadata.material || "Material premium"),
+    material: sanitizeCatalogText(staticMetadata.material || "Material premium"),
     sizes: metadata.sizes,
     colors: metadata.colors,
     variantStock: metadata.variantStock,
@@ -1031,7 +1207,7 @@ function normalizeInventorySeedProduct(value: unknown): InventorySeedProduct | n
   const sku = normalizeSku(item.id || item.sku || "");
   if (!sku) return null;
 
-  const name = String(item.name || sku).trim() || sku;
+  const name = sanitizeCatalogText(item.name || sku).trim() || sku;
   const unitAmount = Math.max(0, Math.round(Number(item.unitAmount || item.priceCents || 0)));
   const stockQty = Math.max(0, Math.floor(Number(item.stock || item.stockQty || 0)));
   const currency = String(item.currency || "brl").trim().toLowerCase() || "brl";

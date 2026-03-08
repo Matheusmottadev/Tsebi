@@ -1,3 +1,6 @@
+"use client";
+
+import { useEffect, useMemo, useState } from "react";
 import Image from "next/image";
 
 type ProductImageProps = {
@@ -9,6 +12,8 @@ type ProductImageProps = {
   imageBaseUrl?: string;
   priority?: boolean;
 };
+
+const FALLBACK_IMAGE_SRC = "/images/placeholderreal.webp";
 
 function isAbsoluteHttpUrl(value: string): boolean {
   return /^https?:\/\//i.test(value);
@@ -54,9 +59,18 @@ export function ProductImage({
   imageBaseUrl,
   priority = false,
 }: ProductImageProps) {
-  const { resolvedSrc, useNextImage } = resolveImageSource(src, imageBaseUrl);
+  const { resolvedSrc } = useMemo(() => resolveImageSource(src, imageBaseUrl), [src, imageBaseUrl]);
+  const [currentSrc, setCurrentSrc] = useState(resolvedSrc || FALLBACK_IMAGE_SRC);
+  const [hasFailed, setHasFailed] = useState(false);
 
-  if (!resolvedSrc) {
+  useEffect(() => {
+    setCurrentSrc(resolvedSrc || FALLBACK_IMAGE_SRC);
+    setHasFailed(false);
+  }, [resolvedSrc]);
+
+  const { resolvedSrc: safeSrc, useNextImage } = resolveImageSource(currentSrc, imageBaseUrl);
+
+  if (!safeSrc) {
     return (
       <div
         className={className}
@@ -73,13 +87,18 @@ export function ProductImage({
   if (useNextImage) {
     return (
       <Image
-        src={resolvedSrc}
+        src={safeSrc}
         alt={alt}
         width={width}
         height={height}
         className={className}
         unoptimized
         priority={priority}
+        onError={() => {
+          if (hasFailed || currentSrc === FALLBACK_IMAGE_SRC) return;
+          setHasFailed(true);
+          setCurrentSrc(FALLBACK_IMAGE_SRC);
+        }}
       />
     );
   }
@@ -88,12 +107,17 @@ export function ProductImage({
   return (
     // eslint-disable-next-line @next/next/no-img-element
     <img
-      src={resolvedSrc}
+      src={safeSrc}
       alt={alt}
       width={width}
       height={height}
       className={className}
       loading={priority ? "eager" : "lazy"}
+      onError={(event) => {
+        const target = event.currentTarget;
+        if (target.src.endsWith(FALLBACK_IMAGE_SRC)) return;
+        target.src = FALLBACK_IMAGE_SRC;
+      }}
     />
   );
 }

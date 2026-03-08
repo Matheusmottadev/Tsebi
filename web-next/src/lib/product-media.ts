@@ -1,5 +1,6 @@
 type ProductLikeWithMedia = {
   id?: string;
+  sku?: string;
   image?: string;
   secondaryImage?: string;
   image2?: string;
@@ -16,6 +17,18 @@ export const PRODUCT_IMAGE_POOL = [
 ] as const;
 
 export const PRODUCT_IMAGE_FALLBACK = PRODUCT_IMAGE_POOL[0];
+
+function normalizeImageCompareKey(value: string): string {
+  const raw = String(value || "").trim().toLowerCase();
+  if (!raw) return "";
+  return raw.split("#")[0].split("?")[0];
+}
+
+function buildSkuImageFallbacks(item: ProductLikeWithMedia): string[] {
+  const sku = String(item?.sku || item?.id || "").trim();
+  if (!sku) return [];
+  return [1, 2, 3, 4, 5].map((index) => `/images/product/${sku}-${index}.jpg`);
+}
 
 function normalizeImageValue(value: unknown): string {
   if (value && typeof value === "object" && !Array.isArray(value)) {
@@ -113,14 +126,16 @@ export function collectProductMedia(item: ProductLikeWithMedia): string[] {
     normalizeImageValue(metadataRecord.image2),
     normalizeImageValue(metadataRecord.hoverImage),
   ].filter(Boolean);
-  const unique = Array.from(new Set(collected));
+  const skuFallbacks = buildSkuImageFallbacks(item);
+  const unique = Array.from(new Set([...collected, ...skuFallbacks]));
   return unique.length > 0 ? unique : [PRODUCT_IMAGE_FALLBACK];
 }
 
 export function buildHoverImagePair(item: ProductLikeWithMedia): { primary: string; secondary: string } {
   const media = collectProductMedia(item);
   const primary = media[0] || PRODUCT_IMAGE_FALLBACK;
-  const candidate = media[1] || "";
-  const secondary = candidate && candidate !== primary ? candidate : primary;
+  const primaryKey = normalizeImageCompareKey(primary);
+  const candidate = media.find((entry) => normalizeImageCompareKey(entry) && normalizeImageCompareKey(entry) !== primaryKey) || "";
+  const secondary = candidate || primary;
   return { primary, secondary };
 }

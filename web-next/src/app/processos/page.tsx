@@ -26,6 +26,8 @@ export default async function ProcessosPage() {
       stylesheetHrefs={page.stylesheetHrefs}
       inlineStyles={page.inlineStyles}
       bodyMarkup={page.bodyMarkup}
+      scriptSrcs={page.scriptSrcs}
+      inlineScripts={page.inlineScripts}
     />
   );
 }

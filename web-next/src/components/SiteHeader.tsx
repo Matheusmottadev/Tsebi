@@ -67,6 +67,30 @@ const MENU_MASCULINO_CATEGORIES = [
     items: ["Cintos", "Bolsas"],
   },
 ] as const;
+
+function buildProductsMenuHref(gender: "Feminino" | "Masculino", category?: string, subcategory?: string): string {
+  const params = new URLSearchParams();
+  params.set("gender", gender);
+  if (category) params.set("category", category);
+  if (subcategory) params.set("subcategory", subcategory);
+  return `/products?${params.toString()}`;
+}
+
+function buildAccessoriesMenuHref(options?: {
+  subcategory?: string;
+  sort?: string;
+  isFeatured?: boolean;
+  query?: string;
+}): string {
+  const params = new URLSearchParams();
+  params.set("category", "Accessories");
+  if (options?.subcategory) params.set("subcategory", options.subcategory);
+  if (options?.sort) params.set("sort", options.sort);
+  if (options?.isFeatured) params.set("isFeatured", "true");
+  if (options?.query) params.set("q", options.query);
+  return `/products?${params.toString()}`;
+}
+
 const MENU_SELECAO_TSEBI_LOOK = {
   heroImage: "https://media.tsebi.com.br/generation-57e63375-48cf-4bbf-a7b9-22ce3f1b5a6a.png",
   title: "Seleção Tsebi",
@@ -117,11 +141,16 @@ export function SiteHeader() {
   const searchParams = useSearchParams();
   const isProductPage = pathname === "/product" || String(pathname || "").startsWith("/product/");
   const currentPath = String(pathname || "").trim();
+  const rawQuery = String(searchParams?.toString() || "").trim();
+  const productsQueryTerm = String(searchParams?.get("q") || "").trim();
   const novidadesToken = String(searchParams?.get("n") || "").trim().toLowerCase();
   const novidadesView = String(searchParams?.get("view") || "").trim().toLowerCase();
+  const isPlainProductsPage = currentPath === "/products" && rawQuery.length === 0;
+  const isProductsSearchPage = currentPath === "/products" && productsQueryTerm.length > 0;
   const isNovidadesListingPage =
     currentPath === "/products" &&
-    (["e", "a", "ele", "ela", "m", "f", "masculino", "feminino"].includes(novidadesToken) ||
+    (isPlainProductsPage ||
+      ["e", "a", "ele", "ela", "m", "f", "masculino", "feminino"].includes(novidadesToken) ||
       novidadesView === "novidades-para-ele" ||
       novidadesView === "novidades-para-ela");
   const hasHydrated = useCartStore(cartSelectors.hasHydrated);
@@ -140,7 +169,9 @@ export function SiteHeader() {
   const [isMenuNavPanelOpen, setIsMenuNavPanelOpen] = useState(false);
   const [activeMenuNavPanel, setActiveMenuNavPanel] = useState<string | null>(null);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const [isContactPanelOpen, setIsContactPanelOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [headerSearchQuery, setHeaderSearchQuery] = useState(productsQueryTerm);
   const [selecaoFeedback, setSelecaoFeedback] = useState("");
   const [isHeaderHidden, setIsHeaderHidden] = useState(false);
   const [isHeaderForcedHidden, setIsHeaderForcedHidden] = useState(false);
@@ -179,6 +210,17 @@ export function SiteHeader() {
     },
     [animateArrow]
   );
+
+  useEffect(() => {
+    setHeaderSearchQuery(productsQueryTerm);
+  }, [productsQueryTerm]);
+
+  useEffect(() => {
+    if (!isContactPanelOpen) return;
+    const panelInner = document.querySelector(".header-contact-panel-inner");
+    if (!(panelInner instanceof HTMLElement)) return;
+    panelInner.scrollTop = 0;
+  }, [isContactPanelOpen]);
 
   useEffect(() => {
     let isMounted = true;
@@ -244,13 +286,14 @@ export function SiteHeader() {
   }, [isMenuOpen]);
 
   useEffect(() => {
-    document.body.classList.toggle("no-scroll", isSearchOpen);
-    document.documentElement.classList.toggle("no-scroll", isSearchOpen);
+    const shouldLockScroll = isSearchOpen || isContactPanelOpen;
+    document.body.classList.toggle("no-scroll", shouldLockScroll);
+    document.documentElement.classList.toggle("no-scroll", shouldLockScroll);
     return () => {
       document.body.classList.remove("no-scroll");
       document.documentElement.classList.remove("no-scroll");
     };
-  }, [isSearchOpen]);
+  }, [isSearchOpen, isContactPanelOpen]);
 
   useEffect(() => {
     if (!isSearchOpen) return;
@@ -296,6 +339,7 @@ export function SiteHeader() {
       if (event.key !== "Escape") return;
       setIsMenuOpen(false);
       setIsSearchOpen(false);
+      setIsContactPanelOpen(false);
     };
 
     window.addEventListener("keydown", onKeyDown);
@@ -431,6 +475,7 @@ export function SiteHeader() {
     setIsMenuOpen(false);
     setIsMenuNavPanelOpen(false);
     setActiveMenuNavPanel(null);
+    setIsContactPanelOpen(false);
     setIsSearchOpen(true);
   }, []);
 
@@ -447,12 +492,44 @@ export function SiteHeader() {
     setIsMenuNavPanelOpen(true);
   }, []);
 
-  const submitSearch = useCallback(() => {
-    const normalized = String(searchQuery || "").trim();
+  const submitSearch = useCallback((nextQuery?: string) => {
+    const normalized = String(typeof nextQuery === "string" ? nextQuery : searchQuery || "").trim();
     if (normalized.length < 2) return;
     router.push(`/products?q=${encodeURIComponent(normalized)}`);
     closeSearchOverlay();
   }, [closeSearchOverlay, router, searchQuery]);
+
+  const submitHeaderSearch = useCallback(
+    (event?: React.FormEvent<HTMLFormElement>) => {
+      event?.preventDefault();
+      const normalized = String(headerSearchQuery || "").trim();
+      if (normalized.length < 2) return;
+      const nextParams = new URLSearchParams(String(searchParams?.toString() || ""));
+      nextParams.set("q", normalized);
+      router.push(`/products?${nextParams.toString()}`);
+    },
+    [headerSearchQuery, router, searchParams]
+  );
+
+  const handleHeaderSearchClear = useCallback(() => {
+    setHeaderSearchQuery("");
+    setSearchQuery("");
+    setIsMenuOpen(false);
+    setIsMenuNavPanelOpen(false);
+    setActiveMenuNavPanel(null);
+    setIsSearchOpen(true);
+  }, []);
+
+  const handleMenuProductsLinkClick = useCallback(
+    (event: React.MouseEvent<HTMLAnchorElement>, href: string) => {
+      event.preventDefault();
+      setIsMenuOpen(false);
+      setIsMenuNavPanelOpen(false);
+      setActiveMenuNavPanel(null);
+      router.push(href);
+    },
+    [router]
+  );
 
   const handleAddSelecaoLook = useCallback((event?: React.MouseEvent<HTMLButtonElement>) => {
     event?.preventDefault();
@@ -508,7 +585,7 @@ export function SiteHeader() {
           >
             &#10094;
           </button>
-          <div id="topMessage" className={`top-message ${messageClass}`} key={messageKey}>
+          <div className={`top-message ${messageClass}`} key={messageKey}>
             {currentMessage}
           </div>
           <button
@@ -544,12 +621,37 @@ export function SiteHeader() {
               <span></span>
               <span></span>
             </button>
-            <button type="button" className="header-search-trigger" aria-label="Buscar produtos" onClick={openSearchOverlay}>
-              <svg viewBox="0 0 24 24" aria-hidden="true">
-                <circle cx="11" cy="11" r="7"></circle>
-                <path d="M20 20l-4.2-4.2"></path>
-              </svg>
-            </button>
+            {isProductsSearchPage ? (
+              <form className="header-inline-search" role="search" aria-label="Buscar produtos" onSubmit={submitHeaderSearch}>
+                <span className="header-inline-search-icon" aria-hidden="true">
+                  <svg viewBox="0 0 24 24">
+                    <circle cx="11" cy="11" r="7"></circle>
+                    <path d="M20 20l-4.2-4.2"></path>
+                  </svg>
+                </span>
+                <label htmlFor="header-inline-search-input" className="sr-only">
+                  Buscar produtos
+                </label>
+                <input
+                  id="header-inline-search-input"
+                  className="header-inline-search-input"
+                  type="search"
+                  value={headerSearchQuery}
+                  onChange={(event) => setHeaderSearchQuery(event.target.value)}
+                  autoComplete="off"
+                />
+                <button type="button" className="header-inline-search-clear" onClick={handleHeaderSearchClear}>
+                  Limpar
+                </button>
+              </form>
+            ) : (
+              <button type="button" className="header-search-trigger" aria-label="Buscar produtos" onClick={openSearchOverlay}>
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <circle cx="11" cy="11" r="7"></circle>
+                  <path d="M20 20l-4.2-4.2"></path>
+                </svg>
+              </button>
+            )}
           </div>
 
           <h1 className="logo">
@@ -561,6 +663,20 @@ export function SiteHeader() {
           </h1>
 
           <div className="header-right">
+            <button
+              type="button"
+              className="quick-action-contact"
+              aria-label="Fale Conosco"
+              onClick={() => {
+                setIsMenuOpen(false);
+                setIsMenuNavPanelOpen(false);
+                setActiveMenuNavPanel(null);
+                setIsSearchOpen(false);
+                setIsContactPanelOpen(true);
+              }}
+            >
+              Fale Conosco
+            </button>
             {isAuthenticated ? (
               <a className="quick-action" href="/account" aria-label="Conta">
                 <svg viewBox="0 0 24 24" aria-hidden="true">
@@ -592,6 +708,92 @@ export function SiteHeader() {
         aria-label="Fechar menu"
         onClick={() => setIsMenuOpen(false)}
       />
+
+      <button
+        type="button"
+        className={`header-contact-backdrop ${isContactPanelOpen ? "is-open" : ""}`}
+        aria-label="Fechar Fale Conosco"
+        onClick={() => setIsContactPanelOpen(false)}
+      />
+
+      <aside className={`header-contact-panel ${isContactPanelOpen ? "is-open" : ""}`} aria-hidden={!isContactPanelOpen}>
+        <div className="header-contact-panel-inner">
+          <div className="header-contact-panel-head">
+            <h2>Fale Conosco</h2>
+            <button
+              type="button"
+              className="header-contact-panel-close"
+              aria-label="Fechar"
+              onClick={() => setIsContactPanelOpen(false)}
+            >
+              &times;
+            </button>
+          </div>
+
+          <p className="header-contact-panel-copy">
+            A equipe de consultores da Tsebi está à sua disposição. Com atendimento dedicado e discreto, oferecemos
+            orientação na escolha das peças e acesso a informações sobre materiais, coleções e disponibilidade.
+          </p>
+
+          <nav className="header-contact-panel-links" aria-label="Canais de atendimento">
+            <a href="tel:+5511918596632" className="header-contact-panel-link">
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <rect x="7" y="2.5" width="10" height="19" rx="2"></rect>
+                <path d="M11 18.2h2"></path>
+              </svg>
+              +55 (11) 91859-6632
+            </a>
+            <a href="mailto:Contato@tsebi.com.br" className="header-contact-panel-link">
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <rect x="3" y="6" width="18" height="12" rx="1.5"></rect>
+                <path d="M4.5 7.5L12 13l7.5-5.5"></path>
+              </svg>
+              Envie um email
+            </a>
+            <a
+              href="https://wa.me/5511918596632"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="header-contact-panel-link"
+            >
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M12 4.8a7.2 7.2 0 0 0-6.2 10.9"></path>
+                <path d="M5.8 15.7L4.9 19l3.2-.9"></path>
+                <path d="M8.1 18.1A7.2 7.2 0 1 0 12 4.8"></path>
+                <path d="M9.7 9.6c.2-.3.4-.3.6-.3h.4c.2 0 .3.1.4.3l.5 1.3c.1.2.1.3 0 .5l-.4.5c.3.6.8 1.1 1.4 1.4l.5-.4c.1-.1.3-.1.5 0l1.3.5c.2.1.3.2.3.4v.4c0 .3-.1.5-.3.6-.4.2-.9.3-1.5.1-1.6-.5-2.9-1.8-3.4-3.4-.2-.5-.1-1 .1-1.5z"></path>
+              </svg>
+              WhatsApp
+            </a>
+            <a href="sms:+5511918596632" className="header-contact-panel-link">
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M19 14a3 3 0 0 1-3 3H9l-4 3v-3a3 3 0 0 1-3-3V8a3 3 0 0 1 3-3h11a3 3 0 0 1 3 3z"></path>
+              </svg>
+              Apple Message
+            </a>
+            <a
+              href="https://www.instagram.com/tsebiofficial/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="header-contact-panel-link"
+            >
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <rect x="4" y="4" width="16" height="16" rx="4" ry="4"></rect>
+                <circle cx="12" cy="12" r="3.8"></circle>
+                <circle cx="17.2" cy="6.8" r="1.1"></circle>
+              </svg>
+              Direct Instagram
+            </a>
+          </nav>
+
+          <div className="header-contact-panel-divider" />
+
+          <div className="header-contact-panel-help">
+            <p>Precisa de ajuda?</p>
+            <a href="/faq">Perguntas Frequentes</a>
+            <a href="/processos">Serviços de Cuidado</a>
+          </div>
+        </div>
+      </aside>
 
       <aside
         className={`header-menu ${isMenuOpen ? "is-open" : ""}`}
@@ -665,19 +867,6 @@ export function SiteHeader() {
                 </svg>
                 <span>Marque um atendimento privativo</span>
               </a>
-              <label className="header-menu-utility header-menu-language" aria-label="Idioma">
-                <svg viewBox="0 0 24 24" aria-hidden="true">
-                  <circle cx="12" cy="12" r="9"></circle>
-                  <path d="M3 12h18"></path>
-                  <path d="M12 3a14 14 0 0 1 0 18"></path>
-                  <path d="M12 3a14 14 0 0 0 0 18"></path>
-                </svg>
-                <span>Idioma</span>
-                <select defaultValue="pt-br" aria-label="Selecionar idioma">
-                  <option value="pt-br">PT-BR</option>
-                  <option value="en">Ingles</option>
-                </select>
-              </label>
             </div>
           </div>
           <div className="header-menu-subpanel" aria-hidden={!isMenuNavPanelOpen}>
@@ -708,10 +897,7 @@ export function SiteHeader() {
                         <span className="header-menu-subpanel-category-title">Para ele</span>
                         <div className="header-menu-subpanel-category-links">
                           <a
-                            href={item === "Novidades" ? "/products?n=e" : "#"}
-                            onClick={(event) => {
-                              if (item !== "Novidades") event.preventDefault();
-                            }}
+                            href={item === "Novidades" ? "/products?n=e" : "/products?p=e"}
                           >
                             {item === "Presentes" ? "Presentes para homens" : "Novidades para homens"}
                           </a>
@@ -723,10 +909,7 @@ export function SiteHeader() {
                         <span className="header-menu-subpanel-category-title">Para ela</span>
                         <div className="header-menu-subpanel-category-links">
                           <a
-                            href={item === "Novidades" ? "/products?n=a" : "#"}
-                            onClick={(event) => {
-                              if (item !== "Novidades") event.preventDefault();
-                            }}
+                            href={item === "Novidades" ? "/products?n=a" : "/products?p=a"}
                           >
                             {item === "Presentes" ? "Presentes para mulheres" : "Novidades para Mulheres"}
                           </a>
@@ -760,23 +943,76 @@ export function SiteHeader() {
                       <div className="header-menu-subpanel-category-group">
                         <span className="header-menu-subpanel-category-title">BOLSAS</span>
                         <div className="header-menu-subpanel-category-links">
-                          <a href="/products?category=Bolsas">Todas as bolsas</a>
-                          <a href="/products?q=Genesis%20Bag%20%E2%80%94%20Black">Genesis Bag — Black</a>
-                          <a href="/products?q=Genesis%20Bag%20%E2%80%94%20Sand">Genesis Bag — Sand</a>
+                          <a
+                            href={buildAccessoriesMenuHref({ subcategory: "Bolsas" })}
+                            onClick={(event) =>
+                              handleMenuProductsLinkClick(event, buildAccessoriesMenuHref({ subcategory: "Bolsas" }))
+                            }
+                          >
+                            Todas as bolsas
+                          </a>
+                          <a
+                            href={buildAccessoriesMenuHref({ subcategory: "Bolsas", query: "Genesis Bag Black" })}
+                            onClick={(event) =>
+                              handleMenuProductsLinkClick(
+                                event,
+                                buildAccessoriesMenuHref({ subcategory: "Bolsas", query: "Genesis Bag Black" })
+                              )
+                            }
+                          >
+                            Genesis Bag — Black
+                          </a>
+                          <a
+                            href={buildAccessoriesMenuHref({ subcategory: "Bolsas", query: "Genesis Bag Sand" })}
+                            onClick={(event) =>
+                              handleMenuProductsLinkClick(
+                                event,
+                                buildAccessoriesMenuHref({ subcategory: "Bolsas", query: "Genesis Bag Sand" })
+                              )
+                            }
+                          >
+                            Genesis Bag — Sand
+                          </a>
                         </div>
                       </div>
                       <div className="header-menu-subpanel-category-group">
                         <span className="header-menu-subpanel-category-title">ACESSÓRIOS</span>
                         <div className="header-menu-subpanel-category-links">
-                          <a href="/products?category=Carteiras">Carteiras</a>
-                          <a href="/products?category=Cintos">Cintos</a>
+                          <a
+                            href={buildAccessoriesMenuHref({ subcategory: "Carteiras" })}
+                            onClick={(event) =>
+                              handleMenuProductsLinkClick(event, buildAccessoriesMenuHref({ subcategory: "Carteiras" }))
+                            }
+                          >
+                            Carteiras
+                          </a>
+                          <a
+                            href={buildAccessoriesMenuHref({ subcategory: "Cintos" })}
+                            onClick={(event) =>
+                              handleMenuProductsLinkClick(event, buildAccessoriesMenuHref({ subcategory: "Cintos" }))
+                            }
+                          >
+                            Cintos
+                          </a>
                         </div>
                       </div>
                       <div className="header-menu-subpanel-category-group">
                         <span className="header-menu-subpanel-category-title">FEATURED</span>
                         <div className="header-menu-subpanel-category-links">
-                          <a href="/products?sort=latest">New Arrivals</a>
-                          <a href="/products?featured=signature">Signature Pieces</a>
+                          <a
+                            href={buildAccessoriesMenuHref({ sort: "newest" })}
+                            onClick={(event) => handleMenuProductsLinkClick(event, buildAccessoriesMenuHref({ sort: "newest" }))}
+                          >
+                            New Arrivals
+                          </a>
+                          <a
+                            href={buildAccessoriesMenuHref({ isFeatured: true })}
+                            onClick={(event) =>
+                              handleMenuProductsLinkClick(event, buildAccessoriesMenuHref({ isFeatured: true }))
+                            }
+                          >
+                            Signature Pieces
+                          </a>
                         </div>
                       </div>
                       <a
@@ -843,17 +1079,35 @@ export function SiteHeader() {
                       <div className="header-menu-subpanel-categories">
                         {MENU_FEMININO_CATEGORIES.map((group) => (
                           <div key={group.title} className="header-menu-subpanel-category-group">
-                            <span className="header-menu-subpanel-category-title">{group.title}</span>
+                            <a
+                              href={buildProductsMenuHref("Feminino", group.title)}
+                              className="header-menu-subpanel-category-title"
+                              onClick={(event) =>
+                                handleMenuProductsLinkClick(event, buildProductsMenuHref("Feminino", group.title))
+                              }
+                            >
+                              {group.title}
+                            </a>
                             <div className="header-menu-subpanel-category-links">
                               {group.items.map((subItem) => (
-                                <a key={subItem} href={`/products?q=${encodeURIComponent(subItem)}`}>
+                                <a
+                                  key={subItem}
+                                  href={buildProductsMenuHref("Feminino", group.title, subItem)}
+                                  onClick={(event) =>
+                                    handleMenuProductsLinkClick(event, buildProductsMenuHref("Feminino", group.title, subItem))
+                                  }
+                                >
                                   {subItem}
                                 </a>
                               ))}
                             </div>
                           </div>
                         ))}
-                        <a className="header-menu-subpanel-view-all" href="/products?gender=Feminino">
+                        <a
+                          className="header-menu-subpanel-view-all"
+                          href={buildProductsMenuHref("Feminino")}
+                          onClick={(event) => handleMenuProductsLinkClick(event, buildProductsMenuHref("Feminino"))}
+                        >
                           Ver tudo
                         </a>
                       </div>
@@ -866,17 +1120,35 @@ export function SiteHeader() {
                       <div className="header-menu-subpanel-categories">
                         {MENU_MASCULINO_CATEGORIES.map((group) => (
                           <div key={group.title} className="header-menu-subpanel-category-group">
-                            <span className="header-menu-subpanel-category-title">{group.title}</span>
+                            <a
+                              href={buildProductsMenuHref("Masculino", group.title)}
+                              className="header-menu-subpanel-category-title"
+                              onClick={(event) =>
+                                handleMenuProductsLinkClick(event, buildProductsMenuHref("Masculino", group.title))
+                              }
+                            >
+                              {group.title}
+                            </a>
                             <div className="header-menu-subpanel-category-links">
                               {group.items.map((subItem) => (
-                                <a key={subItem} href={`/products?q=${encodeURIComponent(subItem)}`}>
+                                <a
+                                  key={subItem}
+                                  href={buildProductsMenuHref("Masculino", group.title, subItem)}
+                                  onClick={(event) =>
+                                    handleMenuProductsLinkClick(event, buildProductsMenuHref("Masculino", group.title, subItem))
+                                  }
+                                >
                                   {subItem}
                                 </a>
                               ))}
                             </div>
                           </div>
                         ))}
-                        <a className="header-menu-subpanel-view-all" href="/products?gender=Masculino">
+                        <a
+                          className="header-menu-subpanel-view-all"
+                          href={buildProductsMenuHref("Masculino")}
+                          onClick={(event) => handleMenuProductsLinkClick(event, buildProductsMenuHref("Masculino"))}
+                        >
                           Ver tudo
                         </a>
                       </div>
@@ -961,10 +1233,7 @@ export function SiteHeader() {
                   key={category}
                   type="button"
                   className="tsebi-search-category-btn"
-                  onClick={() => {
-                    setSearchQuery(category);
-                    searchInputRef.current?.focus();
-                  }}
+                  onClick={() => submitSearch(category)}
                 >
                   {category}
                 </button>
@@ -993,6 +1262,7 @@ export function SiteHeader() {
     </>
   );
 }
+
 
 
 

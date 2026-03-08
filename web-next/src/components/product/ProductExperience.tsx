@@ -7,6 +7,7 @@ import { buildVariantSnapshot, getProductVariantOptions, getVariantStockQty } fr
 import { useCartStore } from "@/lib/cart/cartStore";
 import { getSmoothScrollEngine } from "@/lib/animation/smoothScrollEngine";
 import { getOrCreateAnonId, trackCommerceEvent } from "@/lib/analytics";
+import { quoteShipping } from "@/services/orders";
 import type { Product } from "@/types";
 import { Drawer } from "./Drawer";
 import {
@@ -121,6 +122,102 @@ function clamp01(value: number): number {
   return clampRange(value, 0, 1);
 }
 
+function normalizeText(value: unknown): string {
+  return String(value || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .trim()
+    .toLowerCase();
+}
+
+function isUniqueSizeLabel(value: string): boolean {
+  const normalized = normalizeText(value);
+  return normalized === "unico" || normalized === "unique";
+}
+
+function normalizePostalCode(value: string): string {
+  return String(value || "").replace(/\D/g, "").slice(0, 8);
+}
+
+function formatPostalCode(value: string): string {
+  const digits = normalizePostalCode(value);
+  if (digits.length <= 5) return digits;
+  return `${digits.slice(0, 5)}-${digits.slice(5)}`;
+}
+
+function extractRangeFromUnknown(value: unknown): { minDays: number; maxDays: number } | null {
+  if (typeof value === "number" && Number.isFinite(value) && value > 0) {
+    const day = Math.max(1, Math.round(value));
+    return { minDays: day, maxDays: day };
+  }
+
+  const text = String(value || "").trim();
+  if (!text) return null;
+  const matches = text.match(/\d+/g);
+  if (!matches || matches.length === 0) return null;
+  const values = matches
+    .map((entry) => Number(entry))
+    .filter((entry) => Number.isFinite(entry) && entry > 0)
+    .map((entry) => Math.round(entry));
+  if (values.length === 0) return null;
+  const minDays = Math.min(...values);
+  const maxDays = Math.max(...values);
+  return { minDays, maxDays };
+}
+
+function resolveQuoteDeadlineRange(quote: {
+  deadlineDays?: number | null;
+  rawPayload?: unknown;
+  deadlineMinDays?: number | null;
+  deadlineMaxDays?: number | null;
+}): { minDays: number; maxDays: number } | null {
+  const explicitMin = Number(quote.deadlineMinDays);
+  const explicitMax = Number(quote.deadlineMaxDays);
+  if (Number.isFinite(explicitMin) && explicitMin > 0 && Number.isFinite(explicitMax) && explicitMax > 0) {
+    return { minDays: Math.min(explicitMin, explicitMax), maxDays: Math.max(explicitMin, explicitMax) };
+  }
+
+  const direct = extractRangeFromUnknown(quote.deadlineDays);
+  if (direct) return direct;
+
+  if (quote.rawPayload && typeof quote.rawPayload === "object" && !Array.isArray(quote.rawPayload)) {
+    const payload = quote.rawPayload as Record<string, unknown>;
+    const candidates: unknown[] = [
+      payload.custom_delivery_range,
+      payload.delivery_range,
+      payload.range,
+      payload.custom_delivery_time,
+      payload.delivery_time,
+      payload.deadline,
+      payload.time,
+    ];
+    for (const candidate of candidates) {
+      const parsed = extractRangeFromUnknown(candidate);
+      if (parsed) return parsed;
+    }
+  }
+
+  return null;
+}
+
+function formatDeliveryDeadline(range: { minDays: number; maxDays: number } | null): string {
+  if (!range) return "Prazo sob consulta";
+  const minDays = Math.max(1, Math.round(Number(range.minDays || 0)));
+  const maxDays = Math.max(minDays, Math.round(Number(range.maxDays || minDays)));
+  if (minDays === maxDays) {
+    if (minDays === 1) return "1 dia util";
+    return `${minDays} dias uteis`;
+  }
+  return `de ${minDays} a ${maxDays} dias uteis`;
+}
+
+function formatMoneyCentsBRL(cents: number): string {
+  return new Intl.NumberFormat("pt-BR", {
+    style: "currency",
+    currency: "BRL",
+  }).format(Number(cents || 0) / 100);
+}
+
 function resolveColorToken(rawColor: string): { cssColor: string; unknown: boolean } {
   const normalized = String(rawColor || "").trim().toLowerCase();
   const map: Record<string, string> = {
@@ -232,9 +329,19 @@ export function ProductExperience({ product, recommendations, imageBaseUrl }: Pr
   const [stickyToastMessage, setStickyToastMessage] = useState("");
   const [openDrawer, setOpenDrawer] = useState<DrawerKey | null>(null);
   const [showStickyBar, setShowStickyBar] = useState(false);
+  const [deliveryZip, setDeliveryZip] = useState("");
+  const [isDeliveryLoading, setIsDeliveryLoading] = useState(false);
+  const [deliveryError, setDeliveryError] = useState("");
+  const [deliverySummary, setDeliverySummary] = useState<{
+    priceCents: number;
+    deadlineRange: { minDays: number; maxDays: number } | null;
+    serviceName: string;
+    carrierName: string;
+  } | null>(null);
 
   const colorRequired = colors.length > 0;
   const sizeRequired = sizes.length > 0;
+  const isSingleUniqueSizeProduct = sizeRequired && sizes.length === 1 && isUniqueSizeLabel(sizes[0]);
   const hasValidColorSelection = !colorRequired || Boolean(String(selectedColor || "").trim());
   const hasValidSizeSelection = !sizeRequired || Boolean(String(selectedSize || "").trim());
   const canBuy = hasValidColorSelection && hasValidSizeSelection;
@@ -286,6 +393,15 @@ export function ProductExperience({ product, recommendations, imageBaseUrl }: Pr
   useEffect(() => {
     setSelectedColor((current) => (colors.includes(current) ? current : ""));
   }, [colors]);
+
+  useEffect(() => {
+    setSelectedSize((current) => (sizes.includes(current) ? current : ""));
+  }, [sizes]);
+
+  useEffect(() => {
+    if (!isSingleUniqueSizeProduct) return;
+    setSelectedSize("Unico");
+  }, [isSingleUniqueSizeProduct]);
 
   useEffect(() => {
     return () => {
@@ -579,6 +695,50 @@ export function ProductExperience({ product, recommendations, imageBaseUrl }: Pr
     setOpenDrawer(null);
   };
 
+  const handleEstimateDelivery = useCallback(async () => {
+    const normalizedZip = normalizePostalCode(deliveryZip);
+    if (normalizedZip.length !== 8) {
+      setDeliverySummary(null);
+      setDeliveryError("Informe um CEP valido com 8 digitos.");
+      return;
+    }
+
+    setIsDeliveryLoading(true);
+    setDeliveryError("");
+
+    try {
+      const response = await quoteShipping({ destinationZip: normalizedZip });
+      const quotes = Array.isArray(response?.data?.quotes) ? response.data.quotes : [];
+      if (quotes.length === 0) {
+        setDeliverySummary(null);
+        setDeliveryError("Nao foi possivel calcular para este CEP.");
+        return;
+      }
+
+      const bestQuote = [...quotes].sort((a, b) => {
+        const aRange = resolveQuoteDeadlineRange(a as unknown as { deadlineDays?: number | null; rawPayload?: unknown });
+        const bRange = resolveQuoteDeadlineRange(b as unknown as { deadlineDays?: number | null; rawPayload?: unknown });
+        const aMinDays = aRange ? aRange.minDays : Number.POSITIVE_INFINITY;
+        const bMinDays = bRange ? bRange.minDays : Number.POSITIVE_INFINITY;
+        if (aMinDays !== bMinDays) return aMinDays - bMinDays;
+        return Number(a.priceCents || 0) - Number(b.priceCents || 0);
+      })[0];
+
+      setDeliverySummary({
+        priceCents: Number(bestQuote.priceCents || 0),
+        deadlineRange: resolveQuoteDeadlineRange(bestQuote as unknown as { deadlineDays?: number | null; rawPayload?: unknown }),
+        serviceName: String(bestQuote.serviceName || ""),
+        carrierName: String(bestQuote.carrierName || ""),
+      });
+      setDeliveryError("");
+    } catch {
+      setDeliverySummary(null);
+      setDeliveryError("Nao foi possivel calcular agora. Tente novamente.");
+    } finally {
+      setIsDeliveryLoading(false);
+    }
+  }, [deliveryZip]);
+
   return (
     <div className={styles.page}>
       <div className={`${styles.stickyProductBar}${showStickyBar ? ` ${styles.stickyProductBarVisible}` : ""}`} aria-hidden={!showStickyBar}>
@@ -659,20 +819,55 @@ export function ProductExperience({ product, recommendations, imageBaseUrl }: Pr
               })}
             </div>
 
-            <div className={styles.sizeSelectorRow}>
-              <button type="button" className={styles.sizeTrigger} onClick={() => setOpenDrawer("size-chart")}>
-                <span>{selectedSize ? `Tamanho: ${selectedSize}` : "Selecionar tamanho"}</span>
-                <span className={styles.chevron}>&#8964;</span>
-              </button>
-              <button type="button" className={styles.sizeTableButton} onClick={() => setOpenDrawer("size-chart")}>
-                Tabela de tamanhos
-              </button>
-            </div>
+            {!isSingleUniqueSizeProduct ? (
+              <div className={styles.sizeSelectorRow}>
+                <button type="button" className={styles.sizeTrigger} onClick={() => setOpenDrawer("size-chart")}>
+                  <span>{selectedSize ? `Tamanho: ${selectedSize}` : "Selecionar tamanho"}</span>
+                  <span className={styles.chevron}>&#8964;</span>
+                </button>
+                <button type="button" className={styles.sizeTableButton} onClick={() => setOpenDrawer("size-chart")}>
+                  Tabela de tamanhos
+                </button>
+              </div>
+            ) : null}
             <button type="button" className={styles.buyButton} onClick={() => handleBuy("main")} ref={buyButtonRef}>
               Adicionar ao carrinho
             </button>
 
             {feedback ? <p className={styles.feedback}>{feedback}</p> : null}
+            <section className={styles.deliveryEstimate} aria-label="Previsao de entrega">
+              <h3 className={styles.deliveryTitle}>Previsao de entrega</h3>
+              <div className={styles.deliveryForm}>
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  autoComplete="postal-code"
+                  placeholder="Digite seu CEP"
+                  value={formatPostalCode(deliveryZip)}
+                  onChange={(event) => {
+                    setDeliveryZip(normalizePostalCode(event.target.value));
+                    setDeliveryError("");
+                  }}
+                  className={styles.deliveryInput}
+                  aria-label="CEP para calcular entrega"
+                />
+                <button
+                  type="button"
+                  className={styles.deliveryButton}
+                  onClick={() => void handleEstimateDelivery()}
+                  disabled={isDeliveryLoading}
+                >
+                  {isDeliveryLoading ? "Calculando..." : "Calcular"}
+                </button>
+              </div>
+              {deliverySummary ? (
+                <p className={styles.deliveryResult}>
+                  {formatDeliveryDeadline(deliverySummary.deadlineRange)} - {formatMoneyCentsBRL(deliverySummary.priceCents)}
+                  {deliverySummary.serviceName ? ` (${deliverySummary.serviceName})` : ""}
+                </p>
+              ) : null}
+              {deliveryError ? <p className={styles.deliveryError}>{deliveryError}</p> : null}
+            </section>
 
             <div className={styles.infoRows}>
               <button type="button" onClick={() => setOpenDrawer("details")}>Detalhes do produto</button>

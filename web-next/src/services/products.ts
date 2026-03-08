@@ -90,6 +90,79 @@ function buildRecentProductsPath(ids: string[]): string {
   return `/api/products/recent?${params.toString()}`;
 }
 
+function normalizeText(value: unknown): string {
+  return String(value || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .trim()
+    .toLowerCase();
+}
+
+function isSingleSizeAccessoryProduct(product: Product): boolean {
+  const anyProduct = product as Product & { subcategory?: unknown; tags?: unknown };
+  const tags = Array.isArray(anyProduct.tags) ? anyProduct.tags.map((entry) => String(entry || "")) : [];
+  const haystack = [
+    product.category,
+    String(anyProduct.subcategory || ""),
+    product.name,
+    product.sku,
+    ...tags,
+  ]
+    .map((entry) => normalizeText(entry))
+    .join(" ");
+
+  const isAccessoryCategory =
+    normalizeText(product.category) === "accessories" || normalizeText(product.category) === "acessorios";
+  const hasSingleSizeKeywords = /\b(bolsa|bolsas|bag|bags|cinto|cintos|belt|belts|carteira|carteiras|wallet|wallets)\b/.test(
+    haystack
+  );
+
+  return isAccessoryCategory && hasSingleSizeKeywords;
+}
+
+function forceSingleSize(product: Product): Product {
+  const currentSizes = Array.isArray(product.sizes) ? product.sizes : [];
+  const hasOnlySingleSize =
+    currentSizes.length === 1 && ["unico", "único"].includes(normalizeText(currentSizes[0]));
+  if (hasOnlySingleSize) return product;
+
+  const nextProduct: Product = {
+    ...product,
+    sizes: ["Unico"],
+  };
+
+  const variantStockEntries = Object.entries(product.variantStock || {});
+  if (variantStockEntries.length === 0) return nextProduct;
+
+  const byColor = new Map<string, number>();
+  variantStockEntries.forEach(([key, rawQty]) => {
+    const qty = Math.max(0, Number(rawQty || 0));
+    if (!qty) return;
+    const parts = key.includes("__") ? key.split("__") : key.includes("|") ? key.split("|") : [];
+    const color = String(parts[0] || "").trim();
+    if (!color) return;
+    byColor.set(color, (byColor.get(color) || 0) + qty);
+  });
+
+  if (byColor.size === 0) return nextProduct;
+
+  const nextVariantStock: Record<string, number> = {};
+  byColor.forEach((qty, color) => {
+    nextVariantStock[`${color}__Unico`] = qty;
+  });
+  nextProduct.variantStock = nextVariantStock;
+  return nextProduct;
+}
+
+function normalizeProductForStorefront(product: Product): Product {
+  if (!isSingleSizeAccessoryProduct(product)) return product;
+  return forceSingleSize(product);
+}
+
+function normalizeProductsForStorefront(products: Product[]): Product[] {
+  return (Array.isArray(products) ? products : []).map((product) => normalizeProductForStorefront(product));
+}
+
 /**
  * GET /api/products or GET /api/products/recent
  * Auth: public.
@@ -98,9 +171,10 @@ export async function listProducts(params: ListProductsParams = {}): Promise<Pro
   const recentIds = Array.isArray(params.recentIds) ? params.recentIds : [];
   if (recentIds.length > 0) {
     const response = await get<{ products: Product[] }>(buildRecentProductsPath(recentIds));
-    return Array.isArray(response.products) ? response.products : [];
+    return normalizeProductsForStorefront(Array.isArray(response.products) ? response.products : []);
   }
-  return get<Product[]>("/api/products");
+  const response = await get<Product[]>("/api/products");
+  return normalizeProductsForStorefront(response);
 }
 
 /**
@@ -144,10 +218,10 @@ export async function searchProductsDetailed(
     limit: Math.max(1, Number(response?.limit || limit) || limit),
     source: String(response?.source || "postgres"),
     found: Math.max(0, Number(response?.found || 0) || 0),
-    products: Array.isArray(response?.products) ? response.products : [],
+    products: normalizeProductsForStorefront(Array.isArray(response?.products) ? response.products : []),
     suggestions: Array.isArray(response?.suggestions) ? response.suggestions : [],
     suggestedQuery: response?.suggestedQuery ? String(response.suggestedQuery) : null,
-    curatedProducts: Array.isArray(response?.curatedProducts) ? response.curatedProducts : []
+    curatedProducts: normalizeProductsForStorefront(Array.isArray(response?.curatedProducts) ? response.curatedProducts : [])
   };
 }
 
@@ -169,7 +243,7 @@ export async function searchProductSuggestions(query: string, limit = 8): Promis
     query: String(response?.query || normalized),
     suggestions: Array.isArray(response?.suggestions) ? response.suggestions : [],
     suggestedQuery: response?.suggestedQuery ? String(response.suggestedQuery) : null,
-    curatedProducts: Array.isArray(response?.curatedProducts) ? response.curatedProducts : []
+    curatedProducts: normalizeProductsForStorefront(Array.isArray(response?.curatedProducts) ? response.curatedProducts : [])
   };
 }
 
@@ -206,7 +280,7 @@ export async function getPersonalizedProducts(
     source: response?.source === "best_sellers" ? "best_sellers" : "personalized",
     placement: response?.placement ? String(response.placement) : undefined,
     actorKey: response?.actorKey ? String(response.actorKey) : undefined,
-    products: Array.isArray(response?.products) ? response.products : [],
+    products: normalizeProductsForStorefront(Array.isArray(response?.products) ? response.products : []),
     items: Array.isArray(response?.items) ? response.items : undefined,
   };
 }
@@ -237,7 +311,8 @@ export async function getRecentProducts(ids: string[] = []): Promise<Product[]> 
  */
 export async function getProductBySlugOrId(idOrSlug: string): Promise<Product | null> {
   try {
-    return await get<Product>(`/api/products/${encodeURIComponent(idOrSlug)}`);
+    const response = await get<Product>(`/api/products/${encodeURIComponent(idOrSlug)}`);
+    return normalizeProductForStorefront(response);
   } catch (error) {
     if (error instanceof HttpError && error.status === 404) return null;
     throw error;
@@ -259,9 +334,14 @@ export async function getProduct(idOrSlug: string): Promise<Product | null> {
  */
 export async function listProductRecommendations(idOrSlug: string, limit = 4): Promise<ProductRecommendationsResponse> {
   const safeLimit = Math.max(1, Math.min(12, Number(limit) || 4));
-  return get<ProductRecommendationsResponse>(
+  const response = await get<ProductRecommendationsResponse>(
     `/api/products/${encodeURIComponent(idOrSlug)}/recommendations?limit=${safeLimit}`
   );
+  return {
+    ...response,
+    base: normalizeProductForStorefront(response.base),
+    recommendations: normalizeProductsForStorefront(Array.isArray(response.recommendations) ? response.recommendations : []),
+  };
 }
 
 /**

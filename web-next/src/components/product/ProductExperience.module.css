@@ -275,6 +275,29 @@
   font-family: "Montserrat", sans-serif;
 }
 
+.sizeSingleSelector {
+  min-height: 38px;
+  width: fit-content;
+  min-width: 188px;
+  max-width: 240px;
+  border: 1px solid #d8d8d8;
+  background: #fff;
+  padding: 0 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: "Montserrat", sans-serif;
+  font-size: 12px;
+  color: #111;
+}
+
+.sizeSingleSelector strong {
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+
 .stockNotice {
   margin: 0;
   font-size: 11px;
@@ -317,6 +340,76 @@
   margin: 0;
   font-size: 11px;
   color: #333;
+}
+
+.deliveryEstimate {
+  border-top: 1px solid #ececec;
+  padding-top: 10px;
+  display: grid;
+  gap: 8px;
+}
+
+.deliveryTitle {
+  margin: 0;
+  font-family: "Montserrat", sans-serif;
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #181818;
+}
+
+.deliveryForm {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 8px;
+}
+
+.deliveryInput {
+  min-height: 38px;
+  border: 1px solid #d8d8d8;
+  background: #fff;
+  padding: 0 10px;
+  font-family: "Montserrat", sans-serif;
+  font-size: 12px;
+  color: #121212;
+}
+
+.deliveryInput::placeholder {
+  color: #8a8a8a;
+}
+
+.deliveryButton {
+  min-height: 38px;
+  border: 1px solid #111;
+  background: #111;
+  color: #fff;
+  padding: 0 12px;
+  font-family: "Montserrat", sans-serif;
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.deliveryButton:disabled {
+  opacity: 0.65;
+  cursor: wait;
+}
+
+.deliveryResult {
+  margin: 0;
+  font-family: "Montserrat", sans-serif;
+  font-size: 12px;
+  color: #202020;
+  line-height: 1.35;
+}
+
+.deliveryError {
+  margin: 0;
+  font-family: "Montserrat", sans-serif;
+  font-size: 11px;
+  color: #8d1f1f;
 }
 
 .infoRows {

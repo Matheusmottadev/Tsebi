@@ -105,6 +105,30 @@ const MENU_MASCULINO_CATEGORIES = [
     items: ["Cintos", "Bolsas"],
   },
 ] as const;
+
+function buildProductsMenuHref(gender: "Feminino" | "Masculino", category?: string, subcategory?: string): string {
+  const params = new URLSearchParams();
+  params.set("gender", gender);
+  if (category) params.set("category", category);
+  if (subcategory) params.set("subcategory", subcategory);
+  return `/products?${params.toString()}`;
+}
+
+function buildAccessoriesMenuHref(options?: {
+  subcategory?: string;
+  sort?: string;
+  isFeatured?: boolean;
+  query?: string;
+}): string {
+  const params = new URLSearchParams();
+  params.set("category", "Accessories");
+  if (options?.subcategory) params.set("subcategory", options.subcategory);
+  if (options?.sort) params.set("sort", options.sort);
+  if (options?.isFeatured) params.set("isFeatured", "true");
+  if (options?.query) params.set("q", options.query);
+  return `/products?${params.toString()}`;
+}
+
 const MENU_SELECAO_TSEBI_LOOK = {
   heroImage: "https://media.tsebi.com.br/generation-57e63375-48cf-4bbf-a7b9-22ce3f1b5a6a.png",
   title: "Seleção Tsebi",
@@ -155,7 +179,7 @@ const HOMEPAGE_PICTURE_FALLBACK = "/images/hero.jpg";
 
 const HOMEPAGE_CATEGORIES = [
   {
-    href: "/categoria/feminino",
+    href: "/products?q=Feminino",
     image: "/images/product/origem-skirt-1.jpg",
     secondaryImage: "/images/product/origem-skirt-2.jpg",
     fallbackImage: "/images/product/origem-skirt-1.jpg",
@@ -163,7 +187,7 @@ const HOMEPAGE_CATEGORIES = [
     label: "Feminino",
   },
   {
-    href: "/categoria/masculino",
+    href: "/products?q=Masculino",
     image: "/images/product/origem-shirt-1.jpg",
     secondaryImage: "/images/product/origem-shirt-2.jpg",
     fallbackImage: "/images/product/origem-shirt-1.jpg",
@@ -171,7 +195,7 @@ const HOMEPAGE_CATEGORIES = [
     label: "Masculino",
   },
   {
-    href: "/categoria/carteiras-masculinas",
+    href: "/products?q=Carteiras+Masculinas",
     image: "/images/product/atelier-bag-1.jpg",
     secondaryImage: "/images/product/atelier-bag-2.jpg",
     fallbackImage: "/images/product/atelier-bag-1.jpg",
@@ -179,7 +203,7 @@ const HOMEPAGE_CATEGORIES = [
     label: "Carteiras Masculinas",
   },
   {
-    href: "/categoria/vestidos",
+    href: "/products?q=Vestidos",
     image: "/images/product/noir-dress-1.jpg",
     secondaryImage: "/images/product/noir-dress-2.jpg",
     fallbackImage: "/images/product/noir-dress-1.jpg",
@@ -187,7 +211,7 @@ const HOMEPAGE_CATEGORIES = [
     label: "Vestidos",
   },
   {
-    href: "/categoria/calcas",
+    href: "/products?q=Cal%C3%A7as",
     image: "/images/product/essence-trousers-1.jpg",
     secondaryImage: "/images/product/essence-trousers-2.jpg",
     fallbackImage: "/images/product/essence-trousers-1.jpg",
@@ -195,7 +219,7 @@ const HOMEPAGE_CATEGORIES = [
     label: "Calças",
   },
   {
-    href: "/categoria/carteiras-femininas",
+    href: "/products?q=Carteiras+Femininas",
     image: "/images/product/atelier-heels-1.jpg",
     secondaryImage: "/images/product/atelier-heels-2.jpg",
     fallbackImage: "/images/product/atelier-heels-1.jpg",
@@ -203,7 +227,7 @@ const HOMEPAGE_CATEGORIES = [
     label: "Carteiras Femininas",
   },
   {
-    href: "/categoria/jaquetas",
+    href: "/products?q=Jaquetas",
     image: "/images/product/genesis-bomber-1.jpg",
     secondaryImage: "/images/product/genesis-bomber-2.jpg",
     fallbackImage: "/images/product/genesis-bomber-1.jpg",
@@ -211,7 +235,7 @@ const HOMEPAGE_CATEGORIES = [
     label: "Jaquetas",
   },
   {
-    href: "/categoria/Acessórios",
+    href: "/products?q=Acess%C3%B3rios",
     image: "/images/product/noir-sneaker-1.jpg",
     secondaryImage: "/images/product/noir-sneaker-2.jpg",
     fallbackImage: "/images/product/noir-sneaker-1.jpg",
@@ -306,6 +330,7 @@ export function LegacyHome({ products }: LegacyHomeProps) {
   const [isMenuNavPanelOpen, setIsMenuNavPanelOpen] = useState(false);
   const [activeMenuNavPanel, setActiveMenuNavPanel] = useState<string | null>(null);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const [isContactPanelOpen, setIsContactPanelOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [selecaoFeedback, setSelecaoFeedback] = useState("");
   const [searchResults, setSearchResults] = useState<SearchPiece[]>([]);
@@ -319,7 +344,6 @@ export function LegacyHome({ products }: LegacyHomeProps) {
   const wishlistHref = isAuthenticated
     ? wishlistTarget
     : `/login?returnUrl=${encodeURIComponent(wishlistTarget)}`;
-  const [language, setLanguage] = useState<"pt" | "en">("pt");
   const logoCycleTimerRef = useRef<number | null>(null);
   const leftArrowRef = useRef<HTMLButtonElement | null>(null);
   const rightArrowRef = useRef<HTMLButtonElement | null>(null);
@@ -614,6 +638,7 @@ export function LegacyHome({ products }: LegacyHomeProps) {
     setIsMenuOpen(false);
     setIsMenuNavPanelOpen(false);
     setActiveMenuNavPanel(null);
+    setIsContactPanelOpen(false);
     setIsSearchOpen(true);
   }, []);
 
@@ -630,6 +655,7 @@ export function LegacyHome({ products }: LegacyHomeProps) {
 
   const openHeaderMenu = useCallback(() => {
     setIsSearchOpen(false);
+    setIsContactPanelOpen(false);
     setIsMenuOpen(true);
     setIsMenuNavPanelOpen(false);
     setActiveMenuNavPanel(null);
@@ -661,12 +687,24 @@ export function LegacyHome({ products }: LegacyHomeProps) {
     input.focus();
   }, [searchQuery]);
 
-  const submitSearchPage = useCallback(() => {
-    const normalized = String(searchQuery || "").trim();
+  const submitSearchPage = useCallback((nextQuery?: string) => {
+    const normalized = String(typeof nextQuery === "string" ? nextQuery : searchQuery || "").trim();
     if (normalized.length < 2) return;
     trackRecommendationSearch(normalized);
-    router.push(`/search?q=${encodeURIComponent(normalized)}`);
-  }, [router, searchQuery]);
+    router.push(`/products?q=${encodeURIComponent(normalized)}`);
+    closeSearchOverlay();
+  }, [closeSearchOverlay, router, searchQuery]);
+
+  const handleMenuProductsLinkClick = useCallback(
+    (event: React.MouseEvent<HTMLAnchorElement>, href: string) => {
+      event.preventDefault();
+      setIsMenuOpen(false);
+      setIsMenuNavPanelOpen(false);
+      setActiveMenuNavPanel(null);
+      router.push(href);
+    },
+    [router]
+  );
 
   const handleAddSelecaoLook = useCallback((event?: React.MouseEvent<HTMLButtonElement>) => {
     event?.preventDefault();
@@ -829,11 +867,19 @@ export function LegacyHome({ products }: LegacyHomeProps) {
       if (event.key !== "Escape") return;
       setIsMenuOpen(false);
       setIsSearchOpen(false);
+      setIsContactPanelOpen(false);
     };
 
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
   }, []);
+
+  useEffect(() => {
+    if (!isContactPanelOpen) return;
+    const panelInner = document.querySelector(".header-contact-panel-inner");
+    if (!(panelInner instanceof HTMLElement)) return;
+    panelInner.scrollTop = 0;
+  }, [isContactPanelOpen]);
 
   return (
     <div className="home-legacy-shell">
@@ -901,6 +947,20 @@ export function LegacyHome({ products }: LegacyHomeProps) {
           </h1>
 
           <div className="header-right">
+            <button
+              type="button"
+              className="quick-action-contact"
+              aria-label="Fale Conosco"
+              onClick={() => {
+                setIsMenuOpen(false);
+                setIsMenuNavPanelOpen(false);
+                setActiveMenuNavPanel(null);
+                setIsSearchOpen(false);
+                setIsContactPanelOpen(true);
+              }}
+            >
+              Fale Conosco
+            </button>
             <Link className="quick-action" href={isAuthenticated ? "/account" : "/login"} aria-label="Conta">
               <svg viewBox="0 0 24 24" aria-hidden="true">
                 <path d="M20 21a8 8 0 0 0-16 0"></path>
@@ -919,23 +979,6 @@ export function LegacyHome({ products }: LegacyHomeProps) {
               </svg>
             </Link>
 
-            <div className="site-language-switcher" aria-label="Language switcher">
-              <button
-                type="button"
-                className={`lang-btn ${language === "pt" ? "is-active" : ""}`}
-                onClick={() => setLanguage("pt")}
-              >
-                PT
-              </button>
-              <span className="lang-divider">|</span>
-              <button
-                type="button"
-                className={`lang-btn ${language === "en" ? "is-active" : ""}`}
-                onClick={() => setLanguage("en")}
-              >
-                EN
-              </button>
-            </div>
           </div>
         </div>
       </header>
@@ -946,6 +989,92 @@ export function LegacyHome({ products }: LegacyHomeProps) {
         aria-label="Fechar menu"
         onClick={() => setIsMenuOpen(false)}
       />
+
+      <button
+        type="button"
+        className={`header-contact-backdrop ${isContactPanelOpen ? "is-open" : ""}`}
+        aria-label="Fechar Fale Conosco"
+        onClick={() => setIsContactPanelOpen(false)}
+      />
+
+      <aside className={`header-contact-panel ${isContactPanelOpen ? "is-open" : ""}`} aria-hidden={!isContactPanelOpen}>
+        <div className="header-contact-panel-inner">
+          <div className="header-contact-panel-head">
+            <h2>Fale Conosco</h2>
+            <button
+              type="button"
+              className="header-contact-panel-close"
+              aria-label="Fechar"
+              onClick={() => setIsContactPanelOpen(false)}
+            >
+              &times;
+            </button>
+          </div>
+
+          <p className="header-contact-panel-copy">
+            A equipe de consultores da Tsebi está à sua disposição. Com atendimento dedicado e discreto, oferecemos
+            orientação na escolha das peças e acesso a informações sobre materiais, coleções e disponibilidade.
+          </p>
+
+          <nav className="header-contact-panel-links" aria-label="Canais de atendimento">
+            <a href="tel:+5511918596632" className="header-contact-panel-link">
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <rect x="7" y="2.5" width="10" height="19" rx="2"></rect>
+                <path d="M11 18.2h2"></path>
+              </svg>
+              +55 (11) 91859-6632
+            </a>
+            <a href="mailto:Contato@tsebi.com.br" className="header-contact-panel-link">
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <rect x="3" y="6" width="18" height="12" rx="1.5"></rect>
+                <path d="M4.5 7.5L12 13l7.5-5.5"></path>
+              </svg>
+              Envie um email
+            </a>
+            <a
+              href="https://wa.me/5511918596632"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="header-contact-panel-link"
+            >
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M12 4.8a7.2 7.2 0 0 0-6.2 10.9"></path>
+                <path d="M5.8 15.7L4.9 19l3.2-.9"></path>
+                <path d="M8.1 18.1A7.2 7.2 0 1 0 12 4.8"></path>
+                <path d="M9.7 9.6c.2-.3.4-.3.6-.3h.4c.2 0 .3.1.4.3l.5 1.3c.1.2.1.3 0 .5l-.4.5c.3.6.8 1.1 1.4 1.4l.5-.4c.1-.1.3-.1.5 0l1.3.5c.2.1.3.2.3.4v.4c0 .3-.1.5-.3.6-.4.2-.9.3-1.5.1-1.6-.5-2.9-1.8-3.4-3.4-.2-.5-.1-1 .1-1.5z"></path>
+              </svg>
+              WhatsApp
+            </a>
+            <a href="sms:+5511918596632" className="header-contact-panel-link">
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M19 14a3 3 0 0 1-3 3H9l-4 3v-3a3 3 0 0 1-3-3V8a3 3 0 0 1 3-3h11a3 3 0 0 1 3 3z"></path>
+              </svg>
+              Apple Message
+            </a>
+            <a
+              href="https://www.instagram.com/tsebiofficial/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="header-contact-panel-link"
+            >
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <rect x="4" y="4" width="16" height="16" rx="4" ry="4"></rect>
+                <circle cx="12" cy="12" r="3.8"></circle>
+                <circle cx="17.2" cy="6.8" r="1.1"></circle>
+              </svg>
+              Direct Instagram
+            </a>
+          </nav>
+
+          <div className="header-contact-panel-divider" />
+
+          <div className="header-contact-panel-help">
+            <p>Precisa de ajuda?</p>
+            <a href="/faq">Perguntas Frequentes</a>
+            <a href="/processos">Serviços de Cuidado</a>
+          </div>
+        </div>
+      </aside>
 
       <aside
         className={`header-menu ${isMenuOpen ? "is-open" : ""}`}
@@ -1020,23 +1149,6 @@ export function LegacyHome({ products }: LegacyHomeProps) {
                 </svg>
                 <span>Marque um atendimento privativo</span>
               </a>
-              <label className="header-menu-utility header-menu-language" aria-label="Idioma">
-                <svg viewBox="0 0 24 24" aria-hidden="true">
-                  <circle cx="12" cy="12" r="9"></circle>
-                  <path d="M3 12h18"></path>
-                  <path d="M12 3a14 14 0 0 1 0 18"></path>
-                  <path d="M12 3a14 14 0 0 0 0 18"></path>
-                </svg>
-                <span>Idioma</span>
-                <select
-                  value={language === "pt" ? "pt-br" : "en"}
-                  onChange={(event) => setLanguage(event.target.value === "pt-br" ? "pt" : "en")}
-                  aria-label="Selecionar idioma"
-                >
-                  <option value="pt-br">PT-BR</option>
-                  <option value="en">Ingles</option>
-                </select>
-              </label>
             </div>
           </div>
           <div className="header-menu-subpanel" aria-hidden={!isMenuNavPanelOpen}>
@@ -1119,23 +1231,76 @@ export function LegacyHome({ products }: LegacyHomeProps) {
                       <div className="header-menu-subpanel-category-group">
                         <span className="header-menu-subpanel-category-title">BOLSAS</span>
                         <div className="header-menu-subpanel-category-links">
-                          <a href="/products?category=Bolsas">Todas as bolsas</a>
-                          <a href="/products?q=Genesis%20Bag%20%E2%80%94%20Black">Genesis Bag — Black</a>
-                          <a href="/products?q=Genesis%20Bag%20%E2%80%94%20Sand">Genesis Bag — Sand</a>
+                          <a
+                            href={buildAccessoriesMenuHref({ subcategory: "Bolsas" })}
+                            onClick={(event) =>
+                              handleMenuProductsLinkClick(event, buildAccessoriesMenuHref({ subcategory: "Bolsas" }))
+                            }
+                          >
+                            Todas as bolsas
+                          </a>
+                          <a
+                            href={buildAccessoriesMenuHref({ subcategory: "Bolsas", query: "Genesis Bag Black" })}
+                            onClick={(event) =>
+                              handleMenuProductsLinkClick(
+                                event,
+                                buildAccessoriesMenuHref({ subcategory: "Bolsas", query: "Genesis Bag Black" })
+                              )
+                            }
+                          >
+                            Genesis Bag — Black
+                          </a>
+                          <a
+                            href={buildAccessoriesMenuHref({ subcategory: "Bolsas", query: "Genesis Bag Sand" })}
+                            onClick={(event) =>
+                              handleMenuProductsLinkClick(
+                                event,
+                                buildAccessoriesMenuHref({ subcategory: "Bolsas", query: "Genesis Bag Sand" })
+                              )
+                            }
+                          >
+                            Genesis Bag — Sand
+                          </a>
                         </div>
                       </div>
                       <div className="header-menu-subpanel-category-group">
                         <span className="header-menu-subpanel-category-title">ACESSÓRIOS</span>
                         <div className="header-menu-subpanel-category-links">
-                          <a href="/products?category=Carteiras">Carteiras</a>
-                          <a href="/products?category=Cintos">Cintos</a>
+                          <a
+                            href={buildAccessoriesMenuHref({ subcategory: "Carteiras" })}
+                            onClick={(event) =>
+                              handleMenuProductsLinkClick(event, buildAccessoriesMenuHref({ subcategory: "Carteiras" }))
+                            }
+                          >
+                            Carteiras
+                          </a>
+                          <a
+                            href={buildAccessoriesMenuHref({ subcategory: "Cintos" })}
+                            onClick={(event) =>
+                              handleMenuProductsLinkClick(event, buildAccessoriesMenuHref({ subcategory: "Cintos" }))
+                            }
+                          >
+                            Cintos
+                          </a>
                         </div>
                       </div>
                       <div className="header-menu-subpanel-category-group">
                         <span className="header-menu-subpanel-category-title">FEATURED</span>
                         <div className="header-menu-subpanel-category-links">
-                          <a href="/products?sort=latest">New Arrivals</a>
-                          <a href="/products?featured=signature">Signature Pieces</a>
+                          <a
+                            href={buildAccessoriesMenuHref({ sort: "newest" })}
+                            onClick={(event) => handleMenuProductsLinkClick(event, buildAccessoriesMenuHref({ sort: "newest" }))}
+                          >
+                            New Arrivals
+                          </a>
+                          <a
+                            href={buildAccessoriesMenuHref({ isFeatured: true })}
+                            onClick={(event) =>
+                              handleMenuProductsLinkClick(event, buildAccessoriesMenuHref({ isFeatured: true }))
+                            }
+                          >
+                            Signature Pieces
+                          </a>
                         </div>
                       </div>
                       <a
@@ -1202,17 +1367,19 @@ export function LegacyHome({ products }: LegacyHomeProps) {
                       <div className="header-menu-subpanel-categories">
                         {MENU_FEMININO_CATEGORIES.map((group) => (
                           <div key={group.title} className="header-menu-subpanel-category-group">
-                            <span className="header-menu-subpanel-category-title">{group.title}</span>
+                            <a href={buildProductsMenuHref("Feminino", group.title)} className="header-menu-subpanel-category-title">
+                              {group.title}
+                            </a>
                             <div className="header-menu-subpanel-category-links">
                               {group.items.map((subItem) => (
-                                <a key={subItem} href={`/products?q=${encodeURIComponent(subItem)}`}>
+                                <a key={subItem} href={buildProductsMenuHref("Feminino", group.title, subItem)}>
                                   {subItem}
                                 </a>
                               ))}
                             </div>
                           </div>
                         ))}
-                        <a className="header-menu-subpanel-view-all" href="/products?gender=Feminino">
+                        <a className="header-menu-subpanel-view-all" href={buildProductsMenuHref("Feminino")}>
                           Ver tudo
                         </a>
                       </div>
@@ -1221,22 +1388,40 @@ export function LegacyHome({ products }: LegacyHomeProps) {
                       </aside>
                     </div>
                   ) : item === "Masculino" ? (
-                    <div className="header-menu-subpanel-categories">
-                      {MENU_MASCULINO_CATEGORIES.map((group) => (
-                        <div key={group.title} className="header-menu-subpanel-category-group">
-                          <span className="header-menu-subpanel-category-title">{group.title}</span>
-                          <div className="header-menu-subpanel-category-links">
-                            {group.items.map((subItem) => (
-                              <a key={subItem} href={`/products?q=${encodeURIComponent(subItem)}`}>
-                                {subItem}
-                              </a>
-                            ))}
+                    <div className="header-menu-subpanel-fashion-layout">
+                      <div className="header-menu-subpanel-categories">
+                        {MENU_MASCULINO_CATEGORIES.map((group) => (
+                          <div key={group.title} className="header-menu-subpanel-category-group">
+                            <a href={buildProductsMenuHref("Masculino", group.title)} className="header-menu-subpanel-category-title">
+                              {group.title}
+                            </a>
+                            <div className="header-menu-subpanel-category-links">
+                              {group.items.map((subItem) => (
+                                <a key={subItem} href={buildProductsMenuHref("Masculino", group.title, subItem)}>
+                                  {subItem}
+                                </a>
+                              ))}
+                            </div>
                           </div>
-                        </div>
-                      ))}
-                      <a className="header-menu-subpanel-view-all" href="/products?gender=Masculino">
-                        Ver tudo
-                      </a>
+                        ))}
+                        <a className="header-menu-subpanel-view-all" href={buildProductsMenuHref("Masculino")}>
+                          Ver tudo
+                        </a>
+                      </div>
+                      <aside
+                        className="header-menu-subpanel-editorial-banner header-menu-subpanel-editorial-banner--masculino"
+                        aria-hidden="true"
+                        style={{
+                          display: "block",
+                          backgroundImage:
+                            'linear-gradient(180deg, rgba(3, 4, 5, 0.46) 0%, rgba(3, 4, 5, 0.34) 30%, rgba(3, 4, 5, 0.24) 58%, rgba(3, 4, 5, 0.54) 100%), radial-gradient(80% 68% at 50% 52%, rgba(255, 255, 255, 0.04) 0%, rgba(255, 255, 255, 0.01) 40%, rgba(0, 0, 0, 0.24) 100%), url("https://media.tsebi.com.br/generation-6393ea28-757e-45d6-ab49-4dfed1ba1a87.png")',
+                          backgroundSize: "auto 100%",
+                          backgroundPosition: "40% 60%",
+                          backgroundRepeat: "no-repeat",
+                        }}
+                      >
+                        <div className="header-menu-subpanel-editorial-banner-space"></div>
+                      </aside>
                     </div>
                   ) : null}
                 </div>
@@ -1312,8 +1497,7 @@ export function LegacyHome({ products }: LegacyHomeProps) {
                   className="tsebi-search-category-btn"
                   onClick={() => {
                     trackRecommendationCategoryVisit(category, 4500);
-                    setSearchQuery(category);
-                    searchInputRef.current?.focus();
+                    submitSearchPage(category);
                   }}
                 >
                   {category}
@@ -1483,10 +1667,11 @@ export function LegacyHome({ products }: LegacyHomeProps) {
         </div>
       </section>
 
-      <LegacyFooter language={language} onLanguageChange={setLanguage} />
+      <LegacyFooter />
     </div>
   );
 }
+
 
 
 

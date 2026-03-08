@@ -2,12 +2,16 @@ type LegacyStaticPageRendererProps = {
   stylesheetHrefs: string[];
   inlineStyles: string[];
   bodyMarkup: string;
+  scriptSrcs?: string[];
+  inlineScripts?: string[];
 };
 
 export function LegacyStaticPageRenderer({
   stylesheetHrefs,
   inlineStyles,
   bodyMarkup,
+  scriptSrcs = [],
+  inlineScripts = [],
 }: LegacyStaticPageRendererProps) {
   return (
     <>
@@ -25,6 +29,15 @@ export function LegacyStaticPageRenderer({
         suppressHydrationWarning
         dangerouslySetInnerHTML={{ __html: bodyMarkup }}
       />
+      {scriptSrcs.map((src) => (
+        <script key={src} src={src} />
+      ))}
+      {inlineScripts.map((code, index) => (
+        <script
+          key={`legacy-inline-script-${index + 1}`}
+          dangerouslySetInnerHTML={{ __html: code }}
+        />
+      ))}
     </>
   );
 }

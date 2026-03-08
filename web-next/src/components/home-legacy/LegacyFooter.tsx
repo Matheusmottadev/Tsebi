@@ -1,12 +1,10 @@
-import Link from "next/link";
+﻿import Link from "next/link";
 
 type LegacyFooterProps = {
   variant?: "dark" | "light";
-  language?: "pt" | "en";
-  onLanguageChange?: (language: "pt" | "en") => void;
 };
 
-export function LegacyFooter({ variant = "dark", language = "pt", onLanguageChange }: LegacyFooterProps) {
+export function LegacyFooter({ variant = "dark" }: LegacyFooterProps) {
   const footerClassName = variant === "light" ? "site-footer site-footer--light" : "site-footer";
   return (
     <footer className={footerClassName}>
@@ -23,7 +21,7 @@ export function LegacyFooter({ variant = "dark", language = "pt", onLanguageChan
             </div>
           </form>
           <p className="newsletter-legal">
-            Ao clicar em &quot;Assinar&quot;, Você confirma que leu e entendeu nossa{" "}
+            Ao clicar em &quot;Assinar&quot;, você confirma que leu e entendeu nossa{" "}
             <Link href="/politica-privacidade">Política de Privacidade</Link> e que deseja receber a newsletter e outras
             comunicações de marketing, conforme nela estabelecido.
           </p>
@@ -85,12 +83,12 @@ export function LegacyFooter({ variant = "dark", language = "pt", onLanguageChan
         </section>
 
         <section className="footer-column">
-          <h3>SERVICOS EXCLUSIVOS</h3>
-          <Link href="/processos">Servicos Tsebi</Link>
+          <h3>SERVIÇOS EXCLUSIVOS</h3>
+          <Link href="/processos">Serviços Tsebi</Link>
           <Link href="/order" data-link-key="track-order">
             Acompanhe seu pedido
           </Link>
-          <Link href="/faq">Devolucoes</Link>
+          <Link href="/faq">Devoluções</Link>
         </section>
 
         <section className="footer-column">
@@ -106,29 +104,10 @@ export function LegacyFooter({ variant = "dark", language = "pt", onLanguageChan
           <Link href="/aviso-legal">Aviso legal</Link>
           <Link href="/politica-privacidade">Política de Privacidade</Link>
           <Link href="/cookie-policy">Política de cookies</Link>
-          <a href="#" data-cookie-settings-trigger="true">Configuracoes de cookies</a>
+          <a href="/cookie-policy" data-cookie-settings-trigger="true">Configurações de cookies</a>
           <Link href="/aviso-legal">Termos de venda</Link>
         </section>
       </div>
-      {onLanguageChange ? (
-        <div className="site-language-switcher" aria-label="Language switcher">
-          <button
-            type="button"
-            className={`lang-btn ${language === "pt" ? "is-active" : ""}`}
-            onClick={() => onLanguageChange("pt")}
-          >
-            PT
-          </button>
-          <span className="lang-divider">|</span>
-          <button
-            type="button"
-            className={`lang-btn ${language === "en" ? "is-active" : ""}`}
-            onClick={() => onLanguageChange("en")}
-          >
-            EN
-          </button>
-        </div>
-      ) : null}
       <p className="footer-cnpj">CNPJ: 65.164.000/0001-72</p>
     </footer>
   );

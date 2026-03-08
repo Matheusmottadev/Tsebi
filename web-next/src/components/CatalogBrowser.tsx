@@ -11,7 +11,8 @@ import {
   trackRecommendationSearch,
 } from "@/lib/recommendationSignals";
 import { getOrCreateAnonId, trackCommerceEvent } from "@/lib/analytics";
-import { getMe } from "@/services/auth";
+import { HttpError } from "@/lib/http";
+import { getFavorites, getMe, updateFavorites } from "@/services/auth";
 import { getPersonalizedProducts, trackSearchEvent } from "@/services/products";
 import { buildHoverImagePair } from "@/lib/product-media";
 import styles from "./CatalogBrowser.module.css";
@@ -81,6 +82,9 @@ export function CatalogBrowser({ products, imageBaseUrl, initialLimit = DEFAULT_
   const [recommendationTitle, setRecommendationTitle] = useState("Seleção personalizada");
   const [recommendations, setRecommendations] = useState<Product[]>([]);
   const [favoriteSkus, setFavoriteSkus] = useState<Record<string, boolean>>({});
+  const [favoritesLoading, setFavoritesLoading] = useState(false);
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [favoritesCsrfToken, setFavoritesCsrfToken] = useState("");
   const [hasTrackedRecommendationView, setHasTrackedRecommendationView] = useState(false);
 
   const categories = useMemo(() => {
@@ -131,6 +135,39 @@ export function CatalogBrowser({ products, imageBaseUrl, initialLimit = DEFAULT_
     () => (recommendations.length > 0 ? recommendations : recommendationFallback).slice(0, 8),
     [recommendations, recommendationFallback]
   );
+
+  useEffect(() => {
+    let cancelled = false;
+    const run = async () => {
+      setFavoritesLoading(true);
+      try {
+        const response = await getFavorites({ cache: "no-store" });
+        if (cancelled) return;
+        const nextMap: Record<string, boolean> = {};
+        (Array.isArray(response.favorites) ? response.favorites : []).forEach((entry) => {
+          const id = String(entry || "").trim();
+          if (!id) return;
+          nextMap[id] = true;
+        });
+        setFavoriteSkus(nextMap);
+        setFavoritesCsrfToken(String(response.csrfToken || "").trim());
+        setIsLoggedIn(true);
+      } catch (error) {
+        if (cancelled) return;
+        setIsLoggedIn(false);
+        if (error instanceof HttpError && (error.status === 401 || error.status === 403)) {
+          setFavoriteSkus({});
+          setFavoritesCsrfToken("");
+        }
+      } finally {
+        if (!cancelled) setFavoritesLoading(false);
+      }
+    };
+    void run();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -300,19 +337,50 @@ export function CatalogBrowser({ products, imageBaseUrl, initialLimit = DEFAULT_
                   type="button"
                   className={`${styles.favoriteBtn} ${isFavorite ? styles.favoriteBtnActive : ""}`}
                   aria-label={isFavorite ? "Remover dos favoritos" : "Adicionar aos favoritos"}
-                  onClick={() => {
+                  disabled={favoritesLoading}
+                  title={!isLoggedIn ? "Disponivel apenas para clientes logados" : undefined}
+                  onClick={async () => {
+                    if (!isLoggedIn) return;
                     const nextActive = !isFavorite;
-                    setFavoriteSkus((current) => ({ ...current, [sku]: nextActive }));
-                    void trackCommerceEvent({
-                      eventName: "favorite_toggle",
-                      anonId: getOrCreateAnonId(),
-                      productId: sku,
-                      category: String(product.category || "").trim(),
-                      price: Number(product.priceValue || 0),
-                      currency: product.currency || "brl",
-                      source: "catalog_recommendations",
-                      attributes: { active: nextActive },
-                    });
+                    const previousMap = favoriteSkus;
+                    const nextMap = { ...favoriteSkus, [sku]: nextActive };
+                    setFavoriteSkus(nextMap);
+                    setFavoritesLoading(true);
+                    try {
+                      const nextFavorites = Object.keys(nextMap).filter((id) => Boolean(nextMap[id]));
+                      const response = await updateFavorites(nextFavorites, {
+                        headers: favoritesCsrfToken
+                          ? {
+                              "x-csrf-token": favoritesCsrfToken,
+                            }
+                          : undefined,
+                      });
+                      const confirmedMap: Record<string, boolean> = {};
+                      (Array.isArray(response.favorites) ? response.favorites : []).forEach((entry) => {
+                        const id = String(entry || "").trim();
+                        if (!id) return;
+                        confirmedMap[id] = true;
+                      });
+                      setFavoriteSkus(confirmedMap);
+                      setFavoritesCsrfToken(String(response.csrfToken || favoritesCsrfToken || "").trim());
+                      void trackCommerceEvent({
+                        eventName: "favorite_toggle",
+                        anonId: getOrCreateAnonId(),
+                        productId: sku,
+                        category: String(product.category || "").trim(),
+                        price: Number(product.priceValue || 0),
+                        currency: product.currency || "brl",
+                        source: "catalog_recommendations",
+                        attributes: { active: nextActive },
+                      });
+                    } catch (error) {
+                      setFavoriteSkus(previousMap);
+                      if (error instanceof HttpError && (error.status === 401 || error.status === 403)) {
+                        setIsLoggedIn(false);
+                      }
+                    } finally {
+                      setFavoritesLoading(false);
+                    }
                   }}
                 >
                   <svg viewBox="0 0 24 24" aria-hidden="true">
