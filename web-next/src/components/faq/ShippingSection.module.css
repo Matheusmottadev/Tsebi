@@ -3,7 +3,8 @@
 }
 
 .inner {
-  width: min(1300px, calc(100% - 64px));
+  width: calc(100% - 64px);
+  max-width: 1300px;
   margin: 0 auto;
   padding: 34px 0 56px;
 }
@@ -174,7 +175,8 @@
 
 @media (max-width: 1024px) {
   .inner {
-    width: min(1300px, calc(100% - 40px));
+    width: calc(100% - 40px);
+    max-width: 1300px;
   }
 
   .layout {
@@ -189,7 +191,8 @@
 
 @media (max-width: 768px) {
   .inner {
-    width: min(1300px, calc(100% - 24px));
+    width: calc(100% - 24px);
+    max-width: 1300px;
     padding-top: 20px;
     padding-bottom: 40px;
   }
@@ -231,4 +234,3 @@
     padding: 20px;
   }
 }
-

@@ -5,14 +5,16 @@
 }
 
 .contentBox {
-  width: min(1300px, calc(100% - 48px));
+  width: calc(100% - 48px);
+  max-width: 1300px;
   margin: 0 auto;
   background: #fff;
   padding: 40px;
 }
 
 .intro {
-  width: min(1300px, calc(100% - 48px));
+  width: calc(100% - 48px);
+  max-width: 1300px;
   margin: 0 auto 18px;
   padding: 0 40px;
   background: transparent;

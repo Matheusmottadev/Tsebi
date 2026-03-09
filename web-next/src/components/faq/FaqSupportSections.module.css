@@ -3,7 +3,8 @@
   padding: 24px 0 74px;
   display: grid;
   gap: 28px;
-  width: min(1300px, calc(100% - 48px));
+  width: calc(100% - 48px);
+  max-width: 1300px;
   margin: 0 auto;
 }
 
