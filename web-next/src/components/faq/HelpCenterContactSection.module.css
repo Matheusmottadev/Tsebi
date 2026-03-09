@@ -20,7 +20,7 @@
   background: transparent;
   border: 0;
   box-shadow: none;
-  scroll-margin-top: calc(var(--top-bar-height, 38px) + var(--header-height, 84px) + 300px);
+  scroll-margin-top: calc(var(--top-bar-height, 38px) + var(--header-height, 84px) + 20px);
 }
 
 .introTitle {

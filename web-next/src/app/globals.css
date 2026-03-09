@@ -82,6 +82,10 @@ body.faq-page-body .home-header {
   margin-top: var(--top-bar-height, 38px) !important;
 }
 
+body.faq-page-body #precisa-de-ajuda {
+  scroll-margin-top: calc(var(--top-bar-height, 38px) + var(--header-height, 84px) + 20px) !important;
+}
+
 /* Fallback styling for FAQ tab section (in case stale chunk renders plain class names) */
 body.faq-page-body .faq-section {
   background: #f5f5f5;
