@@ -1,12 +1,45 @@
+"use client";
+
+import { useEffect, useState } from "react";
 import styles from "./HelpCenterContactSection.module.css";
 
+function isChatWithinBusinessHours(date: Date): boolean {
+  const formatter = new Intl.DateTimeFormat("en-GB", {
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+    timeZone: "America/Sao_Paulo",
+  });
+  const parts = formatter.formatToParts(date);
+  const hour = Number(parts.find((part) => part.type === "hour")?.value || "0");
+  const minute = Number(parts.find((part) => part.type === "minute")?.value || "0");
+  const currentMinutes = hour * 60 + minute;
+  const startMinutes = 9 * 60;
+  const endMinutes = 18 * 60;
+  return currentMinutes >= startMinutes && currentMinutes < endMinutes;
+}
+
 export function HelpCenterContactSection() {
+  const [chatOnline, setChatOnline] = useState<boolean>(() => isChatWithinBusinessHours(new Date()));
+
+  useEffect(() => {
+    const syncChatStatus = () => {
+      setChatOnline(isChatWithinBusinessHours(new Date()));
+    };
+
+    syncChatStatus();
+    const timer = window.setInterval(syncChatStatus, 60_000);
+    return () => {
+      window.clearInterval(timer);
+    };
+  }, []);
+
   return (
     <section className={styles.section} aria-label="Contato e atendimento">
       <header className={styles.intro} id="precisa-de-ajuda">
         <h2 className={styles.introTitle}>Precisa de Ajuda?</h2>
         <p className={styles.introText}>
-          Nossa equipe esta disponivel para orientar voce sobre pedidos, entregas, trocas e cuidados com as pecas.
+          Nossa equipe está disponível para orientar você sobre pedidos, entregas, trocas e cuidados com as peças.
           Escolha abaixo o canal mais conveniente para falar com a Tsebi.
         </p>
       </header>
@@ -15,13 +48,22 @@ export function HelpCenterContactSection() {
         <div className={styles.grid}>
           <article className={styles.column} id="fale-conosco" aria-label="Fale Conosco">
             <h3 className={styles.columnTitle}>Fale Conosco</h3>
-            <p className={styles.columnText}>Nosso atendimento por telefone esta pronto para ajudar em duvidas sobre compras e suporte.</p>
+            <p className={styles.columnText}>Nosso atendimento por telefone está pronto para ajudar em dúvidas sobre compras e suporte.</p>
             <ul className={styles.hours}>
-              <li>Segunda a Sabado: 09h as 20h</li>
+              <li>Segunda a Sábado: 09h às 20h</li>
               <li>Domingo: Fechado</li>
               <li>Feriados: Fechado</li>
             </ul>
             <div className={styles.buttonRow}>
+              <a className={styles.actionButton} href="/faq#precisa-de-ajuda">
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <rect x="3" y="5" width="18" height="16" rx="2"></rect>
+                  <path d="M8 3v4"></path>
+                  <path d="M16 3v4"></path>
+                  <path d="M3 10h18"></path>
+                </svg>
+                <span>Agende um atendimento especializado</span>
+              </a>
               <a className={styles.actionButton} href="tel:+5511918596632">
                 <svg viewBox="0 0 24 24" aria-hidden="true">
                   <path d="M6 2h4l2 5-2 2a15 15 0 0 0 5 5l2-2 5 2v4a2 2 0 0 1-2 2C10.5 20 4 13.5 4 4a2 2 0 0 1 2-2z"></path>
@@ -33,13 +75,21 @@ export function HelpCenterContactSection() {
 
           <article className={styles.column} aria-label="Envie uma Mensagem">
             <h3 className={styles.columnTitle}>Envie uma Mensagem</h3>
-            <p className={styles.columnText}>Fale com nossa equipe via WhatsApp para suporte rapido durante o horario de atendimento.</p>
+            <p className={styles.columnText}>Fale com nossa equipe via WhatsApp para suporte rápido durante o horário de atendimento.</p>
             <ul className={styles.hours}>
-              <li>Segunda a Sabado: 09h as 20h</li>
+              <li>Segunda a Sábado: 09h às 20h</li>
               <li>Domingo: Fechado</li>
               <li>Feriados: Fechado</li>
             </ul>
             <div className={styles.buttonRow}>
+              <a className={styles.actionButton} href="https://www.instagram.com/tsebi/" target="_blank" rel="noreferrer">
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <rect x="3.5" y="3.5" width="17" height="17" rx="4.5"></rect>
+                  <circle cx="12" cy="12" r="4"></circle>
+                  <circle cx="17.5" cy="6.5" r="1"></circle>
+                </svg>
+                <span>Direct Instagram</span>
+              </a>
               <a className={styles.actionButton} href="https://wa.me/5511918596632" target="_blank" rel="noreferrer">
                 <svg viewBox="0 0 24 24" aria-hidden="true">
                   <path d="M12 21a8.7 8.7 0 0 1-4.3-1.1L4 21l1.2-3.5A8.8 8.8 0 1 1 12 21z"></path>
@@ -50,12 +100,28 @@ export function HelpCenterContactSection() {
             </div>
           </article>
 
-          <article className={styles.column} aria-label="Envie um E-mail">
-            <h3 className={styles.columnTitle}>Envie um E-mail</h3>
+          <article className={styles.column} aria-label="Envie um E-mail ou entre no chat ao vivo">
+            <h3 className={styles.columnTitle}>Envie um E-mail ou entre no chat ao vivo</h3>
             <p className={styles.columnText}>
-              Para solicitacoes detalhadas, envie um e-mail. Nossa equipe responde em ate 24 horas uteis.
+              Para solicitações detalhadas, envie um e-mail. Nossa equipe responde em até 24 horas úteis.
+              <br />
+              Entre no chat ao vivo para ser atendido por um de nossos consultores.
             </p>
             <div className={styles.buttonRow}>
+              {chatOnline ? (
+                <a className={`${styles.actionButton} ${styles.chatButton}`} href="/faq#precisa-de-ajuda">
+                  <svg viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M4 6h16a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H8l-4 3v-3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2z"></path>
+                  </svg>
+                  <span>Chat ao vivo</span>
+                  <span className={styles.chatOnlineDot} aria-hidden="true"></span>
+                </a>
+              ) : (
+                <p className={styles.chatOfflineText}>
+                  O chat está fora do horário de funcionamento. Por favor, volte mais tarde ou entre em contato por
+                  outros meios de comunicação.
+                </p>
+              )}
               <a className={styles.actionButton} href="mailto:contato@tsebi.com.br">
                 <svg viewBox="0 0 24 24" aria-hidden="true">
                   <rect x="3" y="5" width="18" height="14" rx="2"></rect>

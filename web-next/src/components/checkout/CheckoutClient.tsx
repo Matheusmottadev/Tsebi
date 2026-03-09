@@ -94,6 +94,17 @@ const REQUIRED_FIELDS: RequiredCheckoutField[] = [
 
 const CHECKOUT_DRAFT_KEY = "checkout_address_draft_v1";
 
+const INSTALLMENT_RULES: InstallmentRule[] = [
+  { minCents: 50000, maxCents: 79999, installments: 3 },
+  { minCents: 80000, maxCents: 109999, installments: 4 },
+  { minCents: 110000, maxCents: 149999, installments: 5 },
+  { minCents: 150000, maxCents: 199999, installments: 6 },
+  { minCents: 200000, maxCents: 279999, installments: 7 },
+  { minCents: 280000, maxCents: 379999, installments: 8 },
+  { minCents: 380000, maxCents: 499999, installments: 9 },
+  { minCents: 500000, maxCents: Number.MAX_SAFE_INTEGER, installments: 10 },
+];
+
 type AddressLike = {
   cep?: string;
   street?: string;
@@ -110,6 +121,12 @@ type CuratedShippingOptions = {
   quotes: ShippingQuote[];
   recommendationById: Record<string, ShippingRecommendation>;
   companyPaidByStore: boolean;
+};
+
+type InstallmentRule = {
+  minCents: number;
+  maxCents: number;
+  installments: number;
 };
 
 class CheckoutValidationError extends Error {
@@ -167,6 +184,22 @@ function normalizeEmail(value: string): string {
 
 function isValidEmail(value: string): boolean {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizeEmail(value));
+}
+
+function formatCurrencyBrlFromCents(amountCents: number): string {
+  return new Intl.NumberFormat("pt-BR", {
+    style: "currency",
+    currency: "BRL",
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
+  }).format(Math.max(0, Number(amountCents || 0)) / 100);
+}
+
+function resolveInstallmentsByTotal(totalCents: number): { installments: number; rule: InstallmentRule | null } {
+  const safeTotal = Math.max(0, Math.floor(Number(totalCents || 0)));
+  const matched = INSTALLMENT_RULES.find((rule) => safeTotal >= rule.minCents && safeTotal <= rule.maxCents) || null;
+  if (!matched) return { installments: 1, rule: null };
+  return { installments: matched.installments, rule: matched };
 }
 
 function formatCpf(value: string): string {
@@ -381,6 +414,7 @@ function buildPayload(
   selectedShippingQuote: ShippingQuote,
   checkoutEmail: string,
   companyPaidByStore: boolean,
+  installments: number,
   metaEventId: string
 ): CreatePaymentIntentPayload {
   const firstName = String(form.firstName || "").trim();
@@ -399,7 +433,7 @@ function buildPayload(
   const shouldSendQuoteId = String(selectedShippingQuote?.provider || "").trim().toLowerCase() === "melhorenvio" && isUuid(selectedQuoteId);
   const payload: CreatePaymentIntentPayload = {
     paymentMethod: "automatic",
-    installments: 1,
+    installments: Math.max(1, Math.min(10, Number(installments || 1))),
     metaEventId: String(metaEventId || "").trim(),
     items: items.map((item) => ({
       id: item.productId,
@@ -522,6 +556,7 @@ export function CheckoutClient() {
   const selectedCompanyPaidByStore = Boolean(isCompanyPaidShipping && selectedShippingTag === "free");
   const shippingCents = selectedCompanyPaidByStore ? 0 : Math.max(0, Number(selectedShippingQuote?.priceCents || 0));
   const totalCents = Math.max(0, subtotal + shippingCents);
+  const installmentPlan = useMemo(() => resolveInstallmentsByTotal(totalCents), [totalCents]);
   const stripePaymentMethodOrder = useMemo(() => buildStripePaymentMethodOrder("apple_pay"), []);
   const stripeConfigured = stripeStatus === "ready";
   const stripeLoading = stripeStatus === "loading";
@@ -1055,6 +1090,7 @@ export function CheckoutClient() {
         selectedShippingQuote,
         checkoutEmail,
         selectedCompanyPaidByStore,
+        installmentPlan.installments,
         getBeginCheckoutEventId()
       );
       const result = await createPaymentIntent(payload);
@@ -1522,6 +1558,23 @@ export function CheckoutClient() {
             {activeStep === "payment" ? (
               <div className={styles.paymentWrap}>
                 <p className={styles.stepHint}>Pagamento seguro</p>
+                <div className={styles.installmentsInfoBox}>
+                  <p className={styles.installmentsInfoTitle}>Parcelamento sem juros</p>
+                  <p className={styles.installmentsInfoText}>
+                    {installmentPlan.rule
+                      ? `Para o total atual, voce pode pagar em ate ${installmentPlan.installments}x sem juros.`
+                      : "Parcelamento sem juros disponivel a partir de R$ 500."}
+                  </p>
+                  <ul className={styles.installmentsInfoList}>
+                    {INSTALLMENT_RULES.map((rule) => (
+                      <li key={`${rule.minCents}-${rule.maxCents}-${rule.installments}`}>
+                        {rule.maxCents === Number.MAX_SAFE_INTEGER
+                          ? `Acima de ${formatCurrencyBrlFromCents(rule.minCents)}: ate ${rule.installments}x sem juros`
+                          : `${formatCurrencyBrlFromCents(rule.minCents)} a ${formatCurrencyBrlFromCents(rule.maxCents)}: ate ${rule.installments}x sem juros`}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
                 {stripeLoading ? <p className={styles.stepHint}>Carregando metodos de pagamento...</p> : null}
                 {!stripeLoading && !stripeConfigured ? (
                   <p className={styles.stepHint}>

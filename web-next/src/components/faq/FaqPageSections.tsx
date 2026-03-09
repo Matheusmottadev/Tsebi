@@ -10,7 +10,7 @@ import { ShippingSection } from "./ShippingSection";
 
 function resolveTabFromHash(hash: string): HelpCenterTab {
   const normalized = decodeURIComponent(String(hash || "").trim().toLowerCase());
-  if (normalized.startsWith("#precisa-de-ajuda")) return "help";
+  if (normalized.startsWith("#precisa-de-ajuda") || normalized.startsWith("#precisando-de-ajuda")) return "help";
   if (normalized.startsWith("#entrega-e-devolucoes")) return "delivery";
   if (normalized.startsWith("#servicos-de-cuidado")) return "care";
   return "faq";
@@ -23,20 +23,39 @@ function resolveHashFromTab(tab: HelpCenterTab): string {
   return "#perguntas-frequentes";
 }
 
+function shouldScrollToHelpIntro(hash: string): boolean {
+  const normalized = decodeURIComponent(String(hash || "").trim().toLowerCase());
+  return normalized.startsWith("#precisa-de-ajuda") || normalized.startsWith("#precisando-de-ajuda");
+}
+
 export function FaqPageSections() {
   const [activeTab, setActiveTab] = useState<HelpCenterTab>("help");
 
   useEffect(() => {
-    const syncFromHash = () => {
-      setActiveTab(resolveTabFromHash(window.location.hash));
-    };
+    setActiveTab(resolveTabFromHash(window.location.hash));
+  }, []);
 
-    syncFromHash();
+  useEffect(() => {
+    const syncFromHash = () => setActiveTab(resolveTabFromHash(window.location.hash));
     window.addEventListener("hashchange", syncFromHash);
+    window.addEventListener("popstate", syncFromHash);
     return () => {
       window.removeEventListener("hashchange", syncFromHash);
+      window.removeEventListener("popstate", syncFromHash);
     };
   }, []);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (activeTab !== "help") return;
+    if (!shouldScrollToHelpIntro(window.location.hash)) return;
+
+    window.requestAnimationFrame(() => {
+      const intro = document.getElementById("precisa-de-ajuda");
+      if (!intro) return;
+      intro.scrollIntoView({ block: "start", behavior: "smooth" });
+    });
+  }, [activeTab]);
 
   const handleTabChange = (tab: HelpCenterTab) => {
     setActiveTab(tab);

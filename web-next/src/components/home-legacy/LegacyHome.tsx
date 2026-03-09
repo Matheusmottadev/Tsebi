@@ -40,7 +40,7 @@ const TOP_MESSAGES = [
   "Você merece vestir algo a sua altura.",
   "Cadastre-se para receber lançamentos",
   "Exclusividade para quem valoriza o que é único.",
-  "Acesso antecipado a novas coleções.",
+  "Excelência garantida. Reparos por 1 ano.",
   "Produção em pequena escala. Qualidade em cada detalhe.",
 ];
 
@@ -1045,11 +1045,16 @@ export function LegacyHome({ products }: LegacyHomeProps) {
               </svg>
               WhatsApp
             </a>
-            <a href="sms:+5511918596632" className="header-contact-panel-link">
+            <a
+              href="#"
+              className="header-contact-panel-link"
+              aria-disabled="true"
+              onClick={(event) => event.preventDefault()}
+            >
               <svg viewBox="0 0 24 24" aria-hidden="true">
                 <path d="M19 14a3 3 0 0 1-3 3H9l-4 3v-3a3 3 0 0 1-3-3V8a3 3 0 0 1 3-3h11a3 3 0 0 1 3 3z"></path>
               </svg>
-              Apple Message
+              Agende um atendimento privativo
             </a>
             <a
               href="https://www.instagram.com/tsebiofficial/"
@@ -1069,9 +1074,10 @@ export function LegacyHome({ products }: LegacyHomeProps) {
           <div className="header-contact-panel-divider" />
 
           <div className="header-contact-panel-help">
-            <p>Precisa de ajuda?</p>
+            <a href="/faq#precisa-de-ajuda">Precisa de ajuda?</a>
             <a href="/faq">Perguntas Frequentes</a>
-            <a href="/processos">Serviços de Cuidado</a>
+            <a href="/faq#entrega-e-devolucoes">Entregas e Devoluções</a>
+            <a href="/faq#servicos-de-cuidado">Serviços e cuidados</a>
           </div>
         </div>
       </aside>

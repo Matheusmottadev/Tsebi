@@ -1,271 +1,369 @@
-"use client";
+﻿"use client";
 
-import { useMemo, useState } from "react";
-import { Box, CreditCard, PenTool, RefreshCcw, Search, ShoppingBag, Tag, Truck } from "lucide-react";
+import { ChevronLeft, Search } from "lucide-react";
+import { ReactNode, useEffect, useMemo, useState } from "react";
+import { FAQ_CATEGORIES, featuredQuestions, flattenQuestions } from "./faqData";
+import { FAQ_QUERY_VARIANTS_BY_QUESTION_ID } from "./faqQueryVariants";
+import styles from "./FaqSection.module.css";
 
-const TOPICS = [
-  { label: "Pedidos", icon: Box },
-  { label: "Entregas", icon: Truck },
-  { label: "Trocas e Devolucoes", icon: RefreshCcw },
-  { label: "Pagamentos", icon: CreditCard },
-  { label: "Produtos", icon: ShoppingBag },
-  { label: "Cuidados das Pecas", icon: Tag },
-  { label: "Servicos", icon: PenTool },
-] as const;
+function normalizeForSearch(value: string): string {
+  return String(value || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9\s]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
 
-const FAQ_ITEMS = [
-  {
-    question: "Quais as formas de pagamento?",
-    answer: "Aceitamos cartao de credito, PIX e boleto, conforme disponibilidade no checkout.",
-  },
-  {
-    question: "Como rastrear meu pedido?",
-    answer: "Apos a expedicao, voce recebe o codigo de rastreio para acompanhar a entrega em tempo real.",
-  },
-  {
-    question: "Quando meu pedido sera entregue?",
-    answer: "O prazo varia por CEP e modalidade escolhida. A previsao aparece no checkout e no resumo do pedido.",
-  },
-  {
-    question: "Como realizar ou cancelar um pedido?",
-    answer: "Para ajustes ou cancelamento, fale com o atendimento o quanto antes com o numero do pedido.",
-  },
-  {
-    question: "Como trocar ou devolver meu pedido?",
-    answer: "A solicitacao deve ser feita dentro do prazo da politica vigente, com o produto em perfeito estado.",
-  },
-  {
-    question: "Como cuidar das minhas pecas?",
-    answer: "Siga as instrucoes da etiqueta e, em caso de duvida, consulte nosso time para orientacao de cuidado.",
-  },
-] as const;
+function toSearchRoots(token: string): string[] {
+  const base = normalizeForSearch(token);
+  if (!base) return [];
+  const roots = new Set<string>([base]);
+  if (base.length >= 6) roots.add(base.slice(0, 6));
+  if (base.length >= 5) roots.add(base.slice(0, 5));
+  if (base.endsWith("s") && base.length > 4) roots.add(base.slice(0, -1));
+  return Array.from(roots);
+}
+
+function buildNgrams(text: string, size = 3): Set<string> {
+  const source = normalizeForSearch(text).replace(/\s+/g, " ");
+  const grams = new Set<string>();
+  if (!source) return grams;
+  if (source.length <= size) {
+    grams.add(source);
+    return grams;
+  }
+  for (let index = 0; index <= source.length - size; index += 1) {
+    grams.add(source.slice(index, index + size));
+  }
+  return grams;
+}
+
+function diceSimilarity(left: string, right: string): number {
+  const leftGrams = buildNgrams(left);
+  const rightGrams = buildNgrams(right);
+  if (leftGrams.size === 0 || rightGrams.size === 0) return 0;
+  let intersection = 0;
+  leftGrams.forEach((gram) => {
+    if (rightGrams.has(gram)) intersection += 1;
+  });
+  return (2 * intersection) / (leftGrams.size + rightGrams.size);
+}
+
+const SEARCH_STOPWORDS = new Set([
+  "a",
+  "o",
+  "e",
+  "de",
+  "da",
+  "do",
+  "das",
+  "dos",
+  "em",
+  "na",
+  "no",
+  "nas",
+  "nos",
+  "para",
+  "por",
+  "com",
+  "sem",
+  "meu",
+  "minha",
+  "meus",
+  "minhas",
+  "quando",
+  "como",
+  "qual",
+  "quais",
+]);
+
+const SEARCH_SYNONYMS: Record<string, string[]> = {
+  chega: ["entrega", "entregue", "prazo", "rastreio"],
+  entregar: ["entrega", "entregue", "prazo", "frete"],
+  entrega: ["entregue", "prazo", "frete", "rastreio"],
+  pedido: ["compra", "rastreio", "entrega"],
+  rastrear: ["rastreio", "acompanhar", "status"],
+  acompanhar: ["rastreio", "status", "pedido"],
+  trocar: ["troca", "devolucao"],
+  devolver: ["devolucao", "troca"],
+  pagamento: ["pagar", "cartao", "boleto", "parcelamento"],
+  parcelar: ["parcelamento", "parcela"],
+  chat: ["atendimento", "suporte"],
+};
+
+const FAQ_SEARCH_STORAGE_KEY = "tsebi_faq_search_query_v1";
+
+function tokenizeSearchQuery(query: string): string[] {
+  const tokens = normalizeForSearch(query)
+    .split(" ")
+    .filter(Boolean)
+    .filter((token) => !SEARCH_STOPWORDS.has(token));
+
+  const expanded = new Set<string>();
+  tokens.forEach((token) => {
+    expanded.add(token);
+    toSearchRoots(token).forEach((root) => expanded.add(root));
+    (SEARCH_SYNONYMS[token] || []).forEach((synonym) => {
+      const normalizedSynonym = normalizeForSearch(synonym);
+      if (!normalizedSynonym) return;
+      expanded.add(normalizedSynonym);
+      toSearchRoots(normalizedSynonym).forEach((root) => expanded.add(root));
+    });
+  });
+
+  return Array.from(expanded);
+}
+
+function getSmartSearchScore(params: { query: string; questionText: string; answerText: string; categoryText: string }): number {
+  const query = normalizeForSearch(params.query);
+  if (!query) return 0;
+
+  const questionText = normalizeForSearch(params.questionText);
+  const answerText = normalizeForSearch(params.answerText);
+  const categoryText = normalizeForSearch(params.categoryText);
+  const combined = [questionText, answerText, categoryText].join(" ");
+
+  const baseTokens = query
+    .split(" ")
+    .filter(Boolean)
+    .filter((token) => !SEARCH_STOPWORDS.has(token))
+    .flatMap((token) => toSearchRoots(token));
+  const expandedTokens = tokenizeSearchQuery(query);
+
+  let score = 0;
+
+  if (questionText.includes(query)) score += 140;
+  else if (combined.includes(query)) score += 80;
+
+  score += diceSimilarity(query, questionText) * 100;
+  score += diceSimilarity(query, combined) * 40;
+
+  if (baseTokens.length > 0) {
+    const matchedBase = baseTokens.filter((token) => questionText.includes(token) || answerText.includes(token));
+    const coverage = matchedBase.length / baseTokens.length;
+    score += coverage * 70;
+  }
+
+  const expandedMatches = expandedTokens.filter((token) => combined.includes(token)).length;
+  score += Math.min(25, expandedMatches * 2);
+
+  return score;
+}
 
 export function FaqSection() {
-  const [query, setQuery] = useState("");
-  const [openQuestion, setOpenQuestion] = useState<string | null>(null);
+  const allQuestions = useMemo(() => flattenQuestions(FAQ_CATEGORIES), []);
 
-  const filteredItems = useMemo(() => {
-    const normalizedQuery = query.trim().toLowerCase();
-    if (!normalizedQuery) return FAQ_ITEMS;
-    return FAQ_ITEMS.filter((item) => item.question.toLowerCase().includes(normalizedQuery));
-  }, [query]);
+  const [activeTopicId, setActiveTopicId] = useState<string | null>(null);
+  const [selectedQuestionId, setSelectedQuestionId] = useState<string | null>(null);
+  const [searchValue, setSearchValue] = useState("");
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const persisted = window.sessionStorage.getItem(FAQ_SEARCH_STORAGE_KEY);
+    if (!persisted) return;
+    setSearchValue(persisted);
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    window.sessionStorage.setItem(FAQ_SEARCH_STORAGE_KEY, searchValue);
+  }, [searchValue]);
+
+  const selectedQuestion = useMemo(() => {
+    if (!selectedQuestionId) return null;
+    return allQuestions.find((question) => question.id === selectedQuestionId) || null;
+  }, [allQuestions, selectedQuestionId]);
+
+  const visibleQuestions = useMemo(() => {
+    const featuredBase = activeTopicId
+      ? allQuestions.filter((question) => question.categoryId === activeTopicId)
+      : (() => {
+          const featuredSet = new Set<string>(featuredQuestions as readonly string[]);
+          const featuredOrdered = featuredQuestions
+            .map((featured) => allQuestions.find((question) => question.question === featured))
+            .filter((question): question is (typeof allQuestions)[number] => Boolean(question));
+          const remaining = allQuestions.filter((question) => !featuredSet.has(question.question));
+          return [...featuredOrdered, ...remaining].slice(0, 11);
+        })();
+
+    const query = searchValue.trim();
+    if (!query) return featuredBase;
+
+    // Busca global com ranking forte por frase e variacoes derivadas por questionId.
+    const scored = allQuestions
+      .map((question) => {
+        const category = FAQ_CATEGORIES.find((entry) => entry.id === question.categoryId);
+        const baseScore = getSmartSearchScore({
+          query,
+          questionText: question.question,
+          answerText: (question.answer || []).join(" "),
+          categoryText: [question.categoryName, category?.name || ""].join(" "),
+        });
+        const variants = FAQ_QUERY_VARIANTS_BY_QUESTION_ID[question.id] || [];
+        const variantScore = variants.reduce((best, variant) => {
+          const score = getSmartSearchScore({
+            query,
+            questionText: variant,
+            answerText: "",
+            categoryText: [question.categoryName, category?.name || ""].join(" "),
+          });
+          return Math.max(best, score);
+        }, 0);
+
+        return { question, score: baseScore + variantScore * 0.9 };
+      })
+      .sort((a, b) => b.score - a.score);
+
+    const positive = scored.filter((entry) => entry.score >= 22).slice(0, 6);
+    if (positive.length >= 6) return positive.map((entry) => entry.question);
+    return scored.slice(0, 6).map((entry) => entry.question);
+  }, [activeTopicId, allQuestions, searchValue]);
+
+  const handleTopicClick = (topicId: string) => {
+    setActiveTopicId((current) => (current === topicId ? null : topicId));
+    setSelectedQuestionId(null);
+    setSearchValue("");
+    if (typeof window !== "undefined") {
+      window.sessionStorage.removeItem(FAQ_SEARCH_STORAGE_KEY);
+    }
+  };
+
+  const handleQuestionClick = (questionId: string) => {
+    const question = allQuestions.find((item) => item.id === questionId);
+    if (!question) return;
+    setActiveTopicId(question.categoryId);
+    setSelectedQuestionId(question.id);
+  };
+
+  const handleBackToGrid = () => {
+    setSelectedQuestionId(null);
+  };
+
+  const renderAnswerContent = (answer: string[]) => {
+    const nodes: ReactNode[] = [];
+    let bulletItems: string[] = [];
+
+    const flushBullets = () => {
+      if (bulletItems.length === 0) return;
+      nodes.push(
+        <ul key={`answer-list-${nodes.length}`} className={styles.answerList}>
+          {bulletItems.map((item) => (
+            <li key={item} className={styles.answerListItem}>
+              {item}
+            </li>
+          ))}
+        </ul>
+      );
+      bulletItems = [];
+    };
+
+    answer.forEach((line, index) => {
+      const trimmed = String(line || "").trim();
+      const isBullet = /^[-•]\s+/.test(trimmed);
+      if (isBullet) {
+        bulletItems.push(trimmed.replace(/^[-•]\s+/, ""));
+        return;
+      }
+      flushBullets();
+      nodes.push(<p key={`answer-p-${index}`}>{line}</p>);
+    });
+
+    flushBullets();
+    return nodes;
+  };
 
   return (
-    <section className="faq-section" id="perguntas-frequentes" aria-label="Perguntas frequentes">
-      <div className="faq-inner">
-        <label className="faq-searchWrap" htmlFor="faqSearchInput">
+    <section className={styles.section} id="perguntas-frequentes" aria-label="Perguntas frequentes">
+      <div className={styles.inner}>
+        <label className={styles.searchWrap} htmlFor="faqSearchInput">
           <Search size={18} aria-hidden="true" />
           <input
             id="faqSearchInput"
             type="search"
-            value={query}
-            onChange={(event) => setQuery(event.target.value)}
+            value={searchValue}
+            onChange={(event) => setSearchValue(event.target.value)}
             placeholder="Como podemos ajudar?"
             aria-label="Como podemos ajudar?"
           />
         </label>
 
-        <div className="faq-columns">
-          <article className="faq-panel">
-            <h2 className="faq-panelTitle">TEMAS</h2>
-            <div className="faq-topicGrid">
-              {TOPICS.map((topic) => {
-                const Icon = topic.icon;
+        <div className={styles.columns}>
+          <article className={styles.panel}>
+            {selectedQuestion ? (
+              <>
+                <button type="button" className={styles.backButton} onClick={handleBackToGrid}>
+                  <ChevronLeft size={16} aria-hidden="true" />
+                  <span>Voltar</span>
+                </button>
+                <h2 className={styles.panelTitleNormal}>{selectedQuestion.question}</h2>
+                <div className={styles.answerContent}>
+                  {renderAnswerContent(selectedQuestion.answer)}
+                </div>
+              </>
+            ) : (
+              <>
+                <h2 className={styles.panelTitle}>TEMAS</h2>
+                <div className={styles.topicGrid}>
+                {FAQ_CATEGORIES.map((topic) => {
+                  const active = activeTopicId === topic.id;
+                  return (
+                    <button
+                      key={topic.id}
+                      type="button"
+                      className={`${styles.topicCard} ${active ? styles.topicCardActive : ""}`}
+                      onClick={() => handleTopicClick(topic.id)}
+                    >
+                      {topic.icon === "gazela" ? (
+                        <img className={styles.topicLogoIcon} src="/images/logo-tsebi.png" alt="" aria-hidden="true" />
+                      ) : (
+                        <topic.icon size={24} strokeWidth={1.4} aria-hidden="true" />
+                      )}
+                      <span>{topic.name}</span>
+                    </button>
+                  );
+                })}
+                </div>
+              </>
+            )}
+          </article>
+
+          <article className={styles.panel}>
+            <h2 className={styles.panelTitleNormal}>Perguntas Frequentes</h2>
+            <div className={styles.faqList}>
+              {visibleQuestions.map((item) => {
+                const selected = selectedQuestionId === item.id;
                 return (
-                  <button key={topic.label} type="button" className="faq-topicCard">
-                    <Icon size={24} strokeWidth={1.4} aria-hidden="true" />
-                    <span>{topic.label}</span>
+                  <button
+                    key={item.id}
+                    type="button"
+                    className={`${styles.faqQuestion} ${selected ? styles.faqQuestionActive : ""}`}
+                    onClick={() => handleQuestionClick(item.id)}
+                  >
+                    {item.question}
                   </button>
                 );
               })}
-            </div>
-          </article>
-
-          <article className="faq-panel">
-            <h2 className="faq-panelTitleNormal">Perguntas Frequentes</h2>
-            <div className="faq-faqList">
-              {filteredItems.map((item) => {
-                const expanded = openQuestion === item.question;
-                return (
-                  <div key={item.question} className="faq-faqItem">
-                    <button
-                      type="button"
-                      className="faq-faqQuestion"
-                      onClick={() => setOpenQuestion(expanded ? null : item.question)}
-                    >
-                      {item.question}
-                    </button>
-                    {expanded ? <p className="faq-faqAnswer">{item.answer}</p> : null}
-                  </div>
-                );
-              })}
+              {visibleQuestions.length === 0 ? <p className={styles.emptyState}>Nenhuma pergunta encontrada.</p> : null}
             </div>
           </article>
         </div>
+
+        <section className={styles.contactBlock} aria-label="Contate-nos">
+          <h3 className={styles.contactTitle}>NÃO ENCONTROU O QUE PROCURAVA? NOSSA EQUIPE ESTÁ PRONTA PARA TE ATENDER.</h3>
+          <p className={styles.contactText}>Se preferir, fale com nossos consultores e receba orientação personalizada sobre pedidos, prazos, produtos e serviços.</p>
+          <div className={styles.contactActions}>
+            <a href="/faq#precisa-de-ajuda" className={styles.contactButton}>
+              PRECISA DE AJUDA?
+            </a>
+            <a href="mailto:contato@tsebi.com.br" className={styles.contactButton}>
+              ENVIE SUA PERGUNTA
+            </a>
+          </div>
+        </section>
       </div>
-      <style jsx>{`
-        .faq-section {
-          background: #f5f5f5;
-          padding: 24px 0 74px;
-        }
-
-        .faq-inner {
-          width: min(1300px, calc(100% - 48px));
-          margin: 0 auto;
-        }
-
-        .faq-searchWrap {
-          width: min(55%, 760px);
-          min-height: 54px;
-          border: 1px solid #cfcfcf;
-          background: #fff;
-          display: inline-flex;
-          align-items: center;
-          gap: 12px;
-          padding: 0 14px;
-        }
-
-        .faq-searchWrap :global(svg) {
-          color: #2a2a2a;
-          flex: 0 0 auto;
-        }
-
-        .faq-searchWrap input {
-          width: 100%;
-          border: 0;
-          background: transparent;
-          outline: 0;
-          color: #1a1a1a;
-          font-size: 14px;
-          font-weight: 300;
-          font-family: inherit;
-        }
-
-        .faq-searchWrap input::placeholder {
-          color: #999;
-        }
-
-        .faq-columns {
-          margin-top: 26px;
-          display: grid;
-          grid-template-columns: minmax(0, 1.85fr) minmax(0, 1fr);
-          gap: 24px;
-        }
-
-        .faq-panel {
-          border: 1px solid #e0e0e0;
-          background: #fff;
-        }
-
-        .faq-panelTitle {
-          margin: 0;
-          padding: 42px 34px 34px;
-          font-size: 40px;
-          letter-spacing: 0.08em;
-          font-weight: 300;
-          text-transform: uppercase;
-          color: #111;
-        }
-
-        .faq-panelTitleNormal {
-          margin: 0;
-          padding: 42px 34px 34px;
-          font-size: 44px;
-          font-weight: 300;
-          color: #111;
-        }
-
-        .faq-topicGrid {
-          display: grid;
-          grid-template-columns: repeat(3, minmax(0, 1fr));
-          border-top: 1px solid #e0e0e0;
-        }
-
-        .faq-topicCard {
-          min-height: 144px;
-          border: 0;
-          border-right: 1px solid #e0e0e0;
-          border-bottom: 1px solid #e0e0e0;
-          background: #fff;
-          color: #191919;
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          justify-content: center;
-          gap: 14px;
-          cursor: pointer;
-          font-family: inherit;
-          font-size: 16px;
-          font-weight: 300;
-          transition: background-color 0.2s ease;
-        }
-
-        .faq-topicCard:nth-child(3n) {
-          border-right: 0;
-        }
-
-        .faq-topicCard:hover,
-        .faq-topicCard:focus-visible {
-          background: #f7f7f7;
-        }
-
-        .faq-faqList {
-          border-top: 1px solid #e0e0e0;
-          padding: 14px 34px 20px;
-        }
-
-        .faq-faqItem {
-          padding: 14px 0;
-        }
-
-        .faq-faqQuestion {
-          border: 0;
-          background: transparent;
-          padding: 0;
-          margin: 0;
-          color: #1d1d1d;
-          text-decoration: underline;
-          text-underline-offset: 2px;
-          font-family: inherit;
-          font-size: 15px;
-          line-height: 1.45;
-          font-weight: 300;
-          cursor: pointer;
-          text-align: left;
-        }
-
-        .faq-faqAnswer {
-          margin: 10px 0 0;
-          color: #3a3a3a;
-          font-size: 14px;
-          line-height: 1.55;
-          font-weight: 300;
-        }
-
-        @media (max-width: 1080px) {
-          .faq-inner {
-            width: calc(100% - 24px);
-          }
-
-          .faq-searchWrap {
-            width: 100%;
-          }
-
-          .faq-columns {
-            grid-template-columns: 1fr;
-          }
-
-          .faq-panelTitle,
-          .faq-panelTitleNormal {
-            font-size: 30px;
-            padding: 30px 20px 24px;
-          }
-
-          .faq-faqList {
-            padding: 10px 20px 16px;
-          }
-        }
-      `}</style>
     </section>
   );
 }
+

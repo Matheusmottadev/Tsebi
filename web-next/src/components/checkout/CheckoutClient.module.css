@@ -307,6 +307,32 @@
   gap: 12px;
 }
 
+.installmentsInfoBox {
+  border: 1px solid #dcdcdc;
+  background: #fff;
+  padding: 10px 12px;
+}
+
+.installmentsInfoTitle {
+  margin: 0;
+  font-size: calc(24px * var(--checkout-scale));
+  font-weight: 600;
+}
+
+.installmentsInfoText {
+  margin: 6px 0 8px;
+  font-size: calc(18px * var(--checkout-scale));
+}
+
+.installmentsInfoList {
+  margin: 0;
+  padding: 0 0 0 16px;
+  display: grid;
+  gap: 4px;
+  font-size: calc(16px * var(--checkout-scale));
+  line-height: 1.35;
+}
+
 .paymentMethodsGrid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));

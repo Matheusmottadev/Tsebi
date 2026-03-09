@@ -7,7 +7,7 @@ const FAQ_ITEMS = [
   "Quando meu pedido sera entregue?",
   "Como realizar ou cancelar um pedido?",
   "Como trocar ou devolver meu pedido?",
-  "Como cuidar das minhas pecas?",
+  "Como cuidar das minhas peças?",
 ] as const;
 
 export function FaqSupportSections() {
@@ -16,12 +16,12 @@ export function FaqSupportSections() {
       <article className={styles.panel} id="cuidados-reparos-faq">
         <h2 className={styles.panelTitle}>CUIDADOS E REPAROS</h2>
         <p className={styles.panelText}>
-          A Tsebi oferece suporte especializado para avaliacao de cuidados e reparos das pecas. Cada solicitacao e
+          A Tsebi oferece suporte especializado para avaliacao de cuidados e reparos das peças. Cada solicitacao e
           analisada individualmente pelo nosso time para orientar o melhor procedimento, prazos e disponibilidade de
           servico.
         </p>
         <Link className={styles.pillAction} href="/faq#servicos-de-cuidado">
-          Servicos de Cuidado
+          Ir para aba de cuidados e reparos
         </Link>
       </article>
 
@@ -53,7 +53,7 @@ export function FaqSupportSections() {
           ))}
         </div>
 
-        <Link className={styles.pillAction} href="/faq">
+        <Link className={styles.pillAction} href="/faq#perguntas-frequentes">
           Ver todas as perguntas
         </Link>
       </article>
