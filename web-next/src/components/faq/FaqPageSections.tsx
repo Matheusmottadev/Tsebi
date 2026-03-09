@@ -23,32 +23,6 @@ function resolveHashFromTab(tab: HelpCenterTab): string {
   return "#perguntas-frequentes";
 }
 
-function shouldScrollToHelpIntro(hash: string): boolean {
-  const normalized = decodeURIComponent(String(hash || "").trim().toLowerCase());
-  return normalized.startsWith("#precisa-de-ajuda") || normalized.startsWith("#precisando-de-ajuda");
-}
-
-function readCssPxVar(varName: string, fallback: number): number {
-  if (typeof window === "undefined") return fallback;
-  const raw = getComputedStyle(document.documentElement).getPropertyValue(varName).trim();
-  const parsed = Number.parseFloat(raw.replace("px", ""));
-  return Number.isFinite(parsed) ? parsed : fallback;
-}
-
-function scrollHelpIntroIntoView() {
-  if (typeof window === "undefined") return;
-  const intro = document.getElementById("precisa-de-ajuda");
-  if (!intro) return;
-
-  const topBarHeight = readCssPxVar("--top-bar-height", 38);
-  const headerHeight = readCssPxVar("--header-height", 84);
-  const stickyTabsHeight = 60;
-  const topOffset = topBarHeight + headerHeight + stickyTabsHeight + 16;
-  const targetTop = Math.max(0, window.scrollY + intro.getBoundingClientRect().top - topOffset);
-
-  window.scrollTo({ top: targetTop, behavior: "auto" });
-}
-
 export function FaqPageSections() {
   const [activeTab, setActiveTab] = useState<HelpCenterTab>("help");
 
@@ -57,13 +31,7 @@ export function FaqPageSections() {
   }, []);
 
   useEffect(() => {
-    const syncFromHash = () => {
-      const nextTab = resolveTabFromHash(window.location.hash);
-      setActiveTab(nextTab);
-      if (nextTab === "help" && shouldScrollToHelpIntro(window.location.hash)) {
-        window.requestAnimationFrame(scrollHelpIntroIntoView);
-      }
-    };
+    const syncFromHash = () => setActiveTab(resolveTabFromHash(window.location.hash));
     window.addEventListener("hashchange", syncFromHash);
     window.addEventListener("popstate", syncFromHash);
     return () => {
@@ -71,16 +39,6 @@ export function FaqPageSections() {
       window.removeEventListener("popstate", syncFromHash);
     };
   }, []);
-
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    if (activeTab !== "help") return;
-    if (!shouldScrollToHelpIntro(window.location.hash)) return;
-
-    window.requestAnimationFrame(scrollHelpIntroIntoView);
-    const timer = window.setTimeout(scrollHelpIntroIntoView, 180);
-    return () => window.clearTimeout(timer);
-  }, [activeTab]);
 
   const handleTabChange = (tab: HelpCenterTab) => {
     setActiveTab(tab);
