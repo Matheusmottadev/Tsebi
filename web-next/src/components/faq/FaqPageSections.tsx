@@ -10,51 +10,61 @@ import { ShippingSection } from "./ShippingSection";
 
 function resolveTabFromHash(hash: string): HelpCenterTab {
   const normalized = decodeURIComponent(String(hash || "").trim().toLowerCase());
-  if (normalized.startsWith("#precisa-de-ajuda") || normalized.startsWith("#precisando-de-ajuda")) return "help";
   if (normalized.startsWith("#entrega-e-devolucoes")) return "delivery";
   if (normalized.startsWith("#servicos-de-cuidado")) return "care";
-  return "faq";
-}
-
-function isHelpHash(hash: string): boolean {
-  const normalized = decodeURIComponent(String(hash || "").trim().toLowerCase());
-  return normalized.startsWith("#precisa-de-ajuda") || normalized.startsWith("#precisando-de-ajuda");
-}
-
-function normalizeHelpHashRoute() {
-  if (typeof window === "undefined") return;
-  if (!isHelpHash(window.location.hash)) return;
-  window.history.replaceState(null, "", "/faq");
-  window.scrollTo({ top: 0, behavior: "auto" });
+  if (normalized.startsWith("#perguntas-frequentes")) return "faq";
+  return "help";
 }
 
 function resolveRouteFromTab(tab: HelpCenterTab): string {
-  if (tab === "help") return "/faq";
   if (tab === "delivery") return "/faq#entrega-e-devolucoes";
   if (tab === "care") return "/faq#servicos-de-cuidado";
-  return "/faq#perguntas-frequentes";
+  if (tab === "faq") return "/faq#perguntas-frequentes";
+  return "/faq";
+}
+
+function normalizeFaqRoute() {
+  if (typeof window === "undefined") return;
+  const hash = window.location.hash;
+  const normalized = decodeURIComponent(String(hash || "").trim().toLowerCase());
+
+  if (!normalized) {
+    window.scrollTo({ top: 0, behavior: "auto" });
+    return;
+  }
+
+  const known =
+    normalized.startsWith("#entrega-e-devolucoes") ||
+    normalized.startsWith("#servicos-de-cuidado") ||
+    normalized.startsWith("#perguntas-frequentes");
+
+  if (!known) {
+    window.history.replaceState(null, "", "/faq");
+    window.scrollTo({ top: 0, behavior: "auto" });
+  }
 }
 
 export function FaqPageSections() {
   const [activeTab, setActiveTab] = useState<HelpCenterTab>("help");
 
   useEffect(() => {
-    const hash = window.location.hash;
-    setActiveTab(resolveTabFromHash(hash));
-    normalizeHelpHashRoute();
-    if (!hash || isHelpHash(hash)) {
-      window.scrollTo({ top: 0, behavior: "auto" });
-    }
+    if (typeof window === "undefined") return;
+
+    const previous = window.history.scrollRestoration;
+    window.history.scrollRestoration = "manual";
+
+    normalizeFaqRoute();
+    setActiveTab(resolveTabFromHash(window.location.hash));
+
+    return () => {
+      window.history.scrollRestoration = previous;
+    };
   }, []);
 
   useEffect(() => {
     const syncFromHash = () => {
-      const hash = window.location.hash;
-      setActiveTab(resolveTabFromHash(hash));
-      normalizeHelpHashRoute();
-      if (!hash || isHelpHash(hash)) {
-        window.scrollTo({ top: 0, behavior: "auto" });
-      }
+      normalizeFaqRoute();
+      setActiveTab(resolveTabFromHash(window.location.hash));
     };
 
     window.addEventListener("hashchange", syncFromHash);
