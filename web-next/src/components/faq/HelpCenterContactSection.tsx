@@ -36,7 +36,7 @@ export function HelpCenterContactSection() {
 
   return (
     <section className={styles.section} aria-label="Contato e atendimento">
-      <header className={styles.intro} id="precisa-de-ajuda">
+      <header className={styles.intro}>
         <h2 className={styles.introTitle}>Precisa de Ajuda?</h2>
         <p className={styles.introText}>
           Nossa equipe está disponível para orientar você sobre pedidos, entregas, trocas e cuidados com as peças.
@@ -44,7 +44,7 @@ export function HelpCenterContactSection() {
         </p>
       </header>
 
-      <div className={styles.contentBox}>
+      <div className={styles.contentBox} id="precisa-de-ajuda">
         <div className={styles.grid}>
           <article className={styles.column} id="fale-conosco" aria-label="Fale Conosco">
             <h3 className={styles.columnTitle}>Fale Conosco</h3>
