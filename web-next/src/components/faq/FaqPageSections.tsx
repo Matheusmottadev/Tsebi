@@ -39,14 +39,15 @@ function forceHelpAnchorPosition() {
   if (typeof window === "undefined") return;
   if (!isHelpHash(window.location.hash)) return;
 
-  const section = document.querySelector('section[aria-label="Contato e atendimento"]');
-  if (!(section instanceof HTMLElement)) return;
+  const anchor = document.getElementById("precisa-de-ajuda");
+  if (!(anchor instanceof HTMLElement)) return;
 
   const topBarHeight = readCssPxVar("--top-bar-height", 38);
   const headerHeight = readCssPxVar("--header-height", 84);
-  const tabsHeight = 60;
+  const tabs = document.querySelector('[aria-label="Navegacao de ajuda"]');
+  const tabsHeight = tabs instanceof HTMLElement ? tabs.getBoundingClientRect().height : 60;
   const topOffset = topBarHeight + headerHeight + tabsHeight + 8;
-  const targetTop = Math.max(0, window.scrollY + section.getBoundingClientRect().top - topOffset);
+  const targetTop = Math.max(0, window.scrollY + anchor.getBoundingClientRect().top - topOffset);
   window.scrollTo({ top: targetTop, behavior: "auto" });
 }
 
@@ -55,9 +56,20 @@ export function FaqPageSections() {
 
   useEffect(() => {
     setActiveTab(resolveTabFromHash(window.location.hash));
-    window.requestAnimationFrame(forceHelpAnchorPosition);
-    const timer = window.setTimeout(forceHelpAnchorPosition, 220);
-    return () => window.clearTimeout(timer);
+    const timers = [0, 60, 180, 420, 900, 1500].map((delay) =>
+      window.setTimeout(forceHelpAnchorPosition, delay),
+    );
+
+    const onLoad = () => forceHelpAnchorPosition();
+    window.addEventListener("load", onLoad);
+    void (document as Document & { fonts?: { ready?: Promise<unknown> } }).fonts?.ready?.then(() => {
+      forceHelpAnchorPosition();
+    });
+
+    return () => {
+      timers.forEach((timer) => window.clearTimeout(timer));
+      window.removeEventListener("load", onLoad);
+    };
   }, []);
 
   useEffect(() => {
