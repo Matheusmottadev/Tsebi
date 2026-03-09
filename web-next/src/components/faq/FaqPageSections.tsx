@@ -39,14 +39,22 @@ export function FaqPageSections() {
   const [activeTab, setActiveTab] = useState<HelpCenterTab>("help");
 
   useEffect(() => {
-    setActiveTab(resolveTabFromHash(window.location.hash));
+    const hash = window.location.hash;
+    setActiveTab(resolveTabFromHash(hash));
     normalizeHelpHashRoute();
+    if (!hash || isHelpHash(hash)) {
+      window.scrollTo({ top: 0, behavior: "auto" });
+    }
   }, []);
 
   useEffect(() => {
     const syncFromHash = () => {
-      setActiveTab(resolveTabFromHash(window.location.hash));
+      const hash = window.location.hash;
+      setActiveTab(resolveTabFromHash(hash));
       normalizeHelpHashRoute();
+      if (!hash || isHelpHash(hash)) {
+        window.scrollTo({ top: 0, behavior: "auto" });
+      }
     };
 
     window.addEventListener("hashchange", syncFromHash);
