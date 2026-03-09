@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -1074,7 +1074,7 @@ export function LegacyHome({ products }: LegacyHomeProps) {
           <div className="header-contact-panel-divider" />
 
           <div className="header-contact-panel-help">
-            <a href="/faq#precisa-de-ajuda">Precisa de ajuda?</a>
+            <a href="/faq">Precisa de ajuda?</a>
             <a href="/faq">Perguntas Frequentes</a>
             <a href="/faq#entrega-e-devolucoes">Entregas e Devoluções</a>
             <a href="/faq#servicos-de-cuidado">Serviços e cuidados</a>
@@ -1677,6 +1677,7 @@ export function LegacyHome({ products }: LegacyHomeProps) {
     </div>
   );
 }
+
 
 
 

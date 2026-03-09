@@ -16,39 +16,23 @@ function resolveTabFromHash(hash: string): HelpCenterTab {
   return "faq";
 }
 
-function resolveHashFromTab(tab: HelpCenterTab): string {
-  if (tab === "help") return "#precisa-de-ajuda";
-  if (tab === "delivery") return "#entrega-e-devolucoes";
-  if (tab === "care") return "#servicos-de-cuidado";
-  return "#perguntas-frequentes";
-}
-
 function isHelpHash(hash: string): boolean {
   const normalized = decodeURIComponent(String(hash || "").trim().toLowerCase());
   return normalized.startsWith("#precisa-de-ajuda") || normalized.startsWith("#precisando-de-ajuda");
 }
 
-function readCssPxVar(varName: string, fallback: number): number {
-  if (typeof window === "undefined") return fallback;
-  const raw = getComputedStyle(document.documentElement).getPropertyValue(varName).trim();
-  const parsed = Number.parseFloat(raw.replace("px", ""));
-  return Number.isFinite(parsed) ? parsed : fallback;
-}
-
-function forceHelpAnchorPosition() {
+function normalizeHelpHashRoute() {
   if (typeof window === "undefined") return;
   if (!isHelpHash(window.location.hash)) return;
+  window.history.replaceState(null, "", "/faq");
+  window.scrollTo({ top: 0, behavior: "auto" });
+}
 
-  const anchor = document.getElementById("precisa-de-ajuda");
-  if (!(anchor instanceof HTMLElement)) return;
-
-  const topBarHeight = readCssPxVar("--top-bar-height", 38);
-  const headerHeight = readCssPxVar("--header-height", 84);
-  const tabs = document.querySelector('[aria-label="Navegacao de ajuda"]');
-  const tabsHeight = tabs instanceof HTMLElement ? tabs.getBoundingClientRect().height : 60;
-  const topOffset = topBarHeight + headerHeight + tabsHeight + 8;
-  const targetTop = Math.max(0, window.scrollY + anchor.getBoundingClientRect().top - topOffset);
-  window.scrollTo({ top: targetTop, behavior: "auto" });
+function resolveRouteFromTab(tab: HelpCenterTab): string {
+  if (tab === "help") return "/faq";
+  if (tab === "delivery") return "/faq#entrega-e-devolucoes";
+  if (tab === "care") return "/faq#servicos-de-cuidado";
+  return "/faq#perguntas-frequentes";
 }
 
 export function FaqPageSections() {
@@ -56,28 +40,15 @@ export function FaqPageSections() {
 
   useEffect(() => {
     setActiveTab(resolveTabFromHash(window.location.hash));
-    const timers = [0, 60, 180, 420, 900, 1500].map((delay) =>
-      window.setTimeout(forceHelpAnchorPosition, delay),
-    );
-
-    const onLoad = () => forceHelpAnchorPosition();
-    window.addEventListener("load", onLoad);
-    void (document as Document & { fonts?: { ready?: Promise<unknown> } }).fonts?.ready?.then(() => {
-      forceHelpAnchorPosition();
-    });
-
-    return () => {
-      timers.forEach((timer) => window.clearTimeout(timer));
-      window.removeEventListener("load", onLoad);
-    };
+    normalizeHelpHashRoute();
   }, []);
 
   useEffect(() => {
     const syncFromHash = () => {
       setActiveTab(resolveTabFromHash(window.location.hash));
-      window.requestAnimationFrame(forceHelpAnchorPosition);
-      window.setTimeout(forceHelpAnchorPosition, 120);
+      normalizeHelpHashRoute();
     };
+
     window.addEventListener("hashchange", syncFromHash);
     window.addEventListener("popstate", syncFromHash);
     return () => {
@@ -89,7 +60,10 @@ export function FaqPageSections() {
   const handleTabChange = (tab: HelpCenterTab) => {
     setActiveTab(tab);
     if (typeof window !== "undefined") {
-      window.history.replaceState(null, "", `/faq${resolveHashFromTab(tab)}`);
+      window.history.replaceState(null, "", resolveRouteFromTab(tab));
+      if (tab === "help") {
+        window.scrollTo({ top: 0, behavior: "auto" });
+      }
     }
   };
 

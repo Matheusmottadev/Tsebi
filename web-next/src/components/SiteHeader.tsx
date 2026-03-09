@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
@@ -793,7 +793,7 @@ export function SiteHeader() {
           <div className="header-contact-panel-divider" />
 
           <div className="header-contact-panel-help">
-            <a href="/faq#precisa-de-ajuda">Precisa de ajuda?</a>
+            <a href="/faq">Precisa de ajuda?</a>
             <a href="/faq">Perguntas Frequentes</a>
             <a href="/faq#entrega-e-devolucoes">Entregas e Devoluções</a>
             <a href="/faq#servicos-de-cuidado">Serviços e cuidados</a>
@@ -1268,6 +1268,7 @@ export function SiteHeader() {
     </>
   );
 }
+
 
 
 

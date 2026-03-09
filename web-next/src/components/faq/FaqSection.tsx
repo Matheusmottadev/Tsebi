@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { ChevronLeft, Search } from "lucide-react";
 import { ReactNode, useEffect, useMemo, useState } from "react";
@@ -354,7 +354,7 @@ export function FaqSection() {
           <h3 className={styles.contactTitle}>NÃO ENCONTROU O QUE PROCURAVA? NOSSA EQUIPE ESTÁ PRONTA PARA TE ATENDER.</h3>
           <p className={styles.contactText}>Se preferir, fale com nossos consultores e receba orientação personalizada sobre pedidos, prazos, produtos e serviços.</p>
           <div className={styles.contactActions}>
-            <a href="/faq#precisa-de-ajuda" className={styles.contactButton}>
+            <a href="/faq" className={styles.contactButton}>
               PRECISA DE AJUDA?
             </a>
             <a href="mailto:contato@tsebi.com.br" className={styles.contactButton}>
@@ -366,4 +366,5 @@ export function FaqSection() {
     </section>
   );
 }
+
 

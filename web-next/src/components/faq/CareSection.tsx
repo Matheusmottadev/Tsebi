@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { ChevronLeft, Heart, Wrench } from "lucide-react";
 import { useState } from "react";
@@ -86,7 +86,7 @@ export function CareSection() {
               <h3 className={styles.contactTitle}>CONTATE-NOS</h3>
               <div className={styles.contactBody}>
                 <p>Entre em contato com o nosso Client Services.</p>
-                <a href="/faq#precisa-de-ajuda" className={styles.contactButton}>
+                <a href="/faq" className={styles.contactButton}>
                   CONTATE-NOS
                 </a>
               </div>
@@ -109,4 +109,5 @@ export function CareSection() {
     </section>
   );
 }
+
 
