@@ -1,7 +1,8 @@
-﻿import type { Metadata } from "next";
-import { notFound } from "next/navigation";
-import { LegacyStaticPageRenderer } from "@/components/LegacyStaticPageRenderer";
-import { loadLegacyStaticPage } from "@/lib/legacy-static-pages";
+import type { Metadata } from "next";
+import { BodyClassName } from "@/components/BodyClassName";
+import { FaqPageSections } from "@/components/faq/FaqPageSections";
+import { LegacyFooter } from "@/components/home-legacy/LegacyFooter";
+import styles from "./page.module.css";
 
 export const metadata: Metadata = {
   title: "FAQ",
@@ -23,17 +24,13 @@ export const metadata: Metadata = {
 };
 
 export default async function FaqPage() {
-  const page = await loadLegacyStaticPage("faq");
-  if (!page) notFound();
-
   return (
-    <LegacyStaticPageRenderer
-      stylesheetHrefs={page.stylesheetHrefs}
-      inlineStyles={page.inlineStyles}
-      bodyMarkup={page.bodyMarkup}
-      scriptSrcs={page.scriptSrcs}
-      inlineScripts={page.inlineScripts}
-    />
+    <>
+      <BodyClassName className="faq-page-body" />
+      <main className={styles.page}>
+        <FaqPageSections />
+      </main>
+      <LegacyFooter />
+    </>
   );
 }
-
