@@ -10,3 +10,4 @@ data/*.local.json
 # Logs
 *.log
 .vercel
+.env*.local
