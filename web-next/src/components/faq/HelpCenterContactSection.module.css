@@ -95,11 +95,51 @@
   color: #fff;
 }
 
+.chatButton {
+  position: relative;
+  padding-right: 36px;
+}
+
+.chatPulse {
+  position: absolute;
+  right: 14px;
+  top: 50%;
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: #35c96e;
+  transform: translateY(-50%);
+  box-shadow: 0 0 0 0 rgba(53, 201, 110, 0.65);
+  animation: chatPulse 1.25s infinite ease-out;
+}
+
+.chatUnavailableText {
+  margin: 0;
+  color: #2a2a2a;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
 .offlineText {
   margin: 0;
   font-size: 13px;
   line-height: 1.5;
   color: #2a2a2a;
+}
+
+@keyframes chatPulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(53, 201, 110, 0.65);
+    opacity: 1;
+  }
+  70% {
+    box-shadow: 0 0 0 7px rgba(53, 201, 110, 0);
+    opacity: 0.8;
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(53, 201, 110, 0);
+    opacity: 1;
+  }
 }
 
 @media (max-width: 1080px) {

@@ -1,17 +1,22 @@
 "use client";
 
-import type { MouseEvent } from "react";
+import { useEffect, useState, type MouseEvent } from "react";
 import { isWithinChatBusinessHours } from "@/lib/chatBusinessHours";
 import styles from "./HelpCenterContactSection.module.css";
 
 export function HelpCenterContactSection() {
+  const [isChatAvailable, setIsChatAvailable] = useState<boolean>(() => isWithinChatBusinessHours());
+
+  useEffect(() => {
+    const syncAvailability = () => setIsChatAvailable(isWithinChatBusinessHours());
+    syncAvailability();
+    const timer = window.setInterval(syncAvailability, 60_000);
+    return () => window.clearInterval(timer);
+  }, []);
+
   const openLiveChat = (event: MouseEvent<HTMLAnchorElement>) => {
     if (typeof window === "undefined") return;
-    if (!isWithinChatBusinessHours()) {
-      event.preventDefault();
-      window.location.assign("/faq");
-      return;
-    }
+    if (!isWithinChatBusinessHours()) event.preventDefault();
 
     const api = (window as Window & { Tawk_API?: { showWidget?: () => void; maximize?: () => void } }).Tawk_API;
     if (api && typeof api.maximize === "function") {
@@ -85,18 +90,25 @@ export function HelpCenterContactSection() {
               Para solicitacoes detalhadas, envie um e-mail. Nossa equipe responde em ate 24 horas uteis.
             </p>
             <div className={styles.actions}>
-              <a
-                className={styles.button}
-                href="https://wa.me/5511918596632"
-                target="_blank"
-                rel="noreferrer"
-                onClick={openLiveChat}
-              >
-                <svg className={styles.buttonIcon} viewBox="0 0 24 24" aria-hidden="true">
-                  <path d="M4 6h16a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H8l-4 3v-3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2z"></path>
-                </svg>
-                <span>Chat ao vivo</span>
-              </a>
+              {isChatAvailable ? (
+                <a
+                  className={`${styles.button} ${styles.chatButton}`}
+                  href="https://wa.me/5511918596632"
+                  target="_blank"
+                  rel="noreferrer"
+                  onClick={openLiveChat}
+                >
+                  <svg className={styles.buttonIcon} viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M4 6h16a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H8l-4 3v-3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2z"></path>
+                  </svg>
+                  <span>Chat ao vivo</span>
+                  <span className={styles.chatPulse} aria-hidden="true"></span>
+                </a>
+              ) : (
+                <p className={styles.chatUnavailableText}>
+                  Chat ao vivo indisponivel, volte mais tarde ou entre em contato por outros meios
+                </p>
+              )}
               <a className={styles.button} href="mailto:contato@tsebi.com.br">
                 <svg className={styles.buttonIcon} viewBox="0 0 24 24" aria-hidden="true">
                   <rect x="3" y="5" width="18" height="14" rx="2"></rect>
