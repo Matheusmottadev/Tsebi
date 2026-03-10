@@ -21,12 +21,17 @@ export function LayoutChrome({ children }: LayoutChromeProps) {
     const query = String(searchParams?.toString() || "").trim();
     return query ? `${currentPath}?${query}` : currentPath;
   }, [currentPath, searchParams]);
+  const normalizedPath = currentPath.replace(/\/+$/, "") || "/";
   const shouldHideForAccount = currentPath === "/account" || currentPath.startsWith("/account/");
   const shouldHideForStudio = currentPath === "/studio" || currentPath.startsWith("/studio/");
+  const shouldHideForAdmin = currentPath === "/admin" || currentPath.startsWith("/admin/");
+  const shouldHideForAdminLogin = normalizedPath === "/admin/login";
   const shouldRenderHeader =
     !ROUTES_WITHOUT_GLOBAL_HEADER.has(currentPath) &&
     !shouldHideForAccount &&
-    !shouldHideForStudio;
+    !shouldHideForStudio &&
+    !shouldHideForAdmin &&
+    !shouldHideForAdminLogin;
 
   useEffect(() => {
     const previousUrl = String(previousUrlRef.current || "").trim();

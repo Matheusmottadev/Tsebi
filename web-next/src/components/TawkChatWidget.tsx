@@ -15,6 +15,27 @@ type TawkApi = {
   minimize?: () => void;
 };
 
+function teardownTawk() {
+  if (typeof window === "undefined" || typeof document === "undefined") return;
+
+  const api = (window as Window & { Tawk_API?: TawkApi }).Tawk_API;
+  if (api && typeof api.minimize === "function") api.minimize();
+  if (api && typeof api.hideWidget === "function") api.hideWidget();
+  document.body.classList.remove("tawk-chat-visible");
+
+  const nodes = document.querySelectorAll(
+    'script#tawk-bootstrap, script#tawk-loader, script[src*="tawk.to"], iframe[src*="tawk.to"], #tawkchat-container'
+  );
+  nodes.forEach((node) => node.remove());
+
+  try {
+    delete (window as Window & { Tawk_API?: TawkApi }).Tawk_API;
+    delete (window as Window & { Tawk_LoadStart?: Date }).Tawk_LoadStart;
+  } catch {
+    // ignore cleanup failures on strict browsers
+  }
+}
+
 function hideDefaultTawkLauncher() {
   const api = (window as Window & { Tawk_API?: TawkApi }).Tawk_API;
   if (!api || typeof api.hideWidget !== "function") return;
@@ -41,15 +62,14 @@ function isLikelyChatNotificationTitle(value: string): boolean {
 export function TawkChatWidget() {
   const pathname = usePathname();
   const isStudioRoute = pathname === "/studio" || pathname.startsWith("/studio/");
+  const isAdminRoute = pathname === "/admin" || pathname.startsWith("/admin/");
+  const shouldHideWidget = isStudioRoute || isAdminRoute;
   const [isChatOpen, setIsChatOpen] = useState(false);
 
   useEffect(() => {
-    if (isStudioRoute) {
+    if (shouldHideWidget) {
       setIsChatOpen(false);
-      setTawkVisibility(false);
-      const api = (window as Window & { Tawk_API?: TawkApi }).Tawk_API;
-      if (api && typeof api.minimize === "function") api.minimize();
-      if (api && typeof api.hideWidget === "function") api.hideWidget();
+      teardownTawk();
       return;
     }
 
@@ -71,10 +91,10 @@ export function TawkChatWidget() {
       window.removeEventListener("tawk:chat-closed", handleChatClosed);
       setTawkVisibility(false);
     };
-  }, [isStudioRoute]);
+  }, [shouldHideWidget]);
 
   useEffect(() => {
-    if (isStudioRoute) return;
+    if (shouldHideWidget) return;
     if (typeof document === "undefined") return;
 
     let stableTitle = document.title;
@@ -105,10 +125,10 @@ export function TawkChatWidget() {
       window.clearInterval(timerId);
       document.removeEventListener("visibilitychange", syncTitle);
     };
-  }, [isStudioRoute]);
+  }, [shouldHideWidget]);
 
   const openChat = useCallback(() => {
-    if (isStudioRoute) return;
+    if (shouldHideWidget) return;
     if (typeof window === "undefined") return;
     if (!isWithinChatBusinessHours()) {
       window.location.assign("/faq");
@@ -125,9 +145,9 @@ export function TawkChatWidget() {
     }
 
     window.open("https://wa.me/5511918596632", "_blank", "noopener,noreferrer");
-  }, [isStudioRoute]);
+  }, [shouldHideWidget]);
 
-  if (!TAWK_EMBED_SRC || isStudioRoute) return null;
+  if (!TAWK_EMBED_SRC || shouldHideWidget) return null;
 
   return (
     <>
