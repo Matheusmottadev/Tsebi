@@ -99,6 +99,13 @@ export function LoginForm() {
   const [devCodeHint, setDevCodeHint] = useState("");
 
   const emailPreview = useMemo(() => normalizeEmail(activeEmail || email), [activeEmail, email]);
+  const loginNotice = useMemo(() => {
+    const raw = String(searchParams.get("notice") || "").trim().toLowerCase();
+    if (raw === "private-care") {
+      return "Cadastre-se ou faça login para agendar seu atendimento.";
+    }
+    return "";
+  }, [searchParams]);
 
   function redirectToForcedPasswordReset(targetEmail: string): void {
     const normalized = normalizeEmail(targetEmail);
@@ -443,15 +450,16 @@ export function LoginForm() {
   }
 
   return (
-    <section className="auth-card" aria-labelledby="loginTitle">
-      <h1 id="loginTitle">Entrar</h1>
-      <p className="auth-sub">Acesse sua conta Tsebi para acompanhar pedidos e preferencias.</p>
+    <>
+      <section className="auth-card" aria-labelledby="loginTitle">
+        <h1 id="loginTitle">Entrar</h1>
+        <p className="auth-sub">Acesse sua conta Tsebi para acompanhar pedidos e preferencias.</p>
 
       <div id="authError" className="auth-error" role="alert" hidden={!errorMessage}>
         {errorMessage}
       </div>
 
-      <form onSubmit={handleFormSubmit}>
+        <form onSubmit={handleFormSubmit}>
         <section id="stateEmail" className="auth-state" hidden={authState !== "email"}>
           <label htmlFor="emailInput">Email</label>
           <input
@@ -625,8 +633,14 @@ export function LoginForm() {
             Criar conta
           </Link>
         </p>
-      </form>
-    </section>
+        </form>
+      </section>
+      {loginNotice ? (
+        <div className="auth-fixed-notice" role="status" aria-live="polite">
+          {loginNotice}
+        </div>
+      ) : null}
+    </>
   );
 }
 

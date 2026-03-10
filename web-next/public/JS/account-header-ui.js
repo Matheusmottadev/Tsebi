@@ -1,7 +1,7 @@
 ﻿(function initAccountHeaderUi() {
   const messages = [
-    "Nova ColeÃ§Ã£o Genesis",
-    "VocÃª merece vestir algo a sua altura.",
+    "Nova Coleção Genesis",
+    "Você merece vestir algo a sua altura.",
     "Cadastre-se para receber lancamentos",
     "Exclusividade para quem valoriza o que e unico.",
     "Acesso antecipado a novas colecoes.",

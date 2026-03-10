@@ -2,10 +2,27 @@
 
 import { useEffect, useState, type MouseEvent } from "react";
 import { isWithinChatBusinessHours } from "@/lib/chatBusinessHours";
+import { getMe } from "@/services/auth";
 import styles from "./HelpCenterContactSection.module.css";
 
 export function HelpCenterContactSection() {
+  const privateCareTarget = "/account#private-care";
+  const privateCareLoginHref = `/login?returnUrl=${encodeURIComponent(privateCareTarget)}&notice=private-care`;
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isChatAvailable, setIsChatAvailable] = useState<boolean>(() => isWithinChatBusinessHours());
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const user = await getMe({ cache: "no-store" }).catch(() => null);
+      if (cancelled) return;
+      setIsAuthenticated(Boolean(user));
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   useEffect(() => {
     const syncAvailability = () => setIsChatAvailable(isWithinChatBusinessHours());
@@ -39,7 +56,7 @@ export function HelpCenterContactSection() {
               <li>Feriados: Fechado</li>
             </ul>
             <div className={styles.actions}>
-              <a className={styles.button} href="/faq">
+              <a className={styles.button} href={isAuthenticated ? privateCareTarget : privateCareLoginHref}>
                 <svg className={styles.buttonIcon} viewBox="0 0 24 24" aria-hidden="true">
                   <rect x="3" y="5" width="18" height="16" rx="2"></rect>
                   <path d="M8 3v4"></path>

@@ -21,6 +21,8 @@ Endpoint mapping used in this file:
 - GET /api/admin/audit
 - GET /api/admin/audit-logs
 - GET /api/admin/audit/:id
+- GET /api/admin/private-care
+- PATCH /api/admin/private-care/:id
 - GET /api/studio-auth/me
 - POST /api/studio-auth/login
 - POST /api/studio-auth/mfa/setup/init
@@ -243,6 +245,58 @@ export interface ListNewsletterAdminResponse {
   total: number;
   page: number;
   pageSize: number;
+}
+
+export interface AdminPrivateCareSlot {
+  id?: string;
+  label?: string;
+  date?: string;
+  time?: string;
+  startsAt?: string;
+  endsAt?: string;
+}
+
+export interface AdminPrivateCareRequest {
+  id: string;
+  createdAt: string | null;
+  updatedAt: string | null;
+  userId: string | null;
+  userEmail: string;
+  userName: string;
+  channel: string;
+  date: string;
+  time: string;
+  subject: string;
+  message: string;
+  status: string;
+  adminNote: string;
+  availableSlots: Array<string | AdminPrivateCareSlot>;
+}
+
+export interface ListPrivateCareAdminParams {
+  query?: string;
+  status?: string;
+  page?: number;
+  pageSize?: number;
+}
+
+export interface ListPrivateCareAdminResponse {
+  rows: AdminPrivateCareRequest[];
+  total: number;
+  page: number;
+  pageSize: number;
+}
+
+export interface UpdatePrivateCareAdminPayload {
+  status?: string;
+  decision?: "accept" | "decline";
+  adminNote?: string;
+  availableSlots?: string[];
+}
+
+export interface UpdatePrivateCareAdminResponse {
+  ok: true;
+  request?: AdminPrivateCareRequest;
 }
 
 export interface AdminAuditLog {
@@ -805,6 +859,41 @@ export async function listNewsletterAdmin(
     pageSize: params.pageSize,
   });
   return get<ListNewsletterAdminResponse>(`/api/admin/newsletter${query}`, options);
+}
+
+/**
+ * GET /api/admin/private-care
+ * Auth: admin session required.
+ */
+export async function listPrivateCareAdmin(
+  params: ListPrivateCareAdminParams = {},
+  options?: HttpRequestOptions
+): Promise<ListPrivateCareAdminResponse> {
+  const query = buildQuery({
+    query: params.query,
+    status: params.status,
+    page: params.page,
+    pageSize: params.pageSize,
+  });
+  return get<ListPrivateCareAdminResponse>(`/api/admin/private-care${query}`, options);
+}
+
+/**
+ * PATCH /api/admin/private-care/:id
+ * Auth: admin session required + CSRF header.
+ */
+export async function updatePrivateCareAdmin(
+  id: string,
+  payload: UpdatePrivateCareAdminPayload,
+  csrfToken?: string,
+  options?: HttpRequestOptions
+): Promise<UpdatePrivateCareAdminResponse> {
+  const token = await resolveCsrfToken(csrfToken, options);
+  return patch<UpdatePrivateCareAdminResponse>(
+    `/api/admin/private-care/${encodeURIComponent(id)}`,
+    payload,
+    mergeOptionsWithHeaders(options, buildCsrfHeader(token))
+  );
 }
 
 /**

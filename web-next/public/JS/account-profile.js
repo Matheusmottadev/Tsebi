@@ -44,7 +44,7 @@
   });
 
   const monthLabels = [
-    "Janeiro", "Fevereiro", "MarÃ§o", "Abril", "Maio", "Junho",
+    "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
     "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"
   ];
 
@@ -289,7 +289,7 @@
       const article = document.createElement("article");
       article.className = "address-card";
       article.innerHTML = `
-        <strong>${String(address?.label || address?.fullName || "EndereÃ§o")}</strong>
+        <strong>${String(address?.label || address?.fullName || "Endereço")}</strong>
         <p>${String(address?.street || "")}, ${String(address?.number || "")}</p>
         <p>${String(address?.district || "")} - ${String(address?.city || "")}/${String(address?.state || "")}</p>
         <p>CEP ${String(address?.cep || "")}</p>
@@ -319,9 +319,9 @@
     wrapper.hidden = true;
     wrapper.innerHTML = `
       <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="addressModalTitle">
-        <h3 id="addressModalTitle">Novo endereÃ§o</h3>
+        <h3 id="addressModalTitle">Novo endereço</h3>
         <form id="addressFormModal" class="modal-form">
-          <label for="addressLabelInput">RÃ³tulo</label>
+          <label for="addressLabelInput">Rótulo</label>
           <input id="addressLabelInput" name="label" type="text" placeholder="Casa, Trabalho..." required />
 
           <label for="addressFullNameInput">Nome completo</label>
@@ -333,7 +333,7 @@
           <label for="addressStreetInput">Rua</label>
           <input id="addressStreetInput" name="street" type="text" required />
 
-          <label for="addressNumberInput">NÃºmero</label>
+          <label for="addressNumberInput">Número</label>
           <input id="addressNumberInput" name="number" type="text" required />
 
           <label for="addressComplementInput">Complemento (opcional)</label>
@@ -350,7 +350,7 @@
 
           <div class="modal-actions">
             <button type="button" class="btn-outline" data-address-action="cancel">Cancelar</button>
-            <button type="submit" class="btn-primary" id="addressModalSubmitBtn">Salvar endereÃ§o</button>
+            <button type="submit" class="btn-primary" id="addressModalSubmitBtn">Salvar endereço</button>
           </div>
         </form>
       </div>
@@ -413,7 +413,7 @@
         !payload.city ||
         payload.state.length !== 2
       ) {
-        showToast("Preencha os campos obrigatÃ³rios do endereÃ§o.");
+        showToast("Preencha os campos obrigatórios do endereço.");
         return;
       }
 
@@ -429,7 +429,7 @@
           }
           renderAddresses(currentAddresses);
           addressModal.hidden = true;
-          showToast("EndereÃ§o salvo.");
+          showToast("Endereço salvo.");
           return;
         }
 
@@ -439,14 +439,14 @@
             : await store.createMyAddress(payload);
 
         if (!result?.ok) {
-          showToast(result?.error || "NÃ£o foi possÃ­vel salvar o endereÃ§o.");
+          showToast(result?.error || "Não foi possível salvar o endereço.");
           return;
         }
 
         currentAddresses = Array.isArray(result.addresses) ? result.addresses : currentAddresses;
         renderAddresses(currentAddresses);
         addressModal.hidden = true;
-        showToast("EndereÃ§o salvo.");
+        showToast("Endereço salvo.");
       } finally {
         if (addressSubmitEl) addressSubmitEl.disabled = false;
       }
@@ -475,8 +475,8 @@
       .toUpperCase()
       .slice(0, 2);
 
-    if (addressTitleEl) addressTitleEl.textContent = addressMode === "edit" ? "Editar endereÃ§o" : "Novo endereÃ§o";
-    if (addressSubmitEl) addressSubmitEl.textContent = addressMode === "edit" ? "Salvar alteraÃ§Ãµes" : "Salvar endereÃ§o";
+    if (addressTitleEl) addressTitleEl.textContent = addressMode === "edit" ? "Editar endereço" : "Novo endereço";
+    if (addressSubmitEl) addressSubmitEl.textContent = addressMode === "edit" ? "Salvar alterações" : "Salvar endereço";
     addressModal.hidden = false;
   }
 
@@ -567,19 +567,19 @@
     let valid = true;
 
     if (!data.title) {
-      setError("profileTitle", "Campo obrigatÃ³rio");
+      setError("profileTitle", "Campo obrigatório");
       valid = false;
     }
     if (data.firstName.length < 2) {
-      setError("profileFirstName", "Campo obrigatÃ³rio");
+      setError("profileFirstName", "Campo obrigatório");
       valid = false;
     }
     if (data.lastName.length < 2) {
-      setError("profileLastName", "Campo obrigatÃ³rio");
+      setError("profileLastName", "Campo obrigatório");
       valid = false;
     }
     if (!data.country) {
-      setError("profileCountry", "Campo obrigatÃ³rio");
+      setError("profileCountry", "Campo obrigatório");
       valid = false;
     }
 
@@ -594,10 +594,10 @@
 
       const result = await saveProfile(data);
       if (!result?.ok) {
-        showToast(result?.error || "NÃ£o foi possÃ­vel salvar");
+        showToast(result?.error || "Não foi possível salvar");
         return;
       }
-      showToast("InformaÃ§Ãµes salvas");
+      showToast("Informações salvas");
     });
 
     const prefMap = {
@@ -626,7 +626,7 @@
       const addressId = String(button.getAttribute("data-address-edit") || "");
       const address = currentAddresses.find((item) => String(item?.id || "") === addressId) || null;
       if (!address) {
-        showToast("EndereÃ§o nÃ£o encontrado.");
+        showToast("Endereço não encontrado.");
         return;
       }
       openAddressModal("edit", address);
@@ -701,7 +701,7 @@
     enablePasskeyBtn?.addEventListener("click", async () => {
       setPasskeyFeedback("");
       if (!(window.PublicKeyCredential && navigator.credentials)) {
-        setPasskeyFeedback("Este navegador nÃ£o suporta Passkey.", true);
+        setPasskeyFeedback("Este navegador não suporta Passkey.", true);
         return;
       }
 
@@ -717,7 +717,7 @@
         });
         const optionsData = await optionsResponse.json().catch(() => ({}));
         if (!optionsResponse.ok || !optionsData?.ok || !optionsData?.options) {
-          setPasskeyFeedback("NÃ£o foi possÃ­vel iniciar a ativaÃ§Ã£o de Passkey.", true);
+          setPasskeyFeedback("Não foi possível iniciar a ativação de Passkey.", true);
           return;
         }
 
@@ -742,9 +742,9 @@
         showToast("Passkey ativada");
       } catch (error) {
         if (error?.name === "NotAllowedError") {
-          setPasskeyFeedback("AtivaÃ§Ã£o de Passkey cancelada.", true);
+          setPasskeyFeedback("Ativação de Passkey cancelada.", true);
         } else {
-          setPasskeyFeedback("NÃ£o foi possÃ­vel ativar a Passkey.", true);
+          setPasskeyFeedback("Não foi possível ativar a Passkey.", true);
         }
       } finally {
         enablePasskeyBtn.disabled = false;
@@ -768,7 +768,7 @@
           street: "Rua Exemplo",
           number: "123",
           district: "Centro",
-          city: "SÃ£o Paulo",
+          city: "São Paulo",
           state: "SP",
           cep: "01000-000"
         }

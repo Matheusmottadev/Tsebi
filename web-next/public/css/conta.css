@@ -319,12 +319,12 @@ nav.conta-subnav {
 }
 
 .btn-primary {
-  background: #000000;
-  color: #ffffff;
+  background: #ffffff;
+  color: #111111;
   border-radius: 999px;
   padding: 12px 24px;
   font-size: 14px;
-  border: none;
+  border: 1px solid #111111;
   text-decoration: none;
   display: inline-flex;
   align-items: center;
@@ -333,11 +333,12 @@ nav.conta-subnav {
 }
 
 .btn-primary:hover {
-  opacity: 0.85;
+  background: #111111;
+  color: #ffffff;
 }
 
 .btn-outline {
-  background: transparent;
+  background: #ffffff;
   border: 1px solid #111111;
   color: #111111;
   border-radius: 999px;
@@ -352,7 +353,13 @@ nav.conta-subnav {
 }
 
 .btn-outline:hover {
-  opacity: 0.85;
+  background: #111111;
+  color: #ffffff;
+}
+
+.btn-primary:visited,
+.btn-outline:visited {
+  color: inherit;
 }
 
 .conta-toggle {
@@ -690,6 +697,16 @@ nav.conta-subnav {
   padding-top: 8px;
   display: grid;
   gap: 6px;
+}
+
+.history-slot-list {
+  margin: 0;
+  padding-left: 18px;
+  display: grid;
+  gap: 4px;
+  font-family: "Montserrat", sans-serif;
+  font-size: 13px;
+  color: #333;
 }
 
 .tiny-badge {

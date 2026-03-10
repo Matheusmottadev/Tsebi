@@ -1,0 +1,127 @@
+.wrap {
+  display: grid;
+  gap: 10px;
+}
+
+.ok,
+.error {
+  margin: 0;
+  border-radius: 10px;
+  padding: 10px 12px;
+  font-size: 13px;
+}
+
+.ok {
+  border: 1px solid var(--studio-accent);
+  background: var(--studio-accent-soft);
+  color: var(--studio-text);
+}
+
+.error {
+  border: 1px solid var(--studio-negative);
+  background: var(--studio-negative-soft);
+  color: #fff2f2;
+}
+
+.tableWrap {
+  border: 1px solid var(--studio-border);
+  border-radius: 16px;
+  background: var(--studio-surface-soft);
+  overflow: auto;
+}
+
+.table {
+  width: 100%;
+  min-width: 1180px;
+  border-collapse: collapse;
+}
+
+.table th,
+.table td {
+  border-bottom: 1px solid var(--studio-border-strong);
+  text-align: left;
+  padding: 10px 12px;
+  vertical-align: top;
+}
+
+.table th {
+  font-size: 12px;
+  color: var(--studio-muted);
+  text-transform: uppercase;
+}
+
+.table td {
+  font-size: 14px;
+  color: var(--studio-text);
+}
+
+.userCell,
+.requestCell {
+  display: grid;
+  gap: 4px;
+}
+
+.userCell small,
+.requestCell small {
+  color: var(--studio-muted);
+}
+
+.requestCell p {
+  margin: 0;
+}
+
+.statusChip {
+  display: inline-flex;
+  align-items: center;
+  min-height: 28px;
+  border-radius: 999px;
+  border: 1px solid var(--studio-border-strong);
+  padding: 0 10px;
+  background: #151515;
+  color: var(--studio-text);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-size: 11px;
+}
+
+.textarea {
+  width: 100%;
+  min-height: 86px;
+  border-radius: 10px;
+  border: 1px solid var(--studio-border);
+  padding: 8px 10px;
+  background: #0f0f0f;
+  color: var(--studio-text);
+  resize: vertical;
+  font: inherit;
+  margin-bottom: 8px;
+}
+
+.actions {
+  display: grid;
+  gap: 8px;
+}
+
+.actions button {
+  min-height: 36px;
+  border-radius: 8px;
+  border: 1px solid var(--studio-border);
+  background: #111;
+  color: var(--studio-text);
+  cursor: pointer;
+  padding: 0 10px;
+}
+
+.actions button:hover:not(:disabled) {
+  border-color: var(--studio-accent);
+}
+
+.actions button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.empty {
+  color: var(--studio-muted);
+}
+

@@ -1,0 +1,41 @@
+.filters {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 220px 120px;
+  gap: 8px;
+}
+
+.filters input,
+.filters select,
+.filters button {
+  min-height: 40px;
+  border-radius: 10px;
+  border: 1px solid var(--studio-border);
+  padding: 0 10px;
+  font-size: 14px;
+  background: #101010;
+  color: var(--studio-text);
+}
+
+.filters button {
+  border-color: var(--studio-accent);
+  background: var(--studio-accent-soft);
+  color: var(--studio-text);
+  cursor: pointer;
+}
+
+.error {
+  margin: 0;
+  border: 1px solid var(--studio-negative);
+  background: var(--studio-negative-soft);
+  color: #fff2f2;
+  border-radius: 10px;
+  padding: 10px 12px;
+  font-size: 13px;
+}
+
+@media (max-width: 900px) {
+  .filters {
+    grid-template-columns: 1fr;
+  }
+}
+

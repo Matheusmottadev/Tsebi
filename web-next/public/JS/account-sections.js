@@ -42,6 +42,23 @@
       .replace(/'/g, '&#39;');
   }
 
+  function normalizeAvailableSlots(rawSlots) {
+    if (!Array.isArray(rawSlots)) return [];
+    return rawSlots
+      .map((slot) => {
+        if (typeof slot === 'string') return String(slot).trim();
+        if (!slot || typeof slot !== 'object') return '';
+        const label = String(slot.label || '').trim();
+        if (label) return label;
+        const date = String(slot.date || '').trim();
+        const time = String(slot.time || '').trim();
+        if (date || time) return `${date} ${time}`.trim();
+        return String(slot.startsAt || '').trim();
+      })
+      .filter(Boolean)
+      .slice(0, 8);
+  }
+
   function orderStatusLabel(status) {
     const value = String(status || '').trim().toLowerCase();
     if (value === 'paid') return 'Pago';
@@ -110,7 +127,11 @@
       historyMount.innerHTML = list
         .map((item) => {
           const tone = statusTone(item.status);
-          return `<article class="history-item"><div class="history-item-head"><strong>${escapeHtml(formatDateBR(item.date || item.createdAt))}</strong><span class="status-chip ${tone}">${escapeHtml(item.status || 'Pendente')}</span></div><p class="conta-muted">${escapeHtml(item.channel || '-')} ? ${escapeHtml(item.subject || 'Assunto')}</p><button type="button" class="btn-outline history-detail-btn" data-history-detail="${escapeHtml(item.id)}">Ver detalhes</button><div class="history-item-detail" id="history-detail-${escapeHtml(item.id)}" hidden><p class="conta-muted">${escapeHtml(item.message || 'Sem mensagem.')}</p><p class="conta-muted">Horário: ${escapeHtml(item.time || '-')}</p></div></article>`;
+          const slots = normalizeAvailableSlots(item.availableSlots);
+          const slotsHtml = slots.length
+            ? `<p class="conta-muted">Horarios disponiveis:</p><ul class="history-slot-list">${slots.map((slot) => `<li>${escapeHtml(slot)}</li>`).join('')}</ul>`
+            : '';
+          return `<article class="history-item"><div class="history-item-head"><strong>${escapeHtml(formatDateBR(item.date || item.createdAt))}</strong><span class="status-chip ${tone}">${escapeHtml(item.status || 'Pendente')}</span></div><p class="conta-muted">${escapeHtml(item.channel || '-')} ? ${escapeHtml(item.subject || 'Assunto')}</p><button type="button" class="btn-outline history-detail-btn" data-history-detail="${escapeHtml(item.id)}">Ver detalhes</button><div class="history-item-detail" id="history-detail-${escapeHtml(item.id)}" hidden><p class="conta-muted">${escapeHtml(item.message || 'Sem mensagem.')}</p><p class="conta-muted">Horário: ${escapeHtml(item.time || '-')}</p>${slotsHtml}</div></article>`;
         })
         .join('');
 
@@ -144,28 +165,16 @@
     }
 
     async function submitRequest(values) {
-      if (store?.createPrivateCare) {
-        const response = await store.createPrivateCare(values);
-        if (response?.ok) {
-          historyState = Array.isArray(response.history) ? response.history : historyState;
-          root[userId] = historyState;
-          writeJson(PRIVATE_CARE_KEY, root);
-          return true;
-        }
+      if (!store?.createPrivateCare) {
+        throw new Error('PRIVATE_CARE_API_UNAVAILABLE');
       }
-
-      const list = getHistory();
-      list.unshift({
-        id: `pc-${Date.now()}`,
-        channel: values.channel,
-        date: values.date,
-        time: values.time,
-        subject: values.subject,
-        message: values.message,
-        status: 'Pendente',
-        createdAt: new Date().toISOString()
-      });
-      saveHistory(list.slice(0, 50));
+      const response = await store.createPrivateCare(values);
+      if (!response?.ok) {
+        throw new Error(String(response?.error || 'PRIVATE_CARE_CREATE_FAILED'));
+      }
+      historyState = Array.isArray(response.history) ? response.history : historyState;
+      root[userId] = historyState;
+      writeJson(PRIVATE_CARE_KEY, root);
       return true;
     }
 

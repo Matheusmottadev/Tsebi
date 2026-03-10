@@ -16,14 +16,40 @@ export const metadata: Metadata = {
   },
 };
 
-export default async function LoginPage() {
+const FALLBACK_RETURN_URL = "/account";
+const SITE_ORIGIN = "https://tsebi.com.br";
+
+function resolveReturnUrl(raw: string): string {
+  const trimmed = String(raw || "").trim();
+  if (!trimmed) return FALLBACK_RETURN_URL;
+
+  try {
+    const parsed = new URL(trimmed, SITE_ORIGIN);
+    if (parsed.origin !== SITE_ORIGIN) return FALLBACK_RETURN_URL;
+    const normalizedPath = parsed.pathname.replace(/\/+$/, "") || "/";
+    if (normalizedPath === "/" || normalizedPath === "/login" || normalizedPath === "/login.html") {
+      return FALLBACK_RETURN_URL;
+    }
+    return `${parsed.pathname}${parsed.search}${parsed.hash}`;
+  } catch {
+    return FALLBACK_RETURN_URL;
+  }
+}
+
+export default async function LoginPage({
+  searchParams,
+}: {
+  searchParams?: Promise<Record<string, string | string[] | undefined>>;
+}) {
+  const params = (await searchParams) || {};
+  const returnUrlParam = Array.isArray(params.returnUrl) ? params.returnUrl[0] : params.returnUrl;
   const headerStore = await headers();
   const cookie = headerStore.get("cookie") || undefined;
 
   try {
     const user = await getMe({ cookie, cache: "no-store" });
     if (user) {
-      redirect("/account");
+      redirect(resolveReturnUrl(String(returnUrlParam || "")));
     }
   } catch {}
 

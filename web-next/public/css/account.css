@@ -267,19 +267,32 @@ nav.account-subnav {
 }
 
 .btn-primary {
-  background: #000;
-  border: 1px solid #000;
-  color: #fff;
+  background: #fff;
+  border: 1px solid #111;
+  color: #111;
 }
 
 .btn-primary:hover {
-  opacity: 0.88;
+  background: #111;
+  border-color: #111;
+  color: #fff;
 }
 
 .btn-outline {
-  background: transparent;
+  background: #fff;
   border: 1px solid #111;
   color: #111;
+}
+
+.btn-outline:hover {
+  background: #111;
+  border-color: #111;
+  color: #fff;
+}
+
+.btn-primary:visited,
+.btn-outline:visited {
+  color: inherit;
 }
 
 .btn-full {

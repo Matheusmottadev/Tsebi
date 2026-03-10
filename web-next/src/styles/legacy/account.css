@@ -267,19 +267,32 @@ nav.account-subnav {
 }
 
 .btn-primary {
-  background: #000;
-  border: 1px solid #000;
-  color: #fff;
+  background: #fff;
+  border: 1px solid #111;
+  color: #111;
 }
 
 .btn-primary:hover {
-  opacity: 0.88;
+  background: #111;
+  border-color: #111;
+  color: #fff;
 }
 
 .btn-outline {
-  background: transparent;
+  background: #fff;
   border: 1px solid #111;
   color: #111;
+}
+
+.btn-outline:hover {
+  background: #111;
+  border-color: #111;
+  color: #fff;
+}
+
+.btn-primary:visited,
+.btn-outline:visited {
+  color: inherit;
 }
 
 .btn-full {
@@ -1036,9 +1049,34 @@ body.login-page > .home-header .header-search-trigger {
   color: #666;
 }
 
+.auth-fixed-notice {
+  position: fixed;
+  left: 50%;
+  bottom: 18px;
+  transform: translateX(-50%);
+  z-index: 6200;
+  width: min(560px, calc(100vw - 24px));
+  border: 1px solid rgba(17, 17, 17, 0.2);
+  border-radius: 10px;
+  background: #111;
+  color: #fff;
+  padding: 12px 14px;
+  font-size: 13px;
+  line-height: 1.45;
+  text-align: center;
+}
+
 @media (max-width: 768px) {
   .auth-card {
     padding: 22px 18px;
+  }
+
+  .auth-fixed-notice {
+    bottom: 12px;
+    width: calc(100vw - 16px);
+    border-radius: 8px;
+    font-size: 12px;
+    padding: 10px 12px;
   }
 }
 

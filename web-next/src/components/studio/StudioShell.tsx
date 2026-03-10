@@ -20,6 +20,7 @@ export function StudioShell({ admin, title, subtitle, children }: StudioShellPro
     { href: "/studio", label: "Inicio" },
     { href: "/studio/users", label: "Usuarios" },
     { href: "/studio/orders", label: "Pedidos" },
+    { href: "/studio/atendimentos", label: "Atendimentos" },
     { href: "/studio/products", label: "Produtos" },
     { href: "/studio/vip", label: "Lista VIP" },
     { href: "/studio/newsletter", label: "Newsletter" },
