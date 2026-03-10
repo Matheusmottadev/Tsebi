@@ -17,8 +17,8 @@
 }
 
 .card {
-  padding: 32px;
-  min-height: 340px;
+  padding: 40px 32px;
+  min-height: 430px;
   display: flex;
   flex-direction: column;
 }
@@ -57,7 +57,7 @@
 
 .actions {
   margin-top: auto;
-  padding-top: 20px;
+  padding-top: 28px;
   display: grid;
   gap: 10px;
 }
@@ -101,7 +101,7 @@
 
   .card {
     min-height: 0;
-    padding: 24px 18px;
+    padding: 30px 18px;
   }
 
   .card + .card {
