@@ -25,12 +25,12 @@ export function Topbar({ title, onNewProduct }: TopbarProps) {
 
   return (
     <header className={styles.topbar}>
-      <div>
+      <div className={styles.topbarLeft}>
         <h2>{title}</h2>
         <p>{formattedDate}</p>
       </div>
 
-      <div className={styles.actions}>
+      <div className={styles.topbarRight}>
         <button type="button" className={styles.bellBtn} aria-label="Notificações">
           <Bell size={16} strokeWidth={1.7} aria-hidden="true" />
           <span className={styles.dot} aria-hidden="true" />

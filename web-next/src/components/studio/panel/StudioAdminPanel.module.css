@@ -9,6 +9,7 @@
   --grey-800: #333;
   --sidebar-w: 220px;
 
+  display: flex;
   min-height: 100vh;
   width: 100%;
   background: var(--grey-100);
@@ -19,6 +20,8 @@
 
 .main {
   margin-left: var(--sidebar-w);
+  flex: 1;
+  min-width: 0;
   width: calc(100% - var(--sidebar-w));
   min-height: 100vh;
   background: var(--grey-100);
@@ -27,6 +30,7 @@
 .content {
   padding: 36px 40px;
   padding-top: 96px;
+  width: 100%;
 }
 
 @media (max-width: 980px) {

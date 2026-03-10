@@ -4,6 +4,8 @@
   left: 0;
   bottom: 0;
   width: var(--sidebar-w);
+  min-width: var(--sidebar-w);
+  flex-shrink: 0;
   background: var(--black);
   color: var(--white);
   display: flex;
@@ -144,3 +146,4 @@
   font-weight: 300;
   color: #555;
 }
+
