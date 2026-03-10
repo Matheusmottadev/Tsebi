@@ -4,7 +4,7 @@ import { Cormorant_Garamond, Jost } from "next/font/google";
 import { Lock } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useRef, useState } from "react";
-import styles from "./page.module.css";
+import styles from "./admin-login.module.css";
 
 const cormorant = Cormorant_Garamond({
   subsets: ["latin"],
