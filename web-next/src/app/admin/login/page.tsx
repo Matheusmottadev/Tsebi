@@ -1,10 +1,10 @@
 ﻿"use client";
 
 import { Cormorant_Garamond, Jost } from "next/font/google";
-import { useRouter } from "next/navigation";
 import { Lock } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { useRef, useState } from "react";
-import styles from "./admin-login.module.css";
+import styles from "./page.module.css";
 
 const cormorant = Cormorant_Garamond({
   subsets: ["latin"],
@@ -37,10 +37,12 @@ export default function AdminLoginPage() {
     if (isLoading) return;
 
     const nextErrors: FieldErrors = {};
-    if (!String(email || "").includes("@")) {
+
+    if (!email.includes("@")) {
       nextErrors.email = "E-mail inválido.";
     }
-    if (String(password || "").trim().length < 4) {
+
+    if (password.trim().length < 4) {
       nextErrors.password = "Senha incorreta.";
     }
 
@@ -50,6 +52,7 @@ export default function AdminLoginPage() {
       emailRef.current?.focus();
       return;
     }
+
     if (nextErrors.password) {
       passwordRef.current?.focus();
       return;
@@ -74,7 +77,8 @@ export default function AdminLoginPage() {
             Forma,
             <br />
             <em>princípio</em>
-            <br />e excelência.
+            <br />
+            e excelência.
           </h2>
           <span>Gestão com o mesmo padrão da marca</span>
         </div>

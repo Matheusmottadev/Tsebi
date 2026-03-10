@@ -10,17 +10,19 @@
   display: flex;
   min-height: 100vh;
   background: var(--black);
+  color: var(--white);
+  isolation: isolate;
 }
 
 .leftPanel {
+  position: relative;
   width: 52%;
-  border-right: 1px solid #222;
-  background: var(--black);
   padding: 52px 64px;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-  position: relative;
+  background: var(--black);
+  border-right: 1px solid #222;
   overflow: hidden;
 }
 
@@ -28,10 +30,10 @@
 .leftPanel::after {
   content: "";
   position: absolute;
-  pointer-events: none;
   width: 360px;
   height: 360px;
   border-radius: 50%;
+  pointer-events: none;
   background: radial-gradient(circle, rgba(255, 255, 255, 0.03), transparent 68%);
 }
 
@@ -48,26 +50,26 @@
 .brandBlock {
   position: relative;
   z-index: 1;
-  background: transparent;
 }
 
 .brandBlock h1 {
   margin: 0;
-  font-family: var(--font-cormorant), Georgia, serif;
-  font-size: 28px;
-  font-weight: 500;
-  letter-spacing: 0.3em;
   color: var(--white);
+  font-family: var(--font-cormorant), Georgia, serif;
+  font-size: 50px;
+  font-weight: 500;
+  line-height: 1;
+  letter-spacing: 0.3em;
   text-transform: uppercase;
 }
 
 .brandBlock p {
-  margin: 8px 0 0;
+  margin: 14px 0 0;
+  color: var(--grey-dim);
   font-family: var(--font-jost), sans-serif;
-  font-size: 9px;
+  font-size: 13px;
   font-weight: 200;
   letter-spacing: 0.3em;
-  color: var(--grey-dim);
   text-transform: uppercase;
 }
 
@@ -78,11 +80,11 @@
 
 .quoteWrap h2 {
   margin: 0;
-  font-family: var(--font-cormorant), Georgia, serif;
-  font-size: 42px;
-  font-weight: 300;
-  line-height: 1.2;
   color: var(--white);
+  font-family: var(--font-cormorant), Georgia, serif;
+  font-size: 76px;
+  font-weight: 300;
+  line-height: 1.1;
 }
 
 .quoteWrap em {
@@ -92,55 +94,55 @@
 
 .quoteWrap span {
   display: block;
-  margin-top: 24px;
+  margin-top: 38px;
+  color: #444;
   font-family: var(--font-jost), sans-serif;
-  font-size: 11px;
+  font-size: 30px;
   font-weight: 200;
   letter-spacing: 0.2em;
-  color: #444;
   text-transform: uppercase;
 }
 
 .leftFooter {
   position: relative;
   z-index: 1;
+  color: var(--grey-faint);
   font-family: var(--font-jost), sans-serif;
-  font-size: 10px;
+  font-size: 28px;
   font-weight: 200;
   letter-spacing: 0.1em;
-  color: var(--grey-faint);
 }
 
 .rightPanel {
   flex: 1;
-  background: var(--dark);
-  padding: 60px 72px;
   display: flex;
   align-items: center;
   justify-content: center;
+  padding: 60px 72px;
+  background: var(--dark);
 }
 
 .loginBox {
   width: 100%;
-  max-width: 380px;
+  max-width: 640px;
 }
 
 .loginBox h3 {
   margin: 0;
+  color: var(--white);
   font-family: var(--font-cormorant), Georgia, serif;
-  font-size: 26px;
+  font-size: 62px;
   font-weight: 400;
   letter-spacing: 0.05em;
-  color: var(--white);
 }
 
 .subtitle {
-  margin: 10px 0 48px;
+  margin: 16px 0 48px;
+  color: var(--grey-dim);
   font-family: var(--font-jost), sans-serif;
-  font-size: 11px;
+  font-size: 29px;
   font-weight: 200;
   letter-spacing: 0.1em;
-  color: var(--grey-dim);
 }
 
 .fields {
@@ -156,11 +158,11 @@
 }
 
 .field label {
+  color: var(--grey-dim);
   font-family: var(--font-jost), sans-serif;
-  font-size: 9px;
+  font-size: 18px;
   font-weight: 300;
   letter-spacing: 0.2em;
-  color: var(--grey-dim);
   text-transform: uppercase;
 }
 
@@ -172,27 +174,27 @@
 
 .forgotBtn {
   border: 0;
+  padding: 0;
+  cursor: pointer;
+  color: #444;
   background: transparent;
   font-family: var(--font-jost), sans-serif;
-  font-size: 10px;
+  font-size: 18px;
   font-weight: 200;
-  color: #444;
   text-decoration: underline;
-  cursor: pointer;
-  padding: 0;
 }
 
 .input {
   width: 100%;
-  background: var(--surface);
   border: 1px solid var(--border);
-  color: var(--white);
-  font-family: var(--font-jost), sans-serif;
-  font-size: 13px;
-  font-weight: 300;
-  padding: 14px 16px;
   border-radius: 0;
   outline: none;
+  background: var(--surface);
+  color: var(--white);
+  font-family: var(--font-jost), sans-serif;
+  font-size: 28px;
+  font-weight: 300;
+  padding: 24px 22px;
 }
 
 .input::placeholder {
@@ -208,25 +210,25 @@
 }
 
 .error {
-  font-family: var(--font-jost), sans-serif;
-  font-size: 10px;
-  font-weight: 300;
   color: #9b2226;
+  font-family: var(--font-jost), sans-serif;
+  font-size: 16px;
+  font-weight: 300;
 }
 
 .submitBtn {
   width: 100%;
   border: 0;
   border-radius: 0;
+  padding: 24px;
+  cursor: pointer;
   background: var(--white);
   color: var(--black);
   font-family: var(--font-jost), sans-serif;
-  font-size: 10px;
+  font-size: 18px;
   font-weight: 400;
   letter-spacing: 0.25em;
   text-transform: uppercase;
-  padding: 16px;
-  cursor: pointer;
 }
 
 .submitBtn:hover {
@@ -240,10 +242,10 @@
 }
 
 .divider {
-  margin: 32px 0;
   display: flex;
   align-items: center;
   gap: 10px;
+  margin: 38px 0;
 }
 
 .divider span {
@@ -253,29 +255,110 @@
 }
 
 .divider strong {
+  color: var(--grey-faint);
   font-family: var(--font-jost), sans-serif;
-  font-size: 9px;
+  font-size: 15px;
   font-weight: 200;
   letter-spacing: 0.2em;
-  color: var(--grey-faint);
 }
 
 .securityNote {
-  border-top: 1px solid #1e1e1e;
-  padding-top: 28px;
-  margin-top: 36px;
   display: flex;
   align-items: center;
   gap: 8px;
+  margin-top: 36px;
+  padding-top: 28px;
   color: var(--grey-faint);
+  border-top: 1px solid #1e1e1e;
 }
 
 .securityNote p {
   margin: 0;
   font-family: var(--font-jost), sans-serif;
-  font-size: 10px;
+  font-size: 16px;
   font-weight: 200;
   letter-spacing: 0.08em;
+}
+
+@media (max-width: 1680px) {
+  .brandBlock h1 {
+    font-size: 28px;
+  }
+
+  .brandBlock p {
+    font-size: 9px;
+    margin-top: 8px;
+  }
+
+  .quoteWrap h2 {
+    font-size: 76px;
+  }
+
+  .quoteWrap span {
+    font-size: 20px;
+    margin-top: 30px;
+  }
+
+  .leftFooter {
+    font-size: 14px;
+  }
+
+  .loginBox {
+    max-width: 500px;
+  }
+
+  .loginBox h3 {
+    font-size: 58px;
+  }
+
+  .subtitle {
+    font-size: 18px;
+  }
+
+  .field label,
+  .forgotBtn {
+    font-size: 12px;
+  }
+
+  .input {
+    padding: 18px 18px;
+    font-size: 20px;
+  }
+
+  .submitBtn {
+    font-size: 13px;
+    padding: 20px;
+  }
+
+  .divider strong {
+    font-size: 11px;
+  }
+
+  .securityNote p {
+    font-size: 12px;
+  }
+}
+
+@media (max-width: 1280px) {
+  .leftPanel {
+    padding: 48px 48px;
+  }
+
+  .quoteWrap h2 {
+    font-size: 62px;
+  }
+
+  .quoteWrap span {
+    font-size: 16px;
+  }
+
+  .rightPanel {
+    padding: 48px 54px;
+  }
+
+  .loginBox h3 {
+    font-size: 50px;
+  }
 }
 
 @media (max-width: 1024px) {
@@ -292,10 +375,49 @@
   }
 
   .quoteWrap h2 {
-    font-size: 34px;
+    font-size: 46px;
+  }
+
+  .quoteWrap span {
+    font-size: 14px;
+  }
+
+  .leftFooter {
+    font-size: 12px;
   }
 
   .rightPanel {
     padding: 40px 22px;
+  }
+
+  .loginBox {
+    max-width: 640px;
+  }
+
+  .loginBox h3 {
+    font-size: 42px;
+  }
+
+  .subtitle {
+    font-size: 14px;
+  }
+
+  .field label,
+  .forgotBtn {
+    font-size: 11px;
+  }
+
+  .input {
+    font-size: 18px;
+    padding: 16px;
+  }
+
+  .submitBtn {
+    font-size: 12px;
+    padding: 16px;
+  }
+
+  .securityNote p {
+    font-size: 10px;
   }
 }

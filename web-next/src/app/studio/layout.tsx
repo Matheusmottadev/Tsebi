@@ -1,9 +1,9 @@
-import styles from "./layout.module.css";
+import { redirect } from "next/navigation";
 
 type StudioLayoutProps = {
   children: React.ReactNode;
 };
 
-export default function StudioLayout({ children }: StudioLayoutProps) {
-  return <div className={styles.root}>{children}</div>;
+export default function StudioLayout(_: StudioLayoutProps) {
+  redirect("/admin");
 }
