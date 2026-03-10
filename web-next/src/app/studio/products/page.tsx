@@ -23,6 +23,18 @@ export const metadata: Metadata = {
   },
 };
 
+function pickProductIdentifier(product: { dbId?: string | null; id?: string | null; sku?: string | null }): string {
+  const candidates = [product?.dbId, product?.id, product?.sku];
+  for (const raw of candidates) {
+    const value = String(raw || "").trim();
+    if (!value) continue;
+    const lowered = value.toLowerCase();
+    if (lowered === "undefined" || lowered === "null") continue;
+    return value;
+  }
+  return "";
+}
+
 export default async function StudioProductsPage({ searchParams }: StudioProductsPageProps) {
   const session = await readStudioSession("/studio/products");
   const resolvedSearchParams = await searchParams;
@@ -71,8 +83,11 @@ export default async function StudioProductsPage({ searchParams }: StudioProduct
             </tr>
           </thead>
           <tbody>
-            {result.rows.map((product) => (
-              <tr key={product.id}>
+            {result.rows.map((product, index) => {
+              const productIdentifier = pickProductIdentifier(product);
+              const rowKey = pickProductIdentifier(product) || `row-${index}`;
+              return (
+              <tr key={rowKey}>
                 <td>{product.sku}</td>
                 <td>{product.name}</td>
                 <td>
@@ -81,10 +96,14 @@ export default async function StudioProductsPage({ searchParams }: StudioProduct
                 <td>{product.stock}</td>
                 <td>{product.active ? "active" : "inactive"}</td>
                 <td>
-                  <Link href={`/studio/products/${encodeURIComponent(product.dbId || product.id)}`}>Editar</Link>
+                  {productIdentifier ? (
+                    <Link href={`/studio/products/${encodeURIComponent(productIdentifier)}`}>Editar</Link>
+                  ) : (
+                    <span>-</span>
+                  )}
                 </td>
               </tr>
-            ))}
+            )})}
             {result.rows.length === 0 ? (
               <tr>
                 <td colSpan={6} className={styles.empty}>

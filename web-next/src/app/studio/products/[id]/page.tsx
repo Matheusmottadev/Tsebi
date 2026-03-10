@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { Price } from "@/components/Price";
 import { ProductEditorForm } from "@/components/studio/ProductEditorForm";
 import { StudioShell } from "@/components/studio/StudioShell";
@@ -27,10 +27,15 @@ export const metadata: Metadata = {
 
 export default async function StudioProductDetailPage({ params }: StudioProductDetailPageProps) {
   const productId = decodeURIComponent(params.id);
+  const normalizedProductId = String(productId || "").trim();
+  if (!normalizedProductId || ["undefined", "null"].includes(normalizedProductId.toLowerCase())) {
+    redirect("/studio/products");
+  }
+
   const session = await readStudioSession(`/studio/products/${encodeURIComponent(productId)}`);
   let product;
   try {
-    product = await getProductAdmin(productId, { cookie: session.cookie, cache: "no-store" });
+    product = await getProductAdmin(normalizedProductId, { cookie: session.cookie, cache: "no-store" });
   } catch (error) {
     if (error instanceof HttpError && error.status === 404) {
       notFound();
@@ -42,7 +47,9 @@ export default async function StudioProductDetailPage({ params }: StudioProductD
     notFound();
   }
 
-  const editProductId = String(product.dbId || product.id || "").trim() || productId;
+  const editProductId = [product.dbId, product.id, product.sku, normalizedProductId]
+    .map((entry) => String(entry || "").trim())
+    .find((entry) => entry && !["undefined", "null"].includes(entry.toLowerCase())) || normalizedProductId;
 
   return (
     <StudioShell admin={session.admin} title={`Product ${product.sku}`} subtitle="Edição segura com CSRF obrigatório.">

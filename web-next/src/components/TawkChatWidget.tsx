@@ -1,7 +1,6 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { usePathname } from "next/navigation";
 import Script from "next/script";
 import { isWithinChatBusinessHours } from "@/lib/chatBusinessHours";
 import styles from "./TawkChatWidget.module.css";
@@ -26,9 +25,19 @@ function setTawkVisibility(visible: boolean) {
   document.body.classList.toggle("tawk-chat-visible", visible);
 }
 
+function isLikelyChatNotificationTitle(value: string): boolean {
+  const normalized = String(value || "").trim().toLowerCase();
+  if (!normalized) return false;
+  if (/\b\d+\s*(nova|novo|new|nueva)\s*(mensagem|mensagens|message|messages|mensaje|mensajes)\b/.test(normalized)) {
+    return true;
+  }
+  if (/^\(\d+\)\s+.*tsebi brasil/.test(normalized)) {
+    return true;
+  }
+  return false;
+}
+
 export function TawkChatWidget() {
-  const pathname = usePathname();
-  const isStudioRoute = String(pathname || "").startsWith("/studio");
   const [isChatOpen, setIsChatOpen] = useState(false);
 
   useEffect(() => {
@@ -52,6 +61,39 @@ export function TawkChatWidget() {
     };
   }, []);
 
+  useEffect(() => {
+    if (typeof document === "undefined") return;
+
+    let stableTitle = document.title;
+    const titleElement = document.querySelector("title");
+
+    const syncTitle = () => {
+      const currentTitle = String(document.title || "").trim();
+      if (!currentTitle) return;
+      if (isLikelyChatNotificationTitle(currentTitle)) {
+        if (stableTitle && currentTitle !== stableTitle) {
+          document.title = stableTitle;
+        }
+        return;
+      }
+      stableTitle = currentTitle;
+    };
+
+    const observer = titleElement ? new MutationObserver(syncTitle) : null;
+    if (observer && titleElement) {
+      observer.observe(titleElement, { childList: true, subtree: true, characterData: true });
+    }
+
+    const timerId = window.setInterval(syncTitle, 250);
+    document.addEventListener("visibilitychange", syncTitle);
+
+    return () => {
+      observer?.disconnect();
+      window.clearInterval(timerId);
+      document.removeEventListener("visibilitychange", syncTitle);
+    };
+  }, []);
+
   const openChat = useCallback(() => {
     if (typeof window === "undefined") return;
     if (!isWithinChatBusinessHours()) {
@@ -71,7 +113,6 @@ export function TawkChatWidget() {
     window.open("https://wa.me/5511918596632", "_blank", "noopener,noreferrer");
   }, []);
 
-  if (isStudioRoute) return null;
   if (!TAWK_EMBED_SRC) return null;
 
   return (
