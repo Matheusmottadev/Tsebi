@@ -1,6 +1,7 @@
 ﻿"use client";
 
 import { Bell } from "lucide-react";
+import { useEffect, useState } from "react";
 import styles from "./Topbar.module.css";
 
 type TopbarProps = {
@@ -9,12 +10,18 @@ type TopbarProps = {
 };
 
 export function Topbar({ title, onNewProduct }: TopbarProps) {
-  const formattedDate = new Intl.DateTimeFormat("pt-BR", {
-    weekday: "long",
-    day: "numeric",
-    month: "long",
-    year: "numeric",
-  }).format(new Date());
+  const [formattedDate, setFormattedDate] = useState("");
+
+  useEffect(() => {
+    const nextDate = new Intl.DateTimeFormat("pt-BR", {
+      weekday: "long",
+      day: "numeric",
+      month: "long",
+      year: "numeric",
+    }).format(new Date());
+
+    setFormattedDate(nextDate);
+  }, []);
 
   return (
     <header className={styles.topbar}>
@@ -35,4 +42,3 @@ export function Topbar({ title, onNewProduct }: TopbarProps) {
     </header>
   );
 }
-

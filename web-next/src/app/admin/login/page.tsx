@@ -1,22 +1,9 @@
 ﻿"use client";
 
-import { Cormorant_Garamond, Jost } from "next/font/google";
 import { Lock } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useRef, useState } from "react";
 import styles from "./admin-login.module.css";
-
-const cormorant = Cormorant_Garamond({
-  subsets: ["latin"],
-  weight: ["300", "400", "500"],
-  variable: "--font-cormorant",
-});
-
-const jost = Jost({
-  subsets: ["latin"],
-  weight: ["200", "300", "400"],
-  variable: "--font-jost",
-});
 
 type FieldErrors = {
   email?: string;
@@ -65,8 +52,8 @@ export default function AdminLoginPage() {
   }
 
   return (
-    <main className={`${styles.root} ${cormorant.variable} ${jost.variable}`}>
-      <section className={styles.leftPanel}>
+    <main className={`admin-login-root ${styles.root}`}>
+      <section className={`admin-login-left ${styles.leftPanel}`}>
         <header className={styles.brandBlock}>
           <h1>TSEBI</h1>
           <p>Painel Administrativo</p>
@@ -86,7 +73,7 @@ export default function AdminLoginPage() {
         <footer className={styles.leftFooter}>© 2025 Tsebi Brasil - Acesso restrito</footer>
       </section>
 
-      <section className={styles.rightPanel}>
+      <section className={`admin-login-right ${styles.rightPanel}`}>
         <div className={styles.loginBox}>
           <h3>Bem-vindo de volta.</h3>
           <p className={styles.subtitle}>Insira suas credenciais para continuar</p>

@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Montserrat, Playfair_Display } from "next/font/google";
+import { Cormorant_Garamond, Jost, Montserrat, Playfair_Display } from "next/font/google";
 import Script from "next/script";
 import { Suspense } from "react";
 import { LayoutChrome } from "@/components/LayoutChrome";
@@ -25,6 +25,18 @@ const playfairDisplay = Playfair_Display({
   variable: "--font-playfair",
   weight: ["400", "500", "600", "700"],
   subsets: ["latin"],
+});
+
+const cormorant = Cormorant_Garamond({
+  subsets: ["latin"],
+  weight: ["300", "400", "500"],
+  variable: "--font-cormorant",
+});
+
+const jost = Jost({
+  subsets: ["latin"],
+  weight: ["200", "300", "400"],
+  variable: "--font-jost",
 });
 
 const defaultSiteUrl = "https://tsebi.com.br";
@@ -154,7 +166,7 @@ export default function RootLayout({
         <link rel="preload" as="video" href="/videos/legacy/hero.mp4" type="video/mp4" />
         <MetaPixelBase />
       </head>
-      <body className={`${montserrat.variable} ${playfairDisplay.variable}`}>
+      <body className={`${montserrat.variable} ${playfairDisplay.variable} ${cormorant.variable} ${jost.variable}`}>
         <Script id="google-consent-default" strategy="beforeInteractive">
           {`
             window.dataLayer = window.dataLayer || [];
