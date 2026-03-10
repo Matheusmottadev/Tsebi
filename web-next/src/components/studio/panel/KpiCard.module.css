@@ -1,0 +1,45 @@
+﻿.card {
+  background: var(--white);
+  border: 1px solid var(--grey-300);
+  padding: 24px 28px;
+  transition: border-color 0.2s ease;
+}
+
+.card:hover {
+  border-color: var(--black);
+}
+
+.label {
+  margin: 0 0 12px;
+  font-family: var(--font-jost), sans-serif;
+  font-size: 9px;
+  font-weight: 300;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--grey-600);
+}
+
+.value {
+  margin: 0;
+  font-family: var(--font-cormorant), Georgia, serif;
+  font-size: 32px;
+  font-weight: 400;
+  line-height: 1;
+  color: var(--black);
+}
+
+.delta {
+  margin: 10px 0 0;
+  font-family: var(--font-jost), sans-serif;
+  font-size: 10px;
+  font-weight: 300;
+}
+
+.positive {
+  color: #2d6a4f;
+}
+
+.negative {
+  color: #9b2226;
+}
+

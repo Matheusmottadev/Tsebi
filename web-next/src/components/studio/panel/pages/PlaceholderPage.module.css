@@ -1,0 +1,24 @@
+﻿.wrap {
+  padding: 80px 40px;
+  text-align: center;
+  background: var(--white);
+  border: 1px solid var(--grey-300);
+}
+
+.wrap h3 {
+  margin: 18px 0 0;
+  font-family: var(--font-cormorant), Georgia, serif;
+  font-size: 22px;
+  font-weight: 400;
+  color: var(--grey-400);
+}
+
+.wrap p {
+  margin: 8px auto 0;
+  max-width: 560px;
+  font-family: var(--font-jost), sans-serif;
+  font-size: 12px;
+  font-weight: 200;
+  color: var(--grey-400);
+}
+
