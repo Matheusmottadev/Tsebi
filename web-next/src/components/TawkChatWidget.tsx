@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { usePathname } from "next/navigation";
 import Script from "next/script";
 import { isWithinChatBusinessHours } from "@/lib/chatBusinessHours";
 import styles from "./TawkChatWidget.module.css";
@@ -26,6 +27,8 @@ function setTawkVisibility(visible: boolean) {
 }
 
 export function TawkChatWidget() {
+  const pathname = usePathname();
+  const isStudioRoute = String(pathname || "").startsWith("/studio");
   const [isChatOpen, setIsChatOpen] = useState(false);
 
   useEffect(() => {
@@ -68,6 +71,7 @@ export function TawkChatWidget() {
     window.open("https://wa.me/5511918596632", "_blank", "noopener,noreferrer");
   }, []);
 
+  if (isStudioRoute) return null;
   if (!TAWK_EMBED_SRC) return null;
 
   return (
