@@ -1,5 +1,6 @@
 ﻿import type { Metadata } from "next";
 import { StudioAdminPanel } from "@/components/studio/panel/StudioAdminPanel";
+import { requireAdminSession } from "@/lib/admin/server";
 
 export const metadata: Metadata = {
   title: "Admin | Tsebi",
@@ -10,6 +11,7 @@ export const metadata: Metadata = {
   },
 };
 
-export default function AdminPage() {
+export default async function AdminPage() {
+  await requireAdminSession("/admin");
   return <StudioAdminPanel />;
 }
