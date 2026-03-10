@@ -1,8 +1,20 @@
 "use client";
 
+import type { MouseEvent } from "react";
 import styles from "./HelpCenterContactSection.module.css";
 
 export function HelpCenterContactSection() {
+  const openLiveChat = (event: MouseEvent<HTMLAnchorElement>) => {
+    if (typeof window === "undefined") return;
+
+    const api = (window as Window & { Tawk_API?: { showWidget?: () => void; maximize?: () => void } }).Tawk_API;
+    if (api && typeof api.maximize === "function") {
+      event.preventDefault();
+      if (typeof api.showWidget === "function") api.showWidget();
+      api.maximize();
+    }
+  };
+
   return (
     <section className={styles.section} aria-label="Contato e atendimento">
       <div className={styles.container}>
@@ -67,7 +79,13 @@ export function HelpCenterContactSection() {
               Para solicitacoes detalhadas, envie um e-mail. Nossa equipe responde em ate 24 horas uteis.
             </p>
             <div className={styles.actions}>
-              <a className={styles.button} href="/faq">
+              <a
+                className={styles.button}
+                href="https://wa.me/5511918596632"
+                target="_blank"
+                rel="noreferrer"
+                onClick={openLiveChat}
+              >
                 <svg className={styles.buttonIcon} viewBox="0 0 24 24" aria-hidden="true">
                   <path d="M4 6h16a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H8l-4 3v-3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2z"></path>
                 </svg>

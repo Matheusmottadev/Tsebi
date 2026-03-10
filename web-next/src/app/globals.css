@@ -187,6 +187,18 @@ body.faq-page-body .faq-faqQuestion {
   text-align: left;
 }
 
+#tawkchat-container {
+  opacity: 0 !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+}
+
+body.tawk-chat-visible #tawkchat-container {
+  opacity: 1 !important;
+  visibility: visible !important;
+  pointer-events: auto !important;
+}
+
 .header-contact-backdrop {
   position: fixed;
   inset: 0;
