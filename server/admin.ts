@@ -58,6 +58,7 @@ const {
   deleteAccessCode,
   normalizeCode
 } = require("./lib/access-code-repository");
+const { query } = require("./lib/db");
 // Lazy load R2 upload module to avoid build-time errors
 let uploadR2Buffer: any = null;
 function getR2Upload() {
@@ -254,6 +255,13 @@ const newsletterSendSchema = z.object({
   testEmail: z.string().trim().email().optional().default("")
 });
 
+const privateCarePatchSchema = z.object({
+  status: z.enum(["pending", "accepted", "declined", "scheduled", "completed", "canceled"]).optional(),
+  decision: z.enum(["accept", "decline"]).optional(),
+  adminNote: z.string().trim().max(2000).optional(),
+  availableSlots: z.array(z.string().trim().min(1).max(120)).max(12).optional()
+});
+
 const accessCodeUpsertSchema = z.object({
   code: z
     .string()
@@ -378,6 +386,109 @@ function createAdminError(code: any, status: any = 400) {
   error.code = code;
   error.status = status;
   return error;
+}
+
+let privateCareColumnsPromise: Promise<void> | null = null;
+async function ensurePrivateCareColumns() {
+  if (!privateCareColumnsPromise) {
+    privateCareColumnsPromise = (async () => {
+      await query(`
+        ALTER TABLE users
+          ADD COLUMN IF NOT EXISTS account_private_care_history JSONB NOT NULL DEFAULT '[]'::jsonb,
+          ADD COLUMN IF NOT EXISTS account_private_care_preferences JSONB NOT NULL DEFAULT '{}'::jsonb;
+      `);
+    })().catch((error: any) => {
+      privateCareColumnsPromise = null;
+      throw error;
+    });
+  }
+  return privateCareColumnsPromise;
+}
+
+function normalizePrivateCareStatus(value: any) {
+  const raw = String(value || "").trim().toLowerCase();
+  if (!raw || ["pending", "pendente", "novo", "new"].includes(raw)) return "pending";
+  if (["accepted", "aceito", "aprovado"].includes(raw)) return "accepted";
+  if (["declined", "recusado", "rejected"].includes(raw)) return "declined";
+  if (["scheduled", "agendado"].includes(raw)) return "scheduled";
+  if (["completed", "concluido", "concluído", "finalizado", "done"].includes(raw)) return "completed";
+  if (["canceled", "cancelado", "cancelled"].includes(raw)) return "canceled";
+  return raw;
+}
+
+function normalizePrivateCareSlots(value: any) {
+  const fromDelimitedString = (text: any) =>
+    String(text || "")
+      .split(/\r?\n|[,;]+/g)
+      .map((entry: any) => String(entry || "").trim())
+      .filter(Boolean)
+      .slice(0, 12);
+
+  if (typeof value === "string") return fromDelimitedString(value);
+  if (!Array.isArray(value)) return [];
+
+  return value
+    .map((entry: any) => {
+      if (typeof entry === "string") {
+        const normalized = entry.trim();
+        return normalized || null;
+      }
+      if (!entry || typeof entry !== "object") return null;
+      const slot = {
+        label: String(entry.label || "").trim(),
+        date: String(entry.date || "").trim(),
+        time: String(entry.time || "").trim(),
+        startsAt: String(entry.startsAt || "").trim(),
+        endsAt: String(entry.endsAt || "").trim()
+      };
+      if (!slot.label && !slot.date && !slot.time && !slot.startsAt) return null;
+      return slot;
+    })
+    .filter(Boolean)
+    .slice(0, 12);
+}
+
+function normalizePrivateCareEntry(entry: any) {
+  if (!entry || typeof entry !== "object") return null;
+  const now = new Date().toISOString();
+  const id = String(entry.id || "").trim();
+  if (!id) return null;
+
+  return {
+    id,
+    channel: String(entry.channel || "").trim(),
+    date: String(entry.date || "").trim(),
+    time: String(entry.time || "").trim(),
+    subject: String(entry.subject || "").trim(),
+    message: String(entry.message || "").trim(),
+    status: normalizePrivateCareStatus(entry.status),
+    adminNote: String(entry.adminNote || "").trim(),
+    availableSlots: normalizePrivateCareSlots(entry.availableSlots),
+    createdAt: String(entry.createdAt || now),
+    updatedAt: String(entry.updatedAt || entry.createdAt || now)
+  };
+}
+
+function toAdminPrivateCareRow(user: any, entry: any) {
+  const normalized = normalizePrivateCareEntry(entry);
+  if (!normalized) return null;
+
+  return {
+    id: normalized.id,
+    createdAt: normalized.createdAt || null,
+    updatedAt: normalized.updatedAt || null,
+    userId: String(user?.id || "").trim() || null,
+    userEmail: normalizeEmail(user?.email || ""),
+    userName: String(user?.name || "").trim(),
+    channel: normalized.channel,
+    date: normalized.date,
+    time: normalized.time,
+    subject: normalized.subject,
+    message: normalized.message,
+    status: normalized.status,
+    adminNote: normalized.adminNote,
+    availableSlots: normalized.availableSlots
+  };
 }
 
 function buildAuditActor(req: any) {
@@ -1770,6 +1881,167 @@ adminRouter.delete("/products/:id", async (req: any, res: any) => {
     return res.json({ ok: true, product: archived });
   } catch {
     return res.status(500).json({ error: "ADMIN_PRODUCT_DELETE_FAILED" });
+  }
+});
+
+adminRouter.get("/private-care", async (req: any, res: any) => {
+  const queryText = String(req.query.query || "").trim().toLowerCase();
+  const statusRaw = String(req.query.status || "").trim();
+  const statusFilter = normalizePrivateCareStatus(statusRaw);
+  const hasStatusFilter = Boolean(statusRaw);
+  const page = Math.max(1, Number(req.query.page || 1) || 1);
+  const pageSize = Math.max(1, Math.min(200, Number(req.query.pageSize || 50) || 50));
+
+  try {
+    await ensurePrivateCareColumns();
+    const usersResult = await query(
+      `
+      SELECT id, name, email, account_private_care_history
+      FROM users
+      WHERE account_private_care_history IS NOT NULL
+      `
+    );
+
+    const rows = (Array.isArray(usersResult.rows) ? usersResult.rows : []).flatMap((user: any) => {
+      const history = Array.isArray(user?.account_private_care_history) ? user.account_private_care_history : [];
+      return history
+        .map((entry: any) => toAdminPrivateCareRow(user, entry))
+        .filter(Boolean);
+    });
+
+    const filtered = rows
+      .filter((row: any) => {
+        if (hasStatusFilter && normalizePrivateCareStatus(row.status) !== statusFilter) return false;
+        if (!queryText) return true;
+        const haystack = [
+          row.id,
+          row.userName,
+          row.userEmail,
+          row.subject,
+          row.message,
+          row.channel,
+          row.date,
+          row.time,
+          row.adminNote
+        ]
+          .join(" ")
+          .toLowerCase();
+        return haystack.includes(queryText);
+      })
+      .sort((a: any, b: any) =>
+        String(b.createdAt || b.updatedAt || "").localeCompare(String(a.createdAt || a.updatedAt || ""))
+      );
+
+    const total = filtered.length;
+    const offset = (page - 1) * pageSize;
+    const pagedRows = filtered.slice(offset, offset + pageSize);
+
+    return res.json({
+      rows: pagedRows,
+      total,
+      page,
+      pageSize
+    });
+  } catch {
+    return res.status(500).json({ error: "ADMIN_PRIVATE_CARE_LIST_FAILED" });
+  }
+});
+
+adminRouter.patch("/private-care/:id", async (req: any, res: any) => {
+  const requestId = String(req.params.id || "").trim();
+  if (!requestId) return res.status(400).json({ error: "INVALID_ID" });
+
+  const parsed = privateCarePatchSchema.safeParse(req.body || {});
+  if (!parsed.success) return res.status(400).json({ error: "INVALID_INPUT" });
+
+  const hasAnyPatch =
+    Object.prototype.hasOwnProperty.call(parsed.data, "status") ||
+    Object.prototype.hasOwnProperty.call(parsed.data, "decision") ||
+    Object.prototype.hasOwnProperty.call(parsed.data, "adminNote") ||
+    Object.prototype.hasOwnProperty.call(parsed.data, "availableSlots");
+  if (!hasAnyPatch) return res.status(400).json({ error: "INVALID_INPUT" });
+
+  try {
+    await ensurePrivateCareColumns();
+    const ownerResult = await query(
+      `
+      SELECT id, name, email, account_private_care_history
+      FROM users
+      WHERE EXISTS (
+        SELECT 1
+        FROM jsonb_array_elements(
+          CASE
+            WHEN jsonb_typeof(account_private_care_history) = 'array' THEN account_private_care_history
+            ELSE '[]'::jsonb
+          END
+        ) AS entry
+        WHERE entry->>'id' = $1
+      )
+      LIMIT 1
+      `,
+      [requestId]
+    );
+
+    const owner = ownerResult.rows[0] || null;
+    if (!owner) return res.status(404).json({ error: "NOT_FOUND" });
+
+    const history = Array.isArray(owner.account_private_care_history) ? [...owner.account_private_care_history] : [];
+    const rowIndex = history.findIndex((entry: any) => String(entry?.id || "").trim() === requestId);
+    if (rowIndex < 0) return res.status(404).json({ error: "NOT_FOUND" });
+
+    const before = normalizePrivateCareEntry(history[rowIndex]);
+    if (!before) return res.status(404).json({ error: "NOT_FOUND" });
+
+    const next = {
+      ...before
+    };
+
+    let nextStatus = normalizePrivateCareStatus(before.status);
+    if (Object.prototype.hasOwnProperty.call(parsed.data, "status")) {
+      nextStatus = normalizePrivateCareStatus(parsed.data.status);
+    }
+    if (parsed.data.decision === "accept") nextStatus = "accepted";
+    if (parsed.data.decision === "decline") nextStatus = "declined";
+
+    if (Object.prototype.hasOwnProperty.call(parsed.data, "adminNote")) {
+      next.adminNote = String(parsed.data.adminNote || "").trim();
+    }
+    if (Object.prototype.hasOwnProperty.call(parsed.data, "availableSlots")) {
+      next.availableSlots = normalizePrivateCareSlots(parsed.data.availableSlots);
+    }
+    next.status = nextStatus;
+    next.updatedAt = new Date().toISOString();
+
+    history[rowIndex] = next;
+    await query(
+      `
+      UPDATE users
+      SET account_private_care_history = $2::jsonb,
+          updated_at = NOW()
+      WHERE id = $1
+      `,
+      [String(owner.id || ""), JSON.stringify(history)]
+    );
+
+    const beforeRow = toAdminPrivateCareRow(owner, before);
+    const afterRow = toAdminPrivateCareRow(owner, next);
+    await recordAuditLog(req, {
+      action: "save",
+      entityType: "private_care",
+      entityId: requestId,
+      summary: `Atendimento atualizado: ${requestId}`,
+      before: beforeRow,
+      after: afterRow,
+      reversePayload: null,
+      reversible: false
+    });
+
+    return res.json({
+      ok: true,
+      request: afterRow
+    });
+  } catch {
+    return res.status(500).json({ error: "ADMIN_PRIVATE_CARE_UPDATE_FAILED" });
   }
 });
 

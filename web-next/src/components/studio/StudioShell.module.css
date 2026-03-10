@@ -36,21 +36,21 @@
   display: flex;
   justify-content: center;
   flex-wrap: wrap;
-  gap: 10px;
+  gap: 8px;
 }
 
 .tab {
-  min-height: 40px;
+  min-height: 34px;
   border-radius: 999px;
   border: 1px solid #3a3a3a;
-  padding: 0 14px;
+  padding: 0 11px;
   display: inline-flex;
   align-items: center;
   color: #f4f4f4;
   text-decoration: none;
   text-transform: uppercase;
-  letter-spacing: 0.04em;
-  font-size: 12px;
+  letter-spacing: 0.03em;
+  font-size: 11px;
   background: #111111;
 }
 
