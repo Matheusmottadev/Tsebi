@@ -81,7 +81,7 @@ export default async function StudioProductsPage({ searchParams }: StudioProduct
                 <td>{product.stock}</td>
                 <td>{product.active ? "active" : "inactive"}</td>
                 <td>
-                  <Link href={`/studio/products/${encodeURIComponent(product.id)}`}>Editar</Link>
+                  <Link href={`/studio/products/${encodeURIComponent(product.dbId || product.id)}`}>Editar</Link>
                 </td>
               </tr>
             ))}

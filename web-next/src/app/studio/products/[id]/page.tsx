@@ -42,6 +42,8 @@ export default async function StudioProductDetailPage({ params }: StudioProductD
     notFound();
   }
 
+  const editProductId = String(product.dbId || product.id || "").trim() || productId;
+
   return (
     <StudioShell admin={session.admin} title={`Product ${product.sku}`} subtitle="Edição segura com CSRF obrigatório.">
       <div className={styles.grid}>
@@ -70,7 +72,7 @@ export default async function StudioProductDetailPage({ params }: StudioProductD
 
         <section className={styles.card}>
           <h3>Editar produto</h3>
-          <ProductEditorForm productId={product.id} product={product} csrfToken={session.csrfToken} />
+          <ProductEditorForm productId={editProductId} product={product} csrfToken={session.csrfToken} />
         </section>
       </div>
     </StudioShell>
