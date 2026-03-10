@@ -1,0 +1,21 @@
+﻿.adminRoot {
+  all: initial;
+  display: flex;
+  min-height: 100vh;
+  width: 100%;
+  overflow-x: hidden;
+  font-family: var(--font-jost), sans-serif;
+}
+
+.main {
+  display: block;
+  width: 100%;
+  min-width: 0;
+}
+
+.adminRoot,
+.adminRoot *,
+.adminRoot *::before,
+.adminRoot *::after {
+  box-sizing: border-box;
+}

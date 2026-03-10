@@ -29,8 +29,8 @@
 
 .content {
   padding: 36px 40px;
-  padding-top: 96px;
   width: 100%;
+  min-width: 0;
 }
 
 @media (max-width: 980px) {
@@ -41,6 +41,5 @@
 
   .content {
     padding: 28px 20px;
-    padding-top: 90px;
   }
 }
