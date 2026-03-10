@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { ChevronLeft, RefreshCw, Truck } from "lucide-react";
 import { useState } from "react";
@@ -10,13 +10,13 @@ export function ShippingSection() {
   const [activeView, setActiveView] = useState<ShippingView>(null);
 
   return (
-    <section className={styles.section} id="entrega-e-devolucoes" aria-label="Entrega e devoluÃ§Ãµes">
+    <section className={styles.section} id="entrega-e-devolucoes" aria-label="Entrega e devoluções">
       <div className={styles.inner}>
-        <h2 className={styles.title}>Entrega e devoluÃ§Ãµes</h2>
+        <h2 className={styles.title}>Entrega e devoluções</h2>
 
         <div className={styles.layout}>
           {activeView === null ? (
-            <div className={styles.grid} role="group" aria-label="AÃ§Ãµes de entrega e devoluÃ§Ã£o">
+            <div className={styles.grid} role="group" aria-label="Ações de entrega e devolução">
               <button type="button" className={styles.cell} onClick={() => setActiveView("entregas")}>
                 <Truck size={34} strokeWidth={1.5} aria-hidden="true" />
                 <span>ENTREGAS</span>
@@ -24,7 +24,7 @@ export function ShippingSection() {
 
               <button type="button" className={styles.cell} onClick={() => setActiveView("devolucoes")}>
                 <RefreshCw size={34} strokeWidth={1.5} aria-hidden="true" />
-                <span>DEVOLUÃ‡Ã•ES</span>
+                <span>DEVOLUÇÕES</span>
               </button>
             </div>
           ) : (
@@ -38,29 +38,29 @@ export function ShippingSection() {
                 <div className={styles.infoContent}>
                   <h3 className={styles.infoTitle}>ENTREGAS</h3>
                   <p className={styles.infoText}>
-                    A Tsebi realiza entregas para todo o Brasil. O prazo e o valor do frete sÃ£o calculados no checkout
-                    apÃ³s inserir o CEP.
+                    A Tsebi realiza entregas para todo o Brasil. O prazo e o valor do frete são calculados no checkout
+                    após inserir o CEP.
                   </p>
                   <ul className={styles.infoList}>
                     <li>O prazo estimado aparece antes de finalizar o pagamento</li>
-                    <li>VocÃª recebe atualizaÃ§Ãµes de status por e-mail e pode acompanhar em Meus Pedidos</li>
-                    <li>EndereÃ§o pode ser ajustado em atÃ© 24h, se o pedido ainda nÃ£o tiver sido despachado</li>
-                    <li>Em ausÃªncia no local, a transportadora pode realizar novas tentativas</li>
-                    <li>Em casos especÃ­ficos, a entrega pode ser redirecionada para ponto de retirada</li>
+                    <li>Você recebe atualizações de status por e-mail e pode acompanhar em Meus Pedidos</li>
+                    <li>Endereço pode ser ajustado em até 24h, se o pedido ainda não tiver sido despachado</li>
+                    <li>Em ausência no local, a transportadora pode realizar novas tentativas</li>
+                    <li>Em casos específicos, a entrega pode ser redirecionada para ponto de retirada</li>
                   </ul>
                 </div>
               ) : (
                 <div className={styles.infoContent}>
-                  <h3 className={styles.infoTitle}>DEVOLUÃ‡Ã•ES</h3>
+                  <h3 className={styles.infoTitle}>DEVOLUÇÕES</h3>
                   <p className={styles.infoText}>
-                    A Tsebi oferece solicitaÃ§Ã£o de troca ou devoluÃ§Ã£o em atÃ© 7 dias corridos apÃ³s o recebimento.
+                    A Tsebi oferece solicitação de troca ou devolução em até 7 dias corridos após o recebimento.
                   </p>
                   <ul className={styles.infoList}>
                     <li>O item deve estar sem uso, com etiquetas originais e embalagem original</li>
-                    <li>Em defeito de fabricaÃ§Ã£o, a Tsebi cobre o frete de devoluÃ§Ã£o</li>
-                    <li>Trocas por preferÃªncia podem ter frete por conta do cliente</li>
-                    <li>Reembolso ocorre em atÃ© 5 dias Ãºteis apÃ³s aprovaÃ§Ã£o da conferÃªncia</li>
-                    <li>No cartÃ£o, o estorno pode aparecer em atÃ© 2 faturas</li>
+                    <li>Em defeito de fabricação, a Tsebi cobre o frete de devolução</li>
+                    <li>Trocas por preferência podem ter frete por conta do cliente</li>
+                    <li>Reembolso ocorre em até 5 dias úteis após aprovação da conferência</li>
+                    <li>No cartão, o estorno pode aparecer em até 2 faturas</li>
                   </ul>
                 </div>
               )}
@@ -81,4 +81,3 @@ export function ShippingSection() {
     </section>
   );
 }
-

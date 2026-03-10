@@ -794,9 +794,9 @@ export function SiteHeader() {
 
           <div className="header-contact-panel-help">
             <a href="/faq">Precisa de ajuda?</a>
-            <a href="/faq">Perguntas Frequentes</a>
+            <a href="/faq#perguntas-frequentes">Perguntas Frequentes</a>
             <a href="/faq#entrega-e-devolucoes">Entregas e Devoluções</a>
-            <a href="/faq#servicos-de-cuidado">Serviços e cuidados</a>
+            <a href="/faq#servicos-e-reparos">Serviços e cuidados</a>
           </div>
         </div>
       </aside>

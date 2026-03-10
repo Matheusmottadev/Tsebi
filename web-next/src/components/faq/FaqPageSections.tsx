@@ -11,14 +11,14 @@ import { ShippingSection } from "./ShippingSection";
 function resolveTabFromHash(hash: string): HelpCenterTab {
   const normalized = decodeURIComponent(String(hash || "").trim().toLowerCase());
   if (normalized.startsWith("#entrega-e-devolucoes")) return "delivery";
-  if (normalized.startsWith("#servicos-de-cuidado")) return "care";
+  if (normalized.startsWith("#servicos-e-reparos") || normalized.startsWith("#servicos-de-cuidado")) return "care";
   if (normalized.startsWith("#perguntas-frequentes")) return "faq";
   return "help";
 }
 
 function resolveRouteFromTab(tab: HelpCenterTab): string {
   if (tab === "delivery") return "/faq#entrega-e-devolucoes";
-  if (tab === "care") return "/faq#servicos-de-cuidado";
+  if (tab === "care") return "/faq#servicos-e-reparos";
   if (tab === "faq") return "/faq#perguntas-frequentes";
   return "/faq";
 }
@@ -35,6 +35,7 @@ function normalizeFaqRoute() {
 
   const known =
     normalized.startsWith("#entrega-e-devolucoes") ||
+    normalized.startsWith("#servicos-e-reparos") ||
     normalized.startsWith("#servicos-de-cuidado") ||
     normalized.startsWith("#perguntas-frequentes");
 
@@ -44,8 +45,13 @@ function normalizeFaqRoute() {
   }
 }
 
+function scrollFaqToTop() {
+  if (typeof window === "undefined") return;
+  window.scrollTo({ top: 0, behavior: "auto" });
+}
+
 export function FaqPageSections() {
-  const [activeTab, setActiveTab] = useState<HelpCenterTab>("help");
+  const [activeTab, setActiveTab] = useState<HelpCenterTab | null>(null);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -55,6 +61,7 @@ export function FaqPageSections() {
 
     normalizeFaqRoute();
     setActiveTab(resolveTabFromHash(window.location.hash));
+    scrollFaqToTop();
 
     return () => {
       window.history.scrollRestoration = previous;
@@ -65,6 +72,7 @@ export function FaqPageSections() {
     const syncFromHash = () => {
       normalizeFaqRoute();
       setActiveTab(resolveTabFromHash(window.location.hash));
+      scrollFaqToTop();
     };
 
     window.addEventListener("hashchange", syncFromHash);
@@ -79,15 +87,13 @@ export function FaqPageSections() {
     setActiveTab(tab);
     if (typeof window !== "undefined") {
       window.history.replaceState(null, "", resolveRouteFromTab(tab));
-      if (tab === "help") {
-        window.scrollTo({ top: 0, behavior: "auto" });
-      }
+      scrollFaqToTop();
     }
   };
 
   return (
     <>
-      <HelpCenterTabs activeTab={activeTab} onTabChange={handleTabChange} />
+      <HelpCenterTabs activeTab={activeTab ?? "help"} onTabChange={handleTabChange} />
       {activeTab === "help" ? (
         <>
           <HelpCenterContactSection />

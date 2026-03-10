@@ -1,16 +1,33 @@
 "use client";
 
 import { ChevronLeft, Heart, Wrench } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { getMe } from "@/services/auth";
 import styles from "./CareSection.module.css";
 
 type CareView = null | "reparos" | "cuidados";
 
 export function CareSection() {
   const [activeView, setActiveView] = useState<CareView>(null);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    (async () => {
+      const user = await getMe({ cache: "no-store" }).catch(() => null);
+      if (cancelled) return;
+      setIsAuthenticated(Boolean(user));
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   return (
-    <section className={styles.section} id="servicos-de-cuidado" aria-label="Serviços e cuidados">
+    <section className={styles.section} id="servicos-e-reparos" aria-label="Serviços e cuidados">
+      <span id="servicos-de-cuidado" />
       <div className={styles.inner}>
         <h2 className={styles.title}>Serviços e cuidados</h2>
         <div className={styles.layout}>
@@ -66,14 +83,12 @@ export function CareSection() {
                     abaixo de acordo com cada tipo de peça.
                   </p>
                   <ul className={styles.careList}>
-                    <li>Lavar sempre de acordo com a etiqueta — prefira lavar à mão ou ciclo delicado</li>
+                    <li>Lavar sempre de acordo com a etiqueta - prefira lavar à mão ou ciclo delicado</li>
                     <li>Lavar peças de cores escuras separadas das claras</li>
-                    <li>Evitar secadora — secar à sombra em local arejado</li>
+                    <li>Evitar secadora - secar à sombra em local arejado</li>
                     <li>Guardar em local seco, longe de luz solar direta</li>
                     <li>Peças de malha guardar dobradas, não penduradas</li>
-                    <li>
-                      Passar com ferro na temperatura indicada — usar pano úmido em tecidos delicados
-                    </li>
+                    <li>Passar com ferro na temperatura indicada - usar pano úmido em tecidos delicados</li>
                     <li>Não usar alvejantes ou produtos abrasivos</li>
                   </ul>
                 </div>
@@ -93,12 +108,16 @@ export function CareSection() {
             </aside>
 
             {activeView === "reparos" ? (
-              <aside className={styles.contactCard} aria-label="Faça login">
-                <h3 className={styles.contactTitle}>Faça Login</h3>
+              <aside className={styles.contactCard} aria-label={isAuthenticated ? "Ir para minha conta" : "Faça login"}>
+                <h3 className={styles.contactTitle}>{isAuthenticated ? "Ir para minha conta" : "Faça Login"}</h3>
                 <div className={styles.contactBody}>
-                  <p>Caso você precise agendar um reparo, efetue login e agende agora mesmo uma avaliação.</p>
-                  <a href="/login" className={styles.contactButton}>
-                    FAZER LOGIN
+                  <p>
+                    {isAuthenticated
+                      ? "Caso você precise agendar um reparo, agende agora mesmo uma avaliação na tela de conta."
+                      : "Caso você precise agendar um reparo, efetue login e agende agora mesmo uma avaliação."}
+                  </p>
+                  <a href={isAuthenticated ? "/account" : "/login"} className={styles.contactButton}>
+                    {isAuthenticated ? "AGENDAR" : "FAZER LOGIN"}
                   </a>
                 </div>
               </aside>
@@ -109,5 +128,3 @@ export function CareSection() {
     </section>
   );
 }
-
-

@@ -165,7 +165,7 @@
           <button type="button" class="header-contact-panel-close" aria-label="Fechar">&times;</button>
         </div>
         <p class="header-contact-panel-copy">
-          A equipe de consultores da Tsebi estÃ¡ Ã  sua disposiÃ§Ã£o. Com atendimento dedicado e discreto, oferecemos orientaÃ§Ã£o na escolha das peÃ§as e acesso a informaÃ§Ãµes sobre materiais, coleÃ§Ãµes e disponibilidade.
+          A equipe de consultores da Tsebi está à sua disposição. Com atendimento dedicado e discreto, oferecemos orientação na escolha das peças e acesso a informações sobre materiais, coleções e disponibilidade.
         </p>
         <nav class="header-contact-panel-links" aria-label="Canais de atendimento">
           <a href="tel:+5511918596632" class="header-contact-panel-link">
@@ -191,11 +191,11 @@
             </svg>
             WhatsApp
           </a>
-          <a href="sms:+5511918596632" class="header-contact-panel-link">
+          <a href="#" class="header-contact-panel-link" aria-disabled="true">
             <svg viewBox="0 0 24 24" aria-hidden="true">
               <path d="M19 14a3 3 0 0 1-3 3H9l-4 3v-3a3 3 0 0 1-3-3V8a3 3 0 0 1 3-3h11a3 3 0 0 1 3 3z"></path>
             </svg>
-            Apple Message
+            Agende um atendimento privativo
           </a>
           <a href="https://www.instagram.com/tsebiofficial/" target="_blank" rel="noopener noreferrer" class="header-contact-panel-link">
             <svg viewBox="0 0 24 24" aria-hidden="true">
@@ -208,9 +208,10 @@
         </nav>
         <div class="header-contact-panel-divider"></div>
         <div class="header-contact-panel-help">
-          <p>Precisa de ajuda?</p>
-          <a href="/faq">Perguntas Frequentes</a>
-          <a href="/processos">ServiÃ§os de Cuidado</a>
+          <a href="/faq">Precisa de ajuda?</a>
+          <a href="/faq#perguntas-frequentes">Perguntas Frequentes</a>
+          <a href="/faq#entrega-e-devolucoes">Entregas e Devoluções</a>
+          <a href="/faq#servicos-e-reparos">Serviços e cuidados</a>
         </div>
       </div>
     `;
@@ -218,6 +219,7 @@
   }
 
   const contactClose = contactPanel?.querySelector(".header-contact-panel-close");
+  const disabledContactLinks = contactPanel?.querySelectorAll('a[aria-disabled="true"]');
   const openContact = () => {
     const panelInner = contactPanel?.querySelector(".header-contact-panel-inner");
     if (panelInner instanceof HTMLElement) panelInner.scrollTop = 0;
@@ -238,6 +240,11 @@
   });
   contactBackdrop?.addEventListener("click", closeContact);
   contactClose?.addEventListener("click", closeContact);
+  disabledContactLinks?.forEach((link) => {
+    link.addEventListener("click", (event) => {
+      event.preventDefault();
+    });
+  });
   openMenuBtn?.addEventListener("click", closeContact);
   searchBtn?.addEventListener("click", closeContact);
 })();

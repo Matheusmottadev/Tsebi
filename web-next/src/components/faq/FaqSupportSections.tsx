@@ -1,4 +1,7 @@
+"use client";
+
 import Link from "next/link";
+import type { MouseEvent } from "react";
 import styles from "./FaqSupportSections.module.css";
 
 const FAQ_ITEMS = [
@@ -11,6 +14,12 @@ const FAQ_ITEMS = [
 ] as const;
 
 export function FaqSupportSections() {
+  const goToTab = (tabHash: string) => (event: MouseEvent<HTMLAnchorElement>) => {
+    event.preventDefault();
+    if (typeof window === "undefined") return;
+    window.location.hash = tabHash;
+  };
+
   return (
     <section className={styles.section} aria-label="Conteudo complementar de ajuda">
       <div className={styles.container}>
@@ -21,9 +30,9 @@ export function FaqSupportSections() {
             analisada individualmente pelo nosso time para orientar o melhor procedimento, prazos e disponibilidade de
             servico.
           </p>
-          <Link className={styles.pillAction} href="/faq#servicos-de-cuidado">
+          <a className={styles.pillAction} href="/faq#servicos-e-reparos" onClick={goToTab("servicos-e-reparos")}>
             Ir para aba de cuidados e reparos
-          </Link>
+          </a>
         </article>
 
         <article className={styles.panel}>
@@ -48,9 +57,9 @@ export function FaqSupportSections() {
             ))}
           </div>
 
-          <Link className={styles.pillAction} href="/faq#perguntas-frequentes">
+          <a className={styles.pillAction} href="/faq#perguntas-frequentes" onClick={goToTab("perguntas-frequentes")}>
             Ver todas as perguntas
-          </Link>
+          </a>
         </article>
       </div>
     </section>
