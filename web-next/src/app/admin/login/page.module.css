@@ -48,7 +48,7 @@
 .brandBlock {
   position: relative;
   z-index: 1;
-  background: var(--black);
+  background: transparent;
 }
 
 .brandBlock h1 {
