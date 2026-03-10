@@ -1,9 +1,8 @@
 ﻿import type { Metadata } from "next";
-import { StudioAdminPanel } from "@/components/studio/panel/StudioAdminPanel";
 
 export const metadata: Metadata = {
   title: "Admin | Tsebi",
-  description: "Painel administrativo da Tsebi.",
+  description: "Área administrativa.",
   robots: {
     index: false,
     follow: false,
@@ -11,5 +10,5 @@ export const metadata: Metadata = {
 };
 
 export default function AdminPage() {
-  return <StudioAdminPanel />;
+  return <main style={{ minHeight: "100vh", background: "#fff" }} aria-label="Área administrativa em branco" />;
 }
