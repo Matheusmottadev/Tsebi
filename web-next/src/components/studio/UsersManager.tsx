@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createPortal } from "react-dom";
 import { HttpError } from "@/lib/http";
@@ -32,17 +32,30 @@ type UserDraft = {
   cep: string;
 };
 
+const FOCUSABLE_SELECTOR =
+  'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
+
+function getFocusableElements(container: HTMLElement | null): HTMLElement[] {
+  if (!container) return [];
+  return Array.from(container.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR)).filter(
+    (element) => element.offsetParent !== null || element === document.activeElement
+  );
+}
+
 function pickErrorMessage(error: unknown): string {
   if (error instanceof HttpError) {
     const payload = error.payload;
     if (payload && typeof payload === "object" && "error" in payload) {
       const code = String((payload as { error?: unknown }).error || "").trim();
+      if (code === "INVALID_INPUT") {
+        return "Dados inválidos. Verifique senha (mín. 8 com letra e número), data, CPF e CEP.";
+      }
       if (code) return code;
     }
-    return error.message || "Falha na operacao.";
+    return error.message || "Falha na operação.";
   }
-  if (error instanceof Error) return error.message || "Falha na operacao.";
-  return "Falha na operacao.";
+  if (error instanceof Error) return error.message || "Falha na operação.";
+  return "Falha na operação.";
 }
 
 function normalizeDigits(value: string): string {
@@ -108,6 +121,12 @@ function toApiBirthDate(value: string): string {
   return `${year}-${month}-${day}`;
 }
 
+function isStrongPassword(value: string): boolean {
+  const password = String(value || "");
+  if (password.length < 8 || password.length > 128) return false;
+  return /[A-Za-z]/.test(password) && /\d/.test(password);
+}
+
 function formatDate(value: string | null): string {
   if (!value) return "-";
   const date = new Date(value);
@@ -129,6 +148,9 @@ function buildDraft(user: AdminUserDetail): UserDraft {
 
 export function UsersManager({ users, csrfToken }: UsersManagerProps) {
   const router = useRouter();
+  const drawerPanelRef = useRef<HTMLElement | null>(null);
+  const deleteConfirmCardRef = useRef<HTMLDivElement | null>(null);
+  const lastFocusedElementRef = useRef<HTMLElement | null>(null);
   const [rows, setRows] = useState(users);
   const [loadingId, setLoadingId] = useState("");
   const [message, setMessage] = useState("");
@@ -173,7 +195,80 @@ export function UsersManager({ users, csrfToken }: UsersManagerProps) {
     if (!selectedUser) setDeleteConfirmOpen(false);
   }, [selectedUser]);
 
+  useEffect(() => {
+    if (!selectedUser) return;
+    window.setTimeout(() => {
+      const focusable = getFocusableElements(drawerPanelRef.current);
+      if (focusable.length > 0) {
+        focusable[0].focus();
+      } else {
+        drawerPanelRef.current?.focus();
+      }
+    }, 0);
+  }, [selectedUser]);
+
+  useEffect(() => {
+    if (!deleteConfirmOpen) return;
+    window.setTimeout(() => {
+      const focusable = getFocusableElements(deleteConfirmCardRef.current);
+      if (focusable.length > 0) {
+        focusable[0].focus();
+      } else {
+        deleteConfirmCardRef.current?.focus();
+      }
+    }, 0);
+  }, [deleteConfirmOpen]);
+
+  useEffect(() => {
+    if (!selectedUser) return;
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        if (deleteConfirmOpen) {
+          setDeleteConfirmOpen(false);
+          return;
+        }
+        closeDrawer();
+        return;
+      }
+
+      if (event.key !== "Tab") return;
+      const container = deleteConfirmOpen ? deleteConfirmCardRef.current : drawerPanelRef.current;
+      const focusable = getFocusableElements(container);
+      if (focusable.length === 0) {
+        event.preventDefault();
+        container?.focus();
+        return;
+      }
+
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      const active = document.activeElement as HTMLElement | null;
+
+      if (event.shiftKey && active === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && active === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [deleteConfirmOpen, selectedUser]);
+
+  function closeDrawer() {
+    setDeleteConfirmOpen(false);
+    setEditMode(false);
+    setSelectedUser(null);
+    const elementToRestore = lastFocusedElementRef.current;
+    window.setTimeout(() => elementToRestore?.focus(), 0);
+  }
+
   async function openUser(userId: string) {
+    lastFocusedElementRef.current = document.activeElement as HTMLElement | null;
     setLoadingId(userId);
     setError("");
     setMessage("");
@@ -190,6 +285,37 @@ export function UsersManager({ users, csrfToken }: UsersManagerProps) {
   }
 
   async function handleCreate() {
+    const normalizedPhone = normalizePhoneDigits(createData.phone);
+    const normalizedCpf = normalizeDigits(createData.cpf);
+    const normalizedCep = normalizeDigits(createData.cep);
+    const birthDateApi = toApiBirthDate(createData.birthDate);
+
+    if (!isStrongPassword(createData.password)) {
+      setError("Senha inválida: use no mínimo 8 caracteres com letra e número.");
+      setMessage("");
+      return;
+    }
+    if (createData.birthDate.trim() && !birthDateApi) {
+      setError("Data de nascimento inválida. Use DD/MM/AAAA.");
+      setMessage("");
+      return;
+    }
+    if (normalizedCpf && normalizedCpf.length !== 11) {
+      setError("CPF inválido.");
+      setMessage("");
+      return;
+    }
+    if (normalizedCep && normalizedCep.length !== 8) {
+      setError("CEP inválido.");
+      setMessage("");
+      return;
+    }
+    if (normalizedPhone && normalizedPhone.length < 10) {
+      setError("Telefone inválido.");
+      setMessage("");
+      return;
+    }
+
     setLoadingId("create");
     setError("");
     setMessage("");
@@ -199,11 +325,11 @@ export function UsersManager({ users, csrfToken }: UsersManagerProps) {
           title: createData.title,
           name: createData.name.trim(),
           email: createData.email.trim(),
-          phone: normalizePhoneDigits(createData.phone),
+          phone: normalizedPhone,
           password: createData.password,
-          birthDate: toApiBirthDate(createData.birthDate),
-          cpf: normalizeDigits(createData.cpf),
-          cep: normalizeDigits(createData.cep),
+          birthDate: birthDateApi,
+          cpf: normalizedCpf,
+          cep: normalizedCep,
         },
         csrfToken
       );
@@ -217,7 +343,7 @@ export function UsersManager({ users, csrfToken }: UsersManagerProps) {
         cpf: "",
         cep: "",
       });
-      setMessage("Usuario criado com sucesso.");
+      setMessage("Usuário criado com sucesso.");
       router.refresh();
     } catch (err) {
       setError(pickErrorMessage(err));
@@ -249,7 +375,7 @@ export function UsersManager({ users, csrfToken }: UsersManagerProps) {
     if (draftCep !== currentCep) patch.cep = draftCep;
 
     if (Object.keys(patch).length === 0) {
-      setMessage("Nenhuma alteracao para salvar.");
+      setMessage("Nenhuma alteração para salvar.");
       setEditMode(false);
       return;
     }
@@ -281,7 +407,7 @@ export function UsersManager({ users, csrfToken }: UsersManagerProps) {
         )
       );
       setEditMode(false);
-      setMessage(`Usuario ${updated.email} atualizado.`);
+      setMessage(`Usuário ${updated.email} atualizado.`);
       router.refresh();
     } catch (err) {
       setError(pickErrorMessage(err));
@@ -325,7 +451,7 @@ export function UsersManager({ users, csrfToken }: UsersManagerProps) {
               }))
             }
           >
-            <option value="nao_informar">Nao informar</option>
+            <option value="nao_informar">Não informar</option>
             <option value="sr">Sr</option>
             <option value="sra">Sra</option>
             <option value="srta">Srta</option>
@@ -340,7 +466,14 @@ export function UsersManager({ users, csrfToken }: UsersManagerProps) {
             autoComplete="tel"
             maxLength={15}
           />
-          <input value={createData.password} onChange={(event) => setCreateData((c) => ({ ...c, password: event.target.value }))} placeholder="Senha" type="password" />
+          <input
+            value={createData.password}
+            onChange={(event) => setCreateData((c) => ({ ...c, password: event.target.value }))}
+            placeholder="Senha"
+            type="password"
+            minLength={8}
+            maxLength={128}
+          />
           <input
             value={createData.birthDate}
             onChange={(event) => setCreateData((c) => ({ ...c, birthDate: formatBirthDateInput(event.target.value) }))}
@@ -356,7 +489,7 @@ export function UsersManager({ users, csrfToken }: UsersManagerProps) {
         <button
           type="button"
           onClick={handleCreate}
-          disabled={!createData.name || !createData.email || !createData.password || loadingId === "create"}
+          disabled={!createData.name.trim() || !createData.email.trim() || !isStrongPassword(createData.password) || loadingId === "create"}
         >
           {loadingId === "create" ? "Salvando..." : "Cadastrar"}
         </button>
@@ -369,10 +502,10 @@ export function UsersManager({ users, csrfToken }: UsersManagerProps) {
         <table className={styles.table}>
           <thead>
             <tr>
-              <th>Usuario</th>
+              <th>Usuário</th>
               <th>Email</th>
               <th>Status</th>
-              <th>Ultimo login</th>
+              <th>Último login</th>
               <th>Criado em</th>
               <th></th>
             </tr>
@@ -410,15 +543,12 @@ export function UsersManager({ users, csrfToken }: UsersManagerProps) {
                 type="button"
                 className={styles.drawerBackdrop}
                 aria-label="Fechar painel do cliente"
-                onClick={() => {
-                  setSelectedUser(null);
-                  setEditMode(false);
-                }}
+                onClick={closeDrawer}
               />
-              <aside className={styles.drawerPanel}>
+              <aside ref={drawerPanelRef} className={styles.drawerPanel} role="dialog" aria-modal="true" aria-labelledby="userDrawerTitle" tabIndex={-1}>
                 <div className={styles.detailHeader}>
                   <div>
-                    <h3>Cliente: {selectedUser.name || selectedUser.email}</h3>
+                    <h3 id="userDrawerTitle">Cliente: {selectedUser.name || selectedUser.email}</h3>
                     <p className={styles.drawerSub}>{selectedUser.email}</p>
                     {selectedUser.passwordResetRequired ? <p className={styles.warning}>cliente sem senha</p> : null}
                   </div>
@@ -431,10 +561,7 @@ export function UsersManager({ users, csrfToken }: UsersManagerProps) {
                     </button>
                     <button
                       type="button"
-                      onClick={() => {
-                        setSelectedUser(null);
-                        setEditMode(false);
-                      }}
+                      onClick={closeDrawer}
                     >
                       Fechar
                     </button>
@@ -445,13 +572,13 @@ export function UsersManager({ users, csrfToken }: UsersManagerProps) {
                   <h4>Cadastro</h4>
                   <div className={styles.detailGrid}>
             <label>
-              <span>Titulo</span>
+              <span>Título</span>
               <select
                 disabled={!editMode}
                 value={draft.title}
                 onChange={(event) => setDraft((current) => (current ? { ...current, title: event.target.value as UserDraft["title"] } : current))}
               >
-                <option value="nao_informar">Nao informar</option>
+                <option value="nao_informar">Não informar</option>
                 <option value="sr">Sr</option>
                 <option value="sra">Sra</option>
                 <option value="srta">Srta</option>
@@ -515,7 +642,7 @@ export function UsersManager({ users, csrfToken }: UsersManagerProps) {
               <input disabled value={selectedUser.emailVerified ? "sim" : "não"} />
             </label>
             <label>
-              <span>Ultimo login</span>
+              <span>Último login</span>
               <input disabled value={formatDate(selectedUser.lastLoginAt)} />
             </label>
             <label>
@@ -530,7 +657,7 @@ export function UsersManager({ users, csrfToken }: UsersManagerProps) {
                 </section>
 
                 <section className={styles.block}>
-                  <h4>Acoes</h4>
+                  <h4>Ações</h4>
                   <div className={styles.actionGrid}>
                     <button
                       type="button"

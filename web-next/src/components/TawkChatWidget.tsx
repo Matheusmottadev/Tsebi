@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { usePathname } from "next/navigation";
 import Script from "next/script";
 import { isWithinChatBusinessHours } from "@/lib/chatBusinessHours";
 import styles from "./TawkChatWidget.module.css";
@@ -38,9 +39,20 @@ function isLikelyChatNotificationTitle(value: string): boolean {
 }
 
 export function TawkChatWidget() {
+  const pathname = usePathname();
+  const isStudioRoute = pathname === "/studio" || pathname.startsWith("/studio/");
   const [isChatOpen, setIsChatOpen] = useState(false);
 
   useEffect(() => {
+    if (isStudioRoute) {
+      setIsChatOpen(false);
+      setTawkVisibility(false);
+      const api = (window as Window & { Tawk_API?: TawkApi }).Tawk_API;
+      if (api && typeof api.minimize === "function") api.minimize();
+      if (api && typeof api.hideWidget === "function") api.hideWidget();
+      return;
+    }
+
     setTawkVisibility(false);
 
     const handleChatOpen = () => {
@@ -59,9 +71,10 @@ export function TawkChatWidget() {
       window.removeEventListener("tawk:chat-closed", handleChatClosed);
       setTawkVisibility(false);
     };
-  }, []);
+  }, [isStudioRoute]);
 
   useEffect(() => {
+    if (isStudioRoute) return;
     if (typeof document === "undefined") return;
 
     let stableTitle = document.title;
@@ -92,9 +105,10 @@ export function TawkChatWidget() {
       window.clearInterval(timerId);
       document.removeEventListener("visibilitychange", syncTitle);
     };
-  }, []);
+  }, [isStudioRoute]);
 
   const openChat = useCallback(() => {
+    if (isStudioRoute) return;
     if (typeof window === "undefined") return;
     if (!isWithinChatBusinessHours()) {
       window.location.assign("/faq");
@@ -111,9 +125,9 @@ export function TawkChatWidget() {
     }
 
     window.open("https://wa.me/5511918596632", "_blank", "noopener,noreferrer");
-  }, []);
+  }, [isStudioRoute]);
 
-  if (!TAWK_EMBED_SRC) return null;
+  if (!TAWK_EMBED_SRC || isStudioRoute) return null;
 
   return (
     <>
