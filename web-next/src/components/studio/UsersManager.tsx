@@ -120,6 +120,7 @@ export function UsersManager({ users, csrfToken }: UsersManagerProps) {
   const [selectedUser, setSelectedUser] = useState<AdminUserDetail | null>(null);
   const [editMode, setEditMode] = useState(false);
   const [draft, setDraft] = useState<UserDraft | null>(null);
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
 
   const [createData, setCreateData] = useState({
@@ -149,6 +150,10 @@ export function UsersManager({ users, csrfToken }: UsersManagerProps) {
     return () => {
       document.body.style.overflow = previousOverflow;
     };
+  }, [selectedUser]);
+
+  useEffect(() => {
+    if (!selectedUser) setDeleteConfirmOpen(false);
   }, [selectedUser]);
 
   async function openUser(userId: string) {
@@ -514,24 +519,53 @@ export function UsersManager({ users, csrfToken }: UsersManagerProps) {
                     <button
                       type="button"
                       className={styles.danger}
-                      onClick={() => {
-                        if (!window.confirm(`Excluir usuário ${selectedUser.email}?`)) return;
-                        runAction("Usuario excluido.", async () => {
-                          await deleteUserAdmin(selectedUser.id, csrfToken);
-                          setSelectedUser(null);
-                        });
-                      }}
+                      onClick={() => setDeleteConfirmOpen(true)}
                     >
                       Excluir usuário
                     </button>
                   </div>
-                </section>
-              </aside>
-            </div>
-            ,
-            document.body
+	                </section>
+	              </aside>
+	              {deleteConfirmOpen ? (
+	                <div className={styles.confirmLayer} role="dialog" aria-modal="true" aria-labelledby="confirmDeleteTitle">
+	                  <button
+	                    type="button"
+	                    className={styles.confirmBackdrop}
+	                    aria-label="Cancelar exclusao de usuario"
+	                    onClick={() => setDeleteConfirmOpen(false)}
+	                  />
+	                  <div className={styles.confirmCard}>
+	                    <h4 id="confirmDeleteTitle">Excluir usuÃ¡rio?</h4>
+	                    <p>
+	                      Essa acao remove <strong>{selectedUser.email}</strong> permanentemente.
+	                    </p>
+	                    <div className={styles.confirmActions}>
+	                      <button type="button" onClick={() => setDeleteConfirmOpen(false)}>
+	                        Cancelar
+	                      </button>
+	                      <button
+	                        type="button"
+	                        className={styles.danger}
+	                        onClick={() => {
+	                          setDeleteConfirmOpen(false);
+	                          runAction("Usuario excluido.", async () => {
+	                            await deleteUserAdmin(selectedUser.id, csrfToken);
+	                            setSelectedUser(null);
+	                          });
+	                        }}
+	                      >
+	                        Excluir usuÃ¡rio
+	                      </button>
+	                    </div>
+	                  </div>
+	                </div>
+	              ) : null}
+	            </div>
+	            ,
+	            document.body
           )
         : null}
     </div>
   );
 }
+

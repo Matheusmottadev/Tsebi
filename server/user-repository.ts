@@ -170,7 +170,8 @@ async function ensureUserSecurityColumns(): Promise<void> {
           ADD COLUMN IF NOT EXISTS title TEXT,
           ADD COLUMN IF NOT EXISTS phone TEXT,
           ADD COLUMN IF NOT EXISTS is_guest BOOLEAN NOT NULL DEFAULT FALSE,
-          ADD COLUMN IF NOT EXISTS created_via TEXT;
+          ADD COLUMN IF NOT EXISTS created_via TEXT,
+          ADD COLUMN IF NOT EXISTS last_login_at TIMESTAMPTZ;
       `);
       // Keep identity fields as text to avoid numeric overflow/casting errors on legacy schemas.
       await query(`
@@ -714,6 +715,7 @@ async function adminRestoreUserAuthSnapshot(id: string, snapshot: Record<string,
  */
 async function markUserLoggedInNow(userId: string): Promise<User | null> {
   if (!userId) return null;
+  await ensureUserSecurityColumns();
   const result = await query(
     `
     UPDATE users

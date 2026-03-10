@@ -34,7 +34,8 @@
 .metaGrid input,
 .metaGrid select,
 .detailActions button,
-.actionGrid button {
+.actionGrid button,
+.confirmActions button {
   min-height: 36px;
   border-radius: 8px;
   border: 1px solid var(--studio-border);
@@ -166,6 +167,53 @@
 .drawerPanel p,
 .drawerPanel label {
   color: #ffffff;
+}
+
+.confirmLayer {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  display: grid;
+  place-items: center;
+}
+
+.confirmBackdrop {
+  position: absolute;
+  inset: 0;
+  border: 0;
+  background: rgba(1, 5, 14, 0.68);
+}
+
+.confirmCard {
+  position: relative;
+  z-index: 1;
+  width: min(460px, calc(100vw - 28px));
+  border: 1px solid var(--studio-border-strong);
+  border-radius: 12px;
+  background: #111111;
+  color: #ffffff;
+  padding: 14px;
+  box-shadow: 0 24px 42px rgba(0, 0, 0, 0.5);
+}
+
+.confirmCard h4 {
+  margin: 0;
+  font-size: 18px;
+  color: #ffffff;
+}
+
+.confirmCard p {
+  margin: 8px 0 0;
+  color: #d9d9d9;
+  font-size: 14px;
+  line-height: 1.4;
+}
+
+.confirmActions {
+  margin-top: 12px;
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
 }
 
 .drawerSub {
