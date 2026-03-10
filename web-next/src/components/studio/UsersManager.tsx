@@ -61,6 +61,23 @@ function formatCpfInput(value: string): string {
   return `${part1}.${part2}.${part3}-${part4}`;
 }
 
+function normalizePhoneDigits(value: string): string {
+  let digits = normalizeDigits(value);
+  if (digits.length > 11 && digits.startsWith("55")) digits = digits.slice(2);
+  return digits.slice(0, 11);
+}
+
+function formatPhoneInput(value: string): string {
+  const digits = normalizePhoneDigits(value);
+  if (!digits) return "";
+  const ddd = digits.slice(0, 2);
+  const rest = digits.slice(2);
+  if (!rest) return `(${ddd}`;
+  if (rest.length <= 4) return `(${ddd}) ${rest}`;
+  if (rest.length <= 8) return `(${ddd}) ${rest.slice(0, 4)}-${rest.slice(4)}`;
+  return `(${ddd}) ${rest.slice(0, 5)}-${rest.slice(5)}`;
+}
+
 function formatBirthDateInput(value: string): string {
   const digits = normalizeDigits(value).slice(0, 8);
   const day = digits.slice(0, 2);
@@ -103,7 +120,7 @@ function buildDraft(user: AdminUserDetail): UserDraft {
     title: user.title || "nao_informar",
     name: user.name || "",
     email: user.email || "",
-    phone: user.phone || "",
+    phone: formatPhoneInput(user.phone || ""),
     birthDate: toDisplayBirthDate(user.birthDate || ""),
     cpf: formatCpfInput(user.cpf || ""),
     cep: user.cep || "",
@@ -182,7 +199,7 @@ export function UsersManager({ users, csrfToken }: UsersManagerProps) {
           title: createData.title,
           name: createData.name.trim(),
           email: createData.email.trim(),
-          phone: createData.phone.trim(),
+          phone: normalizePhoneDigits(createData.phone),
           password: createData.password,
           birthDate: toApiBirthDate(createData.birthDate),
           cpf: normalizeDigits(createData.cpf),
@@ -216,7 +233,9 @@ export function UsersManager({ users, csrfToken }: UsersManagerProps) {
     if (draft.title !== selectedUser.title) patch.title = draft.title || "nao_informar";
     if (draft.name.trim() !== selectedUser.name) patch.name = draft.name.trim();
     if (draft.email.trim() !== selectedUser.email) patch.email = draft.email.trim();
-    if (draft.phone.trim() !== (selectedUser.phone || "")) patch.phone = draft.phone.trim();
+    const draftPhone = normalizePhoneDigits(draft.phone);
+    const selectedPhone = normalizePhoneDigits(selectedUser.phone || "");
+    if (draftPhone !== selectedPhone) patch.phone = draftPhone;
     const draftBirthDateApi = toApiBirthDate(draft.birthDate);
     const selectedBirthDateApi = toApiBirthDate(selectedUser.birthDate || "");
     if (draftBirthDateApi !== selectedBirthDateApi) patch.birthDate = draftBirthDateApi;
@@ -313,7 +332,14 @@ export function UsersManager({ users, csrfToken }: UsersManagerProps) {
           </select>
           <input value={createData.name} onChange={(event) => setCreateData((c) => ({ ...c, name: event.target.value }))} placeholder="Nome" />
           <input value={createData.email} onChange={(event) => setCreateData((c) => ({ ...c, email: event.target.value }))} placeholder="Email" type="email" />
-          <input value={createData.phone} onChange={(event) => setCreateData((c) => ({ ...c, phone: event.target.value }))} placeholder="Telefone" />
+          <input
+            value={createData.phone}
+            onChange={(event) => setCreateData((c) => ({ ...c, phone: formatPhoneInput(event.target.value) }))}
+            placeholder="Telefone"
+            inputMode="numeric"
+            autoComplete="tel"
+            maxLength={15}
+          />
           <input value={createData.password} onChange={(event) => setCreateData((c) => ({ ...c, password: event.target.value }))} placeholder="Senha" type="password" />
           <input
             value={createData.birthDate}
@@ -441,7 +467,14 @@ export function UsersManager({ users, csrfToken }: UsersManagerProps) {
             </label>
             <label>
               <span>Telefone</span>
-              <input disabled={!editMode} value={draft.phone} onChange={(event) => setDraft((c) => (c ? { ...c, phone: event.target.value } : c))} />
+              <input
+                disabled={!editMode}
+                value={draft.phone}
+                onChange={(event) => setDraft((c) => (c ? { ...c, phone: formatPhoneInput(event.target.value) } : c))}
+                inputMode="numeric"
+                autoComplete="tel"
+                maxLength={15}
+              />
             </label>
             <label>
               <span>Nascimento</span>
