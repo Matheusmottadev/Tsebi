@@ -10,13 +10,16 @@
   --sidebar-w: 220px;
 
   min-height: 100vh;
+  width: 100%;
   background: var(--grey-100);
   color: var(--grey-800);
   font-family: var(--font-jost), sans-serif;
+  overflow-x: hidden;
 }
 
 .main {
   margin-left: var(--sidebar-w);
+  width: calc(100% - var(--sidebar-w));
   min-height: 100vh;
   background: var(--grey-100);
 }
@@ -29,6 +32,7 @@
 @media (max-width: 980px) {
   .main {
     margin-left: 0;
+    width: 100%;
   }
 
   .content {
@@ -36,4 +40,3 @@
     padding-top: 90px;
   }
 }
-

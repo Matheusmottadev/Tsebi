@@ -3,14 +3,15 @@ import styles from "./RecentOrders.module.css";
 
 type RecentOrdersProps = {
   rows: RecentOrder[];
+  onViewAll?: () => void;
 };
 
-export function RecentOrders({ rows }: RecentOrdersProps) {
+export function RecentOrders({ rows, onViewAll }: RecentOrdersProps) {
   return (
     <section className={styles.panel}>
       <header className={styles.header}>
         <h3>PEDIDOS RECENTES</h3>
-        <button type="button" className={styles.linkBtn}>
+        <button type="button" className={styles.linkBtn} onClick={onViewAll}>
           Ver todos
         </button>
       </header>
@@ -37,9 +38,15 @@ export function RecentOrders({ rows }: RecentOrdersProps) {
               </td>
             </tr>
           ))}
+          {!rows.length ? (
+            <tr>
+              <td className={styles.empty} colSpan={5}>
+                Nenhum pedido recente encontrado.
+              </td>
+            </tr>
+          ) : null}
         </tbody>
       </table>
     </section>
   );
 }
-

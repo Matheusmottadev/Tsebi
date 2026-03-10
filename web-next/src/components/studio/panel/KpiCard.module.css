@@ -43,3 +43,6 @@
   color: #9b2226;
 }
 
+.context {
+  color: var(--grey-600);
+}

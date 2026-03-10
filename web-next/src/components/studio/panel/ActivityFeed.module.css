@@ -13,7 +13,8 @@
   font-family: var(--font-jost), sans-serif;
   font-size: 9px;
   font-weight: 300;
-  letter-spacing: 0.2em;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
   color: var(--grey-600);
 }
 
@@ -27,7 +28,7 @@
   display: flex;
   gap: 10px;
   align-items: flex-start;
-  padding: 14px 20px;
+  padding: 16px 20px;
   border-bottom: 1px solid var(--grey-200);
 }
 

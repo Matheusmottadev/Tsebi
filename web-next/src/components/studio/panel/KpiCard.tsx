@@ -9,12 +9,16 @@ type KpiCardProps = {
 };
 
 export function KpiCard({ label, value, delta, tone }: KpiCardProps) {
+  const [trendPart, contextPart] = delta.split(" vs ");
+
   return (
     <article className={styles.card}>
       <p className={styles.label}>{label}</p>
       <p className={styles.value}>{value}</p>
-      <p className={`${styles.delta} ${tone === "positive" ? styles.positive : styles.negative}`}>{delta}</p>
+      <p className={styles.delta}>
+        <span className={tone === "positive" ? styles.positive : styles.negative}>{trendPart}</span>
+        {contextPart ? <span className={styles.context}> vs {contextPart}</span> : null}
+      </p>
     </article>
   );
 }
-

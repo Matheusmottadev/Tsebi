@@ -5,6 +5,28 @@
   margin-bottom: 32px;
 }
 
+.warning {
+  margin: 0 0 16px;
+  padding: 12px 16px;
+  border: 1px solid #f3c3c6;
+  background: #fde8e8;
+  color: #9b2226;
+  font-family: var(--font-jost), sans-serif;
+  font-size: 12px;
+  font-weight: 300;
+}
+
+.loading {
+  margin: 0 0 16px;
+  padding: 12px 16px;
+  border: 1px solid var(--grey-300);
+  background: var(--white);
+  color: var(--grey-600);
+  font-family: var(--font-jost), sans-serif;
+  font-size: 12px;
+  font-weight: 300;
+}
+
 .lowerGrid {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 340px;
@@ -26,4 +48,3 @@
     grid-template-columns: 1fr;
   }
 }
-

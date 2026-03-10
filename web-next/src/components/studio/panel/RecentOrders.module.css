@@ -16,8 +16,9 @@
   font-family: var(--font-jost), sans-serif;
   font-size: 9px;
   font-weight: 300;
-  letter-spacing: 0.2em;
-  color: var(--grey-600);
+  letter-spacing: 0.15em;
+  color: var(--grey-400);
+  text-transform: uppercase;
 }
 
 .linkBtn {
@@ -29,6 +30,9 @@
   font-weight: 300;
   letter-spacing: 0.08em;
   cursor: pointer;
+  color: #8f8f8f;
+  text-decoration: underline;
+  text-underline-offset: 2px;
 }
 
 .table {
@@ -68,6 +72,8 @@
   font-family: var(--font-jost), sans-serif;
   font-size: 9px;
   font-weight: 300;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
 }
 
 .statusPago {
@@ -88,5 +94,11 @@
 .statusCancelado {
   background: #fde8e8;
   color: #9b2226;
+}
+
+
+.empty {
+  text-align: center;
+  color: var(--grey-600);
 }
 

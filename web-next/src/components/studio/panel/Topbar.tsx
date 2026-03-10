@@ -36,7 +36,7 @@ export function Topbar({ title, onNewProduct }: TopbarProps) {
           <span className={styles.dot} aria-hidden="true" />
         </button>
         <button type="button" className={styles.newBtn} onClick={onNewProduct}>
-          + Novo Produto
+          ＋ Novo Produto
         </button>
       </div>
     </header>
