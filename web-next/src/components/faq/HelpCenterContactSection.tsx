@@ -1,11 +1,17 @@
 "use client";
 
 import type { MouseEvent } from "react";
+import { isWithinChatBusinessHours } from "@/lib/chatBusinessHours";
 import styles from "./HelpCenterContactSection.module.css";
 
 export function HelpCenterContactSection() {
   const openLiveChat = (event: MouseEvent<HTMLAnchorElement>) => {
     if (typeof window === "undefined") return;
+    if (!isWithinChatBusinessHours()) {
+      event.preventDefault();
+      window.location.assign("/faq");
+      return;
+    }
 
     const api = (window as Window & { Tawk_API?: { showWidget?: () => void; maximize?: () => void } }).Tawk_API;
     if (api && typeof api.maximize === "function") {

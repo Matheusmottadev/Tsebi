@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import Script from "next/script";
+import { isWithinChatBusinessHours } from "@/lib/chatBusinessHours";
 import styles from "./TawkChatWidget.module.css";
 
 const TAWK_EMBED_SRC = String(process.env.NEXT_PUBLIC_TAWK_EMBED_SRC || "").trim();
@@ -50,6 +51,10 @@ export function TawkChatWidget() {
 
   const openChat = useCallback(() => {
     if (typeof window === "undefined") return;
+    if (!isWithinChatBusinessHours()) {
+      window.location.assign("/faq");
+      return;
+    }
 
     const api = (window as Window & { Tawk_API?: TawkApi }).Tawk_API;
     if (api && typeof api.maximize === "function") {
