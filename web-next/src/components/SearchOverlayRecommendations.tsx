@@ -210,6 +210,8 @@ export function SearchOverlayRecommendations({
   }, [isOpen, limit, mode, placement, query, title]);
 
   const hasCards = cards.length > 0;
+  const modeClassName =
+    mode === "personalized" ? "tsebi-search-reco--personalized" : "tsebi-search-reco--best-sellers";
 
   useEffect(() => {
     if (!guestFavoriteNotice) return;
@@ -246,10 +248,10 @@ export function SearchOverlayRecommendations({
   );
 
   return (
-    <section className="tsebi-search-reco" aria-label={resolvedTitle}>
-      <header className="tsebi-search-reco-head">
+    <section className={`tsebi-search-reco ${modeClassName}`} data-reco-mode={mode} aria-label={resolvedTitle}>
+      <div className="tsebi-search-reco-head">
         <h3 className="tsebi-search-reco-title">{resolvedTitle}</h3>
-      </header>
+      </div>
 
       <div className="tsebi-search-reco-track" role="list">
         {loading && !hasCards
