@@ -6435,9 +6435,9 @@ body:not(.home-page) .home-header.product-mode .product-search-trigger svg {
 }
 
 .tsebi-search-reco{
-  margin: 26px auto 0;
+  margin: 26px 0 0;
   width: 100%;
-  max-width: 1240px;
+  max-width: none;
 }
 
 .tsebi-search-reco-head{
@@ -6489,17 +6489,29 @@ body:not(.home-page) .home-header.product-mode .product-search-trigger svg {
 
 .tsebi-search-reco-media{
   width: 100%;
-  aspect-ratio: 1 / 1.1;
+  aspect-ratio: 4 / 5;
   background: #efefef;
   border-radius: 0;
 }
 
 .tsebi-search-reco-image{
   width: 100%;
-  aspect-ratio: 1 / 1.1;
+  aspect-ratio: 4 / 5;
   object-fit: cover;
   display: block;
   transition: transform 280ms ease;
+}
+
+@media (min-width: 761px){
+  .tsebi-search-reco-media{
+    aspect-ratio: auto;
+    height: clamp(170px, 16vw, 260px);
+  }
+
+  .tsebi-search-reco-image{
+    aspect-ratio: auto;
+    height: clamp(170px, 16vw, 260px);
+  }
 }
 
 .tsebi-search-reco-link:hover .tsebi-search-reco-image{

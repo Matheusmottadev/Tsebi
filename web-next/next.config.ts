@@ -53,6 +53,13 @@ const nextConfig: NextConfig = {
   turbopack: {
     root: projectRoot,
   },
+  webpack: (config, { dev }) => {
+    if (dev) {
+      // Avoid eval-based devtool so local CSP/extension policies don't break the runtime.
+      config.devtool = "cheap-module-source-map";
+    }
+    return config;
+  },
   staticPageGenerationTimeout: 600,
   images: {
     remotePatterns: [
