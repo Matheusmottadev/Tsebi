@@ -79,7 +79,9 @@ export function LegacyFooter({ variant = "dark" }: LegacyFooterProps) {
           <h3>PRECISA DE AJUDA?</h3>
           <a href="tel:+5511934618004">Fale conosco pelo telefone (11) 93461-8004</a>
           <Link href="/faq">FAQ</Link>
-          <Link href="/">Mapa do site</Link>
+          <Link href="/" prefetch={false}>
+            Mapa do site
+          </Link>
         </section>
 
         <section className="footer-column">

@@ -1,6 +1,6 @@
 ﻿"use client";
 
-import { Bell } from "lucide-react";
+import { Bell, Search } from "lucide-react";
 import { useMemo } from "react";
 import styles from "./Topbar.module.css";
 
@@ -8,9 +8,10 @@ type TopbarProps = {
   title: string;
   actionLabel: string;
   onAction: () => void;
+  onOpenGlobalSearch: () => void;
 };
 
-export function Topbar({ title, actionLabel, onAction }: TopbarProps) {
+export function Topbar({ title, actionLabel, onAction, onOpenGlobalSearch }: TopbarProps) {
   const formattedDate = useMemo(
     () =>
       new Intl.DateTimeFormat("pt-BR", {
@@ -50,6 +51,9 @@ export function Topbar({ title, actionLabel, onAction }: TopbarProps) {
           whiteSpace: "nowrap",
         }}
       >
+        <button type="button" className={styles.searchBtn} aria-label="Pesquisa global" onClick={onOpenGlobalSearch}>
+          <Search size={16} strokeWidth={1.7} aria-hidden="true" />
+        </button>
         <button type="button" className={styles.bellBtn} aria-label="Notificações">
           <Bell size={16} strokeWidth={1.7} aria-hidden="true" />
           <span className={styles.dot} aria-hidden="true" />

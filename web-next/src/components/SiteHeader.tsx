@@ -656,7 +656,7 @@ export function SiteHeader() {
           </div>
 
           <h1 className="logo">
-            <Link href="/" className="logo-center-link">
+            <Link href="/" className="logo-center-link" prefetch={false}>
               <span className="logo-center-text">TSEBI</span>
               <Image className="logo-center-image" src="/images/logo-tsebi.png" alt="Logo TSEBI" width={120} height={120} />
             </Link>

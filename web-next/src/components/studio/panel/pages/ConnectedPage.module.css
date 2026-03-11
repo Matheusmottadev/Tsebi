@@ -72,6 +72,15 @@
   text-align: center;
 }
 
+.noResults {
+  margin: 24px 0 32px;
+  text-align: center;
+  color: #999;
+  font-family: var(--font-jost), sans-serif;
+  font-size: 12px;
+  font-weight: 300;
+}
+
 .btnEdit {
   background: transparent;
   color: #111;

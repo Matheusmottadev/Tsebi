@@ -1,11 +1,12 @@
 import { PencilLine, Trash2 } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { ConfirmModal } from "@/components/admin/ConfirmModal";
 import { DrawerDetalhesUsuario } from "@/components/admin/DrawerDetalhesUsuario";
 import { DrawerEditarCupom } from "@/components/admin/DrawerEditarCupom";
 import { DrawerEditarPedido } from "@/components/admin/DrawerEditarPedido";
 import { DrawerEditarProduto } from "@/components/admin/DrawerEditarProduto";
 import { Toast } from "@/components/admin/Toast";
+import { SearchBar, type FilterConfig, type SortOption } from "@/components/studio/panel/SearchBar";
 import {
   deleteCouponAdmin,
   deleteNewsletterAdmin,
@@ -19,7 +20,7 @@ import {
   type AdminVipRow,
 } from "@/services/admin";
 import type { Coupon, Order, Product } from "@/types";
-import type { AdminPageKey } from "../types";
+import type { AdminPageKey, GlobalSearchTarget } from "../types";
 import styles from "./ConnectedPage.module.css";
 
 export interface ConnectedPanelData {
@@ -39,6 +40,8 @@ type ConnectedPageProps = {
   loading: boolean;
   errorMessage: string;
   onRequestRefresh?: () => void;
+  globalSearchTarget?: GlobalSearchTarget | null;
+  onGlobalSearchTargetHandled?: () => void;
 };
 
 type ConfirmDeleteTarget =
@@ -73,16 +76,6 @@ function pickOrderId(order: AdminOrderSummary): string {
   return raw.startsWith("#") ? raw : `#${raw}`;
 }
 
-function renderEmpty(colSpan: number, text: string) {
-  return (
-    <tr>
-      <td colSpan={colSpan} className={styles.empty}>
-        {text}
-      </td>
-    </tr>
-  );
-}
-
 function normalizeUserStatus(value: string): string {
   const normalized = String(value || "").trim().toLowerCase();
   if (!normalized) return "-";
@@ -96,6 +89,99 @@ function normalizeTextForCompare(value: unknown): string {
     .replace(/[\u0300-\u036f]/g, "")
     .trim()
     .toLowerCase();
+}
+
+function normalizeDigits(value: unknown): string {
+  return String(value || "").replace(/\D/g, "");
+}
+
+function toTimestamp(value: string | null | undefined): number {
+  if (!value) return 0;
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return 0;
+  return date.getTime();
+}
+
+function isToday(date: Date): boolean {
+  const now = new Date();
+  return (
+    date.getFullYear() === now.getFullYear() &&
+    date.getMonth() === now.getMonth() &&
+    date.getDate() === now.getDate()
+  );
+}
+
+function isThisWeek(date: Date): boolean {
+  const now = new Date();
+  const day = now.getDay();
+  const mondayOffset = day === 0 ? -6 : 1 - day;
+  const weekStart = new Date(now.getFullYear(), now.getMonth(), now.getDate() + mondayOffset);
+  weekStart.setHours(0, 0, 0, 0);
+  return date.getTime() >= weekStart.getTime();
+}
+
+function isThisMonth(date: Date): boolean {
+  const now = new Date();
+  return date.getFullYear() === now.getFullYear() && date.getMonth() === now.getMonth();
+}
+
+function isInLastMonths(date: Date, months: number): boolean {
+  const limit = new Date();
+  limit.setMonth(limit.getMonth() - months);
+  return date.getTime() >= limit.getTime();
+}
+
+function matchesPeriod(dateValue: string | null | undefined, period: string): boolean {
+  if (period === "todos") return true;
+  if (!dateValue) return false;
+  const date = new Date(dateValue);
+  if (Number.isNaN(date.getTime())) return false;
+  if (period === "hoje") return isToday(date);
+  if (period === "esta_semana") return isThisWeek(date);
+  if (period === "este_mes") return isThisMonth(date);
+  if (period === "ultimos_3_meses") return isInLastMonths(date, 3);
+  return true;
+}
+
+function readUserEmailVerified(row: AdminUserRow): boolean {
+  const extra = row as unknown as Record<string, unknown>;
+  return Boolean(extra.emailVerified);
+}
+
+function readTotalSpentCents(row: Record<string, unknown>): number {
+  const candidates = [
+    row.totalSpentCents,
+    row.totalSpent,
+    row.totalSpentAmount,
+    row.amountSpentCents,
+    row.amountSpent,
+    row.ltvCents,
+    row.ltv,
+  ];
+  for (const candidate of candidates) {
+    const value = Number(candidate || 0);
+    if (Number.isFinite(value) && value > 0) return value;
+  }
+  return 0;
+}
+
+function normalizePrivateCareStatus(value: string): "aberto" | "em_andamento" | "resolvido" | "fechado" {
+  const status = normalizeTextForCompare(value);
+  if (status.includes("fechado") || status.includes("closed")) return "fechado";
+  if (status.includes("resol") || status.includes("concl") || status.includes("finaliz")) return "resolvido";
+  if (status.includes("andamento") || status.includes("progress") || status.includes("process")) return "em_andamento";
+  return "aberto";
+}
+
+function normalizeAuditEventType(action: string): "login" | "logout" | "criacao" | "edicao" | "exclusao" | "erro" | "outro" {
+  const normalized = normalizeTextForCompare(action);
+  if (normalized.includes("login") || normalized === "auth_login") return "login";
+  if (normalized.includes("logout") || normalized === "auth_logout") return "logout";
+  if (normalized.includes("create") || normalized.includes("cri")) return "criacao";
+  if (normalized.includes("update") || normalized.includes("edit") || normalized.includes("patch")) return "edicao";
+  if (normalized.includes("delete") || normalized.includes("remove") || normalized.includes("excl")) return "exclusao";
+  if (normalized.includes("error") || normalized.includes("erro") || normalized.includes("fail")) return "erro";
+  return "outro";
 }
 
 function formatOrderStatus(order: AdminOrderSummary): string {
@@ -201,7 +287,15 @@ function getDeleteContent(target: ConfirmDeleteTarget): {
   };
 }
 
-export function ConnectedPage({ page, data, loading, errorMessage, onRequestRefresh }: ConnectedPageProps) {
+export function ConnectedPage({
+  page,
+  data,
+  loading,
+  errorMessage,
+  onRequestRefresh,
+  globalSearchTarget,
+  onGlobalSearchTargetHandled,
+}: ConnectedPageProps) {
   const [ordersRows, setOrdersRows] = useState<AdminOrderSummary[]>(data.orders || []);
   const [productsRows, setProductsRows] = useState<Product[]>(data.products || []);
   const [usersRows, setUsersRows] = useState<AdminUserRow[]>(data.users || []);
@@ -209,6 +303,51 @@ export function ConnectedPage({ page, data, loading, errorMessage, onRequestRefr
   const [vipRows, setVipRows] = useState<AdminVipRow[]>(data.vip || []);
   const [newsletterRows, setNewsletterRows] = useState<AdminNewsletterRow[]>(data.newsletter || []);
   const [couponsRows, setCouponsRows] = useState<Coupon[]>(data.coupons || []);
+  const [auditRows, setAuditRows] = useState<AdminAuditLog[]>(data.audit || []);
+
+  const [ordersSearch, setOrdersSearch] = useState("");
+  const [ordersStatusFilter, setOrdersStatusFilter] = useState("todos");
+  const [ordersShippingFilter, setOrdersShippingFilter] = useState("todos");
+  const [ordersPeriodFilter, setOrdersPeriodFilter] = useState("todos");
+  const [ordersSort, setOrdersSort] = useState("mais_recente");
+
+  const [productsSearch, setProductsSearch] = useState("");
+  const [productsStatusFilter, setProductsStatusFilter] = useState("todos");
+  const [productsCategoryFilter, setProductsCategoryFilter] = useState("todos");
+  const [productsGenderFilter, setProductsGenderFilter] = useState("todos");
+  const [productsSizeFilter, setProductsSizeFilter] = useState("todos");
+  const [productsStockFilter, setProductsStockFilter] = useState("todos");
+  const [productsSort, setProductsSort] = useState("nome_az");
+
+  const [usersSearch, setUsersSearch] = useState("");
+  const [usersStatusFilter, setUsersStatusFilter] = useState("todos");
+  const [usersEmailFilter, setUsersEmailFilter] = useState("todos");
+  const [usersPeriodFilter, setUsersPeriodFilter] = useState("todos");
+  const [usersSort, setUsersSort] = useState("mais_recente");
+
+  const [couponsSearch, setCouponsSearch] = useState("");
+  const [couponsStatusFilter, setCouponsStatusFilter] = useState("todos");
+  const [couponsTypeFilter, setCouponsTypeFilter] = useState("todos");
+  const [couponsValidityFilter, setCouponsValidityFilter] = useState("todos");
+  const [couponsSort, setCouponsSort] = useState("mais_recente");
+
+  const [careSearch, setCareSearch] = useState("");
+  const [careStatusFilter, setCareStatusFilter] = useState("todos");
+  const [carePeriodFilter, setCarePeriodFilter] = useState("todos");
+  const [careSort, setCareSort] = useState("mais_recente");
+
+  const [vipSearch, setVipSearch] = useState("");
+  const [vipPeriodFilter, setVipPeriodFilter] = useState("todos");
+  const [vipSort, setVipSort] = useState("mais_recente");
+
+  const [newsletterSearch, setNewsletterSearch] = useState("");
+  const [newsletterPeriodFilter, setNewsletterPeriodFilter] = useState("todos");
+  const [newsletterSort, setNewsletterSort] = useState("mais_recente");
+
+  const [auditSearch, setAuditSearch] = useState("");
+  const [auditEventFilter, setAuditEventFilter] = useState("todos");
+  const [auditPeriodFilter, setAuditPeriodFilter] = useState("todos");
+  const [auditSort, setAuditSort] = useState("mais_recente");
 
   const [selectedUser, setSelectedUser] = useState<AdminUserRow | null>(null);
   const [isUserDrawerOpen, setIsUserDrawerOpen] = useState(false);
@@ -257,6 +396,10 @@ export function ConnectedPage({ page, data, loading, errorMessage, onRequestRefr
   useEffect(() => {
     setCouponsRows(data.coupons || []);
   }, [data.coupons]);
+
+  useEffect(() => {
+    setAuditRows(data.audit || []);
+  }, [data.audit]);
 
   useEffect(
     () => () => {
@@ -316,6 +459,731 @@ export function ConnectedPage({ page, data, loading, errorMessage, onRequestRefr
       toastTimerRef.current = null;
     }, 3000);
   };
+
+  const filteredOrders = useMemo(() => {
+    const queryText = normalizeTextForCompare(ordersSearch);
+    const queryDigits = normalizeDigits(ordersSearch);
+    const nextRows = [...ordersRows].filter((order) => {
+      const anyOrder = order as unknown as Record<string, unknown>;
+      const shippingRecord =
+        anyOrder.shipping && typeof anyOrder.shipping === "object"
+          ? (anyOrder.shipping as Record<string, unknown>)
+          : {};
+      const searchableText = normalizeTextForCompare(
+        [
+          order.id,
+          order.userName,
+          order.userEmail,
+          anyOrder.userPhone,
+          anyOrder.userCpf,
+          shippingRecord.phone,
+          shippingRecord.cpf,
+          anyOrder.productName,
+          anyOrder.product,
+          order.shippingSelectedService,
+          order.shippingSelectedCarrierName,
+          order.carrier,
+        ].join(" ")
+      );
+      const searchableDigits = normalizeDigits(
+        [anyOrder.userPhone, anyOrder.userCpf, shippingRecord.phone, shippingRecord.cpf].join(" ")
+      );
+      const matchesQuery =
+        !queryText || searchableText.includes(queryText) || (queryDigits ? searchableDigits.includes(queryDigits) : false);
+      if (!matchesQuery) return false;
+
+      if (ordersStatusFilter !== "todos" && formatOrderStatus(order) !== ordersStatusFilter) return false;
+
+      if (ordersShippingFilter !== "todos") {
+        const shippingText = normalizeTextForCompare(
+          [order.shippingSelectedService, order.shippingSelectedServiceCode, order.shippingSelectedProvider, order.shippingSelectedCarrierName, order.carrier].join(
+            " "
+          )
+        );
+        if (ordersShippingFilter === "sedex" && !shippingText.includes("sedex")) return false;
+        if (ordersShippingFilter === "pac" && !shippingText.includes("pac")) return false;
+        if (ordersShippingFilter === "express_loggi" && !(shippingText.includes("loggi") || shippingText.includes("express"))) return false;
+        if (ordersShippingFilter === "transportadora" && !shippingText.includes("transport")) return false;
+      }
+
+      return matchesPeriod(order.createdAt, ordersPeriodFilter);
+    });
+
+    nextRows.sort((a, b) => {
+      if (ordersSort === "mais_antigo") return toTimestamp(a.createdAt) - toTimestamp(b.createdAt);
+      if (ordersSort === "maior_valor") return Number(b.amount || 0) - Number(a.amount || 0);
+      if (ordersSort === "menor_valor") return Number(a.amount || 0) - Number(b.amount || 0);
+      return toTimestamp(b.createdAt) - toTimestamp(a.createdAt);
+    });
+    return nextRows;
+  }, [ordersPeriodFilter, ordersRows, ordersSearch, ordersShippingFilter, ordersSort, ordersStatusFilter]);
+
+  const filteredProducts = useMemo(() => {
+    const query = normalizeTextForCompare(productsSearch);
+    const nextRows = [...productsRows].filter((product) => {
+      const matchesQuery =
+        !query ||
+        normalizeTextForCompare(
+          [product.sku, product.name, product.category, product.collection, product.gender, ...(Array.isArray(product.colors) ? product.colors : [])].join(" ")
+        ).includes(query);
+      if (!matchesQuery) return false;
+      if (productsStatusFilter === "ativo" && !product.active) return false;
+      if (productsStatusFilter === "inativo" && product.active) return false;
+      if (productsCategoryFilter !== "todos" && normalizeTextForCompare(product.category) !== normalizeTextForCompare(productsCategoryFilter)) {
+        return false;
+      }
+      if (productsGenderFilter !== "todos" && normalizeTextForCompare(product.gender) !== normalizeTextForCompare(productsGenderFilter)) {
+        return false;
+      }
+      if (
+        productsSizeFilter !== "todos" &&
+        !(Array.isArray(product.sizes) ? product.sizes.map((size) => normalizeTextForCompare(size)).includes(normalizeTextForCompare(productsSizeFilter)) : false)
+      ) {
+        return false;
+      }
+      if (productsStockFilter === "em_estoque" && Number(product.stock || 0) <= 0) return false;
+      if (productsStockFilter === "esgotado" && Number(product.stock || 0) > 0) return false;
+      return true;
+    });
+
+    nextRows.sort((a, b) => {
+      if (productsSort === "nome_za") return String(b.name || "").localeCompare(String(a.name || ""));
+      if (productsSort === "maior_preco") return Number(b.unitAmount || 0) - Number(a.unitAmount || 0);
+      if (productsSort === "menor_preco") return Number(a.unitAmount || 0) - Number(b.unitAmount || 0);
+      if (productsSort === "mais_recente") return toTimestamp(b.createdAt) - toTimestamp(a.createdAt);
+      return String(a.name || "").localeCompare(String(b.name || ""));
+    });
+    return nextRows;
+  }, [
+    productsCategoryFilter,
+    productsGenderFilter,
+    productsRows,
+    productsSearch,
+    productsSizeFilter,
+    productsSort,
+    productsStatusFilter,
+    productsStockFilter,
+  ]);
+
+  const filteredUsers = useMemo(() => {
+    const queryText = normalizeTextForCompare(usersSearch);
+    const queryDigits = normalizeDigits(usersSearch);
+    const nextRows = [...usersRows].filter((user) => {
+      const matchesText =
+        !queryText || normalizeTextForCompare([user.name, user.email, user.cpf, user.phone, user.cep].join(" ")).includes(queryText);
+      const matchesDigits =
+        !queryDigits || normalizeDigits([user.cpf, user.phone, user.cep].join(" ")).includes(queryDigits);
+      if (!matchesText && !matchesDigits) return false;
+      if (usersStatusFilter !== "todos" && normalizeUserStatus(user.status) !== usersStatusFilter) return false;
+      if (usersEmailFilter === "verificado" && !readUserEmailVerified(user)) return false;
+      if (usersEmailFilter === "nao_verificado" && readUserEmailVerified(user)) return false;
+      return matchesPeriod(user.createdAt, usersPeriodFilter);
+    });
+
+    nextRows.sort((a, b) => {
+      if (usersSort === "mais_antigo") return toTimestamp(a.createdAt) - toTimestamp(b.createdAt);
+      if (usersSort === "nome_az") return String(a.name || "").localeCompare(String(b.name || ""));
+      if (usersSort === "maior_total_gasto") {
+        const left = readTotalSpentCents(a as unknown as Record<string, unknown>);
+        const right = readTotalSpentCents(b as unknown as Record<string, unknown>);
+        return right - left;
+      }
+      return toTimestamp(b.createdAt) - toTimestamp(a.createdAt);
+    });
+    return nextRows;
+  }, [usersEmailFilter, usersPeriodFilter, usersRows, usersSearch, usersSort, usersStatusFilter]);
+
+  const filteredPrivateCare = useMemo(() => {
+    const query = normalizeTextForCompare(careSearch);
+    const nextRows = [...privateCareRows].filter((row) => {
+      const matchesQuery = !query || normalizeTextForCompare([row.userName, row.userEmail, row.subject].join(" ")).includes(query);
+      if (!matchesQuery) return false;
+      if (careStatusFilter !== "todos" && normalizePrivateCareStatus(row.status) !== careStatusFilter) return false;
+      return matchesPeriod(row.createdAt, carePeriodFilter);
+    });
+
+    nextRows.sort((a, b) => {
+      if (careSort === "mais_antigo") return toTimestamp(a.createdAt) - toTimestamp(b.createdAt);
+      return toTimestamp(b.createdAt) - toTimestamp(a.createdAt);
+    });
+    return nextRows;
+  }, [carePeriodFilter, careSearch, careSort, careStatusFilter, privateCareRows]);
+
+  const filteredVip = useMemo(() => {
+    const queryText = normalizeTextForCompare(vipSearch);
+    const queryDigits = normalizeDigits(vipSearch);
+    const nextRows = [...vipRows].filter((row) => {
+      const matchesText = !queryText || normalizeTextForCompare([row.name, row.email, row.phone].join(" ")).includes(queryText);
+      const matchesDigits = !queryDigits || normalizeDigits(row.phone).includes(queryDigits);
+      if (!matchesText && !matchesDigits) return false;
+      return matchesPeriod(row.subscribedAt, vipPeriodFilter);
+    });
+
+    nextRows.sort((a, b) => {
+      if (vipSort === "nome_az") return String(a.name || "").localeCompare(String(b.name || ""));
+      if (vipSort === "maior_total_gasto") {
+        const left = readTotalSpentCents(a as unknown as Record<string, unknown>);
+        const right = readTotalSpentCents(b as unknown as Record<string, unknown>);
+        return right - left;
+      }
+      return toTimestamp(b.subscribedAt) - toTimestamp(a.subscribedAt);
+    });
+    return nextRows;
+  }, [vipPeriodFilter, vipRows, vipSearch, vipSort]);
+
+  const filteredNewsletter = useMemo(() => {
+    const query = normalizeTextForCompare(newsletterSearch);
+    const nextRows = [...newsletterRows].filter((row) => {
+      const anyRow = row as unknown as Record<string, unknown>;
+      const matchesQuery = !query || normalizeTextForCompare([anyRow.name, row.email].join(" ")).includes(query);
+      if (!matchesQuery) return false;
+      return matchesPeriod(row.subscribedAt, newsletterPeriodFilter);
+    });
+
+    nextRows.sort((a, b) => {
+      if (newsletterSort === "nome_az") {
+        const aName = String((a as unknown as Record<string, unknown>).name || a.email || "");
+        const bName = String((b as unknown as Record<string, unknown>).name || b.email || "");
+        return aName.localeCompare(bName);
+      }
+      return toTimestamp(b.subscribedAt) - toTimestamp(a.subscribedAt);
+    });
+    return nextRows;
+  }, [newsletterPeriodFilter, newsletterRows, newsletterSearch, newsletterSort]);
+
+  const filteredCoupons = useMemo(() => {
+    const query = normalizeTextForCompare(couponsSearch);
+    const now = Date.now();
+    const nextRows = [...couponsRows].filter((coupon) => {
+      const matchesQuery = !query || normalizeTextForCompare([coupon.code, coupon.description].join(" ")).includes(query);
+      if (!matchesQuery) return false;
+      if (couponsStatusFilter === "ativo" && !coupon.active) return false;
+      if (couponsStatusFilter === "inativo" && coupon.active) return false;
+      if (couponsTypeFilter === "percentual" && coupon.type !== "percent") return false;
+      if (couponsTypeFilter === "valor_fixo" && coupon.type !== "fixed") return false;
+
+      const startsAt = toTimestamp(coupon.startsAt || null);
+      const expiresAt = toTimestamp(coupon.expiresAt || null);
+      if (couponsValidityFilter === "validos_agora") {
+        const notStarted = startsAt > 0 && startsAt > now;
+        const expired = expiresAt > 0 && expiresAt < now;
+        if (notStarted || expired) return false;
+      }
+      if (couponsValidityFilter === "expirados" && !(expiresAt > 0 && expiresAt < now)) return false;
+      if (couponsValidityFilter === "sem_data_definida" && expiresAt > 0) return false;
+      return true;
+    });
+
+    nextRows.sort((a, b) => {
+      if (couponsSort === "expiracao_mais_proxima") {
+        const aExp = toTimestamp(a.expiresAt || null) || Number.MAX_SAFE_INTEGER;
+        const bExp = toTimestamp(b.expiresAt || null) || Number.MAX_SAFE_INTEGER;
+        return aExp - bExp;
+      }
+      if (couponsSort === "maior_desconto") {
+        const aScore = a.type === "percent" ? Number(a.percentOff || 0) * 100 : Number(a.amountOffCents || 0);
+        const bScore = b.type === "percent" ? Number(b.percentOff || 0) * 100 : Number(b.amountOffCents || 0);
+        return bScore - aScore;
+      }
+      return toTimestamp(b.createdAt || null) - toTimestamp(a.createdAt || null);
+    });
+    return nextRows;
+  }, [couponsRows, couponsSearch, couponsSort, couponsStatusFilter, couponsTypeFilter, couponsValidityFilter]);
+
+  const filteredAudit = useMemo(() => {
+    const query = normalizeTextForCompare(auditSearch);
+    const nextRows = [...auditRows].filter((log) => {
+      const matchesQuery = !query || normalizeTextForCompare([log.summary, log.actorEmail, log.action, log.entityType].join(" ")).includes(query);
+      if (!matchesQuery) return false;
+      if (auditEventFilter !== "todos" && normalizeAuditEventType(log.action) !== auditEventFilter) return false;
+      return matchesPeriod(log.createdAt, auditPeriodFilter);
+    });
+    nextRows.sort((a, b) => {
+      if (auditSort === "mais_antigo") return toTimestamp(a.createdAt) - toTimestamp(b.createdAt);
+      return toTimestamp(b.createdAt) - toTimestamp(a.createdAt);
+    });
+    return nextRows;
+  }, [auditEventFilter, auditPeriodFilter, auditRows, auditSearch, auditSort]);
+
+  const orderFilterConfigs: FilterConfig[] = [
+    {
+      key: "status_pedidos",
+      value: ordersStatusFilter,
+      onChange: setOrdersStatusFilter,
+      ariaLabel: "Filtrar pedidos por status",
+      options: [
+        { value: "todos", label: "Status: Todos" },
+        { value: "pendente", label: "Pendente" },
+        { value: "pago", label: "Pago" },
+        { value: "enviado", label: "Enviado" },
+        { value: "entregue", label: "Entregue" },
+        { value: "cancelado", label: "Cancelado" },
+        { value: "reembolsado", label: "Reembolsado" },
+      ],
+    },
+    {
+      key: "frete_pedidos",
+      value: ordersShippingFilter,
+      onChange: setOrdersShippingFilter,
+      ariaLabel: "Filtrar pedidos por frete",
+      options: [
+        { value: "todos", label: "Frete: Todos" },
+        { value: "sedex", label: "SEDEX" },
+        { value: "pac", label: "PAC" },
+        { value: "express_loggi", label: "Express — Loggi" },
+        { value: "transportadora", label: "Transportadora" },
+      ],
+    },
+    {
+      key: "periodo_pedidos",
+      value: ordersPeriodFilter,
+      onChange: setOrdersPeriodFilter,
+      ariaLabel: "Filtrar pedidos por periodo",
+      options: [
+        { value: "todos", label: "Período: Todos" },
+        { value: "hoje", label: "Hoje" },
+        { value: "esta_semana", label: "Esta semana" },
+        { value: "este_mes", label: "Este mês" },
+        { value: "ultimos_3_meses", label: "Últimos 3 meses" },
+      ],
+    },
+  ];
+
+  const orderSortOptions: SortOption[] = [
+    {
+      key: "ordenacao_pedidos",
+      value: ordersSort,
+      onChange: setOrdersSort,
+      ariaLabel: "Ordenar pedidos",
+      options: [
+        { value: "mais_recente", label: "Mais recente" },
+        { value: "mais_antigo", label: "Mais antigo" },
+        { value: "maior_valor", label: "Maior valor" },
+        { value: "menor_valor", label: "Menor valor" },
+      ],
+    },
+  ];
+
+  const productFilterConfigs: FilterConfig[] = [
+    {
+      key: "status_produtos",
+      value: productsStatusFilter,
+      onChange: setProductsStatusFilter,
+      options: [
+        { value: "todos", label: "Status: Todos" },
+        { value: "ativo", label: "Ativo" },
+        { value: "inativo", label: "Inativo" },
+      ],
+    },
+    {
+      key: "categoria_produtos",
+      value: productsCategoryFilter,
+      onChange: setProductsCategoryFilter,
+      options: [
+        { value: "todos", label: "Categoria: Todos" },
+        { value: "calcas", label: "Calças" },
+        { value: "blusas", label: "Blusas" },
+        { value: "bolsas", label: "Bolsas" },
+        { value: "cintos", label: "Cintos" },
+        { value: "carteiras", label: "Carteiras" },
+        { value: "jaquetas", label: "Jaquetas" },
+      ],
+    },
+    {
+      key: "genero_produtos",
+      value: productsGenderFilter,
+      onChange: setProductsGenderFilter,
+      options: [
+        { value: "todos", label: "Gênero: Todos" },
+        { value: "masculino", label: "Masculino" },
+        { value: "feminino", label: "Feminino" },
+        { value: "unissex", label: "Unissex" },
+      ],
+    },
+    {
+      key: "tamanho_produtos",
+      value: productsSizeFilter,
+      onChange: setProductsSizeFilter,
+      options: [
+        { value: "todos", label: "Tamanho: Todos" },
+        { value: "pp", label: "PP" },
+        { value: "p", label: "P" },
+        { value: "m", label: "M" },
+        { value: "g", label: "G" },
+        { value: "gg", label: "GG" },
+        { value: "xg", label: "XG" },
+        { value: "unico", label: "Único" },
+      ],
+    },
+    {
+      key: "estoque_produtos",
+      value: productsStockFilter,
+      onChange: setProductsStockFilter,
+      options: [
+        { value: "todos", label: "Estoque: Todos" },
+        { value: "em_estoque", label: "Em estoque" },
+        { value: "esgotado", label: "Esgotado" },
+      ],
+    },
+  ];
+
+  const productSortOptions: SortOption[] = [
+    {
+      key: "ordenacao_produtos",
+      value: productsSort,
+      onChange: setProductsSort,
+      options: [
+        { value: "nome_az", label: "Nome A–Z" },
+        { value: "nome_za", label: "Nome Z–A" },
+        { value: "maior_preco", label: "Maior preço" },
+        { value: "menor_preco", label: "Menor preço" },
+        { value: "mais_recente", label: "Mais recente" },
+      ],
+    },
+  ];
+
+  const userFilterConfigs: FilterConfig[] = [
+    {
+      key: "status_usuarios",
+      value: usersStatusFilter,
+      onChange: setUsersStatusFilter,
+      options: [
+        { value: "todos", label: "Status: Todos" },
+        { value: "active", label: "Ativo" },
+        { value: "suspended", label: "Suspenso" },
+      ],
+    },
+    {
+      key: "email_verificado_usuarios",
+      value: usersEmailFilter,
+      onChange: setUsersEmailFilter,
+      options: [
+        { value: "todos", label: "E-mail verificado: Todos" },
+        { value: "verificado", label: "Verificado" },
+        { value: "nao_verificado", label: "Não verificado" },
+      ],
+    },
+    {
+      key: "periodo_usuarios",
+      value: usersPeriodFilter,
+      onChange: setUsersPeriodFilter,
+      options: [
+        { value: "todos", label: "Período: Todos" },
+        { value: "esta_semana", label: "Esta semana" },
+        { value: "este_mes", label: "Este mês" },
+        { value: "ultimos_3_meses", label: "Últimos 3 meses" },
+      ],
+    },
+  ];
+
+  const userSortOptions: SortOption[] = [
+    {
+      key: "ordenacao_usuarios",
+      value: usersSort,
+      onChange: setUsersSort,
+      options: [
+        { value: "mais_recente", label: "Mais recente" },
+        { value: "mais_antigo", label: "Mais antigo" },
+        { value: "nome_az", label: "Nome A–Z" },
+        { value: "maior_total_gasto", label: "Maior total gasto" },
+      ],
+    },
+  ];
+
+  const couponFilterConfigs: FilterConfig[] = [
+    {
+      key: "status_cupons",
+      value: couponsStatusFilter,
+      onChange: setCouponsStatusFilter,
+      options: [
+        { value: "todos", label: "Status: Todos" },
+        { value: "ativo", label: "Ativo" },
+        { value: "inativo", label: "Inativo" },
+      ],
+    },
+    {
+      key: "tipo_cupons",
+      value: couponsTypeFilter,
+      onChange: setCouponsTypeFilter,
+      options: [
+        { value: "todos", label: "Tipo: Todos" },
+        { value: "percentual", label: "Percentual" },
+        { value: "valor_fixo", label: "Valor fixo" },
+      ],
+    },
+    {
+      key: "validade_cupons",
+      value: couponsValidityFilter,
+      onChange: setCouponsValidityFilter,
+      options: [
+        { value: "todos", label: "Validade: Todos" },
+        { value: "validos_agora", label: "Válidos agora" },
+        { value: "expirados", label: "Expirados" },
+        { value: "sem_data_definida", label: "Sem data definida" },
+      ],
+    },
+  ];
+
+  const couponSortOptions: SortOption[] = [
+    {
+      key: "ordenacao_cupons",
+      value: couponsSort,
+      onChange: setCouponsSort,
+      options: [
+        { value: "mais_recente", label: "Mais recente" },
+        { value: "expiracao_mais_proxima", label: "Expiração mais próxima" },
+        { value: "maior_desconto", label: "Maior desconto" },
+      ],
+    },
+  ];
+
+  const careFilterConfigs: FilterConfig[] = [
+    {
+      key: "status_atendimentos",
+      value: careStatusFilter,
+      onChange: setCareStatusFilter,
+      options: [
+        { value: "todos", label: "Status: Todos" },
+        { value: "aberto", label: "Aberto" },
+        { value: "em_andamento", label: "Em andamento" },
+        { value: "resolvido", label: "Resolvido" },
+        { value: "fechado", label: "Fechado" },
+      ],
+    },
+    {
+      key: "periodo_atendimentos",
+      value: carePeriodFilter,
+      onChange: setCarePeriodFilter,
+      options: [
+        { value: "todos", label: "Período: Todos" },
+        { value: "hoje", label: "Hoje" },
+        { value: "esta_semana", label: "Esta semana" },
+        { value: "este_mes", label: "Este mês" },
+      ],
+    },
+  ];
+
+  const careSortOptions: SortOption[] = [
+    {
+      key: "ordenacao_atendimentos",
+      value: careSort,
+      onChange: setCareSort,
+      options: [
+        { value: "mais_recente", label: "Mais recente" },
+        { value: "mais_antigo", label: "Mais antigo" },
+      ],
+    },
+  ];
+
+  const vipFilterConfigs: FilterConfig[] = [
+    {
+      key: "periodo_vip",
+      value: vipPeriodFilter,
+      onChange: setVipPeriodFilter,
+      options: [
+        { value: "todos", label: "Período: Todos" },
+        { value: "esta_semana", label: "Esta semana" },
+        { value: "este_mes", label: "Este mês" },
+        { value: "ultimos_3_meses", label: "Últimos 3 meses" },
+      ],
+    },
+  ];
+
+  const vipSortOptions: SortOption[] = [
+    {
+      key: "ordenacao_vip",
+      value: vipSort,
+      onChange: setVipSort,
+      options: [
+        { value: "mais_recente", label: "Mais recente" },
+        { value: "nome_az", label: "Nome A–Z" },
+        { value: "maior_total_gasto", label: "Maior total gasto" },
+      ],
+    },
+  ];
+
+  const newsletterFilterConfigs: FilterConfig[] = [
+    {
+      key: "periodo_newsletter",
+      value: newsletterPeriodFilter,
+      onChange: setNewsletterPeriodFilter,
+      options: [
+        { value: "todos", label: "Período: Todos" },
+        { value: "esta_semana", label: "Esta semana" },
+        { value: "este_mes", label: "Este mês" },
+        { value: "ultimos_3_meses", label: "Últimos 3 meses" },
+      ],
+    },
+  ];
+
+  const newsletterSortOptions: SortOption[] = [
+    {
+      key: "ordenacao_newsletter",
+      value: newsletterSort,
+      onChange: setNewsletterSort,
+      options: [
+        { value: "mais_recente", label: "Mais recente" },
+        { value: "nome_az", label: "Nome A–Z" },
+      ],
+    },
+  ];
+
+  const auditFilterConfigs: FilterConfig[] = [
+    {
+      key: "tipo_evento_auditoria",
+      value: auditEventFilter,
+      onChange: setAuditEventFilter,
+      options: [
+        { value: "todos", label: "Tipo de evento: Todos" },
+        { value: "login", label: "Login" },
+        { value: "logout", label: "Logout" },
+        { value: "criacao", label: "Criação" },
+        { value: "edicao", label: "Edição" },
+        { value: "exclusao", label: "Exclusão" },
+        { value: "erro", label: "Erro" },
+      ],
+    },
+    {
+      key: "periodo_auditoria",
+      value: auditPeriodFilter,
+      onChange: setAuditPeriodFilter,
+      options: [
+        { value: "todos", label: "Período: Todos" },
+        { value: "hoje", label: "Hoje" },
+        { value: "esta_semana", label: "Esta semana" },
+        { value: "este_mes", label: "Este mês" },
+      ],
+    },
+  ];
+
+  const auditSortOptions: SortOption[] = [
+    {
+      key: "ordenacao_auditoria",
+      value: auditSort,
+      onChange: setAuditSort,
+      options: [
+        { value: "mais_recente", label: "Mais recente" },
+        { value: "mais_antigo", label: "Mais antigo" },
+      ],
+    },
+  ];
+
+  function resetOrdersSearch() {
+    setOrdersSearch("");
+    setOrdersStatusFilter("todos");
+    setOrdersShippingFilter("todos");
+    setOrdersPeriodFilter("todos");
+    setOrdersSort("mais_recente");
+  }
+
+  function resetProductsSearch() {
+    setProductsSearch("");
+    setProductsStatusFilter("todos");
+    setProductsCategoryFilter("todos");
+    setProductsGenderFilter("todos");
+    setProductsSizeFilter("todos");
+    setProductsStockFilter("todos");
+    setProductsSort("nome_az");
+  }
+
+  function resetUsersSearch() {
+    setUsersSearch("");
+    setUsersStatusFilter("todos");
+    setUsersEmailFilter("todos");
+    setUsersPeriodFilter("todos");
+    setUsersSort("mais_recente");
+  }
+
+  function resetCouponsSearch() {
+    setCouponsSearch("");
+    setCouponsStatusFilter("todos");
+    setCouponsTypeFilter("todos");
+    setCouponsValidityFilter("todos");
+    setCouponsSort("mais_recente");
+  }
+
+  function resetCareSearch() {
+    setCareSearch("");
+    setCareStatusFilter("todos");
+    setCarePeriodFilter("todos");
+    setCareSort("mais_recente");
+  }
+
+  function resetVipSearch() {
+    setVipSearch("");
+    setVipPeriodFilter("todos");
+    setVipSort("mais_recente");
+  }
+
+  function resetNewsletterSearch() {
+    setNewsletterSearch("");
+    setNewsletterPeriodFilter("todos");
+    setNewsletterSort("mais_recente");
+  }
+
+  function resetAuditSearch() {
+    setAuditSearch("");
+    setAuditEventFilter("todos");
+    setAuditPeriodFilter("todos");
+    setAuditSort("mais_recente");
+  }
+
+  function buildNoResultsText(searchTerm: string): string {
+    const normalized = String(searchTerm || "").trim();
+    if (!normalized) return "Nenhum resultado encontrado.";
+    return `Nenhum resultado encontrado para '${normalized}'.`;
+  }
+
+  useEffect(() => {
+    if (!globalSearchTarget) return;
+    if (globalSearchTarget.page !== page) return;
+
+    if (globalSearchTarget.kind === "order") {
+      const order = ordersRows.find((row) => String(row.id || "") === globalSearchTarget.id);
+      if (order) {
+        openOrderDrawer(order);
+        onGlobalSearchTargetHandled?.();
+      }
+      return;
+    }
+
+    if (globalSearchTarget.kind === "product") {
+      const product = productsRows.find((row) => {
+        const key = getProductKey(row);
+        return key === globalSearchTarget.id || String(row.sku || "") === globalSearchTarget.id;
+      });
+      if (product) {
+        openProductDrawer(product);
+        onGlobalSearchTargetHandled?.();
+      }
+      return;
+    }
+
+    if (globalSearchTarget.kind === "user") {
+      const user = usersRows.find((row) => String(row.id || "") === globalSearchTarget.id);
+      if (user) {
+        openUserDrawer(user);
+        onGlobalSearchTargetHandled?.();
+      }
+      return;
+    }
+
+    if (globalSearchTarget.kind === "coupon") {
+      const coupon = couponsRows.find((row) => String(row.code || "") === globalSearchTarget.id);
+      if (coupon) {
+        openCouponDrawer(coupon);
+        onGlobalSearchTargetHandled?.();
+      }
+    }
+  }, [
+    couponsRows,
+    globalSearchTarget,
+    onGlobalSearchTargetHandled,
+    ordersRows,
+    page,
+    productsRows,
+    usersRows,
+  ]);
 
   const handleUserRowUpdated = (nextUser: AdminUserRow) => {
     setUsersRows((current) => current.map((row) => (row.id === nextUser.id ? { ...row, ...nextUser } : row)));
@@ -434,308 +1302,420 @@ export function ConnectedPage({ page, data, loading, errorMessage, onRequestRefr
       {loading ? <p className={styles.loading}>Carregando dados reais...</p> : null}
 
       {page === "pedidos" ? (
-        <div className={styles.tableWrap}>
-          <table className={styles.table}>
-            <thead>
-              <tr>
-                <th>Pedido</th>
-                <th>Cliente</th>
-                <th>Status</th>
-                <th>Total</th>
-                <th>Criado em</th>
-                <th></th>
-              </tr>
-            </thead>
-            <tbody>
-              {ordersRows.slice(0, 200).map((order) => (
-                <tr key={order.id}>
-                  <td>{pickOrderId(order)}</td>
-                  <td>{order.userName || order.userEmail || "-"}</td>
-                  <td>{formatOrderStatus(order)}</td>
-                  <td>{formatMoneyCents(order.amount, order.currency)}</td>
-                  <td>{formatDateTime(order.createdAt)}</td>
-                  <td className={styles.actionCell}>
-                    <button className={styles.btnEdit} onClick={() => openOrderDrawer(order)}>
-                      <PencilLine size={12} /> Editar
-                    </button>
-                  </td>
-                </tr>
-              ))}
-              {!ordersRows.length ? renderEmpty(6, "Nenhum pedido encontrado.") : null}
-            </tbody>
-          </table>
-        </div>
+        <>
+          <SearchBar
+            placeholder="Buscar por pedido, cliente, e-mail, telefone, CPF ou produto"
+            value={ordersSearch}
+            onChange={setOrdersSearch}
+            filters={orderFilterConfigs}
+            sortOptions={orderSortOptions}
+            resultsCount={filteredOrders.length}
+            onClear={resetOrdersSearch}
+          />
+          {filteredOrders.length ? (
+            <div className={styles.tableWrap}>
+              <table className={styles.table}>
+                <thead>
+                  <tr>
+                    <th>Pedido</th>
+                    <th>Cliente</th>
+                    <th>Status</th>
+                    <th>Total</th>
+                    <th>Criado em</th>
+                    <th></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredOrders.slice(0, 200).map((order) => (
+                    <tr key={order.id}>
+                      <td>{pickOrderId(order)}</td>
+                      <td>{order.userName || order.userEmail || "-"}</td>
+                      <td>{formatOrderStatus(order)}</td>
+                      <td>{formatMoneyCents(order.amount, order.currency)}</td>
+                      <td>{formatDateTime(order.createdAt)}</td>
+                      <td className={styles.actionCell}>
+                        <button className={styles.btnEdit} onClick={() => openOrderDrawer(order)}>
+                          <PencilLine size={12} /> Editar
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <p className={styles.noResults}>{buildNoResultsText(ordersSearch)}</p>
+          )}
+        </>
       ) : null}
 
       {page === "produtos" ? (
-        <div className={styles.tableWrap}>
-          <table className={styles.table}>
-            <thead>
-              <tr>
-                <th>SKU</th>
-                <th>Produto</th>
-                <th>Preco</th>
-                <th>Estoque</th>
-                <th>Status</th>
-                <th></th>
-              </tr>
-            </thead>
-            <tbody>
-              {productsRows.slice(0, 200).map((product) => (
-                <tr key={product.dbId || product.id || product.sku}>
-                  <td>{product.sku || "-"}</td>
-                  <td>{product.name || "-"}</td>
-                  <td>{formatMoneyCents(product.unitAmount, product.currency)}</td>
-                  <td>{Number(product.stock || 0)}</td>
-                  <td>{product.active ? "active" : "inactive"}</td>
-                  <td className={styles.actionCell}>
-                    <button className={styles.btnEdit} onClick={() => openProductDrawer(product)}>
-                      <PencilLine size={12} /> Editar
-                    </button>
-                  </td>
-                </tr>
-              ))}
-              {!productsRows.length ? renderEmpty(6, "Nenhum produto encontrado.") : null}
-            </tbody>
-          </table>
-        </div>
+        <>
+          <SearchBar
+            placeholder="Buscar por SKU, nome, categoria, coleção ou cor"
+            value={productsSearch}
+            onChange={setProductsSearch}
+            filters={productFilterConfigs}
+            sortOptions={productSortOptions}
+            resultsCount={filteredProducts.length}
+            onClear={resetProductsSearch}
+          />
+          {filteredProducts.length ? (
+            <div className={styles.tableWrap}>
+              <table className={styles.table}>
+                <thead>
+                  <tr>
+                    <th>SKU</th>
+                    <th>Produto</th>
+                    <th>Preco</th>
+                    <th>Estoque</th>
+                    <th>Status</th>
+                    <th></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredProducts.slice(0, 200).map((product) => (
+                    <tr key={product.dbId || product.id || product.sku}>
+                      <td>{product.sku || "-"}</td>
+                      <td>{product.name || "-"}</td>
+                      <td>{formatMoneyCents(product.unitAmount, product.currency)}</td>
+                      <td>{Number(product.stock || 0)}</td>
+                      <td>{product.active ? "active" : "inactive"}</td>
+                      <td className={styles.actionCell}>
+                        <button className={styles.btnEdit} onClick={() => openProductDrawer(product)}>
+                          <PencilLine size={12} /> Editar
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <p className={styles.noResults}>{buildNoResultsText(productsSearch)}</p>
+          )}
+        </>
       ) : null}
 
       {page === "usuarios" ? (
-        <div className={styles.tableWrap}>
-          <table className={styles.table}>
-            <thead>
-              <tr>
-                <th>Usuario</th>
-                <th>Email</th>
-                <th>Status</th>
-                <th>Ultimo login</th>
-                <th>Criado em</th>
-                <th></th>
-              </tr>
-            </thead>
-            <tbody>
-              {usersRows.slice(0, 200).map((user) => (
-                <tr key={user.id}>
-                  <td>{user.name || "-"}</td>
-                  <td>{user.email || "-"}</td>
-                  <td>{normalizeUserStatus(user.status)}</td>
-                  <td>{formatDateTime(user.lastLoginAt)}</td>
-                  <td>{formatDateTime(user.createdAt)}</td>
-                  <td className={styles.actionCell}>
-                    <button className={styles.btnDetalhes} onClick={() => openUserDrawer(user)}>
-                      Detalhes
-                    </button>
-                  </td>
-                </tr>
-              ))}
-              {!usersRows.length ? renderEmpty(6, "Nenhum usuario encontrado.") : null}
-            </tbody>
-          </table>
-        </div>
+        <>
+          <SearchBar
+            placeholder="Buscar por nome, e-mail, CPF, telefone ou CEP"
+            value={usersSearch}
+            onChange={setUsersSearch}
+            filters={userFilterConfigs}
+            sortOptions={userSortOptions}
+            resultsCount={filteredUsers.length}
+            onClear={resetUsersSearch}
+          />
+          {filteredUsers.length ? (
+            <div className={styles.tableWrap}>
+              <table className={styles.table}>
+                <thead>
+                  <tr>
+                    <th>Usuario</th>
+                    <th>Email</th>
+                    <th>Status</th>
+                    <th>Ultimo login</th>
+                    <th>Criado em</th>
+                    <th></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredUsers.slice(0, 200).map((user) => (
+                    <tr key={user.id}>
+                      <td>{user.name || "-"}</td>
+                      <td>{user.email || "-"}</td>
+                      <td>{normalizeUserStatus(user.status)}</td>
+                      <td>{formatDateTime(user.lastLoginAt)}</td>
+                      <td>{formatDateTime(user.createdAt)}</td>
+                      <td className={styles.actionCell}>
+                        <button className={styles.btnDetalhes} onClick={() => openUserDrawer(user)}>
+                          Detalhes
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <p className={styles.noResults}>{buildNoResultsText(usersSearch)}</p>
+          )}
+        </>
       ) : null}
 
       {page === "atendimentos" ? (
-        <div className={styles.tableWrap}>
-          <table className={styles.table}>
-            <thead>
-              <tr>
-                <th>Cliente</th>
-                <th>Assunto</th>
-                <th>Status</th>
-                <th>Canal</th>
-                <th>Criado em</th>
-                <th></th>
-              </tr>
-            </thead>
-            <tbody>
-              {privateCareRows.slice(0, 200).map((care) => (
-                <tr key={care.id}>
-                  <td>{care.userName || care.userEmail || "-"}</td>
-                  <td>{care.subject || "-"}</td>
-                  <td>{care.status || "-"}</td>
-                  <td>{care.channel || "-"}</td>
-                  <td>{formatDateTime(care.createdAt)}</td>
-                  <td className={styles.actionCell}>
-                    <button
-                      className={styles.btnDelete}
-                      onClick={() =>
-                        openDeleteConfirm({
-                          kind: "attendance",
-                          id: String(care.id || ""),
-                          label: String(care.userName || care.userEmail || "cliente"),
-                        })
-                      }
-                    >
-                      <Trash2 size={12} /> Excluir
-                    </button>
-                  </td>
-                </tr>
-              ))}
-              {!privateCareRows.length ? renderEmpty(6, "Nenhum atendimento encontrado.") : null}
-            </tbody>
-          </table>
-        </div>
+        <>
+          <SearchBar
+            placeholder="Buscar por cliente, e-mail ou assunto"
+            value={careSearch}
+            onChange={setCareSearch}
+            filters={careFilterConfigs}
+            sortOptions={careSortOptions}
+            resultsCount={filteredPrivateCare.length}
+            onClear={resetCareSearch}
+          />
+          {filteredPrivateCare.length ? (
+            <div className={styles.tableWrap}>
+              <table className={styles.table}>
+                <thead>
+                  <tr>
+                    <th>Cliente</th>
+                    <th>Assunto</th>
+                    <th>Status</th>
+                    <th>Canal</th>
+                    <th>Criado em</th>
+                    <th></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredPrivateCare.slice(0, 200).map((care) => (
+                    <tr key={care.id}>
+                      <td>{care.userName || care.userEmail || "-"}</td>
+                      <td>{care.subject || "-"}</td>
+                      <td>{care.status || "-"}</td>
+                      <td>{care.channel || "-"}</td>
+                      <td>{formatDateTime(care.createdAt)}</td>
+                      <td className={styles.actionCell}>
+                        <button
+                          className={styles.btnDelete}
+                          onClick={() =>
+                            openDeleteConfirm({
+                              kind: "attendance",
+                              id: String(care.id || ""),
+                              label: String(care.userName || care.userEmail || "cliente"),
+                            })
+                          }
+                        >
+                          <Trash2 size={12} /> Excluir
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <p className={styles.noResults}>{buildNoResultsText(careSearch)}</p>
+          )}
+        </>
       ) : null}
 
       {page === "lista_vip" ? (
-        <div className={styles.tableWrap}>
-          <table className={styles.table}>
-            <thead>
-              <tr>
-                <th>Nome</th>
-                <th>Email</th>
-                <th>Telefone</th>
-                <th>Origem</th>
-                <th>Inscrito em</th>
-                <th></th>
-              </tr>
-            </thead>
-            <tbody>
-              {vipRows.slice(0, 200).map((entry) => (
-                <tr key={entry.id}>
-                  <td>{entry.name || "-"}</td>
-                  <td>{entry.email || "-"}</td>
-                  <td>{entry.phone || "-"}</td>
-                  <td>{entry.source || "-"}</td>
-                  <td>{formatDateTime(entry.subscribedAt)}</td>
-                  <td className={styles.actionCell}>
-                    <button
-                      className={styles.btnDelete}
-                      onClick={() =>
-                        openDeleteConfirm({
-                          kind: "vip",
-                          id: String(entry.id),
-                          label: String(entry.name || entry.email || "inscrito"),
-                        })
-                      }
-                    >
-                      <Trash2 size={12} /> Excluir
-                    </button>
-                  </td>
-                </tr>
-              ))}
-              {!vipRows.length ? renderEmpty(6, "Nenhum inscrito VIP encontrado.") : null}
-            </tbody>
-          </table>
-        </div>
+        <>
+          <SearchBar
+            placeholder="Buscar por nome, e-mail ou telefone"
+            value={vipSearch}
+            onChange={setVipSearch}
+            filters={vipFilterConfigs}
+            sortOptions={vipSortOptions}
+            resultsCount={filteredVip.length}
+            onClear={resetVipSearch}
+          />
+          {filteredVip.length ? (
+            <div className={styles.tableWrap}>
+              <table className={styles.table}>
+                <thead>
+                  <tr>
+                    <th>Nome</th>
+                    <th>Email</th>
+                    <th>Telefone</th>
+                    <th>Origem</th>
+                    <th>Inscrito em</th>
+                    <th></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredVip.slice(0, 200).map((entry) => (
+                    <tr key={entry.id}>
+                      <td>{entry.name || "-"}</td>
+                      <td>{entry.email || "-"}</td>
+                      <td>{entry.phone || "-"}</td>
+                      <td>{entry.source || "-"}</td>
+                      <td>{formatDateTime(entry.subscribedAt)}</td>
+                      <td className={styles.actionCell}>
+                        <button
+                          className={styles.btnDelete}
+                          onClick={() =>
+                            openDeleteConfirm({
+                              kind: "vip",
+                              id: String(entry.id),
+                              label: String(entry.name || entry.email || "inscrito"),
+                            })
+                          }
+                        >
+                          <Trash2 size={12} /> Excluir
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <p className={styles.noResults}>{buildNoResultsText(vipSearch)}</p>
+          )}
+        </>
       ) : null}
 
       {page === "newsletter" ? (
-        <div className={styles.tableWrap}>
-          <table className={styles.table}>
-            <thead>
-              <tr>
-                <th>Email</th>
-                <th>Telefone</th>
-                <th>Status</th>
-                <th>Origem</th>
-                <th>Inscrito em</th>
-                <th></th>
-              </tr>
-            </thead>
-            <tbody>
-              {newsletterRows.slice(0, 200).map((entry) => (
-                <tr key={entry.id}>
-                  <td>{entry.email || "-"}</td>
-                  <td>{entry.phone || "-"}</td>
-                  <td>{entry.status || "-"}</td>
-                  <td>{entry.source || "-"}</td>
-                  <td>{formatDateTime(entry.subscribedAt)}</td>
-                  <td className={styles.actionCell}>
-                    <button
-                      className={styles.btnDelete}
-                      onClick={() =>
-                        openDeleteConfirm({
-                          kind: "newsletter",
-                          id: String(entry.id || ""),
-                          label: String(entry.email || "inscrito"),
-                        })
-                      }
-                    >
-                      <Trash2 size={12} /> Excluir
-                    </button>
-                  </td>
-                </tr>
-              ))}
-              {!newsletterRows.length ? renderEmpty(6, "Nenhum inscrito de newsletter encontrado.") : null}
-            </tbody>
-          </table>
-        </div>
+        <>
+          <SearchBar
+            placeholder="Buscar por nome ou e-mail"
+            value={newsletterSearch}
+            onChange={setNewsletterSearch}
+            filters={newsletterFilterConfigs}
+            sortOptions={newsletterSortOptions}
+            resultsCount={filteredNewsletter.length}
+            onClear={resetNewsletterSearch}
+          />
+          {filteredNewsletter.length ? (
+            <div className={styles.tableWrap}>
+              <table className={styles.table}>
+                <thead>
+                  <tr>
+                    <th>Email</th>
+                    <th>Telefone</th>
+                    <th>Status</th>
+                    <th>Origem</th>
+                    <th>Inscrito em</th>
+                    <th></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredNewsletter.slice(0, 200).map((entry) => (
+                    <tr key={entry.id}>
+                      <td>{entry.email || "-"}</td>
+                      <td>{entry.phone || "-"}</td>
+                      <td>{entry.status || "-"}</td>
+                      <td>{entry.source || "-"}</td>
+                      <td>{formatDateTime(entry.subscribedAt)}</td>
+                      <td className={styles.actionCell}>
+                        <button
+                          className={styles.btnDelete}
+                          onClick={() =>
+                            openDeleteConfirm({
+                              kind: "newsletter",
+                              id: String(entry.id || ""),
+                              label: String(entry.email || "inscrito"),
+                            })
+                          }
+                        >
+                          <Trash2 size={12} /> Excluir
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <p className={styles.noResults}>{buildNoResultsText(newsletterSearch)}</p>
+          )}
+        </>
       ) : null}
 
       {page === "cupons" ? (
-        <div className={styles.tableWrap}>
-          <table className={styles.table}>
-            <thead>
-              <tr>
-                <th>Codigo</th>
-                <th>Tipo</th>
-                <th>Regra</th>
-                <th>Ativo</th>
-                <th>Expira em</th>
-                <th></th>
-              </tr>
-            </thead>
-            <tbody>
-              {couponsRows.slice(0, 200).map((coupon) => (
-                <tr key={coupon.code}>
-                  <td>{coupon.code || "-"}</td>
-                  <td>{coupon.type || "-"}</td>
-                  <td>{formatCouponRule(coupon)}</td>
-                  <td>{coupon.active ? "sim" : "nao"}</td>
-                  <td>{formatDateTime(coupon.expiresAt || null)}</td>
-                  <td className={styles.actionCell}>
-                    <button className={styles.btnEdit} onClick={() => openCouponDrawer(coupon)}>
-                      <PencilLine size={12} /> Editar
-                    </button>
-                    <button
-                      className={styles.btnDelete}
-                      onClick={() =>
-                        openDeleteConfirm({
-                          kind: "coupon",
-                          id: String(coupon.code || ""),
-                          label: String(coupon.code || "cupom"),
-                        })
-                      }
-                    >
-                      <Trash2 size={12} /> Excluir
-                    </button>
-                  </td>
-                </tr>
-              ))}
-              {!couponsRows.length ? renderEmpty(6, "Nenhum cupom encontrado.") : null}
-            </tbody>
-          </table>
-        </div>
+        <>
+          <SearchBar
+            placeholder="Buscar por codigo ou descricao"
+            value={couponsSearch}
+            onChange={setCouponsSearch}
+            filters={couponFilterConfigs}
+            sortOptions={couponSortOptions}
+            resultsCount={filteredCoupons.length}
+            onClear={resetCouponsSearch}
+          />
+          {filteredCoupons.length ? (
+            <div className={styles.tableWrap}>
+              <table className={styles.table}>
+                <thead>
+                  <tr>
+                    <th>Codigo</th>
+                    <th>Tipo</th>
+                    <th>Regra</th>
+                    <th>Ativo</th>
+                    <th>Expira em</th>
+                    <th></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredCoupons.slice(0, 200).map((coupon) => (
+                    <tr key={coupon.code}>
+                      <td>{coupon.code || "-"}</td>
+                      <td>{coupon.type || "-"}</td>
+                      <td>{formatCouponRule(coupon)}</td>
+                      <td>{coupon.active ? "sim" : "nao"}</td>
+                      <td>{formatDateTime(coupon.expiresAt || null)}</td>
+                      <td className={styles.actionCell}>
+                        <button className={styles.btnEdit} onClick={() => openCouponDrawer(coupon)}>
+                          <PencilLine size={12} /> Editar
+                        </button>
+                        <button
+                          className={styles.btnDelete}
+                          onClick={() =>
+                            openDeleteConfirm({
+                              kind: "coupon",
+                              id: String(coupon.code || ""),
+                              label: String(coupon.code || "cupom"),
+                            })
+                          }
+                        >
+                          <Trash2 size={12} /> Excluir
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <p className={styles.noResults}>{buildNoResultsText(couponsSearch)}</p>
+          )}
+        </>
       ) : null}
 
       {page === "auditoria" ? (
-        <div className={styles.tableWrap}>
-          <table className={styles.table}>
-            <thead>
-              <tr>
-                <th>Acao</th>
-                <th>Entidade</th>
-                <th>Resumo</th>
-                <th>Ator</th>
-                <th>Data</th>
-              </tr>
-            </thead>
-            <tbody>
-              {data.audit.slice(0, 200).map((log) => (
-                <tr key={log.id}>
-                  <td>{log.action || "-"}</td>
-                  <td>{log.entityType || "-"}</td>
-                  <td>{log.summary || "-"}</td>
-                  <td>{log.actorEmail || "-"}</td>
-                  <td>{formatDateTime(log.createdAt)}</td>
-                </tr>
-              ))}
-              {!data.audit.length ? renderEmpty(5, "Nenhum log de auditoria encontrado.") : null}
-            </tbody>
-          </table>
-        </div>
+        <>
+          <SearchBar
+            placeholder="Buscar por descricao, usuario ou tipo de evento"
+            value={auditSearch}
+            onChange={setAuditSearch}
+            filters={auditFilterConfigs}
+            sortOptions={auditSortOptions}
+            resultsCount={filteredAudit.length}
+            onClear={resetAuditSearch}
+          />
+          {filteredAudit.length ? (
+            <div className={styles.tableWrap}>
+              <table className={styles.table}>
+                <thead>
+                  <tr>
+                    <th>Acao</th>
+                    <th>Entidade</th>
+                    <th>Resumo</th>
+                    <th>Ator</th>
+                    <th>Data</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredAudit.slice(0, 200).map((log) => (
+                    <tr key={log.id}>
+                      <td>{log.action || "-"}</td>
+                      <td>{log.entityType || "-"}</td>
+                      <td>{log.summary || "-"}</td>
+                      <td>{log.actorEmail || "-"}</td>
+                      <td>{formatDateTime(log.createdAt)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <p className={styles.noResults}>{buildNoResultsText(auditSearch)}</p>
+          )}
+        </>
       ) : null}
 
       {page === "usuarios" ? (

@@ -1,7 +1,8 @@
 ﻿"use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import { Search } from "lucide-react";
 import { HttpError } from "@/lib/http";
 import {
   listAuditLogsAdmin,
@@ -27,7 +28,7 @@ import { Toast } from "@/components/admin/Toast";
 import { PAGE_TITLES } from "./data";
 import { Sidebar } from "./Sidebar";
 import { Topbar } from "./Topbar";
-import type { ActivityItem, AdminPageKey, KpiData, RecentOrder } from "./types";
+import type { ActivityItem, AdminPageKey, GlobalSearchTarget, KpiData, RecentOrder } from "./types";
 import { InicioPage } from "./pages/InicioPage";
 import { ConnectedPage, type ConnectedPanelData } from "./pages/ConnectedPage";
 import styles from "./StudioAdminPanel.module.css";
@@ -225,6 +226,34 @@ function buildActivityItems(data: ConnectedPanelData): ActivityItem[] {
   }));
 }
 
+type GlobalSearchResult = {
+  id: string;
+  title: string;
+  subtitle: string;
+  meta: string;
+  target: GlobalSearchTarget;
+};
+
+type GlobalSearchGroup = {
+  label: "PEDIDOS" | "PRODUTOS" | "USUÁRIOS" | "CUPONS";
+  items: GlobalSearchResult[];
+};
+
+function normalizeSearchValue(value: unknown): string {
+  return String(value || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .trim()
+    .toLowerCase();
+}
+
+function matchesSearch(value: string, ...fields: unknown[]): boolean {
+  const normalizedQuery = normalizeSearchValue(value);
+  if (!normalizedQuery) return false;
+  const haystack = fields.map((field) => normalizeSearchValue(field)).join(" ");
+  return haystack.includes(normalizedQuery);
+}
+
 const OPEN_ORDER_STATUSES = new Set([
   "pending",
   "pending_payment",
@@ -275,7 +304,11 @@ export function StudioAdminPanel() {
   const [activeDrawer, setActiveDrawer] = useState<string | null>(null);
   const [toastMessage, setToastMessage] = useState("");
   const [toastVisible, setToastVisible] = useState(false);
+  const [isGlobalSearchOpen, setIsGlobalSearchOpen] = useState(false);
+  const [globalSearchQuery, setGlobalSearchQuery] = useState("");
+  const [globalSearchTarget, setGlobalSearchTarget] = useState<GlobalSearchTarget | null>(null);
   const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const globalSearchInputRef = useRef<HTMLInputElement | null>(null);
 
   const openDrawer = (name: string) => setActiveDrawer(name);
   const closeDrawer = () => setActiveDrawer(null);
@@ -287,6 +320,31 @@ export function StudioAdminPanel() {
   useEffect(() => {
     setActiveDrawer(null);
   }, [activePage]);
+
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      const isShortcut = (event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "k";
+      if (isShortcut) {
+        event.preventDefault();
+        setIsGlobalSearchOpen(true);
+        return;
+      }
+      if (event.key === "Escape") {
+        setIsGlobalSearchOpen(false);
+      }
+    };
+
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, []);
+
+  useEffect(() => {
+    if (!isGlobalSearchOpen) return;
+    const timer = window.setTimeout(() => {
+      globalSearchInputRef.current?.focus();
+    }, 0);
+    return () => window.clearTimeout(timer);
+  }, [isGlobalSearchOpen]);
 
   function showToast(message: string) {
     setToastMessage(message);
@@ -441,10 +499,82 @@ export function StudioAdminPanel() {
   const kpis = useMemo(() => buildDashboardKpis(connectedData), [connectedData]);
   const recentOrders = useMemo(() => buildRecentOrders(connectedData), [connectedData]);
   const activity = useMemo(() => buildActivityItems(connectedData), [connectedData]);
+  const globalSearchGroups = useMemo<GlobalSearchGroup[]>(() => {
+    const query = String(globalSearchQuery || "").trim();
+    if (query.length < 2) return [];
+
+    const orders = connectedData.orders
+      .filter((order) =>
+        matchesSearch(
+          query,
+          order.id,
+          order.userName,
+          order.userEmail,
+          order.shippingSelectedService,
+          order.shippingSelectedCarrierName,
+          order.carrier
+        )
+      )
+      .sort((a, b) => String(b.createdAt || "").localeCompare(String(a.createdAt || "")))
+      .slice(0, 3)
+      .map<GlobalSearchResult>((order) => ({
+        id: `order-${order.id}`,
+        title: toRecentOrderLabel(order),
+        subtitle: order.userName || order.userEmail || "Cliente",
+        meta: formatCurrency(order.amount, order.currency, 0),
+        target: { page: "pedidos", kind: "order", id: String(order.id || "") },
+      }));
+
+    const products = connectedData.products
+      .filter((product) =>
+        matchesSearch(query, product.sku, product.name, product.category, product.collection, product.gender)
+      )
+      .sort((a, b) => String(a.name || "").localeCompare(String(b.name || "")))
+      .slice(0, 3)
+      .map<GlobalSearchResult>((product) => ({
+        id: `product-${String(product.dbId || product.id || product.sku)}`,
+        title: product.name || "-",
+        subtitle: product.sku || "-",
+        meta: formatCurrency(product.unitAmount, product.currency, 0),
+        target: { page: "produtos", kind: "product", id: String(product.dbId || product.id || product.sku || "") },
+      }));
+
+    const users = connectedData.users
+      .filter((user) => matchesSearch(query, user.name, user.email, user.cpf, user.phone))
+      .sort((a, b) => String(a.name || "").localeCompare(String(b.name || "")))
+      .slice(0, 3)
+      .map<GlobalSearchResult>((user) => ({
+        id: `user-${user.id}`,
+        title: user.name || "-",
+        subtitle: user.email || "-",
+        meta: user.phone || "-",
+        target: { page: "usuarios", kind: "user", id: String(user.id || "") },
+      }));
+
+    const coupons = connectedData.coupons
+      .filter((coupon) => matchesSearch(query, coupon.code, coupon.description))
+      .sort((a, b) => String(b.createdAt || "").localeCompare(String(a.createdAt || "")))
+      .slice(0, 3)
+      .map<GlobalSearchResult>((coupon) => ({
+        id: `coupon-${coupon.code}`,
+        title: coupon.code || "-",
+        subtitle: coupon.description || "Cupom",
+        meta: coupon.active ? "Ativo" : "Inativo",
+        target: { page: "cupons", kind: "coupon", id: String(coupon.code || "") },
+      }));
+
+    const groups: GlobalSearchGroup[] = [];
+    if (orders.length > 0) groups.push({ label: "PEDIDOS", items: orders });
+    if (products.length > 0) groups.push({ label: "PRODUTOS", items: products });
+    if (users.length > 0) groups.push({ label: "USUÁRIOS", items: users });
+    if (coupons.length > 0) groups.push({ label: "CUPONS", items: coupons });
+    return groups;
+  }, [connectedData, globalSearchQuery]);
 
   const topbarConfig = TOPBAR_BUTTONS[activePage];
   const pageTitle = PAGE_TITLES[activePage];
   const topbarActionLabel = topbarConfig.label;
+  const hasGlobalSearchResults = globalSearchGroups.some((group) => group.items.length > 0);
 
   const handleTopbarButton = () => {
     if (activePage === "inicio") {
@@ -453,6 +583,17 @@ export function StudioAdminPanel() {
     }
     openDrawer(activePage);
   };
+
+  function handleGlobalSearchSelect(target: GlobalSearchTarget) {
+    setIsGlobalSearchOpen(false);
+    setGlobalSearchQuery("");
+    setActivePage(target.page);
+    setGlobalSearchTarget(target);
+  }
+
+  const handleGlobalSearchTargetHandled = useCallback(() => {
+    setGlobalSearchTarget(null);
+  }, []);
 
   function handleSaved(shouldReload: boolean) {
     if (shouldReload) {
@@ -486,7 +627,12 @@ export function StudioAdminPanel() {
           background: "#f7f7f7",
         }}
       >
-        <Topbar title={pageTitle} actionLabel={topbarActionLabel} onAction={handleTopbarButton} />
+        <Topbar
+          title={pageTitle}
+          actionLabel={topbarActionLabel}
+          onAction={handleTopbarButton}
+          onOpenGlobalSearch={() => setIsGlobalSearchOpen(true)}
+        />
 
         <section
           className={styles.content}
@@ -512,10 +658,62 @@ export function StudioAdminPanel() {
               loading={isLoading}
               errorMessage={errorMessage}
               onRequestRefresh={() => setRefreshIndex((current) => current + 1)}
+              globalSearchTarget={globalSearchTarget}
+              onGlobalSearchTargetHandled={handleGlobalSearchTargetHandled}
             />
           )}
         </section>
       </main>
+
+      {isGlobalSearchOpen ? (
+        <>
+          <button
+            type="button"
+            className={styles.globalSearchBackdrop}
+            aria-label="Fechar pesquisa global"
+            onClick={() => setIsGlobalSearchOpen(false)}
+          />
+          <div className={styles.globalSearchModal}>
+            <div className={styles.globalSearchInputWrap}>
+              <Search size={14} className={styles.globalSearchIcon} aria-hidden="true" />
+              <input
+                ref={globalSearchInputRef}
+                className={styles.globalSearchInput}
+                type="text"
+                placeholder="Pesquisar em tudo..."
+                value={globalSearchQuery}
+                onChange={(event) => setGlobalSearchQuery(event.target.value)}
+              />
+            </div>
+
+            {String(globalSearchQuery || "").trim().length < 2 ? (
+              <p className={styles.globalSearchEmpty}>Digite pelo menos 2 caracteres para pesquisar.</p>
+            ) : hasGlobalSearchResults ? (
+              globalSearchGroups.map((group) => (
+                <section key={group.label} className={styles.resultGroup}>
+                  <p className={styles.resultGroupLabel}>{group.label}</p>
+                  {group.items.map((item) => (
+                    <button
+                      key={item.id}
+                      type="button"
+                      className={styles.resultItem}
+                      onClick={() => handleGlobalSearchSelect(item.target)}
+                    >
+                      <span>
+                        <strong className={styles.resultItemMain}>{item.title}</strong>
+                        <small className={styles.resultItemSub}>{item.subtitle}</small>
+                      </span>
+                      <span className={styles.resultItemMeta}>{item.meta}</span>
+                    </button>
+                  ))}
+                </section>
+              ))
+            ) : (
+              <p className={styles.globalSearchEmpty}>Nenhum resultado encontrado.</p>
+            )}
+          </div>
+        </>
+      ) : null}
 
       {activeDrawer === "pedidos" ? (
         <DrawerNovoPedido isOpen={true} onClose={closeDrawer} onSaved={() => handleSaved(false)} />

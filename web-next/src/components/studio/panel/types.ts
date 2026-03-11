@@ -36,3 +36,13 @@ export type ActivityItem = {
   important: boolean;
 };
 
+export type GlobalSearchPageKey = Extract<AdminPageKey, "pedidos" | "produtos" | "usuarios" | "cupons">;
+
+export type GlobalSearchTargetKind = "order" | "product" | "user" | "coupon";
+
+export type GlobalSearchTarget = {
+  page: GlobalSearchPageKey;
+  kind: GlobalSearchTargetKind;
+  id: string;
+};
+
