@@ -10,20 +10,18 @@
       ]
     },
     {
-      "source": "/products/:path*",
-      "headers": [
+      "source": "/products(.*)",
+      "has": [
         {
-          "key": "Cache-Control",
-          "value": "public, s-maxage=300, stale-while-revalidate=600"
+          "type": "header",
+          "key": "user-agent",
+          "value": ".*GPTBot.*"
         }
-      ]
-    },
-    {
-      "source": "/product/:path*",
+      ],
       "headers": [
         {
           "key": "Cache-Control",
-          "value": "public, s-maxage=300, stale-while-revalidate=600"
+          "value": "public, s-maxage=3600, stale-while-revalidate=86400"
         }
       ]
     },

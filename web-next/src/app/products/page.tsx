@@ -14,7 +14,7 @@ import { ProductsSearchGrid, type ProductsSearchGridItem } from "./ProductsSearc
 import styles from "./page.module.css";
 import { NovidadesGrid, type NovidadesGridTile } from "./NovidadesGrid";
 
-export const revalidate = 300;
+export const revalidate = 3600;
 
 export const metadata: Metadata = {
   title: "Produtos",

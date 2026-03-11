@@ -17,11 +17,36 @@ export default function robots(): MetadataRoute.Robots {
   return {
     rules: [
       {
+        userAgent: "GPTBot",
+        disallow: ["/"],
+      },
+      {
+        userAgent: "ChatGPT-User",
+        disallow: ["/"],
+      },
+      {
+        userAgent: "Google-Extended",
+        disallow: ["/"],
+      },
+      {
+        userAgent: "CCBot",
+        disallow: ["/"],
+      },
+      {
+        userAgent: "anthropic-ai",
+        disallow: ["/"],
+      },
+      {
+        userAgent: "Claude-Web",
+        disallow: ["/"],
+      },
+      {
         userAgent: "*",
         allow: [
           "/",
           "/products",
-          "/product/",          "/nossa-historia",
+          "/product/",
+          "/nossa-historia",
           "/processos",
           "/faq",
           "/aviso-legal.html",
@@ -35,5 +60,4 @@ export default function robots(): MetadataRoute.Robots {
     host: siteUrl,
   };
 }
-
 
