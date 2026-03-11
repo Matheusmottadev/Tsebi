@@ -26,13 +26,16 @@ export function LayoutChrome({ children }: LayoutChromeProps) {
   const shouldHideForStudio = currentPath === "/studio" || currentPath.startsWith("/studio/");
   const shouldHideForAdmin = currentPath === "/admin" || currentPath.startsWith("/admin/");
   const shouldHideForAdminLogin = normalizedPath === "/admin/login";
-  const shouldBypassChrome = shouldHideForAdmin || shouldHideForAdminLogin;
+  const shouldHideForLegacyAdminLogin =
+    normalizedPath === "/login/admin" || normalizedPath === "/login/admin/login";
+  const shouldBypassChrome = shouldHideForAdmin || shouldHideForAdminLogin || shouldHideForLegacyAdminLogin;
   const shouldRenderHeader =
     !ROUTES_WITHOUT_GLOBAL_HEADER.has(currentPath) &&
     !shouldHideForAccount &&
     !shouldHideForStudio &&
     !shouldHideForAdmin &&
-    !shouldHideForAdminLogin;
+    !shouldHideForAdminLogin &&
+    !shouldHideForLegacyAdminLogin;
 
   if (shouldBypassChrome) {
     return <>{children}</>;
