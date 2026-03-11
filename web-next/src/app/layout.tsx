@@ -7,7 +7,7 @@ import { CookieConsentBar } from "@/components/CookieConsentBar";
 import { IdentityBridge } from "@/components/IdentityBridge";
 import { MetaPixelBase } from "@/components/MetaPixelBase";
 import { MetaPixelPageViewTracker } from "@/components/MetaPixelPageViewTracker";
-import { TawkChatWidget } from "@/components/TawkChatWidget";
+import { WhatsAppContactButton } from "@/components/WhatsAppContactButton";
 import { TrackingScripts } from "@/components/TrackingScripts";
 import "./globals.css";
 import "@/styles/legacy/design-tokens.css";
@@ -186,7 +186,7 @@ export default function RootLayout({
         </Script>
         <MetaPixelPageViewTracker />
         <TrackingScripts />
-        <TawkChatWidget />
+        <WhatsAppContactButton />
         <IdentityBridge />
         <Suspense fallback={children}>
           <LayoutChrome>{children}</LayoutChrome>

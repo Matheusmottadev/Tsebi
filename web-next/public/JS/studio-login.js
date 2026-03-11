@@ -61,14 +61,22 @@
   }
 
   async function api(path, options = {}) {
-    const response = await fetch(path, {
+    const method = String(options.method || "GET").toUpperCase();
+    const requestOptions = {
       credentials: "include",
       ...options,
+      method,
       headers: {
         ...(options.body ? { "Content-Type": "application/json" } : {}),
         ...(options.headers || {})
       }
-    });
+    };
+
+    if (method === "GET" && typeof requestOptions.cache === "undefined" && typeof requestOptions.next === "undefined") {
+      requestOptions.next = { revalidate: 30 };
+    }
+
+    const response = await fetch(path, requestOptions);
     const rawBody = await response.text().catch(() => "");
     const data = (() => {
       if (!rawBody) return {};

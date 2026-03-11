@@ -410,7 +410,17 @@ function setProcessingState(processing) {
 }
 
 async function apiRequest(url, options) {
-  const response = await fetch(url, options);
+  const method = String(options?.method || "GET").toUpperCase();
+  const requestOptions = {
+    ...(options || {}),
+    method
+  };
+
+  if (method === "GET" && typeof requestOptions.cache === "undefined" && typeof requestOptions.next === "undefined") {
+    requestOptions.next = { revalidate: 60 };
+  }
+
+  const response = await fetch(url, requestOptions);
   const data = await response.json().catch(() => ({}));
   if (!response.ok) {
     const serverMessage =
@@ -447,7 +457,7 @@ function getProductPriceLabel(product) {
 
 async function fetchProductsCatalog() {
   try {
-    const response = await fetch("/api/products", { method: "GET" });
+    const response = await fetch("/api/products", { method: "GET", cache: "force-cache" });
     if (!response.ok) return [];
     const parsed = await response.json();
     if (Array.isArray(parsed)) return parsed;

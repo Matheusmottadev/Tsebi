@@ -3,6 +3,8 @@ import { readFile } from "node:fs/promises";
 import type { Metadata } from "next";
 import Script from "next/script";
 
+export const revalidate = 3600;
+
 export const metadata: Metadata = {
   title: "Minha Conta",
   description: "Area da conta Tsebi com perfil, pedidos, favoritos e servicos exclusivos.",

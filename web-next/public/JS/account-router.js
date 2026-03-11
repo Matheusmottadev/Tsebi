@@ -257,7 +257,10 @@
 
   async function loadProductsCatalog() {
     try {
-      const response = await fetch("/api/products", { credentials: "same-origin" });
+      const response = await fetch("/api/products", {
+        credentials: "same-origin",
+        next: { revalidate: 30 }
+      });
       if (!response.ok) return [];
       const parsed = await response.json();
       const list = Array.isArray(parsed) ? parsed : (Array.isArray(parsed.products) ? parsed.products : []);

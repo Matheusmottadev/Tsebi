@@ -369,7 +369,11 @@ function renderFatal(message) {
 
 async function fetchSessionUser() {
   try {
-    const response = await fetch("/api/auth/me", { method: "GET", credentials: "same-origin" });
+    const response = await fetch("/api/auth/me", {
+      method: "GET",
+      credentials: "same-origin",
+      next: { revalidate: 30 }
+    });
     if (!response.ok) return null;
     const data = await response.json().catch(() => ({}));
     return data?.user || null;
@@ -383,7 +387,8 @@ async function fetchOrderById(orderId, email) {
   if (email) qs.set("email", email);
   const response = await fetch(`/api/orders/${encodeURIComponent(orderId)}${qs.toString() ? `?${qs.toString()}` : ""}`, {
     method: "GET",
-    credentials: "same-origin"
+    credentials: "same-origin",
+    next: { revalidate: 30 }
   });
   const data = await response.json().catch(() => ({}));
   if (!response.ok) {
@@ -401,7 +406,8 @@ async function fetchOrderByTrack(orderNumber, email) {
   });
   const response = await fetch(`/api/orders/track?${qs.toString()}`, {
     method: "GET",
-    credentials: "same-origin"
+    credentials: "same-origin",
+    next: { revalidate: 30 }
   });
   const data = await response.json().catch(() => ({}));
   if (!response.ok) {

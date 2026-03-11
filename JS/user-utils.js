@@ -83,10 +83,18 @@
   }
 
   async function apiRequest(url, options) {
-    const response = await fetch(url, {
+    const method = String(options?.method || "GET").toUpperCase();
+    const requestOptions = {
       credentials: "same-origin",
-      ...options
-    });
+      ...options,
+      method
+    };
+
+    if (method === "GET" && typeof requestOptions.cache === "undefined" && typeof requestOptions.next === "undefined") {
+      requestOptions.next = { revalidate: 30 };
+    }
+
+    const response = await fetch(url, requestOptions);
     const data = await response.json().catch(() => ({}));
     if (!response.ok) {
       const message = data && data.error ? data.error : "REQUEST_FAILED";

@@ -462,13 +462,40 @@ export function StudioAdminPanel() {
   }
 
   return (
-    <div className={styles.app}>
+    <div
+      className={styles.app}
+      style={{
+        display: "flex",
+        minHeight: "100vh",
+        width: "100%",
+        background: "#f7f7f7",
+        color: "#333",
+        overflowX: "hidden",
+      }}
+    >
       <Sidebar activePage={activePage} onChangePage={setActivePage} pendingOrders={pendingOrders} openCare={openCare} />
 
-      <main className={styles.main}>
+      <main
+        className={styles.main}
+        style={{
+          marginLeft: 220,
+          flex: 1,
+          minWidth: 0,
+          width: "calc(100% - 220px)",
+          minHeight: "100vh",
+          background: "#f7f7f7",
+        }}
+      >
         <Topbar title={pageTitle} actionLabel={topbarActionLabel} onAction={handleTopbarButton} />
 
-        <section className={styles.content}>
+        <section
+          className={styles.content}
+          style={{
+            padding: "36px 40px",
+            width: "100%",
+            minWidth: 0,
+          }}
+        >
           {activePage === "inicio" ? (
             <InicioPage
               kpis={kpis}

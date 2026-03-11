@@ -54,13 +54,19 @@ export async function api(path, options = {}) {
     headers.set("x-csrf-token", csrfToken);
   }
 
-  const res = await fetch(path, {
+  const requestOptions = {
     ...options,
     method,
     credentials: "include",
     headers,
     body: options.json != null ? JSON.stringify(options.json) : options.body
-  });
+  };
+
+  if (method === "GET" && typeof requestOptions.cache === "undefined" && typeof requestOptions.next === "undefined") {
+    requestOptions.next = { revalidate: 60 };
+  }
+
+  const res = await fetch(path, requestOptions);
 
   const contentType = String(res.headers.get("content-type") || "");
   const isJson = contentType.includes("application/json");
@@ -83,4 +89,3 @@ export async function api(path, options = {}) {
 
   return payload;
 }
-

@@ -46,7 +46,10 @@
   async function fetchConfig() {
     if (state.config) return state.config;
     try {
-      const res = await fetch(CONFIG_URL, { credentials: "include" });
+      const res = await fetch(CONFIG_URL, {
+        credentials: "include",
+        next: { revalidate: 300 }
+      });
       if (!res.ok) return null;
       const json = await res.json();
       if (!json || !json.posthog || !json.posthog.key) return null;

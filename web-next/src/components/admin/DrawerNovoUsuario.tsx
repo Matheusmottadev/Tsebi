@@ -61,7 +61,7 @@ export function DrawerNovoUsuario({ isOpen, onClose, onSaved }: DrawerNovoUsuari
     let cancelled = false;
     (async () => {
       try {
-        const response = await fetch(`https://viacep.com.br/ws/${numericCep}/json/`, { cache: "no-store" });
+        const response = await fetch(`https://viacep.com.br/ws/${numericCep}/json/`, { cache: "force-cache" });
         if (!response.ok) return;
         const data = (await response.json()) as { localidade?: string; uf?: string; erro?: boolean };
         if (cancelled || data.erro) return;

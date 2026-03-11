@@ -461,7 +461,7 @@ function normalizeCatalogList(payload) {
 
 async function loadProductsCatalog() {
   try {
-    const response = await fetch("/api/products");
+    const response = await fetch("/api/products", { next: { revalidate: 30 } });
     if (!response.ok) return;
     const payload = await response.json().catch(() => ({}));
     productsCatalog = normalizeCatalogList(payload).map((item) => ({

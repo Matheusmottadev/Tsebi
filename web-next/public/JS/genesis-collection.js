@@ -88,7 +88,7 @@
 
   async function loadProducts() {
     try {
-      const response = await fetch("/api/products");
+      const response = await fetch("/api/products", { cache: "force-cache" });
       if (!response.ok) return [];
       const parsed = await response.json();
       if (Array.isArray(parsed)) return parsed;

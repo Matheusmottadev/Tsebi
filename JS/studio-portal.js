@@ -335,12 +335,18 @@
       headers["x-csrf-token"] = state.csrfToken;
     }
 
-    const response = await fetch(path, {
+    const requestOptions = {
       ...options,
       method,
       credentials: "include",
       headers
-    });
+    };
+
+    if (method === "GET" && typeof requestOptions.cache === "undefined" && typeof requestOptions.next === "undefined") {
+      requestOptions.next = { revalidate: 30 };
+    }
+
+    const response = await fetch(path, requestOptions);
 
     const data = await response.json().catch(() => ({}));
     if (!response.ok) {

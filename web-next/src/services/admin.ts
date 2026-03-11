@@ -400,6 +400,15 @@ export interface StudioAuthLogoutResponse {
   ok: true;
 }
 
+let pendingClientStudioAuthMeRequest: Promise<StudioAuthMeResponse> | null = null;
+let cachedClientStudioAuthMe: { value: StudioAuthMeResponse; expiresAt: number } | null = null;
+const CLIENT_STUDIO_AUTH_ME_CACHE_TTL_MS = 10_000;
+
+function clearClientStudioAuthMeCache(): void {
+  pendingClientStudioAuthMeRequest = null;
+  cachedClientStudioAuthMe = null;
+}
+
 export interface ListUsersAdminParams {
   query?: string;
   status?: string;
@@ -946,7 +955,30 @@ export async function getAuditLogAdmin(id: string, options?: HttpRequestOptions)
  * Auth: admin studio session.
  */
 export async function studioAuthMe(options?: HttpRequestOptions): Promise<StudioAuthMeResponse> {
-  return get<StudioAuthMeResponse>("/api/studio-auth/me", options);
+  const canDeduplicate = typeof window !== "undefined" && !options?.cookie;
+  if (!canDeduplicate) {
+    return get<StudioAuthMeResponse>("/api/studio-auth/me", options);
+  }
+
+  if (cachedClientStudioAuthMe && cachedClientStudioAuthMe.expiresAt > Date.now()) {
+    return cachedClientStudioAuthMe.value;
+  }
+
+  if (!pendingClientStudioAuthMeRequest) {
+    pendingClientStudioAuthMeRequest = get<StudioAuthMeResponse>("/api/studio-auth/me", options)
+      .then((value) => {
+        cachedClientStudioAuthMe = {
+          value,
+          expiresAt: Date.now() + CLIENT_STUDIO_AUTH_ME_CACHE_TTL_MS,
+        };
+        return value;
+      })
+      .finally(() => {
+        pendingClientStudioAuthMeRequest = null;
+      });
+  }
+
+  return pendingClientStudioAuthMeRequest;
 }
 
 /**
@@ -957,6 +989,7 @@ export async function studioAuthLogin(
   payload: StudioAuthLoginPayload,
   options?: HttpRequestOptions
 ): Promise<StudioAuthLoginResponse> {
+  clearClientStudioAuthMeCache();
   return post<StudioAuthLoginResponse>("/api/studio-auth/login", payload, options);
 }
 
@@ -976,6 +1009,7 @@ export async function studioAuthMfaVerify(
   payload: StudioAuthMfaVerifyPayload,
   options?: HttpRequestOptions
 ): Promise<StudioAuthMfaVerifyResponse> {
+  clearClientStudioAuthMeCache();
   return post<StudioAuthMfaVerifyResponse>("/api/studio-auth/mfa/verify", payload, options);
 }
 
@@ -984,6 +1018,7 @@ export async function studioAuthMfaVerify(
  * Auth: optional.
  */
 export async function studioAuthLogout(options?: HttpRequestOptions): Promise<StudioAuthLogoutResponse> {
+  clearClientStudioAuthMeCache();
   return post<StudioAuthLogoutResponse>("/api/studio-auth/logout", {}, options);
 }
 

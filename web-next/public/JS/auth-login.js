@@ -355,7 +355,8 @@
     try {
       const response = await fetch("/api/auth/google/config", {
         method: "GET",
-        credentials: "same-origin"
+        credentials: "same-origin",
+        next: { revalidate: 30 }
       });
       if (!response.ok) return { enabled: false, clientId: "" };
       const data = await response.json().catch(() => null);

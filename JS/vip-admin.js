@@ -113,11 +113,19 @@
       ...(options && options.headers ? options.headers : {})
     };
 
-    const response = await fetch(path, {
+    const method = String(options?.method || "GET").toUpperCase();
+    const requestOptions = {
       ...(options || {}),
+      method,
       headers,
       credentials: "include"
-    });
+    };
+
+    if (method === "GET" && typeof requestOptions.cache === "undefined" && typeof requestOptions.next === "undefined") {
+      requestOptions.next = { revalidate: 60 };
+    }
+
+    const response = await fetch(path, requestOptions);
 
     const data = await response.json().catch(() => ({}));
 

@@ -2,6 +2,7 @@ import { readPublicEnv } from "@/lib/env";
 
 type HttpMethod = "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
 const userCsrfCookieName = String(process.env.NEXT_PUBLIC_USER_CSRF_COOKIE_NAME || "tsebi.csrf").trim() || "tsebi.csrf";
+const DEFAULT_SERVER_REVALIDATE_SECONDS = 60;
 
 type NextFetchOptions = {
   revalidate?: number;
@@ -83,6 +84,34 @@ function shouldAttachUserCsrf(method: HttpMethod, path: string): boolean {
   return path.startsWith("/api/auth") || path.startsWith("/api/my");
 }
 
+function shouldBypassDefaultCache(path: string): boolean {
+  const uncachedPrefixes = ["/api/auth", "/api/my", "/api/studio-auth", "/api/admin"];
+  return uncachedPrefixes.some((prefix) => path.startsWith(prefix));
+}
+
+function resolveDefaultGetCachingOptions(
+  method: HttpMethod,
+  path: string,
+  options?: HttpRequestOptions
+): HttpRequestOptions {
+  const baseOptions = options || {};
+  if (method !== "GET") return baseOptions;
+  if (typeof baseOptions.cache !== "undefined" || typeof baseOptions.next !== "undefined") return baseOptions;
+  if (shouldBypassDefaultCache(path)) return baseOptions;
+
+  if (typeof window === "undefined") {
+    return {
+      ...baseOptions,
+      next: { revalidate: DEFAULT_SERVER_REVALIDATE_SECONDS },
+    };
+  }
+
+  return {
+    ...baseOptions,
+    cache: "force-cache",
+  };
+}
+
 function readCookieByName(name: string): string {
   if (typeof document === "undefined") return "";
   const source = String(document.cookie || "");
@@ -104,14 +133,15 @@ async function request<T>(
   options?: HttpRequestOptions
 ): Promise<T> {
   const url = buildAbsoluteUrl(path);
-  const headers = new Headers(options?.headers || undefined);
+  const resolvedOptions: HttpRequestOptions = resolveDefaultGetCachingOptions(method, path, options);
+  const headers = new Headers(resolvedOptions.headers || undefined);
 
   if (body !== undefined && !headers.has("Content-Type")) {
     headers.set("Content-Type", "application/json");
   }
 
-  if (options?.cookie && !headers.has("Cookie")) {
-    headers.set("Cookie", options.cookie);
+  if (resolvedOptions.cookie && !headers.has("Cookie")) {
+    headers.set("Cookie", resolvedOptions.cookie);
   }
   if (shouldAttachUserCsrf(method, path) && !headers.has("x-csrf-token")) {
     const token = readCookieByName(userCsrfCookieName);
@@ -119,7 +149,7 @@ async function request<T>(
   }
 
   const response = await fetch(url, {
-    ...options,
+    ...resolvedOptions,
     method,
     credentials: "include",
     headers,

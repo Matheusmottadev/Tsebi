@@ -1,12 +1,19 @@
 "use client";
 
 import { useEffect } from "react";
+import { usePathname } from "next/navigation";
 import posthog from "posthog-js";
 import { getMe } from "@/services/auth";
 import { getOrCreateAnonId, identifyUser } from "@/lib/analytics";
 
 export function IdentityBridge() {
+  const pathname = usePathname();
+  const currentPath = String(pathname || "").trim() || "/";
+  const isAdminRoute = currentPath.startsWith("/admin") || currentPath.startsWith("/studio");
+
   useEffect(() => {
+    if (isAdminRoute) return;
+
     const anonId = getOrCreateAnonId();
     if (posthog?.__loaded) {
       posthog.register({ anon_id: anonId });
@@ -32,7 +39,7 @@ export function IdentityBridge() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [isAdminRoute]);
 
   return null;
 }

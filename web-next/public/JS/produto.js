@@ -2,7 +2,7 @@ let productsCatalog = [];
 
 async function loadProductsCatalog() {
   try {
-    const response = await fetch("/api/products");
+    const response = await fetch("/api/products", { cache: "force-cache" });
     if (!response.ok) return [];
     const parsed = await response.json();
     const list = Array.isArray(parsed) ? parsed : (parsed && Array.isArray(parsed.products) ? parsed.products : []);
@@ -20,7 +20,7 @@ async function loadProductById(id) {
   if (!normalizedId) return null;
 
   try {
-    const response = await fetch(`/api/products/${encodeURIComponent(normalizedId)}`);
+    const response = await fetch(`/api/products/${encodeURIComponent(normalizedId)}`, { cache: "force-cache" });
     if (response.status === 404) return null;
     if (!response.ok) return null;
     const parsed = await response.json();
@@ -906,7 +906,9 @@ if (!product) {
 
   async function fetchSimilarProducts() {
     try {
-      const response = await fetch(`/api/products/${encodeURIComponent(product.id)}/recommendations?limit=4`);
+      const response = await fetch(`/api/products/${encodeURIComponent(product.id)}/recommendations?limit=4`, {
+        cache: "force-cache"
+      });
       if (!response.ok) return [];
       const parsed = await response.json();
       const list = Array.isArray(parsed?.recommendations) ? parsed.recommendations : [];
@@ -950,7 +952,9 @@ if (!product) {
     }
 
     try {
-      const response = await fetch(`/api/products/recent?ids=${encodeURIComponent(ids.join(","))}`);
+      const response = await fetch(`/api/products/recent?ids=${encodeURIComponent(ids.join(","))}`, {
+        cache: "force-cache"
+      });
       if (!response.ok) throw new Error("recent_failed");
       const parsed = await response.json();
       const list = Array.isArray(parsed?.products) ? parsed.products : [];

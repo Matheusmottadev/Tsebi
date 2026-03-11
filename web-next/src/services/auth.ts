@@ -134,14 +134,50 @@ export interface ForgotPasswordResponse extends BasicOkResponse {
   devCode?: string | null;
 }
 
+let pendingClientGetMeRequest: Promise<PublicUser | null> | null = null;
+let cachedClientGetMe: { value: PublicUser | null; expiresAt: number } | null = null;
+const CLIENT_GET_ME_CACHE_TTL_MS = 30_000;
+
+function clearClientGetMeCache(): void {
+  pendingClientGetMeRequest = null;
+  cachedClientGetMe = null;
+}
+
+async function requestMe(options?: HttpRequestOptions): Promise<PublicUser | null> {
+  const response = await get<AuthMeResponse>("/api/auth/me", { cache: "no-store", ...options });
+  if (!response.authenticated) return null;
+  return response.user;
+}
+
 /**
  * GET /api/auth/me
  * Auth: optional (returns unauthenticated state when session is absent).
  */
 export async function getMe(options?: HttpRequestOptions): Promise<PublicUser | null> {
-  const response = await get<AuthMeResponse>("/api/auth/me", { cache: "no-store", ...options });
-  if (!response.authenticated) return null;
-  return response.user;
+  const canDeduplicate = typeof window !== "undefined" && !options?.cookie;
+  if (!canDeduplicate) {
+    return requestMe(options);
+  }
+
+  if (cachedClientGetMe && cachedClientGetMe.expiresAt > Date.now()) {
+    return cachedClientGetMe.value;
+  }
+
+  if (!pendingClientGetMeRequest) {
+    pendingClientGetMeRequest = requestMe(options)
+      .then((value) => {
+        cachedClientGetMe = {
+          value,
+          expiresAt: Date.now() + CLIENT_GET_ME_CACHE_TTL_MS,
+        };
+        return value;
+      })
+      .finally(() => {
+        pendingClientGetMeRequest = null;
+      });
+  }
+
+  return pendingClientGetMeRequest;
 }
 
 /**
@@ -155,6 +191,7 @@ export async function login(payloadOrEmail: LoginPayload | string, password?: st
     typeof payloadOrEmail === "string"
       ? { email: payloadOrEmail, password: String(password || "") }
       : payloadOrEmail;
+  clearClientGetMeCache();
   return post<LoginResponse>("/api/auth/login", payload);
 }
 
@@ -163,6 +200,7 @@ export async function login(payloadOrEmail: LoginPayload | string, password?: st
  * Auth: optional (safe even without active session).
  */
 export async function logout(): Promise<BasicOkResponse> {
+  clearClientGetMeCache();
   return post<BasicOkResponse>("/api/auth/logout", {});
 }
 
@@ -171,6 +209,7 @@ export async function logout(): Promise<BasicOkResponse> {
  * Auth: public.
  */
 export async function register(payload: RegisterPayload): Promise<RegisterResponse> {
+  clearClientGetMeCache();
   return post<RegisterResponse>("/api/auth/register", payload);
 }
 
@@ -203,6 +242,7 @@ export async function startEmailVerification(payload: EmailPayload): Promise<Aut
  * Auth: public (creates session on success).
  */
 export async function verifyEmailCode(payload: EmailCodePayload): Promise<EmailFlowResponse> {
+  clearClientGetMeCache();
   return post<EmailFlowResponse>("/api/auth/email/verify", payload);
 }
 
@@ -211,6 +251,7 @@ export async function verifyEmailCode(payload: EmailCodePayload): Promise<EmailF
  * Auth: public (creates session on success).
  */
 export async function verifyAccountCode(payload: EmailCodePayload): Promise<AuthUserResponse> {
+  clearClientGetMeCache();
   return post<AuthUserResponse>("/api/auth/email/verify-account", payload);
 }
 
@@ -223,6 +264,7 @@ export async function verifyLoginCode(email: string, code: string): Promise<Auth
 export async function verifyLoginCode(payloadOrEmail: EmailCodePayload | string, code?: string): Promise<AuthUserResponse> {
   const payload: EmailCodePayload =
     typeof payloadOrEmail === "string" ? { email: payloadOrEmail, code: String(code || "") } : payloadOrEmail;
+  clearClientGetMeCache();
   return post<AuthUserResponse>("/api/auth/login/verify-code", payload);
 }
 
@@ -257,6 +299,7 @@ export async function getGoogleAuthConfig(): Promise<GoogleAuthConfigResponse> {
  * Auth: public (creates session on success).
  */
 export async function loginWithGoogle(payload: GoogleLoginPayload): Promise<AuthUserResponse> {
+  clearClientGetMeCache();
   return post<AuthUserResponse>("/api/auth/google", payload);
 }
 

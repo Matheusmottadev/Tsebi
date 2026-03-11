@@ -117,7 +117,10 @@
       credentials: "same-origin",
       ...options,
       method,
-      headers
+      headers,
+      ...(method === "GET" && typeof options?.cache === "undefined" && typeof options?.next === "undefined"
+        ? { next: { revalidate: 30 } }
+        : {})
     });
     const data = await response.json().catch(() => ({}));
     if (!response.ok) {

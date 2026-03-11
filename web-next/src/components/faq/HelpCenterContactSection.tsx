@@ -1,7 +1,6 @@
 "use client";
 
-import { useEffect, useState, type MouseEvent } from "react";
-import { isWithinChatBusinessHours } from "@/lib/chatBusinessHours";
+import { useEffect, useState } from "react";
 import { getMe } from "@/services/auth";
 import styles from "./HelpCenterContactSection.module.css";
 
@@ -9,7 +8,6 @@ export function HelpCenterContactSection() {
   const privateCareTarget = "/account#private-care";
   const privateCareLoginHref = `/login?returnUrl=${encodeURIComponent(privateCareTarget)}&notice=private-care`;
   const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [isChatAvailable, setIsChatAvailable] = useState<boolean>(() => isWithinChatBusinessHours());
 
   useEffect(() => {
     let cancelled = false;
@@ -23,25 +21,6 @@ export function HelpCenterContactSection() {
       cancelled = true;
     };
   }, []);
-
-  useEffect(() => {
-    const syncAvailability = () => setIsChatAvailable(isWithinChatBusinessHours());
-    syncAvailability();
-    const timer = window.setInterval(syncAvailability, 60_000);
-    return () => window.clearInterval(timer);
-  }, []);
-
-  const openLiveChat = (event: MouseEvent<HTMLAnchorElement>) => {
-    if (typeof window === "undefined") return;
-    if (!isWithinChatBusinessHours()) event.preventDefault();
-
-    const api = (window as Window & { Tawk_API?: { showWidget?: () => void; maximize?: () => void } }).Tawk_API;
-    if (api && typeof api.maximize === "function") {
-      event.preventDefault();
-      if (typeof api.showWidget === "function") api.showWidget();
-      api.maximize();
-    }
-  };
 
   return (
     <section className={styles.section} aria-label="Contato e atendimento">
@@ -101,31 +80,20 @@ export function HelpCenterContactSection() {
             </div>
           </article>
 
-          <article className={styles.card} aria-label="E-mail e chat">
-            <h3 className={styles.cardTitle}>Envie um E-mail ou entre no chat ao vivo</h3>
+          <article className={styles.card} aria-label="E-mail e WhatsApp">
+            <h3 className={styles.cardTitle}>Envie um E-mail ou fale conosco</h3>
             <p className={styles.cardText}>
-              Para solicitacoes detalhadas, envie um e-mail. Nossa equipe responde em ate 24 horas uteis.
+              Para solicitacoes detalhadas, envie um e-mail. Se preferir, fale com nossa equipe pelo WhatsApp.
             </p>
             <div className={styles.actions}>
-              {isChatAvailable ? (
-                <a
-                  className={`${styles.button} ${styles.chatButton}`}
-                  href="https://wa.me/5511918596632"
-                  target="_blank"
-                  rel="noreferrer"
-                  onClick={openLiveChat}
-                >
-                  <svg className={styles.buttonIcon} viewBox="0 0 24 24" aria-hidden="true">
-                    <path d="M4 6h16a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H8l-4 3v-3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2z"></path>
-                  </svg>
-                  <span>Chat ao vivo</span>
-                  <span className={styles.chatPulse} aria-hidden="true"></span>
-                </a>
-              ) : (
-                <p className={styles.chatUnavailableText}>
-                  Chat ao vivo indisponivel, volte mais tarde ou entre em contato por outros meios
-                </p>
-              )}
+              <a className={`${styles.button} ${styles.chatButton}`} href="https://wa.me/5511918596632" target="_blank" rel="noreferrer">
+                <svg className={styles.buttonIcon} viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M12 21a8.7 8.7 0 0 1-4.3-1.1L4 21l1.2-3.5A8.8 8.8 0 1 1 12 21z"></path>
+                  <path d="M9.2 8.8c.2-.4.4-.4.6-.4h.5c.2 0 .4.1.5.4l.8 1.8c.1.2.1.4 0 .5l-.4.7c-.1.2-.1.4 0 .6.3.5.8 1.1 1.4 1.6.6.5 1.2.9 1.8 1.1.2.1.4.1.6-.1l.7-.6c.2-.2.4-.2.6-.1l1.7.8c.2.1.4.3.4.5v.5c0 .2 0 .4-.3.6-.4.3-.9.5-1.5.5-.9 0-2-.3-3.2-1-1-.6-1.9-1.4-2.6-2.3-.9-1.1-1.4-2.2-1.4-3.2 0-.6.2-1.2.4-1.5z"></path>
+                </svg>
+                <span>Fale conosco</span>
+                <span className={styles.chatPulse} aria-hidden="true"></span>
+              </a>
               <a className={styles.button} href="mailto:contato@tsebi.com.br">
                 <svg className={styles.buttonIcon} viewBox="0 0 24 24" aria-hidden="true">
                   <rect x="3" y="5" width="18" height="14" rx="2"></rect>

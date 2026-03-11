@@ -274,7 +274,7 @@ let productsCatalog = [];
 
 async function loadProductsCatalog() {
   try {
-    const response = await fetch("/api/products");
+    const response = await fetch("/api/products", { cache: "force-cache" });
     if (!response.ok) return [];
     const parsed = await response.json();
     const list = Array.isArray(parsed) ? parsed : (parsed && Array.isArray(parsed.products) ? parsed.products : []);
