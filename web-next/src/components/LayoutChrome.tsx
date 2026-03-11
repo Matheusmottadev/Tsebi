@@ -37,10 +37,6 @@ export function LayoutChrome({ children }: LayoutChromeProps) {
     !shouldHideForAdminLogin &&
     !shouldHideForLegacyAdminLogin;
 
-  if (shouldBypassChrome) {
-    return <>{children}</>;
-  }
-
   useEffect(() => {
     const previousUrl = String(previousUrlRef.current || "").trim();
     const previousPath = previousUrl.split("?")[0] || "";
@@ -49,6 +45,10 @@ export function LayoutChrome({ children }: LayoutChromeProps) {
     }
     previousUrlRef.current = currentUrl;
   }, [currentPath, currentUrl]);
+
+  if (shouldBypassChrome) {
+    return <>{children}</>;
+  }
 
   return (
     <>

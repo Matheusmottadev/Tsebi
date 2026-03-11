@@ -1736,7 +1736,7 @@ body.menu-open::before {
 .footer-newsletter h3,
 .footer-column h3 {
   font-size: 21px;
-  font-weight: 600;
+  font-weight: 400;
   letter-spacing: .1px;
   margin-bottom: 18px;
   color: #fff;
@@ -6516,4 +6516,14 @@ body.home-page * {
 body.home-page b,
 body.home-page strong {
   font-weight: 400 !important;
+}
+
+/* Brand wordmark should always render without bold weight. */
+.home-header .logo,
+.home-header .logo-center-link,
+.home-header .logo-center-text,
+body.home-page .home-header .logo-center-text,
+body:not(.home-page) .home-header .logo-center-text,
+body.product-page .home-header .logo-center-text {
+  font-weight: 300 !important;
 }
