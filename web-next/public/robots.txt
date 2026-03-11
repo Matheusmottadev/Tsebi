@@ -15,14 +15,3 @@ Disallow: /
 
 User-agent: Claude-Web
 Disallow: /
-
-User-agent: *
-Allow: /
-Disallow: /api/
-Disallow: /account
-Disallow: /checkout
-Disallow: /cart
-Disallow: /studio
-Disallow: /login
-Disallow: /search
-Disallow: /legacy/

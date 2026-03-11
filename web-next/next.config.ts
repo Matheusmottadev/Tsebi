@@ -53,7 +53,7 @@ const nextConfig: NextConfig = {
   turbopack: {
     root: projectRoot,
   },
-  staticPageGenerationTimeout: 180,
+  staticPageGenerationTimeout: 600,
   images: {
     remotePatterns: [
       {

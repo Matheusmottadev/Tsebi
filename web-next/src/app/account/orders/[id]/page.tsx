@@ -8,9 +8,9 @@ import type { Order } from "@/types";
 import styles from "./page.module.css";
 
 type OrderDetailsPageProps = {
-  params: {
+  params: Promise<{
     id: string;
-  };
+  }>;
 };
 
 export const metadata: Metadata = {
@@ -49,7 +49,7 @@ async function loadOrder(orderId: string): Promise<Order | null> {
 }
 
 export default async function AccountOrderDetailsPage({ params }: OrderDetailsPageProps) {
-  const { id } = params;
+  const { id } = await params;
   const order = await loadOrder(decodeURIComponent(id));
 
   if (!order) {

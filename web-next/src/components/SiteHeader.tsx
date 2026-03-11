@@ -692,7 +692,7 @@ export function SiteHeader() {
                 </svg>
               </a>
             )}
-            <Link className="quick-action cart-link" href="/cart" aria-label={`Carrinho (${displayCount})`} data-cart-count={cartCountBadge}>
+            <Link className="quick-action cart-link" href="/cart" aria-label={`Carrinho (${displayCount})`} data-cart-count={cartCountBadge} prefetch={false}>
               <svg viewBox="0 0 24 24" aria-hidden="true">
                 <path d="M7 7h10l1 12H6L7 7z"></path>
                 <path d="M9 7V6a3 3 0 1 1 6 0v1"></path>

@@ -961,7 +961,7 @@ export function LegacyHome({ products }: LegacyHomeProps) {
             >
               Fale Conosco
             </button>
-            <Link className="quick-action" href={isAuthenticated ? "/account" : "/login"} aria-label="Conta">
+            <Link className="quick-action" href={isAuthenticated ? "/account" : "/login"} aria-label="Conta" prefetch={false}>
               <svg viewBox="0 0 24 24" aria-hidden="true">
                 <path d="M20 21a8 8 0 0 0-16 0"></path>
                 <circle cx="12" cy="8" r="4"></circle>
@@ -972,6 +972,7 @@ export function LegacyHome({ products }: LegacyHomeProps) {
               href="/cart"
               aria-label={`Carrinho (${displayCount})`}
               data-cart-count={cartCountBadge}
+              prefetch={false}
             >
               <svg viewBox="0 0 24 24" aria-hidden="true">
                 <path d="M7 7h10l1 12H6L7 7z"></path>
@@ -1590,7 +1591,7 @@ export function LegacyHome({ products }: LegacyHomeProps) {
             const pair = buildHoverImagePair(product);
             return (
               <article key={`popular-${product.sku || product.id}-${product.name}`} className="category-card">
-                <Link href={href} className="category-media">
+                <Link href={href} className="category-media" prefetch={false}>
                   <div className="category-image">
                     <Image
                       className="card-media-img card-media-img-primary"
