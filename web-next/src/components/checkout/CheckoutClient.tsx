@@ -820,7 +820,7 @@ export function CheckoutClient() {
     setErrorMessage("");
 
     try {
-      const response = await fetch(`https://viacep.com.br/ws/${cep}/json/`, { method: "GET", cache: "no-store" });
+      const response = await fetch(`https://viacep.com.br/ws/${cep}/json/`, { method: "GET", cache: "force-cache" });
       if (!response.ok) throw new Error("Não foi possível consultar o CEP.");
       const payload = (await response.json()) as {
         erro?: boolean;

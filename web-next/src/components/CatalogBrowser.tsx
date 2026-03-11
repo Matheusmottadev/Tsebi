@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import type { Product } from "@/types";
@@ -417,21 +418,25 @@ export function CatalogBrowser({ products, imageBaseUrl, initialLimit = DEFAULT_
                   }}
                 >
                   <div className={styles.recommendMedia}>
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
+                    <Image
                       className={`${styles.recommendImg} ${styles.recommendImgPrimary}`}
                       loading="lazy"
                       decoding="async"
                       src={pair.primary || resolveProductImageSrc(product)}
                       alt={product.name}
+                      width={900}
+                      height={1200}
+                      unoptimized
                     />
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
+                    <Image
                       className={`${styles.recommendImg} ${styles.recommendImgSecondary}`}
                       loading="lazy"
                       decoding="async"
                       src={pair.secondary || resolveProductImageSrc(product)}
                       alt={`${product.name} - detalhe`}
+                      width={900}
+                      height={1200}
+                      unoptimized
                     />
                   </div>
                   <div className={styles.recommendMeta}>

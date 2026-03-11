@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { Component, type ErrorInfo, type ReactNode } from "react";
 import { useEffect, useMemo, useState } from "react";
@@ -187,8 +188,16 @@ class ExclusiveSuggestionsErrorBoundary extends Component<
             <article key={card.id} className={styles.productsExclusiveCard}>
               <Link href={card.href} className={styles.productsExclusiveCardLink}>
                 <div className={styles.productsExclusiveMedia}>
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={card.image} alt={card.name} className={styles.productsExclusiveImage} loading="lazy" decoding="async" />
+                  <Image
+                    src={card.image}
+                    alt={card.name}
+                    width={900}
+                    height={1200}
+                    className={styles.productsExclusiveImage}
+                    loading="lazy"
+                    decoding="async"
+                    unoptimized
+                  />
                 </div>
                 <p className={styles.productsExclusiveName}>{card.name}</p>
               </Link>
@@ -293,13 +302,15 @@ function ExclusiveSuggestionsContent({ query, contextHint, fallbackCards }: Excl
           <article key={card.id} className={styles.productsExclusiveCard}>
             <Link href={card.href} className={styles.productsExclusiveCardLink}>
               <div className={styles.productsExclusiveMedia}>
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
+                <Image
                   src={card.image}
                   alt={card.name}
+                  width={900}
+                  height={1200}
                   className={styles.productsExclusiveImage}
                   loading="lazy"
                   decoding="async"
+                  unoptimized
                 />
               </div>
               <p className={styles.productsExclusiveName}>{card.name}</p>

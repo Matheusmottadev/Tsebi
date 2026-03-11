@@ -1,5 +1,6 @@
 ﻿import type { Metadata } from "next";
 import Link from "next/link";
+import Image from "next/image";
 import { redirect } from "next/navigation";
 import { listProducts } from "@/services/products";
 import { ProductGrid } from "@/components/ProductGrid";
@@ -12,6 +13,8 @@ import { ExclusiveSuggestions, type ExclusiveSuggestionFallbackCard } from "./Ex
 import { ProductsSearchGrid, type ProductsSearchGridItem } from "./ProductsSearchGrid";
 import styles from "./page.module.css";
 import { NovidadesGrid, type NovidadesGridTile } from "./NovidadesGrid";
+
+export const revalidate = 60;
 
 export const metadata: Metadata = {
   title: "Produtos",
@@ -660,7 +663,7 @@ function renderProductsSearchSidebar(
   const activeSizesSet = new Set(activeSizes.map((entry) => normalizeText(entry)));
   const renderSelectedMark = () => (
     <span className={styles.novidadesFiltersSelectedMark} aria-hidden="true">
-      <img src="/images/logo-tsebi.png" alt="" className={styles.novidadesFiltersSelectedLogo} />
+      <Image src="/images/logo-tsebi.png" alt="" className={styles.novidadesFiltersSelectedLogo} width={18} height={18} />
       <svg viewBox="0 0 12 12" className={styles.novidadesFiltersSelectedTick}>
         <path d="M2.2 6.2 4.8 8.8 9.8 3.8" />
       </svg>
@@ -2085,7 +2088,7 @@ export default async function ProductsPage({
   const shouldUseExpandedToolbar = Boolean(activeFilterGroup) && !isGenderMenuView;
   const renderSelectedMark = () => (
     <span className={styles.novidadesFiltersSelectedMark} aria-hidden="true">
-      <img src="/images/logo-tsebi.png" alt="" className={styles.novidadesFiltersSelectedLogo} />
+      <Image src="/images/logo-tsebi.png" alt="" className={styles.novidadesFiltersSelectedLogo} width={18} height={18} />
       <svg viewBox="0 0 12 12" className={styles.novidadesFiltersSelectedTick}>
         <path d="M2.2 6.2 4.8 8.8 9.8 3.8" />
       </svg>
@@ -2569,9 +2572,11 @@ export default async function ProductsPage({
                 }}
               />
             ) : (
-              <img
+              <Image
                 src={heroConfig.mediaUrl}
                 alt={title}
+                fill
+                sizes="100vw"
                 style={{
                   position: "absolute",
                   inset: 0,

@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { buildHoverImagePair } from "@/lib/product-media";
 import type { Product } from "@/types";
@@ -227,26 +228,26 @@ export function GenderShowcase({ products }: GenderShowcaseProps) {
           <article key={`${product.sku || product.id}-${product.name}`} className="category-card">
             <Link href={product.href} className="category-media">
               <div className="category-image">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
+                <Image
                   className="card-media-img card-media-img-primary"
-                  loading="lazy"
-                  decoding="async"
                   src={product.image}
                   alt={product.alt}
+                  width={900}
+                  height={1200}
+                  unoptimized
                   onError={(event) => {
                     const element = event.currentTarget;
                     element.onerror = null;
                     element.src = product.image || "/images/product/origem-skirt-1.jpg";
                   }}
                 />
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
+                <Image
                   className="card-media-img card-media-img-secondary"
-                  loading="lazy"
-                  decoding="async"
                   src={product.secondaryImage || product.image}
                   alt={`${product.alt} - segunda foto`}
+                  width={900}
+                  height={1200}
+                  unoptimized
                   onError={(event) => {
                     const element = event.currentTarget;
                     element.onerror = null;

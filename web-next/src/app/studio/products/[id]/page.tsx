@@ -10,6 +10,8 @@ import { readStudioSession } from "@/lib/studio/server";
 import { getProductAdmin } from "@/services/admin";
 import styles from "./page.module.css";
 
+export const revalidate = 30;
+
 type StudioProductDetailPageProps = {
   params: {
     id: string;

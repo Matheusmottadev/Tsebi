@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
 import Script from "next/script";
+import Image from "next/image";
 import { isWithinChatBusinessHours } from "@/lib/chatBusinessHours";
 import styles from "./TawkChatWidget.module.css";
 
@@ -189,7 +190,7 @@ export function TawkChatWidget() {
         aria-label="Abrir chat de atendimento"
         style={{ display: isChatOpen ? "none" : undefined }}
       >
-        <img className={styles.launcherIcon} src="/images/logo-tsebi.png" alt="" aria-hidden="true" />
+        <Image className={styles.launcherIcon} src="/images/logo-tsebi.png" alt="" aria-hidden="true" width={44} height={44} />
         <span>Fale Conosco</span>
       </button>
     </>

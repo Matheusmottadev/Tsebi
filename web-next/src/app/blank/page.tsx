@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import { BodyClassName } from "@/components/BodyClassName";
 import styles from "@/app/products/page.module.css";
 
+export const revalidate = 3600;
+
 type FilterLink = {
   href: string;
   label: string;

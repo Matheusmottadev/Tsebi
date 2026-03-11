@@ -9,7 +9,7 @@ type AdminLayoutProps = {
 export default function AdminLayout({ children }: AdminLayoutProps) {
   return (
     <div className={styles.adminRoot}>
-      <div className={styles.main}>{children}</div>
+      <main className={styles.main}>{children}</main>
     </div>
   );
 }

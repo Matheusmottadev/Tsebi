@@ -1,5 +1,7 @@
 import { redirect } from "next/navigation";
 
+export const revalidate = 3600;
+
 type LegacyProdutoPageProps = {
   searchParams?: Promise<{
     id?: string | string[];

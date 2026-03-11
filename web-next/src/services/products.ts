@@ -83,6 +83,12 @@ export interface PersonalizedProductsResponse {
   }>;
 }
 
+const STOREFRONT_REVALIDATE_SECONDS = 60;
+
+const STOREFRONT_CACHE_OPTIONS = {
+  next: { revalidate: STOREFRONT_REVALIDATE_SECONDS },
+} as const;
+
 function buildRecentProductsPath(ids: string[]): string {
   const validIds = ids.map((id) => String(id || "").trim()).filter(Boolean);
   const params = new URLSearchParams();
@@ -170,10 +176,10 @@ function normalizeProductsForStorefront(products: Product[]): Product[] {
 export async function listProducts(params: ListProductsParams = {}): Promise<Product[]> {
   const recentIds = Array.isArray(params.recentIds) ? params.recentIds : [];
   if (recentIds.length > 0) {
-    const response = await get<{ products: Product[] }>(buildRecentProductsPath(recentIds));
+    const response = await get<{ products: Product[] }>(buildRecentProductsPath(recentIds), STOREFRONT_CACHE_OPTIONS);
     return normalizeProductsForStorefront(Array.isArray(response.products) ? response.products : []);
   }
-  const response = await get<Product[]>("/api/products");
+  const response = await get<Product[]>("/api/products", STOREFRONT_CACHE_OPTIONS);
   return normalizeProductsForStorefront(response);
 }
 
@@ -211,7 +217,7 @@ export async function searchProductsDetailed(
   if (typeof params.inStock === "boolean") search.set("inStock", params.inStock ? "true" : "false");
   if (params.sort) search.set("sort", params.sort);
 
-  const response = await get<SearchProductsResponse>(`/api/products/search?${search.toString()}`);
+  const response = await get<SearchProductsResponse>(`/api/products/search?${search.toString()}`, STOREFRONT_CACHE_OPTIONS);
   return {
     query: String(response?.query || normalized),
     page: Math.max(1, Number(response?.page || page) || page),
@@ -238,7 +244,10 @@ export async function searchProductSuggestions(query: string, limit = 8): Promis
   const search = new URLSearchParams();
   search.set("q", normalized);
   search.set("limit", String(safeLimit));
-  const response = await get<SearchSuggestionsResponse>(`/api/products/search/suggestions?${search.toString()}`);
+  const response = await get<SearchSuggestionsResponse>(
+    `/api/products/search/suggestions?${search.toString()}`,
+    STOREFRONT_CACHE_OPTIONS
+  );
   return {
     query: String(response?.query || normalized),
     suggestions: Array.isArray(response?.suggestions) ? response.suggestions : [],
@@ -274,7 +283,9 @@ export async function getPersonalizedProducts(
     search.set("signals", JSON.stringify(signals));
   }
 
-  const response = await get<PersonalizedProductsResponse>(`/api/recommendations?${search.toString()}`);
+  const response = await get<PersonalizedProductsResponse>(`/api/recommendations?${search.toString()}`, {
+    cache: "no-store",
+  });
   return {
     title: String(response?.title || "Selecao personalizada"),
     source: response?.source === "best_sellers" ? "best_sellers" : "personalized",
@@ -311,7 +322,7 @@ export async function getRecentProducts(ids: string[] = []): Promise<Product[]> 
  */
 export async function getProductBySlugOrId(idOrSlug: string): Promise<Product | null> {
   try {
-    const response = await get<Product>(`/api/products/${encodeURIComponent(idOrSlug)}`);
+    const response = await get<Product>(`/api/products/${encodeURIComponent(idOrSlug)}`, STOREFRONT_CACHE_OPTIONS);
     return normalizeProductForStorefront(response);
   } catch (error) {
     if (error instanceof HttpError && error.status === 404) return null;
@@ -335,7 +346,8 @@ export async function getProduct(idOrSlug: string): Promise<Product | null> {
 export async function listProductRecommendations(idOrSlug: string, limit = 4): Promise<ProductRecommendationsResponse> {
   const safeLimit = Math.max(1, Math.min(12, Number(limit) || 4));
   const response = await get<ProductRecommendationsResponse>(
-    `/api/products/${encodeURIComponent(idOrSlug)}/recommendations?limit=${safeLimit}`
+    `/api/products/${encodeURIComponent(idOrSlug)}/recommendations?limit=${safeLimit}`,
+    STOREFRONT_CACHE_OPTIONS
   );
   return {
     ...response,

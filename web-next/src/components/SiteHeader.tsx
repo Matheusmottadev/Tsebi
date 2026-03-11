@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { cartSelectors, useCartStore } from "@/lib/cart/cartStore";
 import { startSearchPlaceholderRotator } from "@/lib/searchPlaceholderRotator";
@@ -657,8 +658,7 @@ export function SiteHeader() {
           <h1 className="logo">
             <Link href="/" className="logo-center-link">
               <span className="logo-center-text">TSEBI</span>
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img className="logo-center-image" src="/images/logo-tsebi.png" alt="Logo TSEBI" />
+              <Image className="logo-center-image" src="/images/logo-tsebi.png" alt="Logo TSEBI" width={120} height={120} />
             </Link>
           </h1>
 
@@ -935,8 +935,13 @@ export function SiteHeader() {
                           ? MENU_PRESENTES_GALLERY_ITEMS
                           : MENU_NOVIDADES_GALLERY_ITEMS).map((galleryItem, imageIndex) => (
                           <a key={galleryItem.name} href={galleryItem.href} className="header-menu-subpanel-gallery-item">
-                            {/* eslint-disable-next-line @next/next/no-img-element */}
-                            <img src={galleryItem.image} alt={`${galleryItem.name} destaque ${imageIndex + 1}`} />
+                            <Image
+                              src={galleryItem.image}
+                              alt={`${galleryItem.name} destaque ${imageIndex + 1}`}
+                              width={720}
+                              height={900}
+                              unoptimized
+                            />
                             <div className="header-menu-subpanel-gallery-meta">
                               <p className="header-menu-subpanel-gallery-name">{galleryItem.name}</p>
                             </div>
@@ -1027,18 +1032,24 @@ export function SiteHeader() {
                         className="header-menu-subpanel-single-image header-menu-subpanel-single-image--clean"
                         aria-label="Imagem destaque Bolsas e Acessórios"
                       >
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img
+                        <Image
                           src="https://media.tsebi.com.br/Pin%20on%20IN%20EYE%2C%20EAR%2C%20MOUTH.jpg"
                           alt="Destaque Bolsas e Acessórios"
+                          width={900}
+                          height={1100}
                         />
                       </a>
                     </div>
                   ) : item === "Seleção Tsebi" ? (
                     <section className="header-menu-subpanel-curation" aria-label="Seleção Tsebi">
                       <div className="header-menu-subpanel-curation-hero">
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img src={MENU_SELECAO_TSEBI_LOOK.heroImage} alt="Modelo com look completo Tsebi" />
+                        <Image
+                          src={MENU_SELECAO_TSEBI_LOOK.heroImage}
+                          alt="Modelo com look completo Tsebi"
+                          width={960}
+                          height={1200}
+                          unoptimized
+                        />
                       </div>
                       <h3 className="header-menu-subpanel-curation-title">{MENU_SELECAO_TSEBI_LOOK.title}</h3>
                       <p className="header-menu-subpanel-curation-subtitle">{MENU_SELECAO_TSEBI_LOOK.subtitle}</p>
@@ -1046,8 +1057,13 @@ export function SiteHeader() {
                       <div className="header-menu-subpanel-curation-grid">
                         {MENU_SELECAO_TSEBI_LOOK.products.map((product, index) => (
                           <article key={product.id} className="header-menu-subpanel-curation-card">
-                            {/* eslint-disable-next-line @next/next/no-img-element */}
-                            <img src={product.image} alt={`Produto ${index + 1} - ${product.name}`} />
+                            <Image
+                              src={product.image}
+                              alt={`Produto ${index + 1} - ${product.name}`}
+                              width={640}
+                              height={800}
+                              unoptimized
+                            />
                             <div className="header-menu-subpanel-curation-card-body">
                               <p className="header-menu-subpanel-curation-card-name">{product.name}</p>
                               <p className="header-menu-subpanel-curation-card-price">{product.priceLabel}</p>

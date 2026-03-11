@@ -5,6 +5,8 @@ import { readStudioSession } from "@/lib/studio/server";
 import { getAuditLogAdmin, listAuditLogsAdmin, searchAuditLogsAdmin } from "@/services/admin";
 import styles from "./page.module.css";
 
+export const revalidate = 30;
+
 type StudioAuditPageProps = {
   searchParams?: Promise<{
     query?: string;

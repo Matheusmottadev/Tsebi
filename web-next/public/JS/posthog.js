@@ -26,6 +26,15 @@
     return LOCAL_HOSTS.has(window.location.hostname);
   }
 
+  function shouldTrackCurrentPath() {
+    const pathname = String(window.location.pathname || "").trim();
+    if (!pathname) return true;
+    if (pathname.startsWith("/admin")) return false;
+    if (pathname.startsWith("/studio")) return false;
+    if (pathname.startsWith("/vip-admin")) return false;
+    return true;
+  }
+
   function readPrefs() {
     try {
       const raw = localStorage.getItem(PREF_KEY);
@@ -119,6 +128,8 @@
       if (!window.posthog || typeof window.posthog.init !== "function") return;
       window.posthog.init(config.key, {
         api_host: config.host,
+        autocapture: true,
+        capture_pageview: false,
         opt_out_capturing_by_default: true
       });
       state.initialized = true;
@@ -128,8 +139,12 @@
 
   async function enableTracking() {
     await initPosthog();
+    if (!shouldTrackCurrentPath()) return;
     if (window.posthog && typeof window.posthog.opt_in_capturing === "function") {
       window.posthog.opt_in_capturing();
+      if (typeof window.posthog.capture === "function") {
+        window.posthog.capture("$pageview");
+      }
     }
   }
 

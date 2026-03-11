@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { Price } from "@/components/Price";
@@ -149,13 +150,21 @@ export function ProductsSearchGrid({ items }: { items: ProductsSearchGridItem[] 
               </button>
               <Link href={item.href} className={styles.productsTightCardLink}>
                 <div className={styles.productsTightMedia}>
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={item.primaryImage} alt={item.name} className={`${styles.productsTightImage} ${styles.productsTightImagePrimary}`} />
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
+                  <Image
+                    src={item.primaryImage}
+                    alt={item.name}
+                    width={900}
+                    height={1200}
+                    className={`${styles.productsTightImage} ${styles.productsTightImagePrimary}`}
+                    unoptimized
+                  />
+                  <Image
                     src={item.secondaryImage || item.primaryImage}
                     alt={`${item.name} - segunda foto`}
+                    width={900}
+                    height={1200}
                     className={`${styles.productsTightImage} ${styles.productsTightImageSecondary}`}
+                    unoptimized
                   />
                   <div className={styles.productsTightMeta}>
                     <p className={styles.productsTightName}>{item.name}</p>
@@ -176,4 +185,3 @@ export function ProductsSearchGrid({ items }: { items: ProductsSearchGridItem[] 
     </>
   );
 }
-

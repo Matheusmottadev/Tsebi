@@ -4,6 +4,8 @@ import { FaqPageSections } from "@/components/faq/FaqPageSections";
 import { LegacyFooter } from "@/components/home-legacy/LegacyFooter";
 import styles from "./page.module.css";
 
+export const revalidate = 3600;
+
 export const metadata: Metadata = {
   title: "FAQ",
   description: "Perguntas frequentes sobre pedidos, pagamentos, entregas e atendimento da Tsebi.",

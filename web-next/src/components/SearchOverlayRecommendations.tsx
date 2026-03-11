@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
+import Image from "next/image";
 import { getOrCreateAnonId, trackCommerceEvent } from "@/lib/analytics";
 import { HttpError } from "@/lib/http";
 import { getFavorites, updateFavorites } from "@/services/auth";
@@ -341,18 +342,18 @@ export function SearchOverlayRecommendations({
                     });
                   }}
                 >
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
+                  <Image
                     className="tsebi-search-reco-image"
                     src={item.image}
                     alt={item.name}
-                    loading="lazy"
-                    decoding="async"
+                    width={720}
+                    height={900}
                     onError={(event) => {
                       const element = event.currentTarget;
                       element.onerror = null;
                       element.src = "/images/placeholderreal.webp";
                     }}
+                    unoptimized
                   />
                   <div className="tsebi-search-reco-meta">
                     <h4 className="tsebi-search-reco-name">{item.name}</h4>

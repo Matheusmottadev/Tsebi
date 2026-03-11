@@ -7,6 +7,8 @@ import {
   loadLegacyStaticPage,
 } from "@/lib/legacy-static-pages";
 
+export const revalidate = 3600;
+
 type LegacyStaticPageParams = {
   legacyStaticPage: string;
 };

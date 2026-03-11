@@ -3,6 +3,8 @@ import { notFound } from "next/navigation";
 import { LegacyStaticPageRenderer } from "@/components/LegacyStaticPageRenderer";
 import { loadLegacyStaticPage } from "@/lib/legacy-static-pages";
 
+export const revalidate = 3600;
+
 export const metadata: Metadata = {
   title: "Processos",
   description: "Entenda os processos da Tsebi: criacao, modelagem, acabamento e controle de qualidade.",

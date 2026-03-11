@@ -5,6 +5,8 @@ import { listProducts } from "@/services/products";
 import type { Product } from "@/types";
 import styles from "./page.module.css";
 
+export const revalidate = 60;
+
 export const metadata: Metadata = {
   title: "Tsebi Brasil",
   description: "Moda autoral premium com Peças exclusivas, acabamento impecavel e coleções de luxo.",

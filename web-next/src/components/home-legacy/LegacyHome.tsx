@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { Product } from "@/types";
@@ -941,8 +942,7 @@ export function LegacyHome({ products }: LegacyHomeProps) {
           <h1 className="logo">
             <Link className="logo-center-link" href="/">
               <span className="logo-center-text">TSEBI</span>
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img className="logo-center-image" src="/images/logo-tsebi.png" alt="Logo TSEBI" />
+              <Image className="logo-center-image" src="/images/logo-tsebi.png" alt="Logo TSEBI" width={120} height={120} />
             </Link>
           </h1>
 
@@ -1223,8 +1223,13 @@ export function LegacyHome({ products }: LegacyHomeProps) {
                           ? MENU_PRESENTES_GALLERY_ITEMS
                           : MENU_NOVIDADES_GALLERY_ITEMS).map((galleryItem, imageIndex) => (
                           <a key={galleryItem.name} href={galleryItem.href} className="header-menu-subpanel-gallery-item">
-                            {/* eslint-disable-next-line @next/next/no-img-element */}
-                            <img src={galleryItem.image} alt={`${galleryItem.name} destaque ${imageIndex + 1}`} />
+                            <Image
+                              src={galleryItem.image}
+                              alt={`${galleryItem.name} destaque ${imageIndex + 1}`}
+                              width={720}
+                              height={900}
+                              unoptimized
+                            />
                             <div className="header-menu-subpanel-gallery-meta">
                               <p className="header-menu-subpanel-gallery-name">{galleryItem.name}</p>
                             </div>
@@ -1315,18 +1320,24 @@ export function LegacyHome({ products }: LegacyHomeProps) {
                         className="header-menu-subpanel-single-image header-menu-subpanel-single-image--clean"
                         aria-label="Imagem destaque Bolsas e Acessórios"
                       >
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img
+                        <Image
                           src="https://media.tsebi.com.br/Pin%20on%20IN%20EYE%2C%20EAR%2C%20MOUTH.jpg"
                           alt="Destaque Bolsas e Acessórios"
+                          width={900}
+                          height={1100}
                         />
                       </a>
                     </div>
                   ) : item === "Seleção Tsebi" ? (
                     <section className="header-menu-subpanel-curation" aria-label="Seleção Tsebi">
                       <div className="header-menu-subpanel-curation-hero">
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img src={MENU_SELECAO_TSEBI_LOOK.heroImage} alt="Modelo com look completo Tsebi" />
+                        <Image
+                          src={MENU_SELECAO_TSEBI_LOOK.heroImage}
+                          alt="Modelo com look completo Tsebi"
+                          width={960}
+                          height={1200}
+                          unoptimized
+                        />
                       </div>
                       <h3 className="header-menu-subpanel-curation-title">{MENU_SELECAO_TSEBI_LOOK.title}</h3>
                       <p className="header-menu-subpanel-curation-subtitle">{MENU_SELECAO_TSEBI_LOOK.subtitle}</p>
@@ -1334,8 +1345,13 @@ export function LegacyHome({ products }: LegacyHomeProps) {
                       <div className="header-menu-subpanel-curation-grid">
                         {MENU_SELECAO_TSEBI_LOOK.products.map((product, index) => (
                           <article key={product.id} className="header-menu-subpanel-curation-card">
-                            {/* eslint-disable-next-line @next/next/no-img-element */}
-                            <img src={product.image} alt={`Produto ${index + 1} - ${product.name}`} />
+                            <Image
+                              src={product.image}
+                              alt={`Produto ${index + 1} - ${product.name}`}
+                              width={640}
+                              height={800}
+                              unoptimized
+                            />
                             <div className="header-menu-subpanel-curation-card-body">
                               <p className="header-menu-subpanel-curation-card-name">{product.name}</p>
                               <p className="header-menu-subpanel-curation-card-price">{product.priceLabel}</p>
@@ -1539,13 +1555,13 @@ export function LegacyHome({ products }: LegacyHomeProps) {
       <section className="new-drop collection-drop" aria-label="Nova Coleção em vídeo">
         <div className="new-drop-inner">
           <div className="new-drop-media">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
+            <Image
               className="new-drop-static-image"
               src={COLLECTION_DROP_IMAGE}
               alt="Nova Coleção em destaque"
-              loading="lazy"
-              decoding="async"
+              width={1400}
+              height={1750}
+              unoptimized
               onError={(event) => {
                 const element = event.currentTarget;
                 element.onerror = null;
@@ -1576,26 +1592,26 @@ export function LegacyHome({ products }: LegacyHomeProps) {
               <article key={`popular-${product.sku || product.id}-${product.name}`} className="category-card">
                 <Link href={href} className="category-media">
                   <div className="category-image">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
+                    <Image
                       className="card-media-img card-media-img-primary"
-                      loading="lazy"
-                      decoding="async"
                       src={pair.primary || resolveProductImageSrc(product)}
                       alt={product.name}
+                      width={900}
+                      height={1200}
+                      unoptimized
                       onError={(event) => {
                         const element = event.currentTarget;
                         element.onerror = null;
                         element.src = COLLECTION_PLACEHOLDER;
                       }}
                     />
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
+                    <Image
                       className="card-media-img card-media-img-secondary"
-                      loading="lazy"
-                      decoding="async"
                       src={pair.secondary || resolveProductImageSrc(product)}
                       alt={`${product.name} - segunda foto`}
+                      width={900}
+                      height={1200}
+                      unoptimized
                       onError={(event) => {
                         const element = event.currentTarget;
                         element.onerror = null;
@@ -1613,14 +1629,14 @@ export function LegacyHome({ products }: LegacyHomeProps) {
       <section className="new-drop homepage-picture-drop" aria-label="Imagem de destaque da home">
         <div className="new-drop-inner" style={{ width: "100vw", maxWidth: "none", margin: "0 calc(50% - 50vw)" }}>
           <div className="new-drop-media" style={{ width: "100vw", maxWidth: "none", margin: 0 }}>
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
+            <Image
               className="homepage-picture-image"
               src={HOMEPAGE_PICTURE_IMAGE}
               alt="Imagem de destaque da homepage"
-              loading="eager"
-              decoding="async"
-              fetchPriority="high"
+              width={1920}
+              height={1080}
+              priority
+              unoptimized
               onError={(event) => {
                 const element = event.currentTarget;
                 const currentSrc = element.getAttribute("src") || "";
@@ -1653,12 +1669,12 @@ export function LegacyHome({ products }: LegacyHomeProps) {
                 onClick={() => trackRecommendationCategoryVisit(item.label, 7000)}
               >
                 <div className="t-media t-media--cat">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
+                  <Image
                     src={item.image}
                     alt={item.alt}
-                    loading="lazy"
-                    decoding="async"
+                    width={900}
+                    height={1200}
+                    unoptimized
                     onError={(event) => {
                       const element = event.currentTarget;
                       element.onerror = null;

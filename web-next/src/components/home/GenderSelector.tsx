@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { buildHoverImagePair } from "@/lib/product-media";
@@ -50,7 +51,7 @@ export function GenderSelector() {
       try {
         const response = await fetch("/api/products", {
           method: "GET",
-          cache: "no-store",
+          cache: "force-cache",
           signal: controller.signal,
         });
 
@@ -141,15 +142,25 @@ export function GenderSelector() {
                 <article key={product.id} className="category-card">
                   <Link href={`/product/${encodeURIComponent(product.id)}`} className="category-media">
                     <div className="category-image">
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img className="card-media-img card-media-img-primary" src={pair.primary} alt={product.name} loading="lazy" decoding="async" />
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img
+                      <Image
+                        className="card-media-img card-media-img-primary"
+                        src={pair.primary}
+                        alt={product.name}
+                        loading="lazy"
+                        decoding="async"
+                        width={900}
+                        height={1200}
+                        unoptimized
+                      />
+                      <Image
                         className="card-media-img card-media-img-secondary"
                         src={pair.secondary || pair.primary}
                         alt={`${product.name} - segunda foto`}
                         loading="lazy"
                         decoding="async"
+                        width={900}
+                        height={1200}
+                        unoptimized
                         onError={(event) => {
                           const element = event.currentTarget;
                           element.onerror = null;

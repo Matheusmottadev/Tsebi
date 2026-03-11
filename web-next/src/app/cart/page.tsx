@@ -3,6 +3,8 @@ import { CartView } from "@/components/CartView";
 import { ContinueShoppingLink } from "@/components/ContinueShoppingLink";
 import styles from "./page.module.css";
 
+export const revalidate = 3600;
+
 export const metadata: Metadata = {
   title: "Carrinho | TSEBI",
   description: "Revise os produtos selecionados antes de finalizar a compra.",

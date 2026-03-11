@@ -103,16 +103,17 @@ export function ProductImage({
     );
   }
 
-  // Fallback for remote/legacy image URLs that may not be compatible with next/image config yet.
+  // Keep a raw-loader fallback for remote/legacy URLs while still using next/image.
   return (
-    // eslint-disable-next-line @next/next/no-img-element
-    <img
+    <Image
       src={safeSrc}
       alt={alt}
       width={width}
       height={height}
       className={className}
-      loading={priority ? "eager" : "lazy"}
+      unoptimized
+      loader={({ src: rawSrc }) => rawSrc}
+      priority={priority}
       onError={(event) => {
         const target = event.currentTarget;
         if (target.src.endsWith(FALLBACK_IMAGE_SRC)) return;

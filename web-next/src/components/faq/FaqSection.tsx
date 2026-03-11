@@ -2,6 +2,7 @@
 
 import { ChevronLeft, Search } from "lucide-react";
 import { ReactNode, useEffect, useMemo, useState } from "react";
+import Image from "next/image";
 import { FAQ_CATEGORIES, featuredQuestions, flattenQuestions } from "./faqData";
 import { FAQ_QUERY_VARIANTS_BY_QUESTION_ID } from "./faqQueryVariants";
 import styles from "./FaqSection.module.css";
@@ -316,7 +317,14 @@ export function FaqSection() {
                       onClick={() => handleTopicClick(topic.id)}
                     >
                       {topic.icon === "gazela" ? (
-                        <img className={styles.topicLogoIcon} src="/images/logo-tsebi.png" alt="" aria-hidden="true" />
+                        <Image
+                          className={styles.topicLogoIcon}
+                          src="/images/logo-tsebi.png"
+                          alt=""
+                          aria-hidden="true"
+                          width={24}
+                          height={24}
+                        />
                       ) : (
                         <topic.icon size={24} strokeWidth={1.4} aria-hidden="true" />
                       )}

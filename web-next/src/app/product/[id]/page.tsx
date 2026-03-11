@@ -6,6 +6,8 @@ import { readPublicEnv } from "@/lib/env";
 import { getProduct, getRecommendations } from "@/services/products";
 import type { Product } from "@/types";
 
+export const revalidate = 60;
+
 type ProductPageProps = {
   params: Promise<{
     id: string;

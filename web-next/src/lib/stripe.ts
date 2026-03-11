@@ -17,7 +17,7 @@ export function resolveStripePromise(): Promise<import("@stripe/stripe-js").Stri
     if (envKey) return loadStripe(envKey);
 
     try {
-      const config = await get<ApiConfigResponse>("/api/config", { cache: "no-store" });
+      const config = await get<ApiConfigResponse>("/api/config", { cache: "force-cache" });
       const apiKey = String(config?.stripePublishableKey || "").trim();
       if (!apiKey) return null;
       return loadStripe(apiKey);

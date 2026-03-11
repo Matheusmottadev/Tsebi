@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { getOrCreateAnonId, trackCommerceEvent } from "@/lib/analytics";
@@ -153,13 +154,21 @@ export function NovidadesGrid({ tiles }: NovidadesGridProps) {
               </button>
 
               <Link href={tile.href} className={styles.novidadesLink}>
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={tile.image} alt={tile.name} className={`${styles.novidadesImage} ${styles.novidadesImagePrimary}`} />
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
+                <Image
+                  src={tile.image}
+                  alt={tile.name}
+                  width={900}
+                  height={1200}
+                  className={`${styles.novidadesImage} ${styles.novidadesImagePrimary}`}
+                  unoptimized
+                />
+                <Image
                   src={tile.secondaryImage || tile.image}
                   alt={`${tile.name} - segunda foto`}
+                  width={900}
+                  height={1200}
                   className={`${styles.novidadesImage} ${styles.novidadesImageSecondary}`}
+                  unoptimized
                   onError={(event) => {
                     const element = event.currentTarget;
                     element.onerror = null;

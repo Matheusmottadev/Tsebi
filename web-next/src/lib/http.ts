@@ -3,8 +3,14 @@ import { readPublicEnv } from "@/lib/env";
 type HttpMethod = "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
 const userCsrfCookieName = String(process.env.NEXT_PUBLIC_USER_CSRF_COOKIE_NAME || "tsebi.csrf").trim() || "tsebi.csrf";
 
+type NextFetchOptions = {
+  revalidate?: number;
+  tags?: string[];
+};
+
 export type HttpRequestOptions = Omit<RequestInit, "method" | "body"> & {
   cookie?: string;
+  next?: NextFetchOptions;
 };
 
 export class HttpError extends Error {

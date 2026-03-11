@@ -6,6 +6,8 @@ import { StudioShell } from "@/components/studio/StudioShell";
 import { PrivateCareManager } from "@/components/studio/PrivateCareManager";
 import styles from "./page.module.css";
 
+export const revalidate = 30;
+
 type StudioPrivateCarePageProps = {
   searchParams?: Promise<{
     query?: string;
@@ -75,4 +77,3 @@ export default async function StudioPrivateCarePage({ searchParams }: StudioPriv
     </StudioShell>
   );
 }
-

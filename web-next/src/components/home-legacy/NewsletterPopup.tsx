@@ -1,6 +1,7 @@
 "use client";
 
 import { FormEvent, useEffect, useMemo, useState } from "react";
+import Image from "next/image";
 
 const NEWSLETTER_POPUP_SESSION_KEY = "tsebi-newsletter-popup-shown";
 
@@ -76,8 +77,13 @@ export function NewsletterPopup() {
 
         <form className="newsletter-popup-form" onSubmit={handleSubmit}>
           <div className="newsletter-popup-image-wrap">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img className="newsletter-popup-image" src="/images/popup.jpg" alt="Destaque da nova Coleção" />
+            <Image
+              className="newsletter-popup-image"
+              src="/images/popup.jpg"
+              alt="Destaque da nova Coleção"
+              width={640}
+              height={860}
+            />
           </div>
 
           <label htmlFor="newsletter-popup-email">E-mail</label>

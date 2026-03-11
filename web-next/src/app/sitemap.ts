@@ -1,6 +1,8 @@
 import type { MetadataRoute } from "next";
 import { listProducts } from "@/services/products";
 
+export const revalidate = 3600;
+
 const defaultSiteUrl = "https://tsebi.com.br";
 
 function resolveSiteUrl(): string {

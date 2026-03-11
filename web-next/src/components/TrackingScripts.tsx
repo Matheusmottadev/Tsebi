@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { usePathname } from "next/navigation";
 import Script from "next/script";
 import posthog from "posthog-js";
 import { CONSENT_EVENT, type ConsentState, readStoredConsent } from "@/components/CookieConsentBar";
@@ -13,9 +14,12 @@ const POSTHOG_KEY = String(process.env.NEXT_PUBLIC_POSTHOG_KEY || "").trim();
 const POSTHOG_HOST = String(process.env.NEXT_PUBLIC_POSTHOG_HOST || "https://us.i.posthog.com").trim();
 
 export function TrackingScripts() {
+  const pathname = usePathname();
   const [consent, setConsent] = useState<ConsentState | null>(null);
   const allowAnalytics = Boolean(consent?.analytics);
   const allowAds = Boolean(consent?.ads);
+  const currentPath = String(pathname || "").trim() || "/";
+  const isAdminRoute = currentPath.startsWith("/admin") || currentPath.startsWith("/studio");
 
   useEffect(() => {
     setConsent(readStoredConsent());
@@ -35,6 +39,7 @@ export function TrackingScripts() {
 
   useEffect(() => {
     if (!allowAnalytics) return;
+    if (isAdminRoute) return;
     if (!POSTHOG_KEY) return;
     if (posthog.__loaded) return;
     const anonId = getOrCreateAnonId();
@@ -43,12 +48,21 @@ export function TrackingScripts() {
       person_profiles: "identified_only",
       persistence: "localStorage+cookie",
       autocapture: true,
-      capture_pageview: true,
+      capture_pageview: false,
       loaded: (instance) => {
         instance.register({ anon_id: anonId });
+        instance.capture("$pageview");
       },
     });
-  }, [allowAnalytics]);
+  }, [allowAnalytics, isAdminRoute]);
+
+  useEffect(() => {
+    if (!allowAnalytics) return;
+    if (isAdminRoute) return;
+    if (!POSTHOG_KEY) return;
+    if (!posthog.__loaded) return;
+    posthog.capture("$pageview");
+  }, [allowAnalytics, currentPath, isAdminRoute]);
 
   const shouldLoadGtag = useMemo(() => {
     if (!allowAnalytics && !allowAds) return false;
