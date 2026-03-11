@@ -2,6 +2,7 @@
 
 import { Plus, X } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
+import { HttpError } from "@/lib/http";
 import { getOrderAdmin, getProductAdmin, updateOrderAdmin, type AdminOrderSummary } from "@/services/admin";
 import type { Order } from "@/types";
 import { Drawer } from "./Drawer";
@@ -70,16 +71,19 @@ function formatMoney(cents: number, currency = "BRL"): string {
   }).format((Number(cents || 0) || 0) / 100);
 }
 
-function parseMoneyToCents(value: string): number {
-  return Number(String(value || "").replace(/\D/g, "") || 0);
-}
+type OrderStatusSource = {
+  status?: unknown;
+  trackingStatus?: unknown;
+  currentStatus?: unknown;
+  shipment?: { status?: unknown } | null;
+};
 
-function mapStatusFromOrder(order: AdminOrderSummary): UiStatus {
+function mapStatusFromOrder(order: OrderStatusSource): UiStatus {
   const status = String(order.status || "").trim().toLowerCase();
-  const tracking = String(order.trackingStatus || "").trim().toLowerCase();
+  const tracking = `${String(order.trackingStatus || "").trim().toLowerCase()} ${String(order.currentStatus || "").trim().toLowerCase()} ${String(order.shipment?.status || "").trim().toLowerCase()}`;
   if (status === "refunded") return "Reembolsado";
   if (status === "canceled" || status === "cancelled" || status === "failed") return "Cancelado";
-  if (tracking.includes("delivered")) return "Entregue";
+  if (tracking.includes("delivered") || tracking.includes("entreg")) return "Entregue";
   if (tracking.includes("transit") || tracking.includes("shipped") || status === "processing") return "Enviado";
   if (status === "paid") return "Pago";
   return "Pendente";
@@ -94,7 +98,11 @@ function mapStatusToPayload(status: UiStatus): { status: string; trackingStatus?
   return { status: "refunded" };
 }
 
-function pickShippingMethod(order: AdminOrderSummary): string {
+function pickShippingMethod(order: {
+  shippingSelectedService?: unknown;
+  shippingSelectedCarrierName?: unknown;
+  carrier?: unknown;
+}): string {
   const source = [order.shippingSelectedService, order.shippingSelectedCarrierName, order.carrier]
     .map((value) => String(value || "").trim().toLowerCase())
     .join(" ");
@@ -120,6 +128,17 @@ function buildOrderCode(value: string): string {
 
 function normalizeDigits(value: string): string {
   return String(value || "").replace(/\D/g, "");
+}
+
+function getSaveErrorMessage(error: unknown): string {
+  if (error instanceof HttpError) {
+    if (error.message === "ORDER_REFUNDED_LOCKED") return "Pedido reembolsado nao pode mudar de status.";
+    if (error.message === "INVALID_INPUT") return "Dados invalidos ao salvar. Revise os campos do pedido.";
+    if (error.message === "NOT_FOUND") return "Pedido nao encontrado.";
+    return error.message || "Falha ao atualizar pedido.";
+  }
+  if (error instanceof Error && error.message) return error.message;
+  return "Falha ao atualizar pedido.";
 }
 
 export function DrawerEditarPedido({ isOpen, order, onClose, onSaved }: DrawerEditarPedidoProps) {
@@ -169,7 +188,7 @@ export function DrawerEditarPedido({ isOpen, order, onClose, onSaved }: DrawerEd
         const full = await getOrderAdmin(String(selectedOrder.id || ""));
         if (cancelled) return;
 
-        setStatus(mapStatusFromOrder(selectedOrder));
+        setStatus(mapStatusFromOrder(full));
         setItems(
           (Array.isArray(full.items) ? full.items : []).map((item) => ({
             id: String(item.id || "").trim(),
@@ -200,7 +219,7 @@ export function DrawerEditarPedido({ isOpen, order, onClose, onSaved }: DrawerEd
         setInstallments(String(Math.max(1, Number(full.installments || 1))));
         setCouponCode(String((shipping as Record<string, unknown>).discountCode || ""));
         setDiscount(String(Math.max(0, Number((shipping as Record<string, unknown>).discountCents || 0))));
-        setShippingMethod(pickShippingMethod(selectedOrder));
+        setShippingMethod(pickShippingMethod(full));
         setShippingCost(String(Math.max(0, Number(full.shippingPriceCents || full.shippingAmount || 0))));
         setTrackingCode(String(full.trackingCode || full.trackingId || ""));
         setAdminNote(String(full.adminNotes || ""));
@@ -348,7 +367,7 @@ export function DrawerEditarPedido({ isOpen, order, onClose, onSaved }: DrawerEd
       onSaved(response.order);
       onClose();
     } catch (saveError) {
-      setError(saveError instanceof Error ? saveError.message : "Falha ao atualizar pedido.");
+      setError(getSaveErrorMessage(saveError));
     } finally {
       setSaving(false);
     }

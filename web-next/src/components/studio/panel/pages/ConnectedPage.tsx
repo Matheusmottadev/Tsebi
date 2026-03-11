@@ -90,6 +90,37 @@ function normalizeUserStatus(value: string): string {
   return normalized;
 }
 
+function normalizeTextForCompare(value: unknown): string {
+  return String(value || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .trim()
+    .toLowerCase();
+}
+
+function formatOrderStatus(order: AdminOrderSummary): string {
+  const status = normalizeTextForCompare(order.status);
+  const tracking = [order.trackingStatus, order.shipment?.status]
+    .map((value) => normalizeTextForCompare(value))
+    .join(" ");
+
+  if (status === "refunded" || status === "reembolsado") return "reembolsado";
+  if (["canceled", "cancelled", "cancelado", "failed", "falhou"].includes(status)) return "cancelado";
+  if (tracking.includes("delivered") || tracking.includes("entreg")) return "entregue";
+  if (
+    tracking.includes("transit") ||
+    tracking.includes("enviado") ||
+    tracking.includes("shipped") ||
+    status === "processing" ||
+    status === "processando"
+  ) {
+    return "enviado";
+  }
+  if (status === "paid" || status === "pago") return "pago";
+  if (status === "pending_payment" || status === "pending" || status === "pendente") return "pendente";
+  return status || "-";
+}
+
 function pickErrorMessage(error: unknown): string {
   if (error instanceof Error && error.message) return error.message;
   return "Falha na operacao.";
@@ -100,6 +131,7 @@ function getProductKey(product: Product): string {
 }
 
 function toSummaryFromOrder(base: AdminOrderSummary, next: Order): AdminOrderSummary {
+  const nextTracking = String(next.trackingStatus || next.currentStatus || base.trackingStatus || "");
   return {
     ...base,
     status: String(next.status || base.status || ""),
@@ -116,9 +148,18 @@ function toSummaryFromOrder(base: AdminOrderSummary, next: Order): AdminOrderSum
       next.shippingDeadlineDays == null ? base.shippingDeadlineDays : Number(next.shippingDeadlineDays),
     shippingDestinationZip: String(next.shippingDestinationZip || base.shippingDestinationZip || ""),
     trackingId: String(next.trackingId || base.trackingId || ""),
-    trackingStatus: String(next.trackingStatus || base.trackingStatus || ""),
+    trackingStatus: nextTracking,
     carrier: String(next.carrier || base.carrier || ""),
     shippingDeadline: next.shippingDeadline ?? base.shippingDeadline ?? null,
+    shipment: base.shipment
+      ? {
+          ...base.shipment,
+          status: String(nextTracking || base.shipment.status || ""),
+          trackingCode: String(next.trackingCode || base.shipment.trackingCode || ""),
+          provider: String(next.shippingSelectedProvider || base.shipment.provider || ""),
+          updatedAt: next.updatedAt || base.shipment.updatedAt || null,
+        }
+      : base.shipment,
     updatedAt: next.updatedAt || base.updatedAt || null,
     createdAt: next.createdAt || base.createdAt || null,
   };
@@ -410,7 +451,7 @@ export function ConnectedPage({ page, data, loading, errorMessage, onRequestRefr
                 <tr key={order.id}>
                   <td>{pickOrderId(order)}</td>
                   <td>{order.userName || order.userEmail || "-"}</td>
-                  <td>{order.status || "-"}</td>
+                  <td>{formatOrderStatus(order)}</td>
                   <td>{formatMoneyCents(order.amount, order.currency)}</td>
                   <td>{formatDateTime(order.createdAt)}</td>
                   <td className={styles.actionCell}>

@@ -798,6 +798,86 @@ function normalizeTrackingStatusForOrder(value: any) {
   return mapMelhorEnvioStatusToInternal(raw).status || "";
 }
 
+function normalizeTextForCompare(value: any) {
+  return String(value || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .trim()
+    .toLowerCase();
+}
+
+function normalizeOrderStatusInput(value: any) {
+  const normalized = normalizeTextForCompare(value);
+  if (!normalized) return "";
+
+  if (
+    [
+      "pending",
+      "pending_payment",
+      "pendente",
+      "aguardando_pagamento",
+      "aguardando pagamento",
+      "em analise",
+      "em_analise"
+    ].includes(normalized)
+  ) {
+    return "pending_payment";
+  }
+
+  if (
+    [
+      "processing",
+      "processando",
+      "enviado",
+      "shipped",
+      "em transito",
+      "em_transito",
+      "in transit",
+      "in_transit"
+    ].includes(normalized)
+  ) {
+    return "processing";
+  }
+
+  if (["paid", "pago", "approved", "aprovado", "delivered", "entregue"].includes(normalized)) {
+    return "paid";
+  }
+
+  if (["failed", "falhou", "recusado", "negado", "declined"].includes(normalized)) {
+    return "failed";
+  }
+
+  if (["canceled", "cancelled", "cancelado"].includes(normalized)) {
+    return "canceled";
+  }
+
+  if (["refunded", "reembolsado", "estornado"].includes(normalized)) {
+    return "refunded";
+  }
+
+  return normalized;
+}
+
+function inferTrackingStatusFromOrderStatusInput(value: any) {
+  const normalized = normalizeTextForCompare(value);
+  if (!normalized) return "";
+  if (["delivered", "entregue"].includes(normalized)) return INTERNAL_TRACKING_STATES.DELIVERED || "DELIVERED";
+  if (
+    ["processing", "processando", "enviado", "shipped", "em transito", "em_transito", "in transit", "in_transit"].includes(
+      normalized
+    )
+  ) {
+    return INTERNAL_TRACKING_STATES.IN_TRANSIT || "IN_TRANSIT";
+  }
+  if (["pending", "pending_payment", "pendente", "aguardando_pagamento", "aguardando pagamento"].includes(normalized)) {
+    return INTERNAL_TRACKING_STATES.ORDER_PLACED || "ORDER_PLACED";
+  }
+  if (["failed", "falhou", "recusado", "negado", "declined", "canceled", "cancelled", "cancelado"].includes(normalized)) {
+    return INTERNAL_TRACKING_STATES.EXCEPTION || "EXCEPTION";
+  }
+  return "";
+}
+
 async function recordAuditLog(req: any, payload: any) {
   const actor = buildAuditActor(req);
   const before = payload.before ?? null;
@@ -1709,7 +1789,24 @@ adminRouter.get("/orders", async (req: any, res: any) => {
 });
 
 adminRouter.patch("/orders/:id", async (req: any, res: any) => {
-  const parsed = orderPatchSchema.safeParse(req.body || {});
+  const rawBody = req.body && typeof req.body === "object" && !Array.isArray(req.body) ? { ...req.body } : {};
+  const hasStatusKey = Object.prototype.hasOwnProperty.call(rawBody, "status");
+  const hasOrderStatusKey = Object.prototype.hasOwnProperty.call(rawBody, "orderStatus");
+  const rawStatusValue = hasOrderStatusKey ? rawBody.orderStatus : rawBody.status;
+  const normalizedStatus = normalizeOrderStatusInput(rawStatusValue);
+
+  if (hasStatusKey && normalizedStatus) {
+    rawBody.status = normalizedStatus;
+  }
+  if (hasOrderStatusKey && normalizedStatus) {
+    rawBody.orderStatus = normalizedStatus;
+  }
+  if (!Object.prototype.hasOwnProperty.call(rawBody, "trackingStatus")) {
+    const inferredTracking = inferTrackingStatusFromOrderStatusInput(rawStatusValue);
+    if (inferredTracking) rawBody.trackingStatus = inferredTracking;
+  }
+
+  const parsed = orderPatchSchema.safeParse(rawBody);
   if (!parsed.success) return res.status(400).json({ error: "INVALID_INPUT" });
 
   try {
@@ -1943,7 +2040,7 @@ adminRouter.patch("/orders/:id", async (req: any, res: any) => {
     const statusChanged = String(before.status || "") !== String(afterState.status || "");
 
     if (["canceled", "refunded", "failed"].includes(String(afterState.status || "").trim().toLowerCase())) {
-      const cancelStatus = INTERNAL_TRACKING_STATES.CANCELED;
+      const cancelStatus = INTERNAL_TRACKING_STATES.CANCELED || INTERNAL_TRACKING_STATES.EXCEPTION || "EXCEPTION";
       await updateOrder(req.params.id, {
         currentStatus: cancelStatus,
         trackingStatus: cancelStatus,
