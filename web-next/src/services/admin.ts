@@ -473,12 +473,23 @@ export interface AdminUserCreatePayload {
 
 export interface AdminUserUpdatePayload {
   title?: "sr" | "sra" | "srta" | "nao_informar" | "";
+  status?: "active" | "suspended";
   name?: string;
   email?: string;
   phone?: string;
   birthDate?: string;
   cpf?: string;
   cep?: string;
+}
+
+export interface AdminUserOrderRow {
+  id: string;
+  createdAt: string | null;
+  status: string;
+  currency: string;
+  amount: number;
+  userId: string;
+  productName: string;
 }
 
 function buildQuery(params: Record<string, string | number | undefined>): string {
@@ -742,6 +753,15 @@ export async function getUserAdmin(id: string, options?: HttpRequestOptions): Pr
 }
 
 /**
+ * GET /api/admin/users/:id/orders
+ * Auth: admin session required.
+ */
+export async function listUserOrdersAdmin(id: string, options?: HttpRequestOptions): Promise<AdminUserOrderRow[]> {
+  const response = await get<{ orders: AdminUserOrderRow[] }>(`/api/admin/users/${encodeURIComponent(id)}/orders`, options);
+  return Array.isArray(response.orders) ? response.orders : [];
+}
+
+/**
  * POST /api/admin/users
  * Auth: admin session required + CSRF header.
  */
@@ -784,6 +804,23 @@ export async function setUserTempPasswordAdmin(
   const token = await resolveCsrfToken(csrfToken, options);
   return post<{ ok: true; tempPassword: string }>(
     `/api/admin/users/${encodeURIComponent(id)}/temp-password`,
+    {},
+    mergeOptionsWithHeaders(options, buildCsrfHeader(token))
+  );
+}
+
+/**
+ * POST /api/admin/users/:id/reset-password
+ * Auth: admin session required + CSRF header.
+ */
+export async function resetUserPasswordAdmin(
+  id: string,
+  csrfToken?: string,
+  options?: HttpRequestOptions
+): Promise<{ ok: true; expiresAt: string | null; resetTokenExpiresAt: string | null; devCode?: string }> {
+  const token = await resolveCsrfToken(csrfToken, options);
+  return post<{ ok: true; expiresAt: string | null; resetTokenExpiresAt: string | null; devCode?: string }>(
+    `/api/admin/users/${encodeURIComponent(id)}/reset-password`,
     {},
     mergeOptionsWithHeaders(options, buildCsrfHeader(token))
   );

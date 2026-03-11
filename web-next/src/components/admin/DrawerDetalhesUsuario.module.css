@@ -1,0 +1,431 @@
+.root {
+  position: fixed;
+  inset: 0;
+  z-index: 1300;
+}
+
+.backdrop {
+  position: absolute;
+  inset: 0;
+  border: 0;
+  background: rgba(0, 0, 0, 0.35);
+}
+
+.drawer {
+  position: absolute;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  width: min(760px, 96vw);
+  background: #fff;
+  border-left: 1px solid #e0e0e0;
+  box-shadow: -12px 0 36px rgba(0, 0, 0, 0.14);
+  overflow-y: auto;
+  padding: 26px 26px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.header {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: start;
+  gap: 12px;
+  border-bottom: 1px solid #efefef;
+  padding-bottom: 12px;
+}
+
+.avatar {
+  width: 46px;
+  height: 46px;
+  border-radius: 999px;
+  background: #111;
+  color: #fff;
+  display: grid;
+  place-items: center;
+  font-family: var(--font-jost), sans-serif;
+  font-size: 13px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.headerInfo h3 {
+  margin: 0;
+  font-family: var(--font-cormorant), "Cormorant Garamond", Georgia, serif;
+  font-size: 22px;
+  line-height: 1.05;
+  color: #111;
+  font-weight: 400;
+}
+
+.headerInfo p {
+  margin: 4px 0 0;
+  font-family: var(--font-jost), sans-serif;
+  font-size: 11px;
+  color: #999;
+  font-weight: 300;
+}
+
+.verifyBadge {
+  margin-top: 8px;
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  padding: 4px 10px;
+  font-family: var(--font-jost), sans-serif;
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  font-weight: 400;
+}
+
+.verifyOk {
+  background: #edf9f1;
+  color: #1c7c3b;
+  border: 1px solid #cdebd7;
+}
+
+.verifyNo {
+  background: #fdeeee;
+  color: #9b2226;
+  border: 1px solid #f4d2d3;
+}
+
+.closeBtn {
+  border: 0;
+  background: transparent;
+  color: #111;
+  font-size: 26px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0 3px;
+}
+
+.error,
+.loading {
+  margin: 0;
+  font-family: var(--font-jost), sans-serif;
+  font-size: 11px;
+  font-weight: 300;
+}
+
+.error {
+  color: #9b2226;
+}
+
+.loading {
+  color: #666;
+}
+
+.statsGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.statCard {
+  border: 1px solid #ececec;
+  padding: 12px;
+}
+
+.statCard span {
+  display: block;
+  font-family: var(--font-jost), sans-serif;
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #9a9a9a;
+}
+
+.statCard strong {
+  display: block;
+  margin-top: 6px;
+  font-family: var(--font-cormorant), "Cormorant Garamond", Georgia, serif;
+  font-size: 30px;
+  color: #111;
+  font-weight: 400;
+}
+
+.section {
+  border: 1px solid #ececec;
+  padding: 14px;
+}
+
+.section h4 {
+  margin: 0 0 12px;
+  font-family: var(--font-jost), sans-serif;
+  font-size: 10px;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: #777;
+  font-weight: 400;
+}
+
+.infoGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px 18px;
+}
+
+.field label {
+  display: block;
+  margin-bottom: 5px;
+  font-family: var(--font-jost), sans-serif;
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #9a9a9a;
+}
+
+.field p {
+  margin: 0;
+  font-family: var(--font-jost), sans-serif;
+  font-size: 12px;
+  color: #111;
+  font-weight: 300;
+  min-height: 18px;
+}
+
+.inlineInput {
+  width: 100%;
+  border: 0;
+  border-bottom: 1px solid #e0e0e0;
+  border-radius: 0;
+  background: transparent;
+  color: #111;
+  font-family: var(--font-jost), sans-serif;
+  font-size: 12px;
+  font-weight: 300;
+  padding: 2px 0 6px;
+  outline: none;
+}
+
+.inlineInput:focus {
+  border-bottom-color: #111;
+}
+
+.orderList {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.orderCard {
+  border: 1px solid #efefef;
+  padding: 10px;
+}
+
+.orderTop {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.orderTop code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  font-size: 11px;
+  color: #555;
+}
+
+.orderCard p {
+  margin: 6px 0 0;
+  font-family: var(--font-jost), sans-serif;
+  font-size: 11px;
+  color: #666;
+  font-weight: 300;
+}
+
+.orderCard strong {
+  display: block;
+  margin-top: 6px;
+  font-family: var(--font-jost), sans-serif;
+  font-size: 13px;
+  font-weight: 400;
+  color: #111;
+}
+
+.statusBadge {
+  border-radius: 999px;
+  padding: 3px 8px;
+  font-family: var(--font-jost), sans-serif;
+  font-size: 9px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  border: 1px solid transparent;
+}
+
+.statuspaid {
+  background: #edf9f1;
+  border-color: #cdebd7;
+  color: #1c7c3b;
+}
+
+.statuspending {
+  background: #fff8de;
+  border-color: #f5e4a6;
+  color: #9b7a00;
+}
+
+.statuscanceled {
+  background: #fdeeee;
+  border-color: #f4d2d3;
+  color: #9b2226;
+}
+
+.empty {
+  margin: 0;
+  font-family: var(--font-jost), sans-serif;
+  font-size: 11px;
+  color: #999;
+  font-weight: 300;
+}
+
+.footer {
+  margin-top: auto;
+  padding-top: 12px;
+  border-top: 1px solid #efefef;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.footer button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border-radius: 100px;
+  padding: 7px 14px;
+  font-family: var(--font-jost), sans-serif;
+  font-size: 10px;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btnEdit {
+  border: 1px solid #e0e0e0;
+  color: #111;
+  background: transparent;
+}
+
+.btnEdit:hover {
+  border-color: #111;
+}
+
+.btnReset {
+  border: 1px solid #fff3cd;
+  color: #856404;
+  background: transparent;
+}
+
+.btnReset:hover {
+  background: #856404;
+  color: #fff;
+}
+
+.btnSuspend {
+  border: 1px solid #e0e0e0;
+  color: #111;
+  background: transparent;
+}
+
+.btnSuspend:hover {
+  border-color: #111;
+}
+
+.btnDelete {
+  border: 1px solid #fde8e8;
+  color: #9b2226;
+  background: transparent;
+}
+
+.btnDelete:hover {
+  background: #9b2226;
+  color: #fff;
+}
+
+.btnSave {
+  border: 1px solid #111;
+  background: #111;
+  color: #fff;
+}
+
+.btnDeleteSolid {
+  border: 1px solid #9b2226;
+  background: #9b2226;
+  color: #fff;
+}
+
+.footer button:disabled,
+.confirmActions button:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.confirmLayer {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  display: grid;
+  place-items: center;
+}
+
+.confirmBackdrop {
+  position: absolute;
+  inset: 0;
+  border: 0;
+  background: rgba(0, 0, 0, 0.45);
+}
+
+.confirmCard {
+  position: relative;
+  z-index: 1;
+  width: min(500px, calc(100vw - 30px));
+  background: #fff;
+  border: 1px solid #ececec;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.2);
+  padding: 18px;
+}
+
+.confirmCard h5 {
+  margin: 0;
+  font-family: var(--font-cormorant), "Cormorant Garamond", Georgia, serif;
+  font-size: 30px;
+  color: #111;
+  font-weight: 400;
+}
+
+.confirmCard p {
+  margin: 8px 0 0;
+  font-family: var(--font-jost), sans-serif;
+  font-size: 12px;
+  color: #555;
+  line-height: 1.45;
+}
+
+.confirmDangerText {
+  color: #9b2226 !important;
+}
+
+.confirmActions {
+  margin-top: 14px;
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+@media (max-width: 760px) {
+  .drawer {
+    width: 100vw;
+    padding: 16px;
+  }
+
+  .statsGrid,
+  .infoGrid {
+    grid-template-columns: 1fr;
+  }
+}
+

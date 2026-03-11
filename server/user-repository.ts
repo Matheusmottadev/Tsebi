@@ -620,6 +620,31 @@ async function adminUpdateUser(id: string, patch: Record<string, unknown> = {}) 
 
 /**
  * @param {string} id
+ * @param {boolean} disabled
+ * @returns {Promise<Record<string, unknown> | null>}
+ */
+async function adminSetUserLoginDisabled(id: string, disabled: boolean): Promise<User | null> {
+  await ensureUserSecurityColumns();
+  const current = await findUserById(id);
+  if (!current) return null;
+
+  const result = await query(
+    `
+    UPDATE users
+    SET
+      login_disabled = $2,
+      updated_at = NOW()
+    WHERE id = $1
+    RETURNING *
+    `,
+    [id, Boolean(disabled)]
+  );
+
+  return fromRow(result.rows[0] || null);
+}
+
+/**
+ * @param {string} id
  * @returns {Promise<Record<string, unknown> | null>}
  */
 async function adminDisableUserLogin(id: string): Promise<User | null> {
@@ -1265,6 +1290,7 @@ module.exports = {
   createUser,
   updateUser,
   adminUpdateUser,
+  adminSetUserLoginDisabled,
   adminDisableUserLogin,
   adminSetUserTempPassword,
   adminRestoreUserAuthSnapshot,

@@ -10,6 +10,7 @@ const {
   findUserById,
   createUser,
   adminUpdateUser,
+  adminSetUserLoginDisabled,
   searchUsersAdmin,
   adminDisableUserLogin,
   adminSetUserTempPassword,
@@ -17,9 +18,10 @@ const {
   invalidateUserSessions,
   deleteUserById,
   normalizeEmail,
+  createPasswordResetToken,
   restoreUserFromSnapshot
 } = require("./user-repository");
-const { listOrders, updateOrder, findOrderById, deleteOrderById } = require("./lib/order-repository");
+const { listOrders, listOrdersByUserId, updateOrder, findOrderById, deleteOrderById } = require("./lib/order-repository");
 const {
   listAdminProducts,
   searchAdminProducts,
@@ -51,7 +53,8 @@ const {
 const { ensureAdminProfile, updateAdminProfile } = require("./lib/admin-profile-repository");
 const { listAdminLoginEvents } = require("./lib/admin-login-events-repository");
 const { readJson } = require("./lib/json-store");
-const { sendEmail } = require("./lib/email-service");
+const { sendEmail, sendPasswordResetEmail } = require("./lib/email-service");
+const { issueAuthEmailCode } = require("./lib/auth-email-code-repository");
 const {
   listAccessCodes,
   upsertAccessCode,
@@ -137,6 +140,7 @@ const userPatchSchema = z.object({
   name: z.string().trim().min(2).max(120).optional(),
   email: z.string().trim().email().optional(),
   phone: z.string().trim().max(40).optional(),
+  status: z.enum(["active", "suspended"]).optional(),
   birthDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).or(z.literal("")).optional(),
   cpf: z
     .string()
@@ -316,6 +320,41 @@ function generateTempPassword() {
   }
   // Fallback determinístico se RNG cair em casos raros.
   return `Tmp${Date.now().toString(36)}9A`;
+}
+
+function normalizeBaseUrl(value: any) {
+  const raw = String(value || "").trim();
+  if (!raw) return "";
+  const withProtocol = /^https?:\/\//i.test(raw) ? raw : `https://${raw}`;
+  return withProtocol.replace(/\/+$/, "");
+}
+
+function resolvePublicBaseUrl() {
+  const explicit = String(
+    process.env.APP_BASE_URL ||
+      process.env.PUBLIC_APP_URL ||
+      process.env.SITE_URL ||
+      process.env.PUBLIC_SITE_URL ||
+      ""
+  ).trim();
+  if (explicit) return normalizeBaseUrl(explicit);
+  const corsOrigin = String(process.env.CORS_ORIGIN || "")
+    .split(",")
+    .map((item: any) => String(item || "").trim())
+    .find(Boolean);
+  if (corsOrigin) return normalizeBaseUrl(corsOrigin);
+  const inferred = process.env.VERCEL_URL || process.env.RAILWAY_STATIC_URL || process.env.RAILWAY_PUBLIC_DOMAIN || "";
+  return normalizeBaseUrl(inferred);
+}
+
+function buildAdminResetPasswordLink(email: any, token: any) {
+  const baseUrl = resolvePublicBaseUrl();
+  if (!baseUrl) return "";
+  const params = new URLSearchParams();
+  params.set("email", normalizeEmail(email || ""));
+  params.set("token", String(token || ""));
+  params.set("source", "admin");
+  return `${baseUrl}/recuperar-senha-codigo?${params.toString()}`;
 }
 
 function sanitizeUser(user: any) {
@@ -1141,6 +1180,94 @@ adminRouter.get("/users/:id", async (req: any, res: any) => {
   }
 });
 
+adminRouter.get("/users/:id/orders", async (req: any, res: any) => {
+  const id = String(req.params.id || "").trim();
+  if (!id) return res.status(400).json({ error: "INVALID_ID" });
+
+  try {
+    const user = await findUserById(id);
+    if (!user) return res.status(404).json({ error: "NOT_FOUND" });
+    const orders = await listOrdersByUserId(id);
+    return res.json({
+      orders: orders.map((order: any) => ({
+        id: String(order.id || ""),
+        createdAt: order.createdAt || null,
+        status: String(order.status || ""),
+        currency: String(order.currency || "brl"),
+        amount: Number(order.amount || 0),
+        userId: String(order.userId || ""),
+        productName: String(order.items?.[0]?.name || order.shippingSelectedService || "Pedido sem item").trim()
+      })),
+      count: orders.length
+    });
+  } catch {
+    return res.status(500).json({ error: "ADMIN_USER_ORDERS_FETCH_FAILED" });
+  }
+});
+
+adminRouter.post("/users/:id/reset-password", sensitiveAdminRateLimit, async (req: any, res: any) => {
+  const id = String(req.params.id || "").trim();
+  if (!id) return res.status(400).json({ error: "INVALID_ID" });
+
+  try {
+    const before = await findUserById(id);
+    if (!before) return res.status(404).json({ error: "NOT_FOUND" });
+
+    const tempPassword = generateTempPassword();
+    const hash = await bcrypt.hash(tempPassword, 12);
+    const updated = await adminSetUserTempPassword(id, hash);
+    if (!updated) return res.status(404).json({ error: "NOT_FOUND" });
+    await invalidateUserSessions(id);
+
+    const resetToken = await createPasswordResetToken(before.id, 30);
+    const issued = await issueAuthEmailCode({
+      userId: before.id,
+      email: before.email,
+      purpose: "password_reset"
+    });
+    if (!issued.ok) return res.status(500).json({ error: "AUTH_CODE_ISSUE_FAILED" });
+
+    await sendPasswordResetEmail({
+      to: before.email,
+      code: issued.code,
+      minutes: 15,
+      resetUrl: buildAdminResetPasswordLink(before.email, resetToken.token)
+    });
+
+    await recordAuditLog(req, {
+      action: "reset_password_email",
+      entityType: "user",
+      entityId: before.id,
+      summary: `Fluxo de redefinicao enviado: ${before.email}`,
+      before: sanitizeUserForAudit(before),
+      after: sanitizeUserForAudit(updated),
+      reversePayload: {
+        type: "user_auth_restore",
+        payload: {
+          id: before.id,
+          snapshot: {
+            passwordHash: before.passwordHash || "",
+            loginDisabled: Boolean(before.loginDisabled),
+            passwordResetRequired: Boolean(before.passwordResetRequired)
+          }
+        }
+      }
+    });
+
+    const response: any = {
+      ok: true,
+      expiresAt: issued.expiresAt || null,
+      resetTokenExpiresAt: resetToken.expiresAt || null
+    };
+    if (process.env.NODE_ENV !== "production") {
+      response.devCode = issued.code;
+    }
+    return res.json(response);
+  } catch {
+    return res.status(500).json({ error: "ADMIN_RESET_PASSWORD_FAILED" });
+  }
+});
+
 adminRouter.post("/users/:id/temp-password", sensitiveAdminRateLimit, async (req: any, res: any) => {
   const id = String(req.params.id || "").trim();
   if (!id) return res.status(400).json({ error: "INVALID_ID" });
@@ -1298,31 +1425,71 @@ adminRouter.patch("/users/:id", async (req: any, res: any) => {
     const before = await findUserById(req.params.id);
     if (!before) return res.status(404).json({ error: "NOT_FOUND" });
 
-    const updated = await adminUpdateUser(req.params.id, {
-      ...parsed.data,
-      email: parsed.data.email ? normalizeEmail(parsed.data.email) : undefined,
-      phone: parsed.data.phone == null ? undefined : String(parsed.data.phone || "").trim().slice(0, 40)
-    });
+    let updated: any = before;
+    const statusValue = String(parsed.data.status || "").trim().toLowerCase();
+    if (statusValue) {
+      const suspended = statusValue === "suspended";
+      const statusUpdated = await adminSetUserLoginDisabled(req.params.id, suspended);
+      if (!statusUpdated) return res.status(404).json({ error: "NOT_FOUND" });
+      updated = statusUpdated;
+      if (suspended) {
+        await invalidateUserSessions(req.params.id);
+      }
+    }
 
-    if (!updated) return res.status(404).json({ error: "NOT_FOUND" });
+    const profilePatch = {
+      title: parsed.data.title,
+      name: parsed.data.name,
+      email: parsed.data.email ? normalizeEmail(parsed.data.email) : undefined,
+      phone: parsed.data.phone == null ? undefined : String(parsed.data.phone || "").trim().slice(0, 40),
+      birthDate: parsed.data.birthDate,
+      cpf: parsed.data.cpf,
+      cep: parsed.data.cep
+    };
+    const hasProfilePatch = Object.values(profilePatch).some((value) => value !== undefined);
+    if (hasProfilePatch) {
+      const profileUpdated = await adminUpdateUser(req.params.id, profilePatch);
+      if (!profileUpdated) return res.status(404).json({ error: "NOT_FOUND" });
+      if (profileUpdated.error === "EMAIL_ALREADY_EXISTS") {
+        return res.status(409).json({ error: "EMAIL_ALREADY_EXISTS" });
+      }
+      updated = profileUpdated;
+    }
+
     if (updated.error === "EMAIL_ALREADY_EXISTS") {
       return res.status(409).json({ error: "EMAIL_ALREADY_EXISTS" });
     }
+
+    const wasStatusChange = Boolean(statusValue);
+    const statusLabel = statusValue === "suspended" ? "Conta suspensa" : statusValue === "active" ? "Conta reativada" : "";
+    const summary = statusLabel ? `${statusLabel}: ${before.email}` : `Usuario atualizado: ${before.email}`;
 
     await recordAuditLog(req, {
       action: "update",
       entityType: "user",
       entityId: before.id,
-      summary: `Usuario atualizado: ${before.email}`,
+      summary,
       before: sanitizeUserForAudit(before),
       after: sanitizeUserForAudit(updated),
-      reversePayload: {
-        type: "user_update",
-        payload: {
-          id: before.id,
-          patch: buildUserPatchFromSnapshot(before)
-        }
-      }
+      reversePayload: wasStatusChange
+        ? {
+            type: "user_auth_restore",
+            payload: {
+              id: before.id,
+              snapshot: {
+                passwordHash: before.passwordHash || "",
+                loginDisabled: Boolean(before.loginDisabled),
+                passwordResetRequired: Boolean(before.passwordResetRequired)
+              }
+            }
+          }
+        : {
+            type: "user_update",
+            payload: {
+              id: before.id,
+              patch: buildUserPatchFromSnapshot(before)
+            }
+          }
     });
 
     return res.json({ ok: true, user: sanitizeUser(updated) });

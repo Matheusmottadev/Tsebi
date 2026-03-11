@@ -1,4 +1,7 @@
-﻿import type {
+import { useEffect, useRef, useState } from "react";
+import { DrawerDetalhesUsuario } from "@/components/admin/DrawerDetalhesUsuario";
+import { Toast } from "@/components/admin/Toast";
+import type {
   AdminAuditLog,
   AdminNewsletterRow,
   AdminOrderSummary,
@@ -26,6 +29,7 @@ type ConnectedPageProps = {
   data: ConnectedPanelData;
   loading: boolean;
   errorMessage: string;
+  onRequestRefresh?: () => void;
 };
 
 function formatDateTime(value: string | null): string {
@@ -64,7 +68,66 @@ function renderEmpty(colSpan: number, text: string) {
   );
 }
 
-export function ConnectedPage({ page, data, loading, errorMessage }: ConnectedPageProps) {
+function normalizeUserStatus(value: string): string {
+  const normalized = String(value || "").trim().toLowerCase();
+  if (!normalized) return "-";
+  if (normalized === "disabled") return "suspended";
+  return normalized;
+}
+
+export function ConnectedPage({ page, data, loading, errorMessage, onRequestRefresh }: ConnectedPageProps) {
+  const [usersRows, setUsersRows] = useState<AdminUserRow[]>(data.users || []);
+  const [selectedUser, setSelectedUser] = useState<AdminUserRow | null>(null);
+  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+  const [toastMessage, setToastMessage] = useState("");
+  const [toastVisible, setToastVisible] = useState(false);
+  const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    if (page !== "usuarios") return;
+    setUsersRows(data.users || []);
+  }, [data.users, page]);
+
+  useEffect(
+    () => () => {
+      if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
+    },
+    []
+  );
+
+  const openUserDrawer = (user: AdminUserRow) => {
+    setSelectedUser(user);
+    setIsDrawerOpen(true);
+    setIsEditing(false);
+  };
+
+  const closeUserDrawer = () => {
+    setIsDrawerOpen(false);
+    setIsEditing(false);
+    setSelectedUser(null);
+  };
+
+  const showToast = (message: string) => {
+    setToastMessage(message);
+    setToastVisible(true);
+    if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
+    toastTimerRef.current = setTimeout(() => {
+      setToastVisible(false);
+      toastTimerRef.current = null;
+    }, 3000);
+  };
+
+  const handleUserRowUpdated = (nextUser: AdminUserRow) => {
+    setUsersRows((current) => current.map((row) => (row.id === nextUser.id ? { ...row, ...nextUser } : row)));
+    setSelectedUser((current) => (current && current.id === nextUser.id ? { ...current, ...nextUser } : current));
+  };
+
+  const handleUserDeleted = (userId: string) => {
+    setUsersRows((current) => current.filter((row) => row.id !== userId));
+    setSelectedUser((current) => (current?.id === userId ? null : current));
+  };
+
   return (
     <section className={styles.panel}>
       {errorMessage ? <p className={styles.warning}>{errorMessage}</p> : null}
@@ -136,19 +199,25 @@ export function ConnectedPage({ page, data, loading, errorMessage }: ConnectedPa
                 <th>Status</th>
                 <th>Último login</th>
                 <th>Criado em</th>
+                <th></th>
               </tr>
             </thead>
             <tbody>
-              {data.users.slice(0, 200).map((user) => (
+              {usersRows.slice(0, 200).map((user) => (
                 <tr key={user.id}>
                   <td>{user.name || "-"}</td>
                   <td>{user.email || "-"}</td>
-                  <td>{user.status || "-"}</td>
+                  <td>{normalizeUserStatus(user.status)}</td>
                   <td>{formatDateTime(user.lastLoginAt)}</td>
                   <td>{formatDateTime(user.createdAt)}</td>
+                  <td>
+                    <button className={styles.btnDetalhes} onClick={() => openUserDrawer(user)}>
+                      Detalhes
+                    </button>
+                  </td>
                 </tr>
               ))}
-              {!data.users.length ? renderEmpty(5, "Nenhum usuário encontrado.") : null}
+              {!usersRows.length ? renderEmpty(6, "Nenhum usuário encontrado.") : null}
             </tbody>
           </table>
         </div>
@@ -293,6 +362,22 @@ export function ConnectedPage({ page, data, loading, errorMessage }: ConnectedPa
           </table>
         </div>
       ) : null}
+
+      {page === "usuarios" ? (
+        <DrawerDetalhesUsuario
+          isOpen={isDrawerOpen}
+          user={selectedUser}
+          isEditing={isEditing}
+          onSetEditing={setIsEditing}
+          onClose={closeUserDrawer}
+          onToast={showToast}
+          onUserRowUpdated={handleUserRowUpdated}
+          onUserDeleted={handleUserDeleted}
+          onRequestRefresh={onRequestRefresh}
+        />
+      ) : null}
+      <Toast message={toastMessage} visible={toastVisible} />
     </section>
   );
 }
+

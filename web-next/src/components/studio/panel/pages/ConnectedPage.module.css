@@ -64,3 +64,24 @@
   color: var(--grey-600);
   text-align: center;
 }
+
+.btnDetalhes {
+  background: transparent;
+  border: 1px solid #e0e0e0;
+  padding: 6px 16px;
+  font-family: var(--font-jost), sans-serif;
+  font-size: 10px;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  cursor: pointer;
+  color: #111;
+  border-radius: 100px;
+  font-weight: 300;
+  transition: all 0.2s;
+}
+
+.btnDetalhes:hover {
+  background: #111;
+  color: #fff;
+  border-color: #111;
+}

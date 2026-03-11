@@ -506,7 +506,13 @@ export function StudioAdminPanel() {
               onViewAllOrders={() => setActivePage("pedidos")}
             />
           ) : (
-            <ConnectedPage page={activePage} data={connectedData} loading={isLoading} errorMessage={errorMessage} />
+            <ConnectedPage
+              page={activePage}
+              data={connectedData}
+              loading={isLoading}
+              errorMessage={errorMessage}
+              onRequestRefresh={() => setRefreshIndex((current) => current + 1)}
+            />
           )}
         </section>
       </main>
