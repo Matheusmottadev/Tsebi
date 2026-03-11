@@ -103,7 +103,7 @@ export function ProductImage({
     );
   }
 
-  // Keep a raw-loader fallback for remote/legacy URLs while still using next/image.
+  // Remote/legacy URLs are rendered unoptimized to avoid optimizer constraints.
   return (
     <Image
       src={safeSrc}
@@ -112,7 +112,6 @@ export function ProductImage({
       height={height}
       className={className}
       unoptimized
-      loader={({ src: rawSrc }) => rawSrc}
       priority={priority}
       onError={(event) => {
         const target = event.currentTarget;
