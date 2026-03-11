@@ -1,6 +1,7 @@
 ﻿"use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import { HttpError } from "@/lib/http";
 import {
   listAuditLogsAdmin,
@@ -14,6 +15,15 @@ import {
   studioAuthMe,
   type AdminOrderSummary,
 } from "@/services/admin";
+import { DrawerAuditoria } from "@/components/admin/DrawerAuditoria";
+import { DrawerNewsletter } from "@/components/admin/DrawerNewsletter";
+import { DrawerNovoAtendimento } from "@/components/admin/DrawerNovoAtendimento";
+import { DrawerNovoCadastroVIP } from "@/components/admin/DrawerNovoCadastroVIP";
+import { DrawerNovoCupom } from "@/components/admin/DrawerNovoCupom";
+import { DrawerNovoPedido } from "@/components/admin/DrawerNovoPedido";
+import { DrawerNovoProduto } from "@/components/admin/DrawerNovoProduto";
+import { DrawerNovoUsuario } from "@/components/admin/DrawerNovoUsuario";
+import { Toast } from "@/components/admin/Toast";
 import { PAGE_TITLES } from "./data";
 import { Sidebar } from "./Sidebar";
 import { Topbar } from "./Topbar";
@@ -215,11 +225,81 @@ function buildActivityItems(data: ConnectedPanelData): ActivityItem[] {
   }));
 }
 
+const OPEN_ORDER_STATUSES = new Set([
+  "pending",
+  "pending_payment",
+  "payment_pending",
+  "awaiting_payment",
+  "processing",
+  "in_progress",
+  "paid",
+  "approved",
+  "pendente",
+  "aguardando_pagamento",
+  "em_andamento",
+]);
+
+const CLOSED_CARE_STATUSES = new Set([
+  "completed",
+  "closed",
+  "resolved",
+  "declined",
+  "canceled",
+  "cancelled",
+  "cancelado",
+  "recusado",
+  "concluido",
+  "concluído",
+  "finalizado",
+]);
+
+const TOPBAR_BUTTONS: Record<AdminPageKey, { label: string }> = {
+  inicio: { label: "Sair" },
+  pedidos: { label: "+ Novo Pedido" },
+  produtos: { label: "+ Novo Produto" },
+  usuarios: { label: "+ Novo Usuário" },
+  atendimentos: { label: "+ Novo Atendimento" },
+  lista_vip: { label: "+ Novo Cadastro" },
+  newsletter: { label: "Editar" },
+  cupons: { label: "+ Novo Cupom" },
+  auditoria: { label: "Exportar" },
+};
+
 export function StudioAdminPanel() {
+  const router = useRouter();
   const [activePage, setActivePage] = useState<AdminPageKey>("inicio");
   const [isLoading, setIsLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState("");
   const [connectedData, setConnectedData] = useState<ConnectedPanelData>(EMPTY_CONNECTED_DATA);
+  const [refreshIndex, setRefreshIndex] = useState(0);
+  const [activeDrawer, setActiveDrawer] = useState<string | null>(null);
+  const [toastMessage, setToastMessage] = useState("");
+  const [toastVisible, setToastVisible] = useState(false);
+  const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const openDrawer = (name: string) => setActiveDrawer(name);
+  const closeDrawer = () => setActiveDrawer(null);
+
+  useEffect(() => {
+    setActiveDrawer(null);
+  }, [activePage]);
+
+  function showToast(message: string) {
+    setToastMessage(message);
+    setToastVisible(true);
+    if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
+    toastTimerRef.current = setTimeout(() => {
+      setToastVisible(false);
+      toastTimerRef.current = null;
+    }, 3000);
+  }
+
+  useEffect(
+    () => () => {
+      if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
+    },
+    []
+  );
 
   useEffect(() => {
     let cancelled = false;
@@ -334,38 +414,55 @@ export function StudioAdminPanel() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [refreshIndex]);
 
-  const pendingOrders = useMemo(
-    () =>
-      connectedData.orders.filter((order) => {
-        const status = String(order.status || "").toLowerCase();
-        return status === "pending_payment" || status === "processing";
-      }).length,
-    [connectedData.orders]
-  );
+  const pendingOrders = useMemo(() => {
+    const openCount = connectedData.orders.filter((order) => {
+      const status = String(order.status || "").trim().toLowerCase();
+      return OPEN_ORDER_STATUSES.has(status);
+    }).length;
+    if (openCount > 0) return openCount;
+    return connectedData.orders.length;
+  }, [connectedData.orders]);
 
-  const openCare = useMemo(
-    () =>
-      connectedData.privateCare.filter((row) => {
-        const status = String(row.status || "").toLowerCase();
-        return !["completed", "declined", "canceled", "cancelado", "recusado"].includes(status);
-      }).length,
-    [connectedData.privateCare]
-  );
+  const openCare = useMemo(() => {
+    const openCount = connectedData.privateCare.filter((row) => {
+      const status = String(row.status || "").trim().toLowerCase();
+      return !CLOSED_CARE_STATUSES.has(status);
+    }).length;
+    if (openCount > 0) return openCount;
+    return connectedData.privateCare.length;
+  }, [connectedData.privateCare]);
 
   const kpis = useMemo(() => buildDashboardKpis(connectedData), [connectedData]);
   const recentOrders = useMemo(() => buildRecentOrders(connectedData), [connectedData]);
   const activity = useMemo(() => buildActivityItems(connectedData), [connectedData]);
 
+  const topbarConfig = TOPBAR_BUTTONS[activePage];
   const pageTitle = PAGE_TITLES[activePage];
+  const topbarActionLabel = topbarConfig.label;
+
+  const handleTopbarButton = () => {
+    if (activePage === "inicio") {
+      router.push("/admin/login");
+      return;
+    }
+    openDrawer(activePage);
+  };
+
+  function handleSaved(shouldReload: boolean) {
+    if (shouldReload) {
+      setRefreshIndex((current) => current + 1);
+    }
+    showToast("Salvo com sucesso");
+  }
 
   return (
     <div className={styles.app}>
       <Sidebar activePage={activePage} onChangePage={setActivePage} pendingOrders={pendingOrders} openCare={openCare} />
 
       <main className={styles.main}>
-        <Topbar title={pageTitle} onNewProduct={() => setActivePage("produtos")} />
+        <Topbar title={pageTitle} actionLabel={topbarActionLabel} onAction={handleTopbarButton} />
 
         <section className={styles.content}>
           {activePage === "inicio" ? (
@@ -382,6 +479,34 @@ export function StudioAdminPanel() {
           )}
         </section>
       </main>
+
+      {activeDrawer === "pedidos" ? (
+        <DrawerNovoPedido isOpen={true} onClose={closeDrawer} onSaved={() => handleSaved(false)} />
+      ) : null}
+      {activeDrawer === "produtos" ? (
+        <DrawerNovoProduto isOpen={true} onClose={closeDrawer} onSaved={() => handleSaved(true)} />
+      ) : null}
+      {activeDrawer === "usuarios" ? (
+        <DrawerNovoUsuario isOpen={true} onClose={closeDrawer} onSaved={() => handleSaved(true)} />
+      ) : null}
+      {activeDrawer === "atendimentos" ? <DrawerNovoAtendimento isOpen={true} onClose={closeDrawer} /> : null}
+      {activeDrawer === "lista_vip" ? <DrawerNovoCadastroVIP isOpen={true} onClose={closeDrawer} /> : null}
+      {activeDrawer === "newsletter" ? (
+        <DrawerNewsletter
+          isOpen={true}
+          onClose={closeDrawer}
+          rows={connectedData.newsletter}
+          onRowsChange={(rows) => setConnectedData((current) => ({ ...current, newsletter: rows }))}
+          onSaved={() => handleSaved(false)}
+        />
+      ) : null}
+      {activeDrawer === "cupons" ? (
+        <DrawerNovoCupom isOpen={true} onClose={closeDrawer} onSaved={() => handleSaved(true)} />
+      ) : null}
+      {activeDrawer === "auditoria" ? (
+        <DrawerAuditoria isOpen={true} onClose={closeDrawer} rows={connectedData.audit} onSaved={() => handleSaved(false)} />
+      ) : null}
+      <Toast message={toastMessage} visible={toastVisible} />
     </div>
   );
 }

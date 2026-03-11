@@ -86,7 +86,7 @@ export function Sidebar({ activePage, onChangePage, pendingOrders, openCare }: S
                 >
                   <Icon size={14} strokeWidth={1.6} aria-hidden="true" />
                   <span>{item.label}</span>
-                  {item.badge ? <span className={styles.badge}>{item.badge}</span> : null}
+                  {typeof item.badge === "number" ? <span className={styles.badge}>{item.badge}</span> : null}
                 </button>
               );
             })}
