@@ -47,8 +47,10 @@ function normalizeImageValue(value: unknown): string {
 
   const raw = String(value || "").trim();
   if (!raw) return "";
+  if (raw === "/" || raw === "." || raw === "#") return "";
+  if (/^(javascript|data):/i.test(raw)) return "";
   if (/^https?:\/\//i.test(raw)) return raw;
-  if (raw.startsWith("/")) return raw;
+  if (raw.startsWith("/")) return raw.length > 1 ? raw : "";
 
   const clean = raw.replace(/^\.?\//, "");
   if (clean.startsWith("images/")) return `/${clean}`;

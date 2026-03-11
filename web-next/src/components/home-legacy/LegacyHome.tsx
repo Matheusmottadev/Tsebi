@@ -290,9 +290,10 @@ function resolveProductHref(product: HomeProductCard): string | null {
 function resolveProductImageSrc(product: HomeProductCard): string {
   const raw = String(product.image || "").trim();
   if (!raw) return COLLECTION_PLACEHOLDER;
+  if (raw === "/" || raw === "." || raw === "#") return COLLECTION_PLACEHOLDER;
   if (/^https?:\/\//i.test(raw)) return raw;
   if (raw.startsWith("/images/")) return raw;
-  if (raw.startsWith("/")) return raw;
+  if (raw.startsWith("/")) return raw.length > 1 ? raw : COLLECTION_PLACEHOLDER;
 
   const clean = raw.replace(/^\.?\//, "");
   if (clean.startsWith("images/")) return `/${clean}`;
