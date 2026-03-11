@@ -281,6 +281,10 @@ export function StudioAdminPanel() {
   const closeDrawer = () => setActiveDrawer(null);
 
   useEffect(() => {
+    document.body.classList.remove("home-page", "home-legacy-page");
+  }, []);
+
+  useEffect(() => {
     setActiveDrawer(null);
   }, [activePage]);
 

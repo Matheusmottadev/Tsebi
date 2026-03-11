@@ -6507,3 +6507,11 @@ body:not(.home-page) .home-header.product-mode .product-search-trigger svg {
 
 
 
+body.home-page * {
+  font-weight: 400 !important;
+}
+
+body.home-page b,
+body.home-page strong {
+  font-weight: 400 !important;
+}
