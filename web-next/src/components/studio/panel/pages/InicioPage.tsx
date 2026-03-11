@@ -26,13 +26,31 @@ export function InicioPage({
       {errorMessage ? <p className={styles.warning}>{errorMessage}</p> : null}
       {loading ? <p className={styles.loading}>Carregando dados reais do painel...</p> : null}
 
-      <section className={styles.kpiGrid}>
+      <section
+        className={styles.kpiGrid}
+        style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
+          gap: 16,
+          marginBottom: 32,
+          width: "100%",
+          minWidth: 0,
+        }}
+      >
         {kpis.map((kpi) => (
           <KpiCard key={kpi.id} label={kpi.label} value={kpi.value} delta={kpi.delta} tone={kpi.tone} />
         ))}
       </section>
 
-      <section className={styles.lowerGrid}>
+      <section
+        className={styles.lowerGrid}
+        style={{
+          display: "grid",
+          gridTemplateColumns: "minmax(0, 1fr) 340px",
+          gap: 16,
+          alignItems: "start",
+        }}
+      >
         <RecentOrders rows={recentOrders} onViewAll={onViewAllOrders} />
         <ActivityFeed items={activities} />
       </section>
