@@ -188,7 +188,7 @@ export default function RootLayout({
         <TrackingScripts />
         <WhatsAppContactButton />
         <IdentityBridge />
-        <Suspense fallback={children}>
+        <Suspense fallback={null}>
           <LayoutChrome>{children}</LayoutChrome>
         </Suspense>
         <CookieConsentBar />

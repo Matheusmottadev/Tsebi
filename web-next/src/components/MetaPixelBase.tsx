@@ -1,4 +1,3 @@
-import Image from "next/image";
 import Script from "next/script";
 
 const META_PIXEL_ID = String(process.env.NEXT_PUBLIC_META_PIXEL_ID || "").trim();
@@ -28,14 +27,12 @@ export function MetaPixelBase() {
         `}
       </Script>
       <noscript>
-        <Image
+        <img
           height={1}
           width={1}
           style={{ display: "none" }}
           src={`https://www.facebook.com/tr?id=${encodeURIComponent(META_PIXEL_ID)}&ev=PageView&noscript=1`}
           alt=""
-          unoptimized
-          loader={({ src }) => src}
         />
       </noscript>
     </>
