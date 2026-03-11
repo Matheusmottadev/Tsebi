@@ -14,7 +14,7 @@ import { ProductsSearchGrid, type ProductsSearchGridItem } from "./ProductsSearc
 import styles from "./page.module.css";
 import { NovidadesGrid, type NovidadesGridTile } from "./NovidadesGrid";
 
-export const revalidate = 60;
+export const revalidate = 300;
 
 export const metadata: Metadata = {
   title: "Produtos",
@@ -431,7 +431,7 @@ function renderRootProductsToolbar(
                 href={item.href}
                 className={`${styles.novidadesMainCategoryLink} ${item.active ? styles.novidadesMainCategoryLinkActive : ""}`}
                 scroll={false}
-                prefetch
+                prefetch={false}
               >
                 {sanitizeDisplayText(item.label)}
               </Link>
@@ -457,7 +457,7 @@ function renderRootProductsToolbar(
                     href={item.href}
                     className={`${styles.novidadesFilterItem} ${item.active ? styles.novidadesFilterItemActive : ""}`}
                     scroll={false}
-                    prefetch
+                    prefetch={false}
                   >
                     {sanitizeDisplayText(item.label)}
                   </Link>
@@ -486,7 +486,7 @@ function renderRootProductsToolbar(
                 </svg>
               </label>
               <div className={styles.novidadesFiltersPopupPanel} role="dialog" aria-label="Filtros">
-                <Link href="/products?n=e&fp=1" className={styles.novidadesFiltersClear} scroll={false} prefetch>
+                <Link href="/products?n=e&fp=1" className={styles.novidadesFiltersClear} scroll={false} prefetch={false}>
                   Limpar filtros
                 </Link>
                 <label htmlFor={filtersToggleId} className={styles.novidadesFiltersPopupClose} aria-label="Fechar filtros">
@@ -497,7 +497,7 @@ function renderRootProductsToolbar(
                     <h3 className={styles.novidadesFiltersSectionTitle}>Coleção</h3>
                     <div className={styles.novidadesFiltersTwoColumns}>
                       {ROOT_PRODUCTS_COLLECTION_LINKS.map((item) => (
-                        <Link key={item.href} href={item.href} className={styles.novidadesFiltersOption} scroll={false} prefetch>
+                        <Link key={item.href} href={item.href} className={styles.novidadesFiltersOption} scroll={false} prefetch={false}>
                           <span className={styles.novidadesFiltersOptionLabel}>{sanitizeDisplayText(item.label)}</span>
                         </Link>
                       ))}
@@ -509,7 +509,7 @@ function renderRootProductsToolbar(
                     <div className={styles.novidadesFiltersExpandableBlock}>
                       <div className={styles.novidadesFiltersTwoColumns}>
                         {ROOT_PRODUCTS_COLOR_OPTIONS_VISIBLE.map((item) => (
-                          <Link key={item.href} href={item.href} className={styles.novidadesFiltersOption} scroll={false} prefetch>
+                          <Link key={item.href} href={item.href} className={styles.novidadesFiltersOption} scroll={false} prefetch={false}>
                             <span
                               className={styles.novidadesFiltersColorDot}
                               aria-hidden="true"
@@ -526,7 +526,7 @@ function renderRootProductsToolbar(
                         </summary>
                         <div className={`${styles.novidadesFiltersTwoColumns} ${styles.novidadesFiltersCollapsibleGrid}`}>
                           {ROOT_PRODUCTS_COLOR_OPTIONS_HIDDEN.map((item) => (
-                            <Link key={item.href} href={item.href} className={styles.novidadesFiltersOption} scroll={false} prefetch>
+                            <Link key={item.href} href={item.href} className={styles.novidadesFiltersOption} scroll={false} prefetch={false}>
                               <span
                                 className={styles.novidadesFiltersColorDot}
                                 aria-hidden="true"
@@ -545,7 +545,7 @@ function renderRootProductsToolbar(
                     <div className={styles.novidadesFiltersExpandableBlock}>
                       <div className={styles.novidadesFiltersTwoColumns}>
                         {ROOT_PRODUCTS_MATERIAL_OPTIONS_VISIBLE.map((item) => (
-                          <Link key={item.href} href={item.href} className={styles.novidadesFiltersOption} scroll={false} prefetch>
+                          <Link key={item.href} href={item.href} className={styles.novidadesFiltersOption} scroll={false} prefetch={false}>
                             <span className={styles.novidadesFiltersOptionLabel}>{sanitizeDisplayText(item.label)}</span>
                           </Link>
                         ))}
@@ -557,7 +557,7 @@ function renderRootProductsToolbar(
                         </summary>
                         <div className={`${styles.novidadesFiltersTwoColumns} ${styles.novidadesFiltersCollapsibleGrid}`}>
                           {ROOT_PRODUCTS_MATERIAL_OPTIONS_HIDDEN.map((item) => (
-                            <Link key={item.href} href={item.href} className={styles.novidadesFiltersOption} scroll={false} prefetch>
+                            <Link key={item.href} href={item.href} className={styles.novidadesFiltersOption} scroll={false} prefetch={false}>
                               <span className={styles.novidadesFiltersOptionLabel}>{sanitizeDisplayText(item.label)}</span>
                             </Link>
                           ))}
@@ -570,13 +570,13 @@ function renderRootProductsToolbar(
                     <h3 className={styles.novidadesFiltersSectionTitle}>Tamanho</h3>
                     <div className={styles.novidadesFiltersSizesWrap}>
                       {ROOT_PRODUCTS_SIZE_OPTIONS_APPAREL.map((size) => (
-                        <Link key={size} href={`/products?n=e&sz=${encodeURIComponent(size)}&fp=1`} className={styles.novidadesFiltersSizeChip} scroll={false} prefetch>
+                        <Link key={size} href={`/products?n=e&sz=${encodeURIComponent(size)}&fp=1`} className={styles.novidadesFiltersSizeChip} scroll={false} prefetch={false}>
                           {size}
                         </Link>
                       ))}
                       <span className={styles.novidadesFiltersSizeDivider}>|</span>
                       {ROOT_PRODUCTS_SIZE_OPTIONS_NUMERIC.map((size) => (
-                        <Link key={size} href={`/products?n=e&sz=${encodeURIComponent(size)}&fp=1`} className={styles.novidadesFiltersSizeChip} scroll={false} prefetch>
+                        <Link key={size} href={`/products?n=e&sz=${encodeURIComponent(size)}&fp=1`} className={styles.novidadesFiltersSizeChip} scroll={false} prefetch={false}>
                           {size}
                         </Link>
                       ))}
@@ -678,7 +678,7 @@ function renderProductsSearchSidebar(
             href={masculineHref}
             className={`${styles.productsSearchGenderChip} ${activeGender === "masculino" ? styles.productsSearchGenderChipActive : ""}`}
             scroll={false}
-            prefetch
+            prefetch={false}
           >
             Homem
           </Link>
@@ -686,7 +686,7 @@ function renderProductsSearchSidebar(
             href={feminineHref}
             className={`${styles.productsSearchGenderChip} ${activeGender === "feminino" ? styles.productsSearchGenderChipActive : ""}`}
             scroll={false}
-            prefetch
+            prefetch={false}
           >
             Mulher
           </Link>
@@ -711,7 +711,7 @@ function renderProductsSearchSidebar(
                   href={buildProductsHref(params, { sort: sortPatch })}
                   className={`${styles.productsSearchSidebarOption} ${isActive ? styles.productsSearchSidebarOptionActive : ""}`}
                   scroll={false}
-                  prefetch
+                  prefetch={false}
                 >
                   {sanitizeDisplayText(item.label)}
                   {isActive ? renderSelectedMark() : null}
@@ -744,7 +744,7 @@ function renderProductsSearchSidebar(
                   })}
                   className={optionClassName}
                   scroll={false}
-                  prefetch
+                  prefetch={false}
                 >
                   {sanitizeDisplayText(collectionOption)}
                   {isActive ? renderSelectedMark() : null}
@@ -782,7 +782,7 @@ function renderProductsSearchSidebar(
                   })}
                   className={optionClassName}
                   scroll={false}
-                  prefetch
+                  prefetch={false}
                 >
                   <span
                     className={styles.productsSearchSidebarColorDot}
@@ -821,7 +821,7 @@ function renderProductsSearchSidebar(
                     })}
                     className={optionClassName}
                     scroll={false}
-                    prefetch
+                    prefetch={false}
                   >
                     {sanitizeDisplayText(material)}
                     {isActive ? renderSelectedMark() : null}
@@ -855,7 +855,7 @@ function renderProductsSearchSidebar(
                   })}
                   className={optionClassName}
                   scroll={false}
-                  prefetch
+                  prefetch={false}
                 >
                   {sanitizeDisplayText(size)}
                   {isActive ? renderSelectedMark() : null}

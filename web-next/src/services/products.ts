@@ -84,9 +84,14 @@ export interface PersonalizedProductsResponse {
 }
 
 const STOREFRONT_REVALIDATE_SECONDS = 60;
+const STOREFRONT_RECOMMENDATIONS_REVALIDATE_SECONDS = 300;
 
 const STOREFRONT_CACHE_OPTIONS = {
   next: { revalidate: STOREFRONT_REVALIDATE_SECONDS },
+} as const;
+
+const STOREFRONT_RECOMMENDATIONS_CACHE_OPTIONS = {
+  next: { revalidate: STOREFRONT_RECOMMENDATIONS_REVALIDATE_SECONDS },
 } as const;
 
 function buildRecentProductsPath(ids: string[]): string {
@@ -347,7 +352,7 @@ export async function listProductRecommendations(idOrSlug: string, limit = 4): P
   const safeLimit = Math.max(1, Math.min(12, Number(limit) || 4));
   const response = await get<ProductRecommendationsResponse>(
     `/api/products/${encodeURIComponent(idOrSlug)}/recommendations?limit=${safeLimit}`,
-    STOREFRONT_CACHE_OPTIONS
+    STOREFRONT_RECOMMENDATIONS_CACHE_OPTIONS
   );
   return {
     ...response,
