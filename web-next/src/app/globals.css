@@ -665,3 +665,11 @@ body.products-novidades-view .header-inline-search-clear {
 .home-header.novidades-listing-mode .header-row {
   background: #fff !important;
 }
+
+/* Global override requested: remove bold text across the site */
+html body,
+html body *,
+html body *::before,
+html body *::after {
+  font-weight: 400 !important;
+}
