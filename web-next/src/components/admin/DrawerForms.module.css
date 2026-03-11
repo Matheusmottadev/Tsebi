@@ -303,11 +303,114 @@
   padding: 12px;
   display: grid;
   gap: 10px;
+  position: relative;
 }
 
 .itemActions {
   display: flex;
   justify-content: space-between;
+}
+
+.itemGrid {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.itemRemoveBtn {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 20px;
+  height: 20px;
+  border: 0;
+  background: transparent;
+  color: #111;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+}
+
+.imageSlots {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(100px, 100px));
+  gap: 10px;
+}
+
+.imageSlotItem {
+  position: relative;
+  width: 100px;
+}
+
+.imageSlotTrigger {
+  width: 100px;
+  height: 100px;
+  border: 1px dashed #e0e0e0;
+  background: #f7f7f7;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  overflow: hidden;
+}
+
+.imageSlotInput {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.imageSlotEmpty {
+  color: #777;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.imageSlotPreview {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.imageRemoveBtn {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  width: 18px;
+  height: 18px;
+  border: 0;
+  border-radius: 50%;
+  background: rgba(17, 17, 17, 0.88);
+  color: #fff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.15s ease;
+}
+
+.imageSlotItem:hover .imageRemoveBtn {
+  opacity: 1;
+}
+
+.imageSlotCaption {
+  margin-top: 6px;
+  font-size: 10px;
+  color: #777;
+  display: block;
+  text-align: center;
+}
+
+.imageHint {
+  margin-top: 8px;
+  font-size: 10px;
+  color: #999;
 }
 
 .variantGrid {
@@ -341,8 +444,10 @@
 
 @media (max-width: 680px) {
   .row2,
-  .row3 {
+  .row3,
+  .itemGrid {
     grid-template-columns: 1fr;
   }
+
 }
 

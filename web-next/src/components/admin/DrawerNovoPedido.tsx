@@ -1,6 +1,6 @@
 ﻿"use client";
 
-import { ChevronDown, ChevronUp, Plus, Trash2 } from "lucide-react";
+import { ChevronDown, ChevronUp, Plus, X } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { Drawer } from "./Drawer";
 import form from "./DrawerForms.module.css";
@@ -38,6 +38,8 @@ const BRAZIL_STATES = [
 type OrderItemDraft = {
   productId: string;
   quantity: string;
+  color: string;
+  size: string;
 };
 
 type DrawerNovoPedidoProps = {
@@ -47,7 +49,7 @@ type DrawerNovoPedidoProps = {
 };
 
 function buildEmptyItem(): OrderItemDraft {
-  return { productId: "", quantity: "1" };
+  return { productId: "", quantity: "1", color: "", size: "" };
 }
 
 export function DrawerNovoPedido({ isOpen, onClose, onSaved }: DrawerNovoPedidoProps) {
@@ -106,7 +108,9 @@ export function DrawerNovoPedido({ isOpen, onClose, onSaved }: DrawerNovoPedidoP
   }, [cep]);
 
   const requiredValid = useMemo(() => {
-    const allItemsValid = items.length > 0 && items.every((item) => item.productId.trim() && Number(item.quantity) > 0);
+    const allItemsValid =
+      items.length > 0 &&
+      items.every((item) => item.productId.trim() && Number(item.quantity) > 0 && item.color.trim() && item.size.trim());
     if (!allItemsValid) return false;
     if (!/^\S+@\S+\.\S+$/.test(email.trim())) return false;
     if (!fullName.trim()) return false;
@@ -135,8 +139,8 @@ export function DrawerNovoPedido({ isOpen, onClose, onSaved }: DrawerNovoPedidoP
   function validate() {
     const nextErrors: Record<string, string> = {};
 
-    if (!items.length || items.some((item) => !item.productId.trim() || Number(item.quantity) <= 0)) {
-      nextErrors.items = "Adicione ao menos um item com ID e quantidade válida.";
+    if (!items.length || items.some((item) => !item.productId.trim() || Number(item.quantity) <= 0 || !item.color.trim() || !item.size.trim())) {
+      nextErrors.items = "Preencha ID, quantidade, cor e tamanho em todos os itens.";
     }
 
     if (!/^\S+@\S+\.\S+$/.test(email.trim())) nextErrors.email = "Informe um e-mail válido.";
@@ -206,7 +210,13 @@ export function DrawerNovoPedido({ isOpen, onClose, onSaved }: DrawerNovoPedidoP
           <div className={form.stack}>
             {items.map((item, index) => (
               <div key={`item-${index}`} className={form.itemBox}>
-                <div className={form.row2}>
+                {items.length > 1 ? (
+                  <button type="button" className={form.itemRemoveBtn} onClick={() => removeItem(index)} aria-label="Remover item">
+                    <X size={12} />
+                  </button>
+                ) : null}
+
+                <div className={form.itemGrid}>
                   <div className={form.field}>
                     <label className={form.label}>Produto por ID</label>
                     <input
@@ -227,23 +237,43 @@ export function DrawerNovoPedido({ isOpen, onClose, onSaved }: DrawerNovoPedidoP
                       onChange={(event) => updateItem(index, { quantity: event.target.value })}
                     />
                   </div>
-                </div>
 
-                <div className={form.itemActions}>
-                  <button type="button" className={form.inlineBtn} onClick={addItem}>
-                    <Plus size={12} style={{ marginRight: 6 }} />
-                    Adicionar item
-                  </button>
-                  {items.length > 1 ? (
-                    <button type="button" className={form.inlineBtn} onClick={() => removeItem(index)}>
-                      <Trash2 size={12} style={{ marginRight: 6 }} />
-                      Remover
-                    </button>
-                  ) : null}
+                  <div className={form.field}>
+                    <label className={form.label}>Cor</label>
+                    <input
+                      className={form.input}
+                      value={item.color}
+                      onChange={(event) => updateItem(index, { color: event.target.value })}
+                      placeholder="Ex: Preto"
+                    />
+                  </div>
+
+                  <div className={form.field}>
+                    <label className={form.label}>Tamanho</label>
+                    <select
+                      className={form.select}
+                      value={item.size}
+                      onChange={(event) => updateItem(index, { size: event.target.value })}
+                    >
+                      <option value="">Selecione</option>
+                      <option value="PP">PP</option>
+                      <option value="P">P</option>
+                      <option value="M">M</option>
+                      <option value="G">G</option>
+                      <option value="GG">GG</option>
+                      <option value="XG">XG</option>
+                      <option value="UNICO">Único</option>
+                    </select>
+                  </div>
                 </div>
               </div>
             ))}
           </div>
+
+          <button type="button" className={form.inlineBtn} onClick={addItem}>
+            <Plus size={12} style={{ marginRight: 6 }} />
+            Adicionar item
+          </button>
 
           {errors.items ? <p className={form.error}>{errors.items}</p> : null}
         </div>

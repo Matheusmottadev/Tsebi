@@ -1,6 +1,6 @@
 ﻿"use client";
 
-import { ChevronDown, ChevronUp, X } from "lucide-react";
+import { ChevronDown, ChevronUp, Plus, X } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { bootstrapAdminCsrfToken, createProductAdmin } from "@/services/admin";
 import { Drawer } from "./Drawer";
@@ -55,7 +55,7 @@ export function DrawerNovoProduto({ isOpen, onClose, onSaved }: DrawerNovoProdut
 
   const [optionalOpen, setOptionalOpen] = useState(false);
   const [currency, setCurrency] = useState("BRL");
-  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [images, setImages] = useState<(File | null)[]>([null, null, null, null, null]);
   const [active, setActive] = useState(true);
   const [sizes, setSizes] = useState<string[]>([]);
   const [colors, setColors] = useState<string[]>([]);
@@ -66,6 +66,18 @@ export function DrawerNovoProduto({ isOpen, onClose, onSaved }: DrawerNovoProdut
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const variants = useMemo(() => buildVariantRows(sizes, colors), [sizes, colors]);
+  const imagePreviews = useMemo(
+    () => images.map((file) => (file ? URL.createObjectURL(file) : null)),
+    [images]
+  );
+
+  useEffect(() => {
+    return () => {
+      imagePreviews.forEach((url) => {
+        if (url) URL.revokeObjectURL(url);
+      });
+    };
+  }, [imagePreviews]);
 
   useEffect(() => {
     setVariantStock((current) => {
@@ -83,8 +95,9 @@ export function DrawerNovoProduto({ isOpen, onClose, onSaved }: DrawerNovoProdut
     if (parseMoneyToCents(price) <= 0) return false;
     const stockQty = Number(stock);
     if (!Number.isFinite(stockQty) || stockQty < 0) return false;
+    if (!images[0]) return false;
     return true;
-  }, [sku, name, price, stock]);
+  }, [sku, name, price, stock, images]);
 
   function toggleSize(value: string) {
     setSizes((current) => (current.includes(value) ? current.filter((item) => item !== value) : [...current, value]));
@@ -115,12 +128,20 @@ export function DrawerNovoProduto({ isOpen, onClose, onSaved }: DrawerNovoProdut
       nextErrors.stock = "Informe um estoque válido (0 ou maior).";
     }
 
-    if (imageFile && !["image/jpeg", "image/png", "image/webp", "image/gif"].includes(imageFile.type)) {
-      nextErrors.image = "Formato de imagem inválido. Use JPG, PNG, WEBP ou GIF.";
+    if (!images[0]) {
+      nextErrors.image = "A primeira imagem é obrigatória.";
+    }
+
+    if (images.some((file) => file && !String(file.type || "").toLowerCase().startsWith("image/"))) {
+      nextErrors.image = "Formato de imagem inválido. Use apenas imagens.";
     }
 
     setErrors(nextErrors);
     return Object.keys(nextErrors).length === 0;
+  }
+
+  function setImageAt(index: number, file: File | null) {
+    setImages((current) => current.map((item, itemIndex) => (itemIndex === index ? file : item)));
   }
 
   async function uploadProductImage(productId: string, file: File) {
@@ -167,8 +188,14 @@ export function DrawerNovoProduto({ isOpen, onClose, onSaved }: DrawerNovoProdut
 
       const created = await createProductAdmin(payload);
       const createdId = String(created.product?.dbId || created.product?.id || created.product?.sku || "").trim();
-      if (createdId && imageFile) {
-        await uploadProductImage(createdId, imageFile);
+      if (createdId) {
+        const selectedImages = images.filter((file): file is File => Boolean(file));
+        if (selectedImages.length) {
+          const orderedUploads = selectedImages.length > 1 ? [...selectedImages.slice(1), selectedImages[0]] : selectedImages;
+          for (const file of orderedUploads) {
+            await uploadProductImage(createdId, file);
+          }
+        }
       }
 
       onClose();
@@ -180,7 +207,7 @@ export function DrawerNovoProduto({ isOpen, onClose, onSaved }: DrawerNovoProdut
       setStock("");
       setOptionalOpen(false);
       setCurrency("BRL");
-      setImageFile(null);
+      setImages([null, null, null, null, null]);
       setActive(true);
       setSizes([]);
       setColors([]);
@@ -284,16 +311,46 @@ export function DrawerNovoProduto({ isOpen, onClose, onSaved }: DrawerNovoProdut
                 </div>
 
                 <div className={form.field}>
-                  <label className={form.label} htmlFor="product-image">
-                    Imagem
+                  <label className={form.label}>
+                    Imagens (até 5)
                   </label>
-                  <input
-                    id="product-image"
-                    type="file"
-                    accept="image/jpeg,image/png,image/webp,image/gif"
-                    className={`${form.input} ${errors.image ? form.inputError : ""}`}
-                    onChange={(event) => setImageFile(event.target.files?.[0] || null)}
-                  />
+                  <div className={form.imageSlots}>
+                    {images.map((file, index) => (
+                      <div key={`product-image-slot-${index}`} className={form.imageSlotItem}>
+                        <label className={form.imageSlotTrigger} htmlFor={`product-image-slot-${index}`}>
+                          <input
+                            id={`product-image-slot-${index}`}
+                            type="file"
+                            accept="image/*"
+                            className={form.imageSlotInput}
+                            onChange={(event) => {
+                              setImageAt(index, event.target.files?.[0] || null);
+                              event.currentTarget.value = "";
+                            }}
+                          />
+                          {file && imagePreviews[index] ? (
+                            <img src={imagePreviews[index] || ""} alt={`Foto ${index + 1}`} className={form.imageSlotPreview} />
+                          ) : (
+                            <span className={form.imageSlotEmpty}>
+                              <Plus size={18} />
+                            </span>
+                          )}
+                        </label>
+                        {file ? (
+                          <button
+                            type="button"
+                            className={form.imageRemoveBtn}
+                            onClick={() => setImageAt(index, null)}
+                            aria-label={`Remover foto ${index + 1}`}
+                          >
+                            <X size={12} />
+                          </button>
+                        ) : null}
+                        <span className={form.imageSlotCaption}>Foto {index + 1}</span>
+                      </div>
+                    ))}
+                  </div>
+                  <p className={form.imageHint}>A primeira imagem será usada como foto principal</p>
                   {errors.image ? <p className={form.error}>{errors.image}</p> : null}
                 </div>
               </div>
