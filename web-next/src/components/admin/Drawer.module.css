@@ -1,4 +1,4 @@
-﻿.drawer {
+.drawer {
   position: fixed;
   top: 0;
   right: 0;
@@ -14,6 +14,10 @@
   box-shadow: -4px 0 40px rgba(0, 0, 0, 0.1);
   display: flex;
   flex-direction: column;
+}
+
+.drawerWide {
+  width: 560px;
 }
 
 .open.drawer {
@@ -94,6 +98,16 @@
   padding-top: 24px;
   border-top: 1px solid #e0e0e0;
   justify-content: flex-end;
+}
+
+.drawerFooterSticky {
+  position: sticky;
+  bottom: 0;
+  z-index: 3;
+  margin: 0;
+  padding: 14px 40px 18px;
+  background: #fff;
+  border-top: 1px solid #e0e0e0;
 }
 
 .btn {

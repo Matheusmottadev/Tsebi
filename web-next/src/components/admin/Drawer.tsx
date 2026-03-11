@@ -16,6 +16,8 @@ export interface DrawerProps {
   cancelLabel?: string;
   saveLabel?: string;
   disableSave?: boolean;
+  wide?: boolean;
+  stickyFooter?: boolean;
 }
 
 export function Drawer({
@@ -30,6 +32,8 @@ export function Drawer({
   cancelLabel = "Cancelar",
   saveLabel = "Salvar",
   disableSave = false,
+  wide = false,
+  stickyFooter = false,
 }: DrawerProps) {
   const openClass = isOpen ? styles.open : "";
 
@@ -56,7 +60,7 @@ export function Drawer({
       <div className={`${styles.drawerOverlay} ${openClass}`} onClick={onClose} aria-hidden="true" />
 
       <aside
-        className={`${styles.drawer} ${openClass}`}
+        className={`${styles.drawer} ${wide ? styles.drawerWide : ""} ${openClass}`}
         role="dialog"
         aria-modal="true"
         aria-hidden={!isOpen}
@@ -75,9 +79,9 @@ export function Drawer({
         <div className={styles.body}>{children}</div>
 
         {footer ? (
-          <div className={styles.drawerFooter}>{footer}</div>
+          <div className={`${styles.drawerFooter} ${stickyFooter ? styles.drawerFooterSticky : ""}`}>{footer}</div>
         ) : (
-          <footer className={styles.drawerFooter}>
+          <footer className={`${styles.drawerFooter} ${stickyFooter ? styles.drawerFooterSticky : ""}`}>
             <button type="button" className={styles.btn} onClick={onCancel || onClose}>
               {cancelLabel}
             </button>

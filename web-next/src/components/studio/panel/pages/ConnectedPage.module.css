@@ -60,9 +60,64 @@
   background: var(--grey-100);
 }
 
+.actionCell {
+  white-space: nowrap;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
 .empty {
   color: var(--grey-600);
   text-align: center;
+}
+
+.btnEdit {
+  background: transparent;
+  color: #111;
+  border: 1px solid #e0e0e0;
+  border-radius: 100px;
+  padding: 6px 14px;
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  font-family: var(--font-jost), sans-serif;
+  font-weight: 300;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.btnEdit:hover {
+  background: #111;
+  color: #fff;
+  border-color: #111;
+}
+
+.btnDelete {
+  background: transparent;
+  color: #9b2226;
+  border: 1px solid #fde8e8;
+  border-radius: 100px;
+  padding: 6px 14px;
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  font-family: var(--font-jost), sans-serif;
+  font-weight: 300;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.btnDelete:hover {
+  background: #9b2226;
+  color: #fff;
+  border-color: #9b2226;
 }
 
 .btnDetalhes {

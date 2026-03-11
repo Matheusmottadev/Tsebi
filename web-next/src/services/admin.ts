@@ -17,12 +17,15 @@ Endpoint mapping used in this file:
 - PATCH /api/admin/coupons/:code
 - DELETE /api/admin/coupons/:code
 - GET /api/admin/vip
+- DELETE /api/admin/vip/:id
 - GET /api/admin/newsletter
+- DELETE /api/admin/newsletter/:id
 - GET /api/admin/audit
 - GET /api/admin/audit-logs
 - GET /api/admin/audit/:id
 - GET /api/admin/private-care
 - PATCH /api/admin/private-care/:id
+- DELETE /api/admin/private-care/:id
 - GET /api/studio-auth/me
 - POST /api/studio-auth/login
 - POST /api/studio-auth/mfa/setup/init
@@ -136,6 +139,20 @@ export interface AdminProductCreatePayload {
   sizes?: string[];
   colors?: string[];
   variantStock?: Record<string, number>;
+  collection?: string;
+  category?: string;
+  subcategory?: string;
+  material?: string;
+  gender?: string;
+  secondaryImage?: string;
+  galleryImages?: string[];
+  modelInfo?: string;
+  fitType?: string;
+  sizeRecommendation?: string;
+  detailedModeling?: string;
+  materialMain?: string;
+  cleaningRecommendation?: string;
+  careList?: string[];
 }
 
 export type AdminProductUpdatePayload = Partial<Omit<AdminProductCreatePayload, "sku">>;
@@ -158,6 +175,36 @@ export interface AdminOrderPatchPayload {
   carrier?: string;
   shippingDeadline?: string;
   adminNotes?: string;
+  userName?: string;
+  userEmail?: string;
+  userPhone?: string;
+  userCpf?: string;
+  shippingStreet?: string;
+  shippingNumber?: string;
+  shippingComplement?: string;
+  shippingDistrict?: string;
+  shippingCity?: string;
+  shippingState?: string;
+  shippingAmount?: number;
+  shippingPriceCents?: number;
+  shippingSelectedService?: string;
+  shippingSelectedProvider?: string;
+  shippingSelectedCarrierName?: string;
+  shippingSelectedServiceCode?: string;
+  shippingDestinationZip?: string;
+  shipping?: Record<string, unknown>;
+  amount?: number;
+  itemsAmount?: number;
+  items?: Array<{
+    id: string;
+    name?: string;
+    qty: number;
+    unitAmount: number;
+    currency?: string;
+    variantColor?: string | null;
+    variantSize?: string | null;
+    variantKey?: string | null;
+  }>;
 }
 
 export interface ListCouponsAdminParams {
@@ -222,6 +269,11 @@ export interface ListVipAdminResponse {
   pageSize: number;
 }
 
+export interface DeleteVipAdminResponse {
+  ok: true;
+  removed: AdminVipRow | Record<string, unknown>;
+}
+
 export interface ListNewsletterAdminParams {
   query?: string;
   page?: number;
@@ -245,6 +297,11 @@ export interface ListNewsletterAdminResponse {
   total: number;
   page: number;
   pageSize: number;
+}
+
+export interface DeleteNewsletterAdminResponse {
+  ok: true;
+  removed: AdminNewsletterRow | Record<string, unknown>;
 }
 
 export interface AdminPrivateCareSlot {
@@ -297,6 +354,11 @@ export interface UpdatePrivateCareAdminPayload {
 export interface UpdatePrivateCareAdminResponse {
   ok: true;
   request?: AdminPrivateCareRequest;
+}
+
+export interface DeletePrivateCareAdminResponse {
+  ok: true;
+  removed?: AdminPrivateCareRequest;
 }
 
 export interface AdminAuditLog {
@@ -892,6 +954,22 @@ export async function listVipAdmin(
 }
 
 /**
+ * DELETE /api/admin/vip/:id
+ * Auth: admin session required + CSRF header.
+ */
+export async function deleteVipAdmin(
+  id: string | number,
+  csrfToken?: string,
+  options?: HttpRequestOptions
+): Promise<DeleteVipAdminResponse> {
+  const token = await resolveCsrfToken(csrfToken, options);
+  return del<DeleteVipAdminResponse>(
+    `/api/admin/vip/${encodeURIComponent(String(id || "").trim())}`,
+    mergeOptionsWithHeaders(options, buildCsrfHeader(token))
+  );
+}
+
+/**
  * GET /api/admin/newsletter
  * Auth: admin session required.
  */
@@ -905,6 +983,22 @@ export async function listNewsletterAdmin(
     pageSize: params.pageSize,
   });
   return get<ListNewsletterAdminResponse>(`/api/admin/newsletter${query}`, options);
+}
+
+/**
+ * DELETE /api/admin/newsletter/:id
+ * Auth: admin session required + CSRF header.
+ */
+export async function deleteNewsletterAdmin(
+  id: string,
+  csrfToken?: string,
+  options?: HttpRequestOptions
+): Promise<DeleteNewsletterAdminResponse> {
+  const token = await resolveCsrfToken(csrfToken, options);
+  return del<DeleteNewsletterAdminResponse>(
+    `/api/admin/newsletter/${encodeURIComponent(String(id || "").trim())}`,
+    mergeOptionsWithHeaders(options, buildCsrfHeader(token))
+  );
 }
 
 /**
@@ -938,6 +1032,22 @@ export async function updatePrivateCareAdmin(
   return patch<UpdatePrivateCareAdminResponse>(
     `/api/admin/private-care/${encodeURIComponent(id)}`,
     payload,
+    mergeOptionsWithHeaders(options, buildCsrfHeader(token))
+  );
+}
+
+/**
+ * DELETE /api/admin/private-care/:id
+ * Auth: admin session required + CSRF header.
+ */
+export async function deletePrivateCareAdmin(
+  id: string,
+  csrfToken?: string,
+  options?: HttpRequestOptions
+): Promise<DeletePrivateCareAdminResponse> {
+  const token = await resolveCsrfToken(csrfToken, options);
+  return del<DeletePrivateCareAdminResponse>(
+    `/api/admin/private-care/${encodeURIComponent(String(id || "").trim())}`,
     mergeOptionsWithHeaders(options, buildCsrfHeader(token))
   );
 }

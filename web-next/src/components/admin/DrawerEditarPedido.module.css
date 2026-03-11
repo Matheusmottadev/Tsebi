@@ -1,0 +1,184 @@
+.section {
+  border-bottom: 1px solid #f0f0f0;
+  padding-bottom: 16px;
+  margin-bottom: 16px;
+}
+
+.sectionTitle {
+  margin: 0 0 8px;
+  font-family: var(--font-jost), sans-serif;
+  font-size: 9px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: #bbb;
+  font-weight: 300;
+}
+
+.error,
+.loading {
+  margin: 0 0 10px;
+  font-family: var(--font-jost), sans-serif;
+  font-size: 11px;
+  font-weight: 300;
+}
+
+.loading {
+  color: #666;
+}
+
+.error {
+  color: #9b2226;
+}
+
+.headerMeta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.orderCode {
+  margin: 0;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  font-size: 12px;
+  color: #333;
+}
+
+.orderDate {
+  margin: 4px 0 0;
+  font-family: var(--font-jost), sans-serif;
+  font-size: 11px;
+  color: #888;
+}
+
+.badge {
+  border-radius: 999px;
+  border: 1px solid #e0e0e0;
+  padding: 4px 10px;
+  font-family: var(--font-jost), sans-serif;
+  font-size: 9px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #555;
+}
+
+.itemsList {
+  display: grid;
+  gap: 8px;
+}
+
+.itemRow {
+  border: 1px solid #ececec;
+  padding: 10px;
+  display: grid;
+  gap: 8px;
+}
+
+.itemTop {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.itemName {
+  margin: 0;
+  font-family: var(--font-jost), sans-serif;
+  font-size: 12px;
+  color: #222;
+}
+
+.itemMeta {
+  margin: 0;
+  font-family: var(--font-jost), sans-serif;
+  font-size: 11px;
+  color: #777;
+}
+
+.itemSubtotal {
+  margin: 0;
+  font-family: var(--font-jost), sans-serif;
+  font-size: 12px;
+  color: #111;
+}
+
+.removeItemBtn {
+  border: 0;
+  background: transparent;
+  color: #9b2226;
+  cursor: pointer;
+  padding: 0;
+}
+
+.addItemBtn {
+  border: 1px solid #e0e0e0;
+  background: transparent;
+  color: #111;
+  border-radius: 100px;
+  padding: 6px 12px;
+  font-family: var(--font-jost), sans-serif;
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.addItemPanel {
+  margin-top: 8px;
+  padding: 10px;
+  border: 1px solid #ececec;
+  display: grid;
+  gap: 8px;
+}
+
+.addItemFooter {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.addItemSubmit {
+  border: 1px solid #111;
+  background: #111;
+  color: #fff;
+  border-radius: 100px;
+  padding: 6px 12px;
+  font-family: var(--font-jost), sans-serif;
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.totalsBox {
+  border: 1px solid #ececec;
+  padding: 10px;
+  display: grid;
+  gap: 6px;
+}
+
+.totalRow {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  font-family: var(--font-jost), sans-serif;
+  font-size: 12px;
+  color: #444;
+}
+
+.totalFinal {
+  font-weight: 500;
+  color: #111;
+  border-top: 1px solid #efefef;
+  padding-top: 6px;
+}
+
+.inputError {
+  border-color: #9b2226 !important;
+}
+
+.fieldError {
+  margin: 4px 0 0;
+  font-family: var(--font-jost), sans-serif;
+  font-size: 10px;
+  color: #9b2226;
+  font-weight: 300;
+}

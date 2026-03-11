@@ -1,0 +1,663 @@
+"use client";
+
+import { GripVertical, Plus, Trash2, X } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { bootstrapAdminCsrfToken, getProductAdmin, updateProductAdmin } from "@/services/admin";
+import type { Product } from "@/types";
+import { Drawer } from "./Drawer";
+import form from "./DrawerForms.module.css";
+import styles from "./DrawerEditarProduto.module.css";
+
+type DrawerEditarProdutoProps = {
+  isOpen: boolean;
+  product: Product | null;
+  onClose: () => void;
+  onSaved: (product: Product) => void;
+};
+
+type SizeRow = {
+  label: string;
+  checked: boolean;
+  stock: number;
+};
+
+type PhotoSlot = {
+  id: string;
+  file: File | null;
+  url: string;
+};
+
+type ValidationErrors = Record<string, string>;
+
+const SIZE_LABELS = ["PP", "P", "M", "G", "GG", "XG", "Unico"];
+
+const COLOR_MAP: Record<string, string> = {
+  preto: "#111111",
+  branco: "#f6f6f6",
+  caramelo: "#ad6f3b",
+  verde: "#4f7f5f",
+  azul: "#5d7ea8",
+  vermelho: "#a3262f",
+  bege: "#ccb998",
+  cinza: "#9ca3af",
+  marrom: "#7a5230",
+  vinho: "#6d1d2b",
+};
+
+function normalizeText(value: string): string {
+  return String(value || "")
+    .trim()
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "");
+}
+
+function formatMoneyInput(cents: number): string {
+  const amount = (Number(cents || 0) || 0) / 100;
+  return amount.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+function parseMoneyToCents(value: string): number {
+  const digits = String(value || "").replace(/\D/g, "");
+  return Number(digits || 0);
+}
+
+function asTitleCase(value: string): string {
+  const trimmed = String(value || "").trim();
+  if (!trimmed) return "";
+  return trimmed[0].toUpperCase() + trimmed.slice(1);
+}
+
+function buildInitialSizeRows(product: Product): SizeRow[] {
+  const selected = new Set((Array.isArray(product.sizes) ? product.sizes : []).map((size) => normalizeText(size)));
+  const stockBySize: Record<string, number> = {};
+
+  if (product.variantStock && typeof product.variantStock === "object") {
+    Object.entries(product.variantStock).forEach(([key, qty]) => {
+      const parts = String(key || "").split(/__|\|/);
+      const size = parts.length > 1 ? normalizeText(parts[1]) : "";
+      if (!size) return;
+      stockBySize[size] = (stockBySize[size] || 0) + Math.max(0, Number(qty || 0));
+    });
+  }
+
+  return SIZE_LABELS.map((label) => {
+    const normalized = normalizeText(label);
+    const stock = Math.max(0, Number(stockBySize[normalized] || 0));
+    const checked = selected.has(normalized) || stock > 0;
+    return {
+      label,
+      checked,
+      stock: checked ? stock : 0,
+    };
+  });
+}
+
+function buildInitialPhotos(product: Product): PhotoSlot[] {
+  const gallery = Array.isArray(product.galleryImages) ? product.galleryImages : [];
+  const urls = [String(product.image || ""), String(product.secondaryImage || ""), ...gallery]
+    .map((value) => String(value || "").trim())
+    .slice(0, 5);
+
+  while (urls.length < 5) urls.push("");
+
+  return urls.map((url, index) => ({
+    id: `slot-${index + 1}`,
+    file: null,
+    url,
+  }));
+}
+
+export function DrawerEditarProduto({ isOpen, product, onClose, onSaved }: DrawerEditarProdutoProps) {
+  const [photos, setPhotos] = useState<PhotoSlot[]>([]);
+  const [sku, setSku] = useState("");
+  const [name, setName] = useState("");
+  const [price, setPrice] = useState("");
+  const [currency, setCurrency] = useState("BRL");
+  const [active, setActive] = useState(true);
+  const [sizes, setSizes] = useState<SizeRow[]>(SIZE_LABELS.map((label) => ({ label, checked: false, stock: 0 })));
+  const [colorInput, setColorInput] = useState("");
+  const [colors, setColors] = useState<string[]>([]);
+  const [modelInfo, setModelInfo] = useState("");
+  const [fitType, setFitType] = useState("");
+  const [sizeRecommendation, setSizeRecommendation] = useState("");
+  const [category, setCategory] = useState("");
+  const [collection, setCollection] = useState("");
+  const [gender, setGender] = useState("Unissex");
+  const [detailedModeling, setDetailedModeling] = useState("");
+  const [materialMain, setMaterialMain] = useState("");
+  const [cleaningRecommendation, setCleaningRecommendation] = useState("");
+  const [careInput, setCareInput] = useState("");
+  const [careList, setCareList] = useState<string[]>([]);
+  const [isSaving, setIsSaving] = useState(false);
+  const [error, setError] = useState("");
+  const [draggingIndex, setDraggingIndex] = useState<number | null>(null);
+
+  const inputRefs = useRef<Array<HTMLInputElement | null>>([]);
+  const previewUrlRegistryRef = useRef<string[]>([]);
+
+  useEffect(() => {
+    if (!isOpen || !product) return;
+    setPhotos(buildInitialPhotos(product));
+    setSku(String(product.sku || ""));
+    setName(String(product.name || ""));
+    setPrice(formatMoneyInput(Number(product.unitAmount || 0)));
+    setCurrency(String(product.currency || "BRL").toUpperCase() || "BRL");
+    setActive(Boolean(product.active));
+    setSizes(buildInitialSizeRows(product));
+    setColors((Array.isArray(product.colors) ? product.colors : []).map((item) => asTitleCase(item)).filter(Boolean));
+    setModelInfo(String(product.modelInfo || ""));
+    setFitType(String(product.fitType || ""));
+    setSizeRecommendation(String(product.sizeRecommendation || ""));
+    setCategory(String(product.category || ""));
+    setCollection(String(product.collection || ""));
+    setGender(String(product.gender || "Unissex") || "Unissex");
+    setDetailedModeling(String(product.detailedModeling || ""));
+    setMaterialMain(String(product.materialMain || product.material || ""));
+    setCleaningRecommendation(String(product.cleaningRecommendation || ""));
+    setCareList((Array.isArray(product.careList) ? product.careList : []).map((item) => String(item || "").trim()).filter(Boolean));
+    setColorInput("");
+    setCareInput("");
+    setError("");
+  }, [isOpen, product]);
+
+  useEffect(() => {
+    return () => {
+      previewUrlRegistryRef.current.forEach((url) => URL.revokeObjectURL(url));
+      previewUrlRegistryRef.current = [];
+    };
+  }, []);
+
+  const validationErrors = useMemo(() => {
+    const next: ValidationErrors = {};
+
+    if (!String(sku || "").trim()) next.sku = "SKU obrigatorio.";
+    if (!String(name || "").trim()) next.name = "Nome obrigatorio.";
+    if (parseMoneyToCents(price) <= 0) next.price = "Preco invalido.";
+
+    const checkedSizes = sizes.filter((size) => size.checked);
+    if (checkedSizes.length === 0) {
+      next.sizes = "Selecione pelo menos um tamanho.";
+    }
+    checkedSizes.forEach((size) => {
+      if (Number(size.stock || 0) < 1) {
+        next[`size-${size.label}`] = `Estoque minimo para ${size.label} e 1.`;
+      }
+    });
+
+    return next;
+  }, [name, price, sizes, sku]);
+
+  const hasErrors = Object.keys(validationErrors).length > 0;
+
+  function openFilePicker(index: number) {
+    const ref = inputRefs.current[index];
+    if (ref) ref.click();
+  }
+
+  function setFileAt(index: number, file: File | null) {
+    setPhotos((current) => {
+      const next = [...current];
+      const previous = next[index];
+      if (previous?.url && String(previous.url).startsWith("blob:")) {
+        URL.revokeObjectURL(previous.url);
+      }
+      const nextUrl = file ? URL.createObjectURL(file) : "";
+      if (nextUrl) previewUrlRegistryRef.current.push(nextUrl);
+      next[index] = {
+        ...previous,
+        file,
+        url: nextUrl,
+      };
+      return next;
+    });
+  }
+
+  function removePhoto(index: number) {
+    setPhotos((current) => {
+      const next = [...current];
+      const previous = next[index];
+      if (previous?.url && String(previous.url).startsWith("blob:")) {
+        URL.revokeObjectURL(previous.url);
+      }
+      next[index] = { ...previous, file: null, url: "" };
+      return next;
+    });
+  }
+
+  function reorderPhotos(fromIndex: number, toIndex: number) {
+    if (fromIndex === toIndex) return;
+    setPhotos((current) => {
+      const next = [...current];
+      const [moved] = next.splice(fromIndex, 1);
+      next.splice(toIndex, 0, moved);
+      return next;
+    });
+  }
+
+  function updateSizeChecked(index: number, checked: boolean) {
+    setSizes((current) =>
+      current.map((row, rowIndex) => {
+        if (rowIndex !== index) return row;
+        return {
+          ...row,
+          checked,
+          stock: checked ? Math.max(1, Number(row.stock || 0)) : 0,
+        };
+      })
+    );
+  }
+
+  function updateSizeStock(index: number, value: string) {
+    const stock = Math.max(0, Number(value || 0));
+    setSizes((current) =>
+      current.map((row, rowIndex) => {
+        if (rowIndex !== index) return row;
+        return { ...row, stock };
+      })
+    );
+  }
+
+  function tryAddColor(rawValue: string) {
+    const normalized = asTitleCase(rawValue);
+    if (!normalized) return;
+
+    setColors((current) => {
+      if (current.some((item) => normalizeText(item) === normalizeText(normalized))) return current;
+      return [...current, normalized];
+    });
+  }
+
+  function handleColorInputKeyDown(event: React.KeyboardEvent<HTMLInputElement>) {
+    if (event.key !== "Enter" && event.key !== ",") return;
+    event.preventDefault();
+    tryAddColor(colorInput);
+    setColorInput("");
+  }
+
+  function removeColor(index: number) {
+    setColors((current) => current.filter((_item, itemIndex) => itemIndex !== index));
+  }
+
+  function addCareItem() {
+    const normalized = String(careInput || "").trim();
+    if (!normalized) return;
+    setCareList((current) => [...current, normalized]);
+    setCareInput("");
+  }
+
+  function removeCare(index: number) {
+    setCareList((current) => current.filter((_item, itemIndex) => itemIndex !== index));
+  }
+
+  async function uploadImage(productId: string, slotIndex: number, file: File) {
+    const csrfToken = await bootstrapAdminCsrfToken();
+    const bytes = await file.arrayBuffer();
+    const response = await fetch(`/api/admin/products/${encodeURIComponent(productId)}/image?slot=${slotIndex + 1}`, {
+      method: "POST",
+      body: bytes,
+      headers: {
+        "content-type": file.type,
+        "x-csrf-token": csrfToken,
+      },
+    });
+    if (!response.ok) throw new Error("Falha ao enviar imagem.");
+  }
+
+  async function handleSave() {
+    if (!product) return;
+    if (hasErrors) {
+      setError("Revise os campos obrigatorios.");
+      return;
+    }
+
+    setIsSaving(true);
+    setError("");
+
+    try {
+      const identifier = String(product.dbId || product.id || product.sku || "").trim();
+      if (!identifier) throw new Error("Produto invalido.");
+
+      const checkedSizes = sizes.filter((size) => size.checked);
+      const sizeLabels = checkedSizes.map((size) => size.label);
+      const normalizedColors = (colors.length > 0 ? colors : ["Unico"]).map((color) => asTitleCase(color));
+      const variantStock: Record<string, number> = {};
+
+      checkedSizes.forEach((size) => {
+        const stock = Math.max(1, Number(size.stock || 0));
+        const baseColor = normalizedColors[0] || "Unico";
+        variantStock[`${baseColor}__${size.label}`] = stock;
+      });
+
+      const galleryImages = photos
+        .slice(1)
+        .map((slot) => String(slot.url || "").trim())
+        .filter((value) => Boolean(value) && !value.startsWith("blob:"))
+        .slice(0, 4);
+
+      const saveResponse = await updateProductAdmin(identifier, {
+        name: String(name || "").trim(),
+        priceCents: parseMoneyToCents(price),
+        stockQty: checkedSizes.reduce((sum, size) => sum + Math.max(1, Number(size.stock || 0)), 0),
+        currency: String(currency || "BRL").trim().toUpperCase(),
+        active,
+        sizes: sizeLabels,
+        colors: normalizedColors,
+        variantStock,
+        category: String(category || "").trim(),
+        collection: String(collection || "").trim(),
+        gender: String(gender || "Unissex").trim(),
+        material: String(materialMain || "").trim(),
+        secondaryImage: (() => {
+          const value = String(photos[1]?.url || "").trim();
+          return value && !value.startsWith("blob:") ? value : "";
+        })(),
+        galleryImages,
+        modelInfo: String(modelInfo || "").trim(),
+        fitType: String(fitType || "").trim(),
+        sizeRecommendation: String(sizeRecommendation || "").trim(),
+        detailedModeling: String(detailedModeling || "").trim(),
+        materialMain: String(materialMain || "").trim(),
+        cleaningRecommendation: String(cleaningRecommendation || "").trim(),
+        careList: careList.map((item) => String(item || "").trim()).filter(Boolean),
+      });
+
+      const productId = String(saveResponse.product.dbId || saveResponse.product.id || saveResponse.product.sku || "").trim();
+      if (!productId) throw new Error("Produto invalido para upload.");
+
+      for (let index = 0; index < photos.length; index += 1) {
+        const file = photos[index]?.file;
+        if (!file) continue;
+        await uploadImage(productId, index, file);
+      }
+
+      const refreshed = await getProductAdmin(identifier);
+      onSaved(refreshed || saveResponse.product);
+      onClose();
+    } catch (saveError) {
+      setError(saveError instanceof Error ? saveError.message : "Falha ao atualizar produto.");
+    } finally {
+      setIsSaving(false);
+    }
+  }
+
+  return (
+    <Drawer
+      isOpen={isOpen}
+      onClose={onClose}
+      title="Editar Produto"
+      subtitle="Personalizacao completa do catalogo"
+      onSave={handleSave}
+      saveLabel={isSaving ? "Salvando..." : "Salvar alteracoes"}
+      cancelLabel="Cancelar"
+      disableSave={isSaving || hasErrors}
+      wide={true}
+      stickyFooter={true}
+    >
+      <div className={form.stack}>
+        {error ? <p className={styles.error}>{error}</p> : null}
+
+        <section className={styles.section}>
+          <h4 className={styles.sectionTitle}>Fotos (ate 5)</h4>
+          <p className={styles.sectionHint}>A primeira imagem sera usada como foto principal</p>
+          <div className={styles.photosGrid}>
+            {photos.map((slot, index) => {
+              const preview = String(slot.url || "").trim();
+              const isDragging = draggingIndex === index;
+              return (
+                <div key={slot.id} className={styles.photoSlot}>
+                  <button
+                    type="button"
+                    className={`${styles.photoButton} ${isDragging ? styles.dragging : ""}`}
+                    onClick={() => openFilePicker(index)}
+                    draggable={true}
+                    onDragStart={() => setDraggingIndex(index)}
+                    onDragOver={(event) => event.preventDefault()}
+                    onDrop={(event) => {
+                      event.preventDefault();
+                      if (draggingIndex == null) return;
+                      reorderPhotos(draggingIndex, index);
+                      setDraggingIndex(null);
+                    }}
+                    onDragEnd={() => setDraggingIndex(null)}
+                  >
+                    {preview ? <img className={styles.photoPreview} src={preview} alt={`Imagem ${index + 1}`} /> : <Plus className={styles.plusIcon} />}
+                    <input
+                      ref={(node) => {
+                        inputRefs.current[index] = node;
+                      }}
+                      type="file"
+                      accept="image/*"
+                      style={{ display: "none" }}
+                      onChange={(event) => {
+                        const file = event.target.files?.[0] || null;
+                        setFileAt(index, file);
+                      }}
+                    />
+                    <GripVertical size={14} style={{ position: "absolute", left: 6, top: 6, color: "rgba(17,17,17,0.6)" }} />
+                    {preview ? (
+                      <button
+                        type="button"
+                        className={styles.deletePhoto}
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          removePhoto(index);
+                        }}
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    ) : null}
+                  </button>
+                  {index === 0 ? <p className={styles.principalLabel}>Principal</p> : null}
+                </div>
+              );
+            })}
+          </div>
+        </section>
+
+        <section className={styles.section}>
+          <h4 className={styles.sectionTitle}>Informacoes basicas</h4>
+          <div className={form.row2}>
+            <div className={form.field}>
+              <label htmlFor="edit-product-sku" className={form.label}>
+                SKU
+              </label>
+              <input id="edit-product-sku" className={`${form.input} ${validationErrors.sku ? styles.inputError : ""}`} value={sku} readOnly />
+              {validationErrors.sku ? <p className={styles.fieldError}>{validationErrors.sku}</p> : null}
+            </div>
+            <div className={form.field}>
+              <label htmlFor="edit-product-name" className={form.label}>
+                Nome
+              </label>
+              <input
+                id="edit-product-name"
+                className={`${form.input} ${validationErrors.name ? styles.inputError : ""}`}
+                value={name}
+                onChange={(event) => setName(event.target.value)}
+              />
+              {validationErrors.name ? <p className={styles.fieldError}>{validationErrors.name}</p> : null}
+            </div>
+          </div>
+          <div className={form.row2}>
+            <div className={form.field}>
+              <label htmlFor="edit-product-price" className={form.label}>
+                Preco (R$)
+              </label>
+              <input
+                id="edit-product-price"
+                className={`${form.input} ${validationErrors.price ? styles.inputError : ""}`}
+                value={price}
+                onChange={(event) => setPrice(event.target.value)}
+                inputMode="decimal"
+              />
+              {validationErrors.price ? <p className={styles.fieldError}>{validationErrors.price}</p> : null}
+            </div>
+            <div className={form.field}>
+              <label htmlFor="edit-product-currency" className={form.label}>
+                Moeda
+              </label>
+              <select id="edit-product-currency" className={form.select} value={currency} onChange={(event) => setCurrency(event.target.value)}>
+                <option value="BRL">BRL</option>
+                <option value="USD">USD</option>
+                <option value="EUR">EUR</option>
+              </select>
+            </div>
+          </div>
+        </section>
+
+        <section className={styles.section}>
+          <h4 className={styles.sectionTitle}>Status e Estoque</h4>
+          <div className={styles.switchRow}>
+            <span className={styles.switchLabel}>Ativo / Inativo - quando inativo o produto nao aparece no site.</span>
+            <button
+              type="button"
+              className={`${styles.switchBtn} ${active ? styles.switchBtnOn : ""}`}
+              onClick={() => setActive((value) => !value)}
+              aria-label="Alternar status"
+            />
+          </div>
+
+          <div className={styles.sizesList}>
+            {sizes.map((size, index) => (
+              <div key={size.label} className={styles.sizeRow}>
+                <input
+                  id={`size-${size.label}`}
+                  type="checkbox"
+                  checked={size.checked}
+                  onChange={(event) => updateSizeChecked(index, event.target.checked)}
+                />
+                <label htmlFor={`size-${size.label}`} className={styles.sizeLabel}>
+                  {size.label}
+                </label>
+                <input
+                  type="number"
+                  min={0}
+                  value={size.stock}
+                  disabled={!size.checked}
+                  className={`${styles.stockInput} ${size.checked ? styles.stockInputEnabled : styles.stockInputDisabled}`}
+                  onChange={(event) => updateSizeStock(index, event.target.value)}
+                />
+              </div>
+            ))}
+          </div>
+          {validationErrors.sizes ? <p className={styles.fieldError}>{validationErrors.sizes}</p> : null}
+        </section>
+
+        <section className={styles.section}>
+          <h4 className={styles.sectionTitle}>Cores</h4>
+          <input
+            className={form.input}
+            value={colorInput}
+            placeholder="Digite uma cor e pressione Enter"
+            onChange={(event) => setColorInput(event.target.value)}
+            onKeyDown={handleColorInputKeyDown}
+          />
+          <div className={styles.colorTags}>
+            {colors.map((color, index) => {
+              const colorHex = COLOR_MAP[normalizeText(color)] || "";
+              return (
+                <span key={`${color}-${index}`} className={styles.colorTag}>
+                  {colorHex ? <span className={styles.colorDot} style={{ background: colorHex }} /> : null}
+                  {color}
+                  <button type="button" onClick={() => removeColor(index)} aria-label={`Remover ${color}`}>
+                    <X size={12} />
+                  </button>
+                </span>
+              );
+            })}
+          </div>
+        </section>
+
+        <section className={styles.section}>
+          <h4 className={styles.sectionTitle}>Detalhes do produto</h4>
+          <div className={form.row2}>
+            <div className={form.field}>
+              <label className={form.label}>Modelo</label>
+              <input className={form.input} value={modelInfo} onChange={(event) => setModelInfo(event.target.value)} />
+            </div>
+            <div className={form.field}>
+              <label className={form.label}>Modelagem</label>
+              <input className={form.input} value={fitType} onChange={(event) => setFitType(event.target.value)} />
+            </div>
+          </div>
+
+          <div className={form.field}>
+            <label className={form.label}>Recomendacao</label>
+            <input className={form.input} value={sizeRecommendation} onChange={(event) => setSizeRecommendation(event.target.value)} />
+          </div>
+
+          <div className={form.row2}>
+            <div className={form.field}>
+              <label className={form.label}>Categoria</label>
+              <input className={form.input} value={category} onChange={(event) => setCategory(event.target.value)} />
+            </div>
+            <div className={form.field}>
+              <label className={form.label}>Colecao</label>
+              <input className={form.input} value={collection} onChange={(event) => setCollection(event.target.value)} />
+            </div>
+          </div>
+
+          <div className={form.row2}>
+            <div className={form.field}>
+              <label className={form.label}>Genero</label>
+              <select className={form.select} value={gender} onChange={(event) => setGender(event.target.value)}>
+                <option value="Masculino">Masculino</option>
+                <option value="Feminino">Feminino</option>
+                <option value="Unissex">Unissex</option>
+              </select>
+            </div>
+            <div className={form.field}>
+              <label className={form.label}>Codigo SKU</label>
+              <input className={form.input} value={sku} readOnly />
+            </div>
+          </div>
+
+          <div className={form.field}>
+            <label className={form.label}>Modelagem detalhada</label>
+            <textarea className={form.textarea} value={detailedModeling} onChange={(event) => setDetailedModeling(event.target.value)} />
+          </div>
+        </section>
+
+        <section className={styles.section}>
+          <h4 className={styles.sectionTitle}>Materiais e cuidados</h4>
+          <div className={form.field}>
+            <label className={form.label}>Material principal</label>
+            <input className={form.input} value={materialMain} onChange={(event) => setMaterialMain(event.target.value)} />
+          </div>
+
+          <div className={form.field}>
+            <label className={form.label}>Recomendacao de limpeza</label>
+            <textarea
+              className={form.textarea}
+              value={cleaningRecommendation}
+              onChange={(event) => setCleaningRecommendation(event.target.value)}
+            />
+          </div>
+
+          <div className={styles.careAddRow}>
+            <input
+              className={form.input}
+              value={careInput}
+              onChange={(event) => setCareInput(event.target.value)}
+              placeholder="Digite um cuidado"
+            />
+            <button type="button" className={styles.careAddBtn} onClick={addCareItem}>
+              + Adicionar
+            </button>
+          </div>
+
+          <ul className={styles.careList}>
+            {careList.map((care, index) => (
+              <li key={`${care}-${index}`} className={styles.careItem}>
+                <span>{care}</span>
+                <button type="button" onClick={() => removeCare(index)} aria-label={`Remover ${care}`}>
+                  <X size={14} />
+                </button>
+              </li>
+            ))}
+          </ul>
+        </section>
+      </div>
+    </Drawer>
+  );
+}

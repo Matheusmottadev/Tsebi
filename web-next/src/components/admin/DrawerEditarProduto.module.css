@@ -1,0 +1,282 @@
+.section {
+  border-bottom: 1px solid #f0f0f0;
+  padding-bottom: 16px;
+  margin-bottom: 16px;
+}
+
+.sectionTitle {
+  margin: 0 0 4px;
+  font-family: var(--font-jost), sans-serif;
+  font-size: 9px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: #bbb;
+  font-weight: 300;
+}
+
+.sectionHint {
+  margin: 0 0 10px;
+  font-family: var(--font-jost), sans-serif;
+  font-size: 11px;
+  color: #8a8a8a;
+  font-weight: 300;
+}
+
+.error {
+  margin: 0 0 10px;
+  font-family: var(--font-jost), sans-serif;
+  font-size: 11px;
+  color: #9b2226;
+  font-weight: 300;
+}
+
+.fieldError {
+  margin: 4px 0 0;
+  font-family: var(--font-jost), sans-serif;
+  font-size: 10px;
+  color: #9b2226;
+  font-weight: 300;
+}
+
+.inputError {
+  border-color: #9b2226 !important;
+}
+
+.photosGrid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.photoSlot {
+  width: 100%;
+}
+
+.photoButton {
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  border: 1px dashed #e0e0e0;
+  background: #f7f7f7;
+  cursor: pointer;
+  position: relative;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  overflow: hidden;
+}
+
+.photoButton.dragging {
+  opacity: 0.65;
+}
+
+.plusIcon {
+  color: #aaa;
+  width: 20px;
+  height: 20px;
+}
+
+.photoPreview {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.deletePhoto {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  width: 24px;
+  height: 24px;
+  border-radius: 999px;
+  border: 0;
+  background: rgba(17, 17, 17, 0.85);
+  color: #fff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+
+.photoButton:hover .deletePhoto {
+  opacity: 1;
+}
+
+.principalLabel {
+  margin-top: 6px;
+  font-family: var(--font-jost), sans-serif;
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #777;
+}
+
+.switchRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.switchLabel {
+  font-family: var(--font-jost), sans-serif;
+  font-size: 11px;
+  color: #555;
+  font-weight: 300;
+}
+
+.switchBtn {
+  width: 52px;
+  height: 28px;
+  border-radius: 999px;
+  border: 1px solid #d0d0d0;
+  background: #f2f2f2;
+  position: relative;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.switchBtn::after {
+  content: "";
+  width: 22px;
+  height: 22px;
+  border-radius: 999px;
+  background: #fff;
+  border: 1px solid #d0d0d0;
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  transition: transform 0.2s;
+}
+
+.switchBtnOn {
+  background: #111;
+  border-color: #111;
+}
+
+.switchBtnOn::after {
+  transform: translateX(24px);
+}
+
+.sizesList {
+  display: grid;
+  gap: 8px;
+}
+
+.sizeRow {
+  display: grid;
+  grid-template-columns: auto 1fr 100px;
+  align-items: center;
+  gap: 12px;
+}
+
+.sizeLabel {
+  font-family: var(--font-jost), sans-serif;
+  font-size: 11px;
+  color: #333;
+  font-weight: 300;
+}
+
+.stockInput {
+  width: 100%;
+  border: 1px solid #e0e0e0;
+  padding: 8px 10px;
+  font-family: var(--font-jost), sans-serif;
+  font-size: 12px;
+  color: #111;
+  background: #fff;
+}
+
+.stockInputEnabled {
+  border-color: #111;
+}
+
+.stockInputDisabled {
+  background: #f7f7f7;
+  color: #bbb;
+}
+
+.colorTags {
+  margin-top: 8px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.colorTag {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: #111;
+  color: #fff;
+  border-radius: 100px;
+  padding: 4px 12px;
+  font-family: var(--font-jost), sans-serif;
+  font-size: 10px;
+}
+
+.colorDot {
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.4);
+}
+
+.colorTag button {
+  border: 0;
+  background: transparent;
+  color: #fff;
+  padding: 0;
+  cursor: pointer;
+  line-height: 1;
+}
+
+.careAddRow {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 8px;
+}
+
+.careAddBtn {
+  border: 1px solid #111;
+  background: #111;
+  color: #fff;
+  border-radius: 100px;
+  padding: 0 12px;
+  font-family: var(--font-jost), sans-serif;
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.careList {
+  margin: 10px 0 0;
+  padding-left: 18px;
+  display: grid;
+  gap: 8px;
+}
+
+.careItem {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  font-family: var(--font-jost), sans-serif;
+  font-size: 11px;
+  color: #444;
+}
+
+.careItem button {
+  border: 0;
+  background: transparent;
+  color: #9b2226;
+  cursor: pointer;
+}
+
+@media (max-width: 980px) {
+  .photosGrid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}

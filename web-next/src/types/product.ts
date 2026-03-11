@@ -10,6 +10,20 @@ export interface ProductMetadata {
   sizes: string[];
   colors: string[];
   variantStock: ProductVariantStockMap;
+  collection?: string;
+  category?: string;
+  subcategory?: string;
+  material?: string;
+  gender?: string;
+  modelInfo?: string;
+  fitType?: string;
+  sizeRecommendation?: string;
+  detailedModeling?: string;
+  materialMain?: string;
+  cleaningRecommendation?: string;
+  careList?: string[];
+  galleryImages?: string[];
+  secondaryImage?: string;
 }
 
 export interface Product {
@@ -33,6 +47,14 @@ export interface Product {
   active: boolean;
   image: string;
   secondaryImage?: string;
+  modelInfo?: string;
+  fitType?: string;
+  sizeRecommendation?: string;
+  detailedModeling?: string;
+  materialMain?: string;
+  cleaningRecommendation?: string;
+  careList?: string[];
+  galleryImages?: string[];
   createdAt: string | null;
   updatedAt: string | null;
   href: string;

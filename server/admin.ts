@@ -52,7 +52,7 @@ const {
 } = require("./lib/admin-audit-repository");
 const { ensureAdminProfile, updateAdminProfile } = require("./lib/admin-profile-repository");
 const { listAdminLoginEvents } = require("./lib/admin-login-events-repository");
-const { readJson } = require("./lib/json-store");
+const { readJson, writeJson } = require("./lib/json-store");
 const { sendEmail, sendPasswordResetEmail } = require("./lib/email-service");
 const { issueAuthEmailCode } = require("./lib/auth-email-code-repository");
 const {
@@ -61,7 +61,7 @@ const {
   deleteAccessCode,
   normalizeCode
 } = require("./lib/access-code-repository");
-const { query } = require("./lib/db");
+const { query, withTransaction } = require("./lib/db");
 // Lazy load R2 upload module to avoid build-time errors
 let uploadR2Buffer: any = null;
 function getR2Upload() {
@@ -135,6 +135,17 @@ const statusSchema = z.enum([
   "refunded"
 ]);
 
+const orderItemPatchSchema = z.object({
+  id: z.string().trim().min(1).max(120),
+  name: z.string().trim().min(1).max(240).optional(),
+  qty: z.coerce.number().int().min(1).max(999),
+  unitAmount: z.coerce.number().int().min(0).max(9_999_999),
+  currency: z.string().trim().min(3).max(3).optional(),
+  variantColor: z.string().trim().max(80).optional(),
+  variantSize: z.string().trim().max(40).optional(),
+  variantKey: z.string().trim().max(160).optional()
+});
+
 const userPatchSchema = z.object({
   title: z.enum(["sr", "sra", "srta", "nao_informar"]).optional(),
   name: z.string().trim().min(2).max(120).optional(),
@@ -191,7 +202,38 @@ const orderPatchSchema = z.object({
   trackingStatus: z.string().trim().max(120).optional(),
   carrier: z.string().trim().max(120).optional(),
   shippingDeadline: z.string().trim().max(40).optional(),
-  adminNotes: z.string().trim().max(10_000).optional()
+  adminNotes: z.string().trim().max(10_000).optional(),
+  userName: z.string().trim().min(1).max(160).optional(),
+  userEmail: z.string().trim().email().optional(),
+  userPhone: z.string().trim().max(40).optional(),
+  userCpf: z
+    .string()
+    .transform((value: any) => String(value || "").replace(/\D/g, ""))
+    .refine((value: any) => value.length === 0 || /^\d{11}$/.test(value))
+    .optional(),
+  shippingStreet: z.string().trim().max(160).optional(),
+  shippingNumber: z.string().trim().max(30).optional(),
+  shippingComplement: z.string().trim().max(120).optional(),
+  shippingDistrict: z.string().trim().max(120).optional(),
+  shippingCity: z.string().trim().max(120).optional(),
+  shippingState: z.string().trim().max(4).optional(),
+  shippingAmount: z.coerce.number().int().min(0).max(9_999_999).optional(),
+  shippingPriceCents: z.coerce.number().int().min(0).max(9_999_999).optional(),
+  shippingSelectedProvider: z.string().trim().max(120).optional(),
+  shippingSelectedService: z.string().trim().max(120).optional(),
+  shippingSelectedServiceCode: z.string().trim().max(120).optional(),
+  shippingSelectedCarrierName: z.string().trim().max(120).optional(),
+  shippingDestinationZip: z
+    .string()
+    .transform((value: any) => String(value || "").replace(/\D/g, ""))
+    .refine((value: any) => value.length === 0 || /^\d{8}$/.test(value))
+    .optional(),
+  shipping: z.record(z.string(), z.any()).optional(),
+  amount: z.coerce.number().int().min(0).max(9_999_999).optional(),
+  itemsAmount: z.coerce.number().int().min(0).max(9_999_999).optional(),
+  items: z.array(orderItemPatchSchema).max(200).optional(),
+  discountCents: z.coerce.number().int().min(0).max(9_999_999).optional(),
+  couponCode: z.string().trim().max(80).optional()
 });
 
 const adminProfilePatchSchema = z.object({
@@ -217,7 +259,21 @@ const productCreateSchema = z.object({
   active: z.boolean().optional().default(true),
   sizes: productOptionListSchema.optional().default([]),
   colors: productOptionListSchema.optional().default([]),
-  variantStock: productVariantStockSchema.optional().default({})
+  variantStock: productVariantStockSchema.optional().default({}),
+  collection: z.string().trim().max(120).optional().default(""),
+  category: z.string().trim().max(120).optional().default(""),
+  subcategory: z.string().trim().max(120).optional().default(""),
+  material: z.string().trim().max(160).optional().default(""),
+  gender: z.string().trim().max(40).optional().default(""),
+  secondaryImage: z.string().trim().max(600).optional().default(""),
+  galleryImages: z.array(z.string().trim().max(600)).max(5).optional().default([]),
+  modelInfo: z.string().trim().max(200).optional().default(""),
+  fitType: z.string().trim().max(120).optional().default(""),
+  sizeRecommendation: z.string().trim().max(240).optional().default(""),
+  detailedModeling: z.string().trim().max(2000).optional().default(""),
+  materialMain: z.string().trim().max(160).optional().default(""),
+  cleaningRecommendation: z.string().trim().max(2000).optional().default(""),
+  careList: z.array(z.string().trim().min(1).max(240)).max(40).optional().default([])
 });
 
 const productPatchSchema = z.object({
@@ -229,7 +285,21 @@ const productPatchSchema = z.object({
   active: z.boolean().optional(),
   sizes: productOptionListSchema.optional(),
   colors: productOptionListSchema.optional(),
-  variantStock: productVariantStockSchema.optional()
+  variantStock: productVariantStockSchema.optional(),
+  collection: z.string().trim().max(120).optional(),
+  category: z.string().trim().max(120).optional(),
+  subcategory: z.string().trim().max(120).optional(),
+  material: z.string().trim().max(160).optional(),
+  gender: z.string().trim().max(40).optional(),
+  secondaryImage: z.string().trim().max(600).optional(),
+  galleryImages: z.array(z.string().trim().max(600)).max(5).optional(),
+  modelInfo: z.string().trim().max(200).optional(),
+  fitType: z.string().trim().max(120).optional(),
+  sizeRecommendation: z.string().trim().max(240).optional(),
+  detailedModeling: z.string().trim().max(2000).optional(),
+  materialMain: z.string().trim().max(160).optional(),
+  cleaningRecommendation: z.string().trim().max(2000).optional(),
+  careList: z.array(z.string().trim().min(1).max(240)).max(40).optional()
 });
 
 const vipUpsertSchema = z.object({
@@ -1645,6 +1715,7 @@ adminRouter.patch("/orders/:id", async (req: any, res: any) => {
   try {
     const before = await findOrderById(req.params.id);
     if (!before) return res.status(404).json({ error: "NOT_FOUND" });
+    const hasItemsPatch = Array.isArray(parsed.data.items);
     const nextPatch = {
       ...parsed.data,
       status: parsed.data.orderStatus ?? parsed.data.status
@@ -1657,6 +1728,136 @@ adminRouter.patch("/orders/:id", async (req: any, res: any) => {
       const deadline = new Date(String(nextPatch.shippingDeadline || ""));
       nextPatch.shippingDeadline = Number.isNaN(deadline.getTime()) ? null : deadline.toISOString();
     }
+
+    const shippingSnapshot =
+      before.shipping && typeof before.shipping === "object" && !Array.isArray(before.shipping)
+        ? { ...before.shipping }
+        : {};
+
+    if (Object.prototype.hasOwnProperty.call(parsed.data, "userPhone")) {
+      shippingSnapshot.phone = String(parsed.data.userPhone || "").trim();
+    }
+    if (Object.prototype.hasOwnProperty.call(parsed.data, "userCpf")) {
+      shippingSnapshot.cpf = String(parsed.data.userCpf || "").replace(/\D/g, "");
+    }
+    if (Object.prototype.hasOwnProperty.call(parsed.data, "shippingDestinationZip")) {
+      shippingSnapshot.cep = String(parsed.data.shippingDestinationZip || "").replace(/\D/g, "").slice(0, 8);
+    }
+    if (Object.prototype.hasOwnProperty.call(parsed.data, "shippingStreet")) {
+      shippingSnapshot.street = String(parsed.data.shippingStreet || "").trim();
+    }
+    if (Object.prototype.hasOwnProperty.call(parsed.data, "shippingNumber")) {
+      shippingSnapshot.number = String(parsed.data.shippingNumber || "").trim();
+    }
+    if (Object.prototype.hasOwnProperty.call(parsed.data, "shippingComplement")) {
+      shippingSnapshot.complement = String(parsed.data.shippingComplement || "").trim();
+    }
+    if (Object.prototype.hasOwnProperty.call(parsed.data, "shippingDistrict")) {
+      shippingSnapshot.district = String(parsed.data.shippingDistrict || "").trim();
+    }
+    if (Object.prototype.hasOwnProperty.call(parsed.data, "shippingCity")) {
+      shippingSnapshot.city = String(parsed.data.shippingCity || "").trim();
+    }
+    if (Object.prototype.hasOwnProperty.call(parsed.data, "shippingState")) {
+      shippingSnapshot.state = String(parsed.data.shippingState || "").trim().toUpperCase();
+    }
+    if (Object.prototype.hasOwnProperty.call(parsed.data, "couponCode")) {
+      shippingSnapshot.discountCode = String(parsed.data.couponCode || "").trim();
+    }
+    if (Object.prototype.hasOwnProperty.call(parsed.data, "discountCents")) {
+      shippingSnapshot.discountCents = Math.max(0, Number(parsed.data.discountCents || 0));
+    }
+    if (Object.prototype.hasOwnProperty.call(parsed.data, "shippingSelectedService")) {
+      const service = String(parsed.data.shippingSelectedService || "").trim();
+      shippingSnapshot.shippingMethod = service;
+      shippingSnapshot.selectedService = service;
+    }
+
+    const hasShippingPatch =
+      Object.prototype.hasOwnProperty.call(parsed.data, "shipping") ||
+      Object.prototype.hasOwnProperty.call(parsed.data, "userPhone") ||
+      Object.prototype.hasOwnProperty.call(parsed.data, "userCpf") ||
+      Object.prototype.hasOwnProperty.call(parsed.data, "shippingDestinationZip") ||
+      Object.prototype.hasOwnProperty.call(parsed.data, "shippingStreet") ||
+      Object.prototype.hasOwnProperty.call(parsed.data, "shippingNumber") ||
+      Object.prototype.hasOwnProperty.call(parsed.data, "shippingComplement") ||
+      Object.prototype.hasOwnProperty.call(parsed.data, "shippingDistrict") ||
+      Object.prototype.hasOwnProperty.call(parsed.data, "shippingCity") ||
+      Object.prototype.hasOwnProperty.call(parsed.data, "shippingState") ||
+      Object.prototype.hasOwnProperty.call(parsed.data, "couponCode") ||
+      Object.prototype.hasOwnProperty.call(parsed.data, "discountCents") ||
+      Object.prototype.hasOwnProperty.call(parsed.data, "shippingSelectedService");
+
+    if (Object.prototype.hasOwnProperty.call(parsed.data, "shipping")) {
+      nextPatch.shipping =
+        parsed.data.shipping && typeof parsed.data.shipping === "object" && !Array.isArray(parsed.data.shipping)
+          ? { ...shippingSnapshot, ...parsed.data.shipping }
+          : shippingSnapshot;
+    } else if (hasShippingPatch) {
+      nextPatch.shipping = shippingSnapshot;
+    }
+
+    if (Object.prototype.hasOwnProperty.call(parsed.data, "shippingDestinationZip")) {
+      nextPatch.shippingDestinationZip = String(parsed.data.shippingDestinationZip || "").replace(/\D/g, "").slice(0, 8);
+    }
+
+    if (Object.prototype.hasOwnProperty.call(parsed.data, "shippingSelectedService")) {
+      const service = String(parsed.data.shippingSelectedService || "").trim();
+      const lowerService = service.toLowerCase();
+      const provider = lowerService.includes("loggi")
+        ? "loggi"
+        : lowerService.includes("transportadora")
+          ? "transportadora"
+          : "correios";
+      const serviceCode = lowerService.includes("sedex")
+        ? "SEDEX"
+        : lowerService.includes("pac")
+          ? "PAC"
+          : lowerService.includes("express")
+            ? "EXPRESS"
+            : "MANUAL";
+      nextPatch.shippingSelectedProvider = provider;
+      nextPatch.shippingSelectedCarrierName = service;
+      nextPatch.shippingSelectedServiceCode = serviceCode;
+    }
+
+    if (hasItemsPatch) {
+      const normalizedItems = parsed.data.items.map((item: any) => ({
+        id: String(item.id || "").trim(),
+        name: String(item.name || item.id || "").trim(),
+        qty: Math.max(1, Number(item.qty || 1)),
+        unitAmount: Math.max(0, Number(item.unitAmount || 0)),
+        currency: String(item.currency || before.currency || "brl").trim().toLowerCase(),
+        variantColor: String(item.variantColor || "").trim() || null,
+        variantSize: String(item.variantSize || "").trim() || null,
+        variantKey: String(item.variantKey || "").trim() || null
+      }));
+
+      const itemsAmountCalculated = normalizedItems.reduce(
+        (sum: number, item: any) => sum + Math.max(0, Number(item.unitAmount || 0)) * Math.max(1, Number(item.qty || 1)),
+        0
+      );
+      nextPatch.itemsAmount = itemsAmountCalculated;
+
+      if (!Object.prototype.hasOwnProperty.call(parsed.data, "amount")) {
+        const shippingAmount =
+          Object.prototype.hasOwnProperty.call(parsed.data, "shippingPriceCents") && parsed.data.shippingPriceCents != null
+            ? Math.max(0, Number(parsed.data.shippingPriceCents || 0))
+            : Object.prototype.hasOwnProperty.call(parsed.data, "shippingAmount") && parsed.data.shippingAmount != null
+              ? Math.max(0, Number(parsed.data.shippingAmount || 0))
+              : Math.max(0, Number(before.shippingPriceCents || before.shippingAmount || 0));
+        const discountCents = Math.max(
+          0,
+          Number(
+            Object.prototype.hasOwnProperty.call(parsed.data, "discountCents")
+              ? parsed.data.discountCents || 0
+              : before.shipping?.discountCents || 0
+          )
+        );
+        nextPatch.amount = Math.max(0, itemsAmountCalculated + shippingAmount - discountCents);
+      }
+    }
+
     const hasTrackingStatus = Object.prototype.hasOwnProperty.call(parsed.data, "trackingStatus");
     if (hasTrackingStatus) {
       const normalizedTracking = normalizeTrackingStatusForOrder(nextPatch.trackingStatus);
@@ -1698,7 +1899,46 @@ adminRouter.patch("/orders/:id", async (req: any, res: any) => {
       nextPatch.cancellationReason = nextPatch.cancellationReason || "refunded_by_admin";
     }
 
-    const updated = await updateOrder(req.params.id, nextPatch);
+    let updated = await updateOrder(req.params.id, nextPatch);
+
+    if (hasItemsPatch) {
+      const itemsToPersist = parsed.data.items || [];
+      await withTransaction(async (client: any) => {
+        await client.query(`DELETE FROM order_items WHERE order_id = $1`, [String(before.id)]);
+        for (const item of itemsToPersist) {
+          const sku = String(item.id || "").trim();
+          if (!sku) continue;
+          const productResult = await client.query(
+            `SELECT id FROM products WHERE lower(sku) = lower($1) LIMIT 1`,
+            [sku]
+          );
+          const productId = productResult.rows[0]?.id || null;
+          await client.query(
+            `
+            INSERT INTO order_items (
+              order_id, product_id, product_sku, name, qty, price_cents, currency, variant_color, variant_size, variant_key
+            ) VALUES (
+              $1, $2::uuid, $3, $4, $5, $6, $7, $8, $9, $10
+            )
+            `,
+            [
+              String(before.id),
+              productId,
+              sku,
+              String(item.name || sku),
+              Math.max(1, Number(item.qty || 1)),
+              Math.max(0, Number(item.unitAmount || 0)),
+              String(item.currency || before.currency || "brl").trim().toLowerCase(),
+              String(item.variantColor || "").trim() || null,
+              String(item.variantSize || "").trim() || null,
+              String(item.variantKey || "").trim() || null
+            ]
+          );
+        }
+      });
+      updated = (await findOrderById(req.params.id)) || updated;
+    }
+
     const afterState = updated || before;
     const statusChanged = String(before.status || "") !== String(afterState.status || "");
 
@@ -1902,21 +2142,36 @@ adminRouter.post(
     try {
       const before = await getProductByIdentifier(id);
       if (!before) return res.status(404).json({ error: "NOT_FOUND" });
+      const slotRaw = Number(req.query.slot || 1);
+      const slot = Number.isInteger(slotRaw) && slotRaw >= 1 && slotRaw <= 5 ? slotRaw : 1;
 
       const folder = String(process.env.R2_FOLDER || "tsebi/products").trim() || "tsebi/products";
-      const publicId = `product_${String(before.sku || before.id || id).trim()}`;
+      const publicIdBase = `product_${String(before.sku || before.id || id).trim()}`;
+      const publicId = slot > 1 ? `${publicIdBase}_slot${slot}` : publicIdBase;
       const uploaded = await getR2Upload()(req.body, { folder, publicId });
       const url = String(uploaded?.secure_url || uploaded?.url || "").trim();
       if (!url) return res.status(500).json({ error: "IMAGE_UPLOAD_FAILED" });
 
-      const updated = await updateProductByIdentifier(id, { imageUrl: url });
+      const gallery = Array.isArray(before.galleryImages) ? [...before.galleryImages] : [];
+      const imagePatch: any = {};
+      if (slot === 1) {
+        imagePatch.imageUrl = url;
+      } else {
+        const index = slot - 2;
+        while (gallery.length <= index) gallery.push("");
+        gallery[index] = url;
+        imagePatch.galleryImages = gallery.filter((value: any) => String(value || "").trim());
+        if (slot === 2) imagePatch.secondaryImage = url;
+      }
+
+      const updated = await updateProductByIdentifier(id, imagePatch);
       if (!updated) return res.status(404).json({ error: "NOT_FOUND" });
 
       await recordAuditLog(req, {
         action: "save",
         entityType: "product",
         entityId: updated.sku || updated.id,
-        summary: `Imagem atualizada: ${updated.sku || updated.id}`,
+        summary: `Imagem atualizada (slot ${slot}): ${updated.sku || updated.id}`,
         before: sanitizeProductForAudit(before),
         after: sanitizeProductForAudit(updated),
         reversePayload: {
@@ -1933,6 +2188,7 @@ adminRouter.post(
         product: updated,
         image: {
           url,
+          slot,
           bytes: Number(uploaded?.bytes || 0) || null,
           format: String(uploaded?.format || "") || null,
           width: Number(uploaded?.width || 0) || null,
@@ -2212,6 +2468,73 @@ adminRouter.patch("/private-care/:id", async (req: any, res: any) => {
   }
 });
 
+adminRouter.delete("/private-care/:id", sensitiveAdminRateLimit, async (req: any, res: any) => {
+  const requestId = String(req.params.id || "").trim();
+  if (!requestId) return res.status(400).json({ error: "INVALID_ID" });
+
+  try {
+    await ensurePrivateCareColumns();
+    const ownerResult = await query(
+      `
+      SELECT id, name, email, account_private_care_history
+      FROM users
+      WHERE EXISTS (
+        SELECT 1
+        FROM jsonb_array_elements(
+          CASE
+            WHEN jsonb_typeof(account_private_care_history) = 'array' THEN account_private_care_history
+            ELSE '[]'::jsonb
+          END
+        ) AS entry
+        WHERE entry->>'id' = $1
+      )
+      LIMIT 1
+      `,
+      [requestId]
+    );
+
+    const owner = ownerResult.rows[0] || null;
+    if (!owner) return res.status(404).json({ error: "NOT_FOUND" });
+
+    const history = Array.isArray(owner.account_private_care_history) ? [...owner.account_private_care_history] : [];
+    const rowIndex = history.findIndex((entry: any) => String(entry?.id || "").trim() === requestId);
+    if (rowIndex < 0) return res.status(404).json({ error: "NOT_FOUND" });
+
+    const before = normalizePrivateCareEntry(history[rowIndex]);
+    if (!before) return res.status(404).json({ error: "NOT_FOUND" });
+
+    history.splice(rowIndex, 1);
+    await query(
+      `
+      UPDATE users
+      SET account_private_care_history = $2::jsonb,
+          updated_at = NOW()
+      WHERE id = $1
+      `,
+      [String(owner.id || ""), JSON.stringify(history)]
+    );
+
+    const beforeRow = toAdminPrivateCareRow(owner, before);
+    await recordAuditLog(req, {
+      action: "delete",
+      entityType: "private_care",
+      entityId: requestId,
+      summary: `Atendimento removido: ${requestId}`,
+      before: beforeRow,
+      after: null,
+      reversePayload: null,
+      reversible: false
+    });
+
+    return res.json({
+      ok: true,
+      removed: beforeRow
+    });
+  } catch {
+    return res.status(500).json({ error: "ADMIN_PRIVATE_CARE_DELETE_FAILED" });
+  }
+});
+
 adminRouter.get("/newsletter", async (req: any, res: any) => {
   const queryText = String(req.query.query || "").trim().toLowerCase();
   const page = Math.max(1, Number(req.query.page || 1) || 1);
@@ -2258,6 +2581,64 @@ adminRouter.get("/newsletter", async (req: any, res: any) => {
     });
   } catch {
     return res.status(500).json({ error: "ADMIN_NEWSLETTER_LIST_FAILED" });
+  }
+});
+
+adminRouter.delete("/newsletter/:id", sensitiveAdminRateLimit, async (req: any, res: any) => {
+  const rawId = String(req.params.id || "").trim();
+  if (!rawId) return res.status(400).json({ error: "INVALID_ID" });
+
+  try {
+    const list = await readJson(newsletterDataFile, []);
+    const rows = Array.isArray(list) ? [...list] : [];
+    const normalizedId = normalizeEmail(rawId);
+
+    let removed: any = null;
+    const nextRows = rows.filter((entry: any, index: number) => {
+      const email = normalizeEmail(entry?.email || "");
+      const fallbackId = `newsletter_${index + 1}`;
+      const rowId = email || fallbackId;
+      const matches =
+        rowId === rawId ||
+        fallbackId === rawId ||
+        (normalizedId && email && normalizedId === email);
+      if (!removed && matches) {
+        removed = entry;
+        return false;
+      }
+      return true;
+    });
+
+    if (!removed) return res.status(404).json({ error: "NOT_FOUND" });
+    await writeJson(newsletterDataFile, nextRows);
+
+    const removedEmail = normalizeEmail(removed?.email || "");
+    const removedRow = {
+      id: removedEmail || rawId,
+      email: String(removed?.email || ""),
+      phone: String(removed?.phone || ""),
+      source: String(removed?.source || ""),
+      page: String(removed?.page || ""),
+      status: String(removed?.status || "active"),
+      consent: Boolean(removed?.consent),
+      subscribedAt: removed?.subscribedAt || null,
+      updatedAt: removed?.updatedAt || null
+    };
+
+    await recordAuditLog(req, {
+      action: "delete",
+      entityType: "newsletter_subscriber",
+      entityId: removedRow.id,
+      summary: `Inscrito newsletter removido: ${removedRow.email || removedRow.id}`,
+      before: removedRow,
+      after: null,
+      reversePayload: null,
+      reversible: false
+    });
+
+    return res.json({ ok: true, removed: removedRow });
+  } catch {
+    return res.status(500).json({ error: "ADMIN_NEWSLETTER_DELETE_FAILED" });
   }
 });
 
@@ -2397,9 +2778,15 @@ adminRouter.patch("/coupons/:code", async (req: any, res: any) => {
       (Array.isArray(listed.rows) ? listed.rows : []).find((entry: any) => String(entry?.code || "") === currentCode) || null;
     if (!current) return res.status(404).json({ error: "NOT_FOUND" });
 
-    const merged = { ...current, ...parsed.data, code: currentCode };
+    const requestedCode = normalizeCode(String(parsed.data.code || currentCode));
+    if (!requestedCode) return res.status(400).json({ error: "INVALID_CODE" });
+
+    const merged = { ...current, ...parsed.data, code: requestedCode };
     const result = await upsertAccessCode(merged);
     if (!result?.ok) return res.status(400).json({ error: result?.error || "INVALID_INPUT" });
+    if (requestedCode !== currentCode) {
+      await deleteAccessCode(currentCode).catch(() => null);
+    }
     return res.json({ ok: true, coupon: result.code });
   } catch {
     return res.status(500).json({ error: "ADMIN_COUPON_UPDATE_FAILED" });

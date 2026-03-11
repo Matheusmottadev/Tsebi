@@ -148,6 +148,20 @@ export type ProductWritePayload = {
   sizes?: string[];
   colors?: string[];
   variantStock?: VariantStockMap;
+  collection?: string;
+  category?: string;
+  subcategory?: string;
+  material?: string;
+  gender?: string;
+  secondaryImage?: string;
+  galleryImages?: string[];
+  modelInfo?: string;
+  fitType?: string;
+  sizeRecommendation?: string;
+  detailedModeling?: string;
+  materialMain?: string;
+  cleaningRecommendation?: string;
+  careList?: string[];
 };
 
 type ProductStaticMetadata = {
@@ -172,6 +186,20 @@ type ProductMetadata = {
   sizes: string[];
   colors: string[];
   variantStock: VariantStockMap;
+  collection?: string;
+  category?: string;
+  subcategory?: string;
+  material?: string;
+  gender?: string;
+  secondaryImage?: string;
+  galleryImages?: string[];
+  modelInfo?: string;
+  fitType?: string;
+  sizeRecommendation?: string;
+  detailedModeling?: string;
+  materialMain?: string;
+  cleaningRecommendation?: string;
+  careList?: string[];
 };
 
 type ProductRow = JsonRecord & {
@@ -225,6 +253,14 @@ export type Product = {
   active: boolean;
   image: string;
   secondaryImage?: string;
+  modelInfo?: string;
+  fitType?: string;
+  sizeRecommendation?: string;
+  detailedModeling?: string;
+  materialMain?: string;
+  cleaningRecommendation?: string;
+  careList?: string[];
+  galleryImages?: string[];
   createdAt: string | null;
   updatedAt: string | null;
   href: string;
@@ -929,10 +965,48 @@ function normalizeProductMetadata(value: unknown, fallback: ProductStaticMetadat
     variantStock = sanitizeVariantStockMap(raw.variantStock ?? raw.variant_stock, colors, sizes);
   }
 
+  const collection = sanitizeCatalogText(raw.collection || fallback.collection || "").trim();
+  const category = sanitizeCatalogText(raw.category || fallback.category || "").trim();
+  const subcategory = sanitizeCatalogText(raw.subcategory || fallback.subcategory || "").trim();
+  const material = sanitizeCatalogText(raw.material || fallback.material || "").trim();
+  const genderRaw = sanitizeCatalogText(raw.gender || fallback.gender || "").trim();
+  const gender =
+    genderRaw && ["feminino", "masculino", "unissex"].includes(genderRaw.toLowerCase())
+      ? genderRaw[0].toUpperCase() + genderRaw.slice(1).toLowerCase()
+      : "";
+
+  const secondaryImage = String(
+    raw.secondaryImage || raw.secondary_image || raw.image2 || raw.hoverImage || fallback.secondaryImage || ""
+  ).trim();
+  const galleryImages = normalizeTextList(raw.galleryImages || raw.gallery_images || [], []);
+  const careList = normalizeTextList(raw.careList || raw.care_list || [], []);
+  const modelInfo = sanitizeCatalogText(raw.modelInfo || raw.model_info || "").trim();
+  const fitType = sanitizeCatalogText(raw.fitType || raw.fit_type || "").trim();
+  const sizeRecommendation = sanitizeCatalogText(raw.sizeRecommendation || raw.size_recommendation || "").trim();
+  const detailedModeling = sanitizeCatalogText(raw.detailedModeling || raw.detailed_modeling || "").trim();
+  const materialMain = sanitizeCatalogText(raw.materialMain || raw.material_main || "").trim();
+  const cleaningRecommendation = sanitizeCatalogText(
+    raw.cleaningRecommendation || raw.cleaning_recommendation || ""
+  ).trim();
+
   return {
     sizes: sizes.length ? sizes : ["?nico"],
     colors: colors.length ? colors : ["?nico"],
-    variantStock
+    variantStock,
+    collection: collection || undefined,
+    category: category || undefined,
+    subcategory: subcategory || undefined,
+    material: material || undefined,
+    gender: gender || undefined,
+    secondaryImage: secondaryImage || undefined,
+    galleryImages: galleryImages.length ? galleryImages : undefined,
+    modelInfo: modelInfo || undefined,
+    fitType: fitType || undefined,
+    sizeRecommendation: sizeRecommendation || undefined,
+    detailedModeling: detailedModeling || undefined,
+    materialMain: materialMain || undefined,
+    cleaningRecommendation: cleaningRecommendation || undefined,
+    careList: careList.length ? careList : undefined
   };
 }
 
@@ -1118,16 +1192,17 @@ function mapProduct(row: ProductRow | null | undefined): Product {
   const dbImage = String(row?.image_url || "").trim();
   const metadataImage = String(metadataRecord.image || metadataRecord.image_url || metadataRecord.imageUrl || "").trim();
   const staticImage = String(staticMetadata.image || "").trim();
-  const metadataSecondaryImage = String(
-    metadataRecord.secondaryImage || metadataRecord.secondary_image || metadataRecord.image2 || metadataRecord.hoverImage || ""
-  ).trim();
+  const metadataSecondaryImage = String(metadata.secondaryImage || "").trim();
   const staticSecondaryImage = String(staticMetadata.secondaryImage || "").trim();
   const resolvedImage = dbImage || metadataImage || staticImage || DEFAULT_IMAGE;
   const resolvedSecondaryImage = metadataSecondaryImage || staticSecondaryImage;
-  const collections = buildCollectionsArray(staticMetadata);
-  const resolvedGender = resolveProductGenderBySku(sku, staticMetadata.gender);
-  const category = sanitizeCatalogText(staticMetadata.category || "Colecao");
-  const subcategory = sanitizeCatalogText(staticMetadata.subcategory || category);
+  const collections = normalizeTextList(
+    [String(metadata.collection || "").trim(), ...buildCollectionsArray(staticMetadata)],
+    ["Alicerce"]
+  );
+  const resolvedGender = resolveProductGenderBySku(sku, metadata.gender || staticMetadata.gender);
+  const category = sanitizeCatalogText(metadata.category || staticMetadata.category || "Colecao");
+  const subcategory = sanitizeCatalogText(metadata.subcategory || staticMetadata.subcategory || category);
   const isNew = Boolean(staticMetadata.isNew ?? NEW_SKUS.has(sku));
   const isBestSeller = Boolean(staticMetadata.isBestSeller ?? BEST_SELLER_SKUS.has(sku));
   const isFeatured = Boolean(staticMetadata.isFeatured ?? FEATURED_SKUS.has(sku));
@@ -1144,7 +1219,7 @@ function mapProduct(row: ProductRow | null | undefined): Product {
     collections,
     category,
     subcategory,
-    material: sanitizeCatalogText(staticMetadata.material || "Material premium"),
+    material: sanitizeCatalogText(metadata.material || staticMetadata.material || "Material premium"),
     sizes: metadata.sizes,
     colors: metadata.colors,
     variantStock: metadata.variantStock,
@@ -1162,6 +1237,14 @@ function mapProduct(row: ProductRow | null | undefined): Product {
     active: Boolean(row?.active),
     image: resolvedImage,
     secondaryImage: resolvedSecondaryImage || undefined,
+    modelInfo: metadata.modelInfo || undefined,
+    fitType: metadata.fitType || undefined,
+    sizeRecommendation: metadata.sizeRecommendation || undefined,
+    detailedModeling: metadata.detailedModeling || undefined,
+    materialMain: metadata.materialMain || undefined,
+    cleaningRecommendation: metadata.cleaningRecommendation || undefined,
+    careList: Array.isArray(metadata.careList) ? metadata.careList : undefined,
+    galleryImages: Array.isArray(metadata.galleryImages) ? metadata.galleryImages : undefined,
     createdAt: (row?.created_at as string | null) || null,
     updatedAt: (row?.updated_at as string | null) || null,
     href: `produto.html?id=${encodeURIComponent(sku)}`
@@ -1846,7 +1929,21 @@ function buildPersistedMetadata(sku: string, input: unknown = {}): ProductMetada
   return {
     sizes: normalized.sizes,
     colors: normalized.colors,
-    variantStock: normalized.variantStock
+    variantStock: normalized.variantStock,
+    collection: normalized.collection,
+    category: normalized.category,
+    subcategory: normalized.subcategory,
+    material: normalized.material,
+    gender: normalized.gender,
+    secondaryImage: normalized.secondaryImage,
+    galleryImages: normalized.galleryImages,
+    modelInfo: normalized.modelInfo,
+    fitType: normalized.fitType,
+    sizeRecommendation: normalized.sizeRecommendation,
+    detailedModeling: normalized.detailedModeling,
+    materialMain: normalized.materialMain,
+    cleaningRecommendation: normalized.cleaningRecommendation,
+    careList: normalized.careList
   };
 }
 
@@ -1862,6 +1959,20 @@ async function createProduct(payload: ProductWritePayload = {}): Promise<Product
   const sku = normalizeSku(payload.sku);
   if (!sku) return { error: "INVALID_SKU" };
   const metadata = buildPersistedMetadata(sku, {
+    collection: payload.collection,
+    category: payload.category,
+    subcategory: payload.subcategory,
+    material: payload.material,
+    gender: payload.gender,
+    secondaryImage: payload.secondaryImage,
+    galleryImages: payload.galleryImages,
+    modelInfo: payload.modelInfo,
+    fitType: payload.fitType,
+    sizeRecommendation: payload.sizeRecommendation,
+    detailedModeling: payload.detailedModeling,
+    materialMain: payload.materialMain,
+    cleaningRecommendation: payload.cleaningRecommendation,
+    careList: payload.careList,
     sizes: payload.sizes,
     colors: payload.colors,
     variantStock: payload.variantStock
@@ -1919,9 +2030,43 @@ async function updateProductByIdentifier(identifier: string, patch: ProductWrite
   const normalized = String(identifier || "").trim();
   if (!normalized) return null;
 
-  const current = await getProductByIdentifier(normalized);
-  if (!current) return null;
+  const currentRowResult = await queryWithOptionalMetadata(
+    `
+    SELECT id, sku, name, price_cents, stock_qty, currency, active, image_url, metadata, created_at, updated_at
+    FROM products
+    WHERE id::text = $1
+       OR lower(sku) = lower($1)
+    LIMIT 1
+    `,
+    `
+    SELECT id, sku, name, price_cents, stock_qty, currency, active, image_url, created_at, updated_at
+    FROM products
+    WHERE id::text = $1
+       OR lower(sku) = lower($1)
+    LIMIT 1
+    `,
+    [normalized]
+  );
+  const currentRow = currentRowResult.rows[0] || null;
+  if (!currentRow) return null;
+  const current = mapProduct(currentRow);
+  const currentMetadataRecord = asRecord(currentRow.metadata);
   const metadata = buildPersistedMetadata(current.sku, {
+    ...currentMetadataRecord,
+    collection: patch.collection ?? currentMetadataRecord.collection,
+    category: patch.category ?? currentMetadataRecord.category,
+    subcategory: patch.subcategory ?? currentMetadataRecord.subcategory,
+    material: patch.material ?? currentMetadataRecord.material,
+    gender: patch.gender ?? currentMetadataRecord.gender,
+    secondaryImage: patch.secondaryImage ?? currentMetadataRecord.secondaryImage,
+    galleryImages: patch.galleryImages ?? currentMetadataRecord.galleryImages,
+    modelInfo: patch.modelInfo ?? currentMetadataRecord.modelInfo,
+    fitType: patch.fitType ?? currentMetadataRecord.fitType,
+    sizeRecommendation: patch.sizeRecommendation ?? currentMetadataRecord.sizeRecommendation,
+    detailedModeling: patch.detailedModeling ?? currentMetadataRecord.detailedModeling,
+    materialMain: patch.materialMain ?? currentMetadataRecord.materialMain,
+    cleaningRecommendation: patch.cleaningRecommendation ?? currentMetadataRecord.cleaningRecommendation,
+    careList: patch.careList ?? currentMetadataRecord.careList,
     sizes: patch.sizes ?? current.sizes,
     colors: patch.colors ?? current.colors,
     variantStock: patch.variantStock ?? current.variantStock
