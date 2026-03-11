@@ -6208,9 +6208,9 @@ body:not(.home-page) .home-header.product-mode .product-search-trigger svg {
 }
 
 .tsebi-search-reco{
-  margin: 26px 0 0;
+  margin: 26px auto 0;
   width: 100%;
-  max-width: none;
+  max-width: 1240px;
 }
 
 .tsebi-search-reco-head{
@@ -6262,14 +6262,14 @@ body:not(.home-page) .home-header.product-mode .product-search-trigger svg {
 
 .tsebi-search-reco-media{
   width: 100%;
-  aspect-ratio: 4 / 5;
+  aspect-ratio: 1 / 1.1;
   background: #efefef;
   border-radius: 0;
 }
 
 .tsebi-search-reco-image{
   width: 100%;
-  aspect-ratio: 4 / 5;
+  aspect-ratio: 1 / 1.1;
   object-fit: cover;
   display: block;
   transition: transform 280ms ease;
