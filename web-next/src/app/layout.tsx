@@ -140,6 +140,7 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const isProduction = process.env.NODE_ENV === "production";
   const organizationSchema = {
     "@context": "https://schema.org",
     "@type": "Organization",
@@ -163,8 +164,7 @@ export default function RootLayout({
   return (
     <html lang="pt-BR">
       <head>
-        <link rel="preload" as="video" href="/videos/legacy/hero.mp4" type="video/mp4" />
-        <MetaPixelBase />
+        {isProduction ? <MetaPixelBase /> : null}
       </head>
       <body className={`${montserrat.variable} ${playfairDisplay.variable} ${cormorant.variable} ${jost.variable}`}>
         <Script id="google-consent-default" strategy="beforeInteractive">
@@ -184,8 +184,8 @@ export default function RootLayout({
             });
           `}
         </Script>
-        <MetaPixelPageViewTracker />
-        <TrackingScripts />
+        {isProduction ? <MetaPixelPageViewTracker /> : null}
+        {isProduction ? <TrackingScripts /> : null}
         <WhatsAppContactButton />
         <IdentityBridge />
         <Suspense fallback={null}>
