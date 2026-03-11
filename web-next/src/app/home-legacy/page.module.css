@@ -2,3 +2,12 @@
   min-height: 100vh;
   background: #fff;
 }
+
+.route :global(*) {
+  font-weight: 400 !important;
+}
+
+.route :global(b),
+.route :global(strong) {
+  font-weight: 400 !important;
+}
