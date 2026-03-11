@@ -940,7 +940,7 @@ export function LegacyHome({ products }: LegacyHomeProps) {
           </div>
 
           <h1 className="logo">
-            <Link className="logo-center-link" href="/">
+            <Link className="logo-center-link" href="/" prefetch={false}>
               <span className="logo-center-text">TSEBI</span>
               <Image className="logo-center-image" src="/images/logo-tsebi.png" alt="Logo TSEBI" width={120} height={120} />
             </Link>
@@ -1570,7 +1570,7 @@ export function LegacyHome({ products }: LegacyHomeProps) {
             />
           </div>
           <h2>Coleção Alicerce</h2>
-          <Link className="new-drop-cta" href="/">
+          <Link className="new-drop-cta" href="/" prefetch={false}>
             EM BREVE
           </Link>
         </div>

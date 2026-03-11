@@ -4,12 +4,15 @@ import { useEffect, useRef } from "react";
 import { usePathname } from "next/navigation";
 
 type FbqFn = (...args: unknown[]) => void;
+const META_PIXEL_ID = String(process.env.NEXT_PUBLIC_META_PIXEL_ID || "").trim();
 
 export function MetaPixelPageViewTracker() {
   const pathname = usePathname();
   const lastTrackedPathRef = useRef<string>("");
+  const hasMetaPixelId = Boolean(META_PIXEL_ID);
 
   useEffect(() => {
+    if (!hasMetaPixelId) return;
     const currentPath = String(pathname || "").trim() || "/";
     const globalKey = "__tsebi_meta_last_pageview_path__";
     const windowWithMeta = window as unknown as { [key: string]: unknown; fbq?: FbqFn };
@@ -25,7 +28,9 @@ export function MetaPixelPageViewTracker() {
     }
     lastTrackedPathRef.current = currentPath;
     windowWithMeta[globalKey] = currentPath;
-  }, [pathname]);
+  }, [hasMetaPixelId, pathname]);
+
+  if (!hasMetaPixelId) return null;
 
   return null;
 }
