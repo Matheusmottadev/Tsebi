@@ -22,7 +22,7 @@ export async function requireAdminSession(returnTo = "/admin"): Promise<void> {
       redirect(buildAdminLoginRedirect(returnTo));
     }
   } catch (error) {
-    if (error instanceof HttpError && (error.status === 401 || error.status === 403)) {
+    if (error instanceof HttpError) {
       redirect(buildAdminLoginRedirect(returnTo));
     }
     throw error;

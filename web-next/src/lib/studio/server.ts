@@ -41,7 +41,7 @@ export async function readStudioSession(returnTo: string): Promise<StudioSession
       idleTimeoutMs: me.idleTimeoutMs,
     };
   } catch (error) {
-    if (error instanceof HttpError && (error.status === 401 || error.status === 403)) {
+    if (error instanceof HttpError) {
       redirect(buildStudioLoginRedirect(returnTo));
     }
     throw error;
