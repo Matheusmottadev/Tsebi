@@ -6,6 +6,7 @@ import { HttpError } from "@/lib/http";
 import {
   deleteUserAdmin,
   getUserAdmin,
+  listOrdersAdmin,
   listUserOrdersAdmin,
   resetUserPasswordAdmin,
   updateUserAdmin,
@@ -62,6 +63,73 @@ function formatMoneyCents(amountCents: number, currency = "BRL"): string {
     currency: String(currency || "BRL").toUpperCase(),
     maximumFractionDigits: 0,
   }).format((Number(amountCents || 0) || 0) / 100);
+}
+
+function normalizeEmailValue(value: string): string {
+  return String(value || "").trim().toLowerCase();
+}
+
+function normalizeDigits(value: string): string {
+  return String(value || "").replace(/\D/g, "");
+}
+
+function normalizePhoneDigits(value: string): string {
+  let digits = normalizeDigits(value);
+  if (digits.length > 11 && digits.startsWith("55")) digits = digits.slice(2);
+  return digits.slice(0, 11);
+}
+
+function formatPhoneInput(value: string): string {
+  const digits = normalizePhoneDigits(value);
+  if (!digits) return "";
+  const ddd = digits.slice(0, 2);
+  const rest = digits.slice(2);
+  if (!rest) return `(${ddd}`;
+  if (rest.length <= 4) return `(${ddd}) ${rest}`;
+  if (rest.length <= 8) return `(${ddd}) ${rest.slice(0, 4)}-${rest.slice(4)}`;
+  return `(${ddd}) ${rest.slice(0, 5)}-${rest.slice(5)}`;
+}
+
+function formatCpfInput(value: string): string {
+  const digits = normalizeDigits(value).slice(0, 11);
+  const p1 = digits.slice(0, 3);
+  const p2 = digits.slice(3, 6);
+  const p3 = digits.slice(6, 9);
+  const p4 = digits.slice(9, 11);
+  if (digits.length <= 3) return p1;
+  if (digits.length <= 6) return `${p1}.${p2}`;
+  if (digits.length <= 9) return `${p1}.${p2}.${p3}`;
+  return `${p1}.${p2}.${p3}-${p4}`;
+}
+
+function formatBirthDateInput(value: string): string {
+  const digits = normalizeDigits(value).slice(0, 8);
+  const day = digits.slice(0, 2);
+  const month = digits.slice(2, 4);
+  const year = digits.slice(4, 8);
+  if (digits.length <= 2) return day;
+  if (digits.length <= 4) return `${day}/${month}`;
+  return `${day}/${month}/${year}`;
+}
+
+function toDisplayBirthDate(value: string): string {
+  const raw = String(value || "").trim();
+  const iso = raw.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (iso) return `${iso[3]}/${iso[2]}/${iso[1]}`;
+  return formatBirthDateInput(raw);
+}
+
+function toApiBirthDate(value: string): string {
+  const raw = String(value || "").trim();
+  if (!raw) return "";
+  const iso = raw.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (iso) return raw;
+  const digits = normalizeDigits(raw);
+  if (digits.length !== 8) return "";
+  const day = digits.slice(0, 2);
+  const month = digits.slice(2, 4);
+  const year = digits.slice(4, 8);
+  return `${year}-${month}-${day}`;
 }
 
 function isPaidStatus(value: string): boolean {
@@ -121,13 +189,34 @@ function toStatusBadge(value: string): { label: "Pago" | "Pendente" | "Cancelado
   return { label: "Pendente", tone: "pending" };
 }
 
+function mapFallbackOrderToUserOrder(row: {
+  id: string;
+  createdAt: string | null;
+  status: string;
+  currency: string;
+  amount: number;
+  shippingSelectedService?: string;
+  shippingSelectedCarrierName?: string;
+}): AdminUserOrderRow {
+  const productName = String(row.shippingSelectedService || row.shippingSelectedCarrierName || "Pedido sem item").trim();
+  return {
+    id: String(row.id || ""),
+    createdAt: row.createdAt || null,
+    status: String(row.status || ""),
+    currency: String(row.currency || "brl"),
+    amount: Number(row.amount || 0),
+    userId: "",
+    productName,
+  };
+}
+
 function buildDraft(user: AdminUserDetail): UserDraft {
   return {
     title: user.title || "nao_informar",
     name: user.name || "",
-    phone: user.phone || "",
-    birthDate: user.birthDate || "",
-    cpf: user.cpf || "",
+    phone: formatPhoneInput(user.phone || ""),
+    birthDate: toDisplayBirthDate(user.birthDate || ""),
+    cpf: formatCpfInput(user.cpf || ""),
     cep: user.cep || "",
   };
 }
@@ -168,6 +257,7 @@ export function DrawerDetalhesUsuario({
 
   const isSuspended = Boolean(detail?.loginDisabled || user?.status === "disabled" || user?.status === "suspended");
   const selectedId = String(user?.id || "").trim();
+  const selectedEmail = normalizeEmailValue(user?.email || "");
 
   useEffect(() => {
     if (!isOpen) {
@@ -210,24 +300,60 @@ export function DrawerDetalhesUsuario({
         setLoading(false);
       });
 
-    listUserOrdersAdmin(selectedId, { cache: "no-store" })
-      .then((rows) => {
-        if (cancelled) return;
-        setOrders(rows);
-      })
-      .catch(() => {
-        if (cancelled) return;
-        setOrders([]);
-      })
-      .finally(() => {
-        if (cancelled) return;
-        setOrdersLoading(false);
+    async function loadOrders(): Promise<void> {
+      let primaryRows: AdminUserOrderRow[] = [];
+      try {
+        primaryRows = await listUserOrdersAdmin(selectedId, { cache: "no-store" });
+      } catch {
+        primaryRows = [];
+      }
+
+      const merged = new Map<string, AdminUserOrderRow>();
+      primaryRows.forEach((row) => {
+        const id = String(row.id || "").trim();
+        if (!id) return;
+        merged.set(id, row);
       });
+
+      // Fallback por e-mail para cobrir pedidos guest e/ou API antiga sem endpoint dedicado.
+      if (selectedEmail) {
+        try {
+          const pageSize = 200;
+          const maxPages = 20;
+          for (let page = 1; page <= maxPages; page += 1) {
+            const response = await listOrdersAdmin({ page, pageSize }, { cache: "no-store" });
+            const rows = Array.isArray(response.orders) ? response.orders : [];
+            rows
+              .filter((row) => normalizeEmailValue(row.userEmail || "") === selectedEmail)
+              .map(mapFallbackOrderToUserOrder)
+              .forEach((row) => {
+                const id = String(row.id || "").trim();
+                if (!id || merged.has(id)) return;
+                merged.set(id, row);
+              });
+            if (rows.length < pageSize) break;
+          }
+        } catch {
+          // Mantém resultado primário se fallback falhar.
+        }
+      }
+
+      const nextOrders = Array.from(merged.values()).sort((a, b) => {
+        const aTime = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+        const bTime = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+        return bTime - aTime;
+      });
+      if (cancelled) return;
+      setOrders(nextOrders);
+      setOrdersLoading(false);
+    }
+
+    void loadOrders();
 
     return () => {
       cancelled = true;
     };
-  }, [isOpen, onSetEditing, selectedId]);
+  }, [isOpen, onSetEditing, selectedEmail, selectedId]);
 
   const stats = useMemo(() => {
     const totalSpent = orders.filter((row) => isPaidStatus(row.status)).reduce((sum, row) => sum + Number(row.amount || 0), 0);
@@ -256,12 +382,28 @@ export function DrawerDetalhesUsuario({
 
   async function handleSalvar() {
     if (!selectedId || !detail || !draft || !user) return;
+    const phoneDigits = normalizePhoneDigits(draft.phone);
+    const cpfDigits = normalizeDigits(draft.cpf);
+    const birthDateApi = toApiBirthDate(draft.birthDate);
+    if (draft.birthDate.trim() && !birthDateApi) {
+      setErrorMessage("Data de nascimento invalida. Use DD/MM/AAAA.");
+      return;
+    }
+    if (cpfDigits && cpfDigits.length !== 11) {
+      setErrorMessage("CPF invalido.");
+      return;
+    }
+    if (phoneDigits && phoneDigits.length < 10) {
+      setErrorMessage("Telefone invalido.");
+      return;
+    }
+
     const payload = {
       title: draft.title,
       name: draft.name,
-      phone: draft.phone,
-      birthDate: draft.birthDate,
-      cpf: draft.cpf,
+      phone: phoneDigits,
+      birthDate: birthDateApi,
+      cpf: cpfDigits,
       cep: draft.cep,
     };
 
@@ -403,7 +545,12 @@ export function DrawerDetalhesUsuario({
                 <input
                   className={styles.inlineInput}
                   value={draft.phone}
-                  onChange={(event) => setDraft((current) => (current ? { ...current, phone: event.target.value } : current))}
+                  onChange={(event) =>
+                    setDraft((current) => (current ? { ...current, phone: formatPhoneInput(event.target.value) } : current))
+                  }
+                  inputMode="numeric"
+                  maxLength={15}
+                  placeholder="(11) 99999-9999"
                 />
               ) : (
                 <p>{detail?.phone || user.phone || "-"}</p>
@@ -416,7 +563,12 @@ export function DrawerDetalhesUsuario({
                 <input
                   className={styles.inlineInput}
                   value={draft.birthDate}
-                  onChange={(event) => setDraft((current) => (current ? { ...current, birthDate: event.target.value } : current))}
+                  onChange={(event) =>
+                    setDraft((current) => (current ? { ...current, birthDate: formatBirthDateInput(event.target.value) } : current))
+                  }
+                  inputMode="numeric"
+                  maxLength={10}
+                  placeholder="DD/MM/AAAA"
                 />
               ) : (
                 <p>{formatDate(detail?.birthDate || null)}</p>
@@ -429,7 +581,12 @@ export function DrawerDetalhesUsuario({
                 <input
                   className={styles.inlineInput}
                   value={draft.cpf}
-                  onChange={(event) => setDraft((current) => (current ? { ...current, cpf: event.target.value } : current))}
+                  onChange={(event) =>
+                    setDraft((current) => (current ? { ...current, cpf: formatCpfInput(event.target.value) } : current))
+                  }
+                  inputMode="numeric"
+                  maxLength={14}
+                  placeholder="000.000.000-00"
                 />
               ) : (
                 <p>{maskCpf(detail?.cpf || "")}</p>
