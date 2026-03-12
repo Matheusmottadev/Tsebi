@@ -16,10 +16,10 @@ export const metadata: Metadata = {
 
 const LEGACY_ACCOUNT_FILE = path.resolve(process.cwd(), "public/legacy/pages/conta.html");
 const LEGACY_CRITICAL_SCRIPTS = [
-  "/JS/user-utils.js?v=20260222a",
+  "/JS/user-utils.js?v=20260312b",
   "/JS/account-header-ui.js?v=20260310a",
   "/JS/account-header-stack-fix.js?v=20260222a",
-  "/JS/account-router.js?v=20260310a",
+  "/JS/account-router.js?v=20260312b",
 ] as const;
 
 const LEGACY_DEFERRED_SCRIPTS = [

@@ -136,7 +136,6 @@ export default function LoginPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isResending, setIsResending] = useState(false);
   const [isGoogleSubmitting, setIsGoogleSubmitting] = useState(false);
-  const [isGoogleAvailable, setIsGoogleAvailable] = useState(false);
 
   const activeEmailPreview = useMemo(() => normalizeEmail(activeEmail || email), [activeEmail, email]);
   const loginNotice = useMemo(() => {
@@ -180,22 +179,12 @@ export default function LoginPage() {
     [returnUrlParam, router]
   );
 
-  async function syncGoogleAvailability(): Promise<void> {
-    try {
-      const config = await getGoogleAuthConfig();
-      setIsGoogleAvailable(Boolean(config.enabled && config.clientId));
-    } catch {
-      setIsGoogleAvailable(false);
-    }
-  }
-
   async function beginGoogleLogin(): Promise<void> {
     clearFeedback();
     setIsGoogleSubmitting(true);
     try {
       const config = await getGoogleAuthConfig();
       if (!config.enabled || !config.clientId) {
-        setIsGoogleAvailable(false);
         setErrorMessage("Login com Google indisponivel no momento.");
         return;
       }
@@ -225,14 +214,13 @@ export default function LoginPage() {
 
       window.location.href = oauthUrl.toString();
     } catch {
-      setIsGoogleAvailable(false);
       setErrorMessage("Login com Google indisponivel no momento.");
     } finally {
       setIsGoogleSubmitting(false);
     }
   }
 
-  async function completeGoogleLoginFromHash(): Promise<void> {
+  const completeGoogleLoginFromHash = useCallback(async (): Promise<void> => {
     const hash = String(window.location.hash || "").replace(/^#/, "");
     if (!hash) return;
 
@@ -274,7 +262,7 @@ export default function LoginPage() {
     } finally {
       setIsGoogleSubmitting(false);
     }
-  }
+  }, [finishLogin]);
 
   useEffect(() => {
     let cancelled = false;
@@ -301,9 +289,8 @@ export default function LoginPage() {
   }, [finishLogin]);
 
   useEffect(() => {
-    void syncGoogleAvailability();
     void completeGoogleLoginFromHash();
-  }, []);
+  }, [completeGoogleLoginFromHash]);
 
   async function handleStepEmailSubmit(event: FormEvent<HTMLFormElement>): Promise<void> {
     event.preventDefault();

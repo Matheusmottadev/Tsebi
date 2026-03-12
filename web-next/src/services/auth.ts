@@ -168,7 +168,8 @@ async function requestMe(options?: HttpRequestOptions): Promise<PublicUser | nul
  * Auth: optional (returns unauthenticated state when session is absent).
  */
 export async function getMe(options?: HttpRequestOptions): Promise<PublicUser | null> {
-  const canDeduplicate = typeof window !== "undefined" && !options?.cookie;
+  const canDeduplicate =
+    typeof window !== "undefined" && !options?.cookie && options?.cache !== "no-store";
   if (!canDeduplicate) {
     return requestMe(options);
   }
