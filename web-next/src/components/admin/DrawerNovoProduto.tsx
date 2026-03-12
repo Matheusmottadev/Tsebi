@@ -28,20 +28,12 @@ function buildVariantRows(sizes: string[], colors: string[]): VariantRow[] {
   const cleanSizes = sizes.map((value) => value.trim()).filter(Boolean);
   const cleanColors = colors.map((value) => value.trim()).filter(Boolean);
 
-  if (!cleanSizes.length && !cleanColors.length) return [];
-
-  if (!cleanSizes.length) {
-    return cleanColors.map((color) => ({ key: `color::${color}`, label: `Cor ${color}` }));
-  }
-
-  if (!cleanColors.length) {
-    return cleanSizes.map((size) => ({ key: `size::${size}`, label: `Tamanho ${size}` }));
-  }
+  if (!cleanSizes.length || !cleanColors.length) return [];
 
   const rows: VariantRow[] = [];
   for (const size of cleanSizes) {
     for (const color of cleanColors) {
-      rows.push({ key: `${size}::${color}`, label: `${size} / ${color}` });
+      rows.push({ key: `${color}__${size}`, label: `${size} / ${color}` });
     }
   }
   return rows;

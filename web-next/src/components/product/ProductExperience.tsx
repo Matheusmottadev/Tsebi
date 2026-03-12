@@ -23,7 +23,7 @@ type ProductExperienceProps = {
 
 function normalizeImageList(input: unknown): string[] {
   if (!Array.isArray(input)) return [];
-  return input.map((item) => String(item || "").trim()).filter(Boolean);
+  return input.map((item) => normalizeImageValue(item)).filter(Boolean);
 }
 
 function normalizeImageValue(input: unknown): string {
@@ -45,6 +45,7 @@ function buildGalleryImages(product: Product): string[] {
   const anyProduct = product as Product & {
     images?: unknown;
     gallery?: unknown;
+    galleryImages?: unknown;
     media?: unknown;
     image_url?: unknown;
     metadata?: unknown;
@@ -57,6 +58,7 @@ function buildGalleryImages(product: Product): string[] {
 
   const metadataImages = normalizeImageList(metadata.images);
   const metadataGallery = normalizeImageList(metadata.gallery);
+  const metadataGalleryImages = normalizeImageList(metadata.galleryImages);
   const metadataMedia = normalizeImageList(metadata.media);
   const metadataSecondary = normalizeImageValue(metadata.secondaryImage);
 
@@ -66,11 +68,14 @@ function buildGalleryImages(product: Product): string[] {
     normalizeImageValue(anyProduct.image_url),
     normalizeImageValue((product as Product & { secondaryImage?: unknown }).secondaryImage),
     metadataSecondary,
+    ...normalizeImageList((product as Product & { galleryImages?: unknown }).galleryImages),
     ...normalizeImageList(anyProduct.images),
     ...normalizeImageList(anyProduct.gallery),
+    ...normalizeImageList(anyProduct.galleryImages),
     ...normalizeImageList(anyProduct.media),
     ...metadataImages,
     ...metadataGallery,
+    ...metadataGalleryImages,
     ...metadataMedia,
     ...skuFallbacks,
   ].filter(Boolean);
@@ -87,6 +92,7 @@ function getProductMediaList(product: Product): string[] {
   const anyProduct = product as Product & {
     images?: unknown;
     gallery?: unknown;
+    galleryImages?: unknown;
     media?: unknown;
   };
 
@@ -94,8 +100,11 @@ function getProductMediaList(product: Product): string[] {
     new Set(
       [
         String(product.image || "").trim(),
+        String(product.secondaryImage || "").trim(),
+        ...normalizeImageList((product as Product & { galleryImages?: unknown }).galleryImages),
         ...normalizeImageList(anyProduct.images),
         ...normalizeImageList(anyProduct.gallery),
+        ...normalizeImageList(anyProduct.galleryImages),
         ...normalizeImageList(anyProduct.media),
       ].filter(Boolean)
     )

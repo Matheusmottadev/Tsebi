@@ -216,6 +216,20 @@ function getProductKey(product: Product): string {
   return String(product.dbId || product.id || product.sku || "").trim();
 }
 
+function buildProductFieldOptions(rows: Product[], field: "category" | "collection"): string[] {
+  const uniqueByKey = new Map<string, string>();
+  rows.forEach((product) => {
+    const rawValue = String(product[field] || "").trim();
+    if (!rawValue) return;
+    const normalized = normalizeTextForCompare(rawValue);
+    if (!normalized || uniqueByKey.has(normalized)) return;
+    uniqueByKey.set(normalized, rawValue);
+  });
+  return Array.from(uniqueByKey.values()).sort((left, right) =>
+    left.localeCompare(right, "pt-BR", { sensitivity: "base" })
+  );
+}
+
 function toSummaryFromOrder(base: AdminOrderSummary, next: Order): AdminOrderSummary {
   const nextTracking = String(next.trackingStatus || next.currentStatus || base.trackingStatus || "");
   return {
@@ -408,6 +422,15 @@ export function ConnectedPage({
     []
   );
 
+  useEffect(() => {
+    if (toastTimerRef.current) {
+      clearTimeout(toastTimerRef.current);
+      toastTimerRef.current = null;
+    }
+    setToastVisible(false);
+    setToastMessage("");
+  }, [page]);
+
   const openUserDrawer = (user: AdminUserRow) => {
     setSelectedUser(user);
     setIsUserDrawerOpen(true);
@@ -456,6 +479,7 @@ export function ConnectedPage({
     if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
     toastTimerRef.current = setTimeout(() => {
       setToastVisible(false);
+      setToastMessage("");
       toastTimerRef.current = null;
     }, 3000);
   };
@@ -564,6 +588,9 @@ export function ConnectedPage({
     productsStatusFilter,
     productsStockFilter,
   ]);
+
+  const productCategoryOptions = useMemo(() => buildProductFieldOptions(productsRows, "category"), [productsRows]);
+  const productCollectionOptions = useMemo(() => buildProductFieldOptions(productsRows, "collection"), [productsRows]);
 
   const filteredUsers = useMemo(() => {
     const queryText = normalizeTextForCompare(usersSearch);
@@ -1736,6 +1763,8 @@ export function ConnectedPage({
         <DrawerEditarProduto
           isOpen={isProductDrawerOpen}
           product={selectedProduct}
+          categoryOptions={productCategoryOptions}
+          collectionOptions={productCollectionOptions}
           onClose={closeProductDrawer}
           onSaved={handleProductSaved}
         />

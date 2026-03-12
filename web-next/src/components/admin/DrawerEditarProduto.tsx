@@ -11,6 +11,8 @@ import styles from "./DrawerEditarProduto.module.css";
 type DrawerEditarProdutoProps = {
   isOpen: boolean;
   product: Product | null;
+  categoryOptions?: string[];
+  collectionOptions?: string[];
   onClose: () => void;
   onSaved: (product: Product) => void;
 };
@@ -21,10 +23,16 @@ type SizeRow = {
   stock: number;
 };
 
+type VariantRow = {
+  key: string;
+  label: string;
+};
+
 type PhotoSlot = {
   id: string;
   file: File | null;
   url: string;
+  persistedUrl: string;
 };
 
 type ValidationErrors = Record<string, string>;
@@ -68,6 +76,66 @@ function asTitleCase(value: string): string {
   return trimmed[0].toUpperCase() + trimmed.slice(1);
 }
 
+function parseVariantKey(rawKey: string): { color: string; size: string } | null {
+  const key = String(rawKey || "").trim();
+  if (!key) return null;
+  if (key.includes("__")) {
+    const [color, size] = key.split("__");
+    if (!String(color || "").trim() || !String(size || "").trim()) return null;
+    return { color: String(color).trim(), size: String(size).trim() };
+  }
+  if (key.includes("|")) {
+    const [color, size] = key.split("|");
+    if (!String(color || "").trim() || !String(size || "").trim()) return null;
+    return { color: String(color).trim(), size: String(size).trim() };
+  }
+  return null;
+}
+
+function resolveSizeLabel(value: string): string {
+  const normalized = normalizeText(value);
+  const known = SIZE_LABELS.find((label) => normalizeText(label) === normalized);
+  return known || String(value || "").trim();
+}
+
+function buildVariantRows(sizes: string[], colors: string[]): VariantRow[] {
+  const cleanSizes = sizes.map((value) => String(value || "").trim()).filter(Boolean);
+  const cleanColors = colors.map((value) => String(value || "").trim()).filter(Boolean);
+  if (!cleanSizes.length || !cleanColors.length) return [];
+
+  const rows: VariantRow[] = [];
+  for (const size of cleanSizes) {
+    for (const color of cleanColors) {
+      rows.push({
+        key: `${color}__${size}`,
+        label: `${size} / ${color}`,
+      });
+    }
+  }
+  return rows;
+}
+
+function buildSelectorOptions(options: string[], selectedValue: string): string[] {
+  const next: string[] = [];
+  const seen = new Set<string>();
+
+  options.forEach((option) => {
+    const raw = String(option || "").trim();
+    const key = normalizeText(raw);
+    if (!raw || !key || seen.has(key)) return;
+    seen.add(key);
+    next.push(raw);
+  });
+
+  const selected = String(selectedValue || "").trim();
+  const selectedKey = normalizeText(selected);
+  if (selected && selectedKey && !seen.has(selectedKey)) {
+    next.unshift(selected);
+  }
+
+  return next;
+}
+
 function buildInitialSizeRows(product: Product): SizeRow[] {
   const selected = new Set((Array.isArray(product.sizes) ? product.sizes : []).map((size) => normalizeText(size)));
   const stockBySize: Record<string, number> = {};
@@ -79,6 +147,22 @@ function buildInitialSizeRows(product: Product): SizeRow[] {
       if (!size) return;
       stockBySize[size] = (stockBySize[size] || 0) + Math.max(0, Number(qty || 0));
     });
+  }
+
+  const explicitStockTotal = Object.values(stockBySize).reduce((sum, qty) => sum + Math.max(0, Number(qty || 0)), 0);
+  const fallbackTotal = Math.max(0, Number(product.stock || 0));
+  const selectedKnownSizes = SIZE_LABELS.filter((label) => selected.has(normalizeText(label)));
+
+  // Fallback: quando variantStock vier vazio/zerado, usa stock total do produto.
+  if (explicitStockTotal <= 0 && fallbackTotal > 0 && selectedKnownSizes.length > 0) {
+    let remaining = fallbackTotal;
+    let pointer = 0;
+    while (remaining > 0) {
+      const key = normalizeText(selectedKnownSizes[pointer % selectedKnownSizes.length]);
+      stockBySize[key] = (stockBySize[key] || 0) + 1;
+      remaining -= 1;
+      pointer += 1;
+    }
   }
 
   return SIZE_LABELS.map((label) => {
@@ -93,6 +177,36 @@ function buildInitialSizeRows(product: Product): SizeRow[] {
   });
 }
 
+function buildInitialVariantStock(product: Product, sizeRows: SizeRow[], colors: string[]): Record<string, number> {
+  const seeded: Record<string, number> = {};
+  let hasExplicitMatrix = false;
+
+  if (product.variantStock && typeof product.variantStock === "object") {
+    Object.entries(product.variantStock).forEach(([rawKey, rawQty]) => {
+      const parts = parseVariantKey(rawKey);
+      if (!parts) return;
+      const color = asTitleCase(parts.color);
+      const size = resolveSizeLabel(parts.size);
+      if (!color || !size) return;
+      hasExplicitMatrix = true;
+      seeded[`${color}__${size}`] = Math.max(0, Number(rawQty || 0));
+    });
+  }
+
+  if (hasExplicitMatrix) return seeded;
+
+  const defaultColor = asTitleCase(colors[0] || "Unico") || "Unico";
+  sizeRows
+    .filter((size) => size.checked)
+    .forEach((size) => {
+      const qty = Math.max(0, Number(size.stock || 0));
+      if (qty < 1) return;
+      seeded[`${defaultColor}__${size.label}`] = qty;
+    });
+
+  return seeded;
+}
+
 function buildInitialPhotos(product: Product): PhotoSlot[] {
   const gallery = Array.isArray(product.galleryImages) ? product.galleryImages : [];
   const urls = [String(product.image || ""), String(product.secondaryImage || ""), ...gallery]
@@ -105,10 +219,18 @@ function buildInitialPhotos(product: Product): PhotoSlot[] {
     id: `slot-${index + 1}`,
     file: null,
     url,
+    persistedUrl: url,
   }));
 }
 
-export function DrawerEditarProduto({ isOpen, product, onClose, onSaved }: DrawerEditarProdutoProps) {
+export function DrawerEditarProduto({
+  isOpen,
+  product,
+  categoryOptions = [],
+  collectionOptions = [],
+  onClose,
+  onSaved,
+}: DrawerEditarProdutoProps) {
   const [photos, setPhotos] = useState<PhotoSlot[]>([]);
   const [sku, setSku] = useState("");
   const [name, setName] = useState("");
@@ -118,6 +240,7 @@ export function DrawerEditarProduto({ isOpen, product, onClose, onSaved }: Drawe
   const [sizes, setSizes] = useState<SizeRow[]>(SIZE_LABELS.map((label) => ({ label, checked: false, stock: 0 })));
   const [colorInput, setColorInput] = useState("");
   const [colors, setColors] = useState<string[]>([]);
+  const [variantStockInput, setVariantStockInput] = useState<Record<string, number>>({});
   const [modelInfo, setModelInfo] = useState("");
   const [fitType, setFitType] = useState("");
   const [sizeRecommendation, setSizeRecommendation] = useState("");
@@ -138,28 +261,91 @@ export function DrawerEditarProduto({ isOpen, product, onClose, onSaved }: Drawe
 
   useEffect(() => {
     if (!isOpen || !product) return;
-    setPhotos(buildInitialPhotos(product));
-    setSku(String(product.sku || ""));
-    setName(String(product.name || ""));
-    setPrice(formatMoneyInput(Number(product.unitAmount || 0)));
-    setCurrency(String(product.currency || "BRL").toUpperCase() || "BRL");
-    setActive(Boolean(product.active));
-    setSizes(buildInitialSizeRows(product));
-    setColors((Array.isArray(product.colors) ? product.colors : []).map((item) => asTitleCase(item)).filter(Boolean));
-    setModelInfo(String(product.modelInfo || ""));
-    setFitType(String(product.fitType || ""));
-    setSizeRecommendation(String(product.sizeRecommendation || ""));
-    setCategory(String(product.category || ""));
-    setCollection(String(product.collection || ""));
-    setGender(String(product.gender || "Unissex") || "Unissex");
-    setDetailedModeling(String(product.detailedModeling || ""));
-    setMaterialMain(String(product.materialMain || product.material || ""));
-    setCleaningRecommendation(String(product.cleaningRecommendation || ""));
-    setCareList((Array.isArray(product.careList) ? product.careList : []).map((item) => String(item || "").trim()).filter(Boolean));
-    setColorInput("");
-    setCareInput("");
-    setError("");
+    let cancelled = false;
+    const baseProduct: Product = product;
+
+    async function hydrate(): Promise<void> {
+      const identifier = String(baseProduct.dbId || baseProduct.id || baseProduct.sku || "").trim();
+      let source: Product = baseProduct;
+      if (identifier) {
+        try {
+          const fresh = await getProductAdmin(identifier);
+          if (fresh) source = fresh;
+        } catch {
+          // fallback para os dados ja carregados em lista
+        }
+      }
+      if (cancelled) return;
+
+      setPhotos(buildInitialPhotos(source));
+      setSku(String(source.sku || ""));
+      setName(String(source.name || ""));
+      setPrice(formatMoneyInput(Number(source.unitAmount || 0)));
+      setCurrency(String(source.currency || "BRL").toUpperCase() || "BRL");
+      setActive(Boolean(source.active));
+      const initialSizes = buildInitialSizeRows(source);
+      const initialColors = (Array.isArray(source.colors) ? source.colors : []).map((item) => asTitleCase(item)).filter(Boolean);
+
+      setSizes(initialSizes);
+      setColors(initialColors);
+      setVariantStockInput(buildInitialVariantStock(source, initialSizes, initialColors));
+      setModelInfo(String(source.modelInfo || ""));
+      setFitType(String(source.fitType || ""));
+      setSizeRecommendation(String(source.sizeRecommendation || ""));
+      setCategory(String(source.category || ""));
+      setCollection(String(source.collection || ""));
+      setGender(String(source.gender || "Unissex") || "Unissex");
+      setDetailedModeling(String(source.detailedModeling || ""));
+      setMaterialMain(String(source.materialMain || source.material || ""));
+      setCleaningRecommendation(String(source.cleaningRecommendation || ""));
+      setCareList((Array.isArray(source.careList) ? source.careList : []).map((item) => String(item || "").trim()).filter(Boolean));
+      setColorInput("");
+      setCareInput("");
+      setError("");
+    }
+
+    void hydrate();
+    return () => {
+      cancelled = true;
+    };
   }, [isOpen, product]);
+
+  const checkedSizes = useMemo(() => sizes.filter((size) => size.checked).map((size) => size.label), [sizes]);
+
+  const resolvedColors = useMemo(() => {
+    const deduped: string[] = [];
+    const seen = new Set<string>();
+    const source = (colors.length > 0 ? colors : ["Unico"]).map((color) => asTitleCase(color)).filter(Boolean);
+    source.forEach((color) => {
+      const key = normalizeText(color);
+      if (!key || seen.has(key)) return;
+      seen.add(key);
+      deduped.push(color);
+    });
+    return deduped.length > 0 ? deduped : ["Unico"];
+  }, [colors]);
+
+  const variantRows = useMemo(() => buildVariantRows(checkedSizes, resolvedColors), [checkedSizes, resolvedColors]);
+
+  const resolvedCategoryOptions = useMemo(
+    () => buildSelectorOptions(categoryOptions, category),
+    [category, categoryOptions]
+  );
+  const resolvedCollectionOptions = useMemo(
+    () => buildSelectorOptions(collectionOptions, collection),
+    [collection, collectionOptions]
+  );
+
+  useEffect(() => {
+    setVariantStockInput((current) => {
+      const next: Record<string, number> = {};
+      for (const row of variantRows) {
+        const qty = Number(current[row.key] ?? 0);
+        next[row.key] = Number.isFinite(qty) && qty >= 0 ? Math.floor(qty) : 0;
+      }
+      return next;
+    });
+  }, [variantRows]);
 
   useEffect(() => {
     return () => {
@@ -175,18 +361,21 @@ export function DrawerEditarProduto({ isOpen, product, onClose, onSaved }: Drawe
     if (!String(name || "").trim()) next.name = "Nome obrigatorio.";
     if (parseMoneyToCents(price) <= 0) next.price = "Preco invalido.";
 
-    const checkedSizes = sizes.filter((size) => size.checked);
     if (checkedSizes.length === 0) {
       next.sizes = "Selecione pelo menos um tamanho.";
     }
-    checkedSizes.forEach((size) => {
-      if (Number(size.stock || 0) < 1) {
-        next[`size-${size.label}`] = `Estoque minimo para ${size.label} e 1.`;
+
+    if (variantRows.length === 0) {
+      next.variantStock = "Preencha pelo menos uma variante para controlar estoque.";
+    } else {
+      const totalVariantStock = variantRows.reduce((sum, row) => sum + Math.max(0, Number(variantStockInput[row.key] || 0)), 0);
+      if (totalVariantStock < 1) {
+        next.variantStock = "Informe estoque maior que 0 em pelo menos uma combinacao.";
       }
-    });
+    }
 
     return next;
-  }, [name, price, sizes, sku]);
+  }, [checkedSizes.length, name, price, sku, variantRows, variantStockInput]);
 
   const hasErrors = Object.keys(validationErrors).length > 0;
 
@@ -195,7 +384,7 @@ export function DrawerEditarProduto({ isOpen, product, onClose, onSaved }: Drawe
     if (ref) ref.click();
   }
 
-  function setFileAt(index: number, file: File | null) {
+  function setFileAt(index: number, file: File) {
     setPhotos((current) => {
       const next = [...current];
       const previous = next[index];
@@ -208,6 +397,7 @@ export function DrawerEditarProduto({ isOpen, product, onClose, onSaved }: Drawe
         ...previous,
         file,
         url: nextUrl,
+        persistedUrl: String(previous?.persistedUrl || "").trim(),
       };
       return next;
     });
@@ -220,7 +410,7 @@ export function DrawerEditarProduto({ isOpen, product, onClose, onSaved }: Drawe
       if (previous?.url && String(previous.url).startsWith("blob:")) {
         URL.revokeObjectURL(previous.url);
       }
-      next[index] = { ...previous, file: null, url: "" };
+      next[index] = { ...previous, file: null, url: "", persistedUrl: "" };
       return next;
     });
   }
@@ -242,20 +432,18 @@ export function DrawerEditarProduto({ isOpen, product, onClose, onSaved }: Drawe
         return {
           ...row,
           checked,
-          stock: checked ? Math.max(1, Number(row.stock || 0)) : 0,
+          stock: checked ? Math.max(1, Number(row.stock || 0)) : row.stock,
         };
       })
     );
   }
 
-  function updateSizeStock(index: number, value: string) {
-    const stock = Math.max(0, Number(value || 0));
-    setSizes((current) =>
-      current.map((row, rowIndex) => {
-        if (rowIndex !== index) return row;
-        return { ...row, stock };
-      })
-    );
+  function updateVariantStock(variantKey: string, value: string) {
+    const parsed = Number(value);
+    setVariantStockInput((current) => ({
+      ...current,
+      [variantKey]: Number.isFinite(parsed) && parsed >= 0 ? Math.floor(parsed) : 0,
+    }));
   }
 
   function tryAddColor(rawValue: string) {
@@ -290,7 +478,7 @@ export function DrawerEditarProduto({ isOpen, product, onClose, onSaved }: Drawe
     setCareList((current) => current.filter((_item, itemIndex) => itemIndex !== index));
   }
 
-  async function uploadImage(productId: string, slotIndex: number, file: File) {
+  async function uploadImage(productId: string, slotIndex: number, file: File): Promise<string> {
     const csrfToken = await bootstrapAdminCsrfToken();
     const bytes = await file.arrayBuffer();
     const response = await fetch(`/api/admin/products/${encodeURIComponent(productId)}/image?slot=${slotIndex + 1}`, {
@@ -302,6 +490,10 @@ export function DrawerEditarProduto({ isOpen, product, onClose, onSaved }: Drawe
       },
     });
     if (!response.ok) throw new Error("Falha ao enviar imagem.");
+    const payload = await response.json().catch(() => ({}));
+    const uploadedUrl = String(payload?.image?.url || "").trim();
+    if (!uploadedUrl) throw new Error("Falha ao enviar imagem.");
+    return uploadedUrl;
   }
 
   async function handleSave() {
@@ -318,27 +510,40 @@ export function DrawerEditarProduto({ isOpen, product, onClose, onSaved }: Drawe
       const identifier = String(product.dbId || product.id || product.sku || "").trim();
       if (!identifier) throw new Error("Produto invalido.");
 
-      const checkedSizes = sizes.filter((size) => size.checked);
-      const sizeLabels = checkedSizes.map((size) => size.label);
-      const normalizedColors = (colors.length > 0 ? colors : ["Unico"]).map((color) => asTitleCase(color));
+      const sizeLabels = checkedSizes;
+      const normalizedColors = resolvedColors;
       const variantStock: Record<string, number> = {};
 
-      checkedSizes.forEach((size) => {
-        const stock = Math.max(1, Number(size.stock || 0));
-        const baseColor = normalizedColors[0] || "Unico";
-        variantStock[`${baseColor}__${size.label}`] = stock;
+      variantRows.forEach((row) => {
+        const stock = Math.max(0, Number(variantStockInput[row.key] || 0));
+        variantStock[row.key] = stock;
       });
 
-      const galleryImages = photos
+      const stockQty = Object.values(variantStock).reduce((sum, qty) => sum + Math.max(0, Number(qty || 0)), 0);
+
+      const resolvedPhotoUrls = photos.map((slot) => {
+        const directUrl = String(slot.url || "").trim();
+        if (directUrl && !directUrl.startsWith("blob:")) return directUrl;
+        if (slot.file) return String(slot.persistedUrl || "").trim();
+        return "";
+      });
+
+      for (let index = 0; index < photos.length; index += 1) {
+        const file = photos[index]?.file;
+        if (!file) continue;
+        const uploadedUrl = await uploadImage(identifier, index, file);
+        resolvedPhotoUrls[index] = uploadedUrl;
+      }
+
+      const galleryImages = resolvedPhotoUrls
         .slice(1)
-        .map((slot) => String(slot.url || "").trim())
-        .filter((value) => Boolean(value) && !value.startsWith("blob:"))
+        .filter((value) => Boolean(value))
         .slice(0, 4);
 
       const saveResponse = await updateProductAdmin(identifier, {
         name: String(name || "").trim(),
         priceCents: parseMoneyToCents(price),
-        stockQty: checkedSizes.reduce((sum, size) => sum + Math.max(1, Number(size.stock || 0)), 0),
+        stockQty,
         currency: String(currency || "BRL").trim().toUpperCase(),
         active,
         sizes: sizeLabels,
@@ -348,10 +553,8 @@ export function DrawerEditarProduto({ isOpen, product, onClose, onSaved }: Drawe
         collection: String(collection || "").trim(),
         gender: String(gender || "Unissex").trim(),
         material: String(materialMain || "").trim(),
-        secondaryImage: (() => {
-          const value = String(photos[1]?.url || "").trim();
-          return value && !value.startsWith("blob:") ? value : "";
-        })(),
+        imageUrl: String(resolvedPhotoUrls[0] || "").trim(),
+        secondaryImage: String(resolvedPhotoUrls[1] || "").trim(),
         galleryImages,
         modelInfo: String(modelInfo || "").trim(),
         fitType: String(fitType || "").trim(),
@@ -361,15 +564,6 @@ export function DrawerEditarProduto({ isOpen, product, onClose, onSaved }: Drawe
         cleaningRecommendation: String(cleaningRecommendation || "").trim(),
         careList: careList.map((item) => String(item || "").trim()).filter(Boolean),
       });
-
-      const productId = String(saveResponse.product.dbId || saveResponse.product.id || saveResponse.product.sku || "").trim();
-      if (!productId) throw new Error("Produto invalido para upload.");
-
-      for (let index = 0; index < photos.length; index += 1) {
-        const file = photos[index]?.file;
-        if (!file) continue;
-        await uploadImage(productId, index, file);
-      }
 
       const refreshed = await getProductAdmin(identifier);
       onSaved(refreshed || saveResponse.product);
@@ -431,7 +625,8 @@ export function DrawerEditarProduto({ isOpen, product, onClose, onSaved }: Drawe
                       style={{ display: "none" }}
                       onChange={(event) => {
                         const file = event.target.files?.[0] || null;
-                        setFileAt(index, file);
+                        if (file) setFileAt(index, file);
+                        event.currentTarget.value = "";
                       }}
                     />
                     <GripVertical size={14} style={{ position: "absolute", left: 6, top: 6, color: "rgba(17,17,17,0.6)" }} />
@@ -529,18 +724,30 @@ export function DrawerEditarProduto({ isOpen, product, onClose, onSaved }: Drawe
                 <label htmlFor={`size-${size.label}`} className={styles.sizeLabel}>
                   {size.label}
                 </label>
-                <input
-                  type="number"
-                  min={0}
-                  value={size.stock}
-                  disabled={!size.checked}
-                  className={`${styles.stockInput} ${size.checked ? styles.stockInputEnabled : styles.stockInputDisabled}`}
-                  onChange={(event) => updateSizeStock(index, event.target.value)}
-                />
               </div>
             ))}
           </div>
           {validationErrors.sizes ? <p className={styles.fieldError}>{validationErrors.sizes}</p> : null}
+          {variantRows.length > 0 ? (
+            <div className={styles.variantStockBlock}>
+              <h5 className={styles.variantStockTitle}>Estoque por cor e tamanho</h5>
+              <div className={form.variantGrid}>
+                {variantRows.map((row) => (
+                  <div key={row.key} className={form.variantRow}>
+                    <span className={form.variantName}>{row.label}</span>
+                    <input
+                      className={form.variantInput}
+                      type="number"
+                      min={0}
+                      value={String(variantStockInput[row.key] ?? 0)}
+                      onChange={(event) => updateVariantStock(row.key, event.target.value)}
+                    />
+                  </div>
+                ))}
+              </div>
+            </div>
+          ) : null}
+          {validationErrors.variantStock ? <p className={styles.fieldError}>{validationErrors.variantStock}</p> : null}
         </section>
 
         <section className={styles.section}>
@@ -589,11 +796,25 @@ export function DrawerEditarProduto({ isOpen, product, onClose, onSaved }: Drawe
           <div className={form.row2}>
             <div className={form.field}>
               <label className={form.label}>Categoria</label>
-              <input className={form.input} value={category} onChange={(event) => setCategory(event.target.value)} />
+              <select className={form.select} value={category} onChange={(event) => setCategory(event.target.value)}>
+                <option value="">Selecione</option>
+                {resolvedCategoryOptions.map((option) => (
+                  <option key={option} value={option}>
+                    {option}
+                  </option>
+                ))}
+              </select>
             </div>
             <div className={form.field}>
               <label className={form.label}>Colecao</label>
-              <input className={form.input} value={collection} onChange={(event) => setCollection(event.target.value)} />
+              <select className={form.select} value={collection} onChange={(event) => setCollection(event.target.value)}>
+                <option value="">Selecione</option>
+                {resolvedCollectionOptions.map((option) => (
+                  <option key={option} value={option}>
+                    {option}
+                  </option>
+                ))}
+              </select>
             </div>
           </div>
 

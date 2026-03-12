@@ -1196,6 +1196,12 @@ function mapProduct(row: ProductRow | null | undefined): Product {
   const staticSecondaryImage = String(staticMetadata.secondaryImage || "").trim();
   const resolvedImage = dbImage || metadataImage || staticImage || DEFAULT_IMAGE;
   const resolvedSecondaryImage = metadataSecondaryImage || staticSecondaryImage;
+  const variantStockTotal = Object.values(metadata.variantStock || {}).reduce(
+    (sum, qty) => sum + Math.max(0, Number(qty || 0)),
+    0
+  );
+  const stockQty = Math.max(0, Number(row?.stock_qty || 0));
+  const resolvedStock = stockQty > 0 ? stockQty : variantStockTotal;
   const collections = normalizeTextList(
     [String(metadata.collection || "").trim(), ...buildCollectionsArray(staticMetadata)],
     ["Alicerce"]
@@ -1229,7 +1235,7 @@ function mapProduct(row: ProductRow | null | undefined): Product {
     priceValue,
     unitAmount: effectivePriceCents,
     currency: String(row?.currency || "brl").toLowerCase(),
-    stock: Math.max(0, Number(row?.stock_qty || 0)),
+    stock: resolvedStock,
     isNew,
     isBestSeller,
     isFeatured,

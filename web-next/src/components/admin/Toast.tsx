@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import styles from "./Toast.module.css";
 
@@ -8,7 +8,10 @@ type ToastProps = {
 };
 
 export function Toast({ message, visible }: ToastProps) {
-  if (!message) return null;
-  return <div className={`${styles.toast} ${visible ? styles.toastVisible : ""}`}>{message}</div>;
+  if (!message || !visible) return null;
+  return (
+    <div role="status" aria-live="polite" className={`${styles.toast} ${styles.toastVisible}`}>
+      {message}
+    </div>
+  );
 }
-

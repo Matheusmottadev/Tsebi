@@ -166,7 +166,7 @@
 
 .sizeRow {
   display: grid;
-  grid-template-columns: auto 1fr 100px;
+  grid-template-columns: auto 1fr;
   align-items: center;
   gap: 12px;
 }
@@ -195,6 +195,20 @@
 .stockInputDisabled {
   background: #f7f7f7;
   color: #bbb;
+}
+
+.variantStockBlock {
+  margin-top: 12px;
+}
+
+.variantStockTitle {
+  margin: 0 0 8px;
+  font-family: var(--font-jost), sans-serif;
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: #777;
+  font-weight: 300;
 }
 
 .colorTags {

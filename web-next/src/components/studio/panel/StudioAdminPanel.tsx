@@ -352,6 +352,7 @@ export function StudioAdminPanel() {
     if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
     toastTimerRef.current = setTimeout(() => {
       setToastVisible(false);
+      setToastMessage("");
       toastTimerRef.current = null;
     }, 3000);
   }
