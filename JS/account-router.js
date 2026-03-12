@@ -53,9 +53,8 @@
   }
 
   function showAuthGate() {
-    if (dashboard) dashboard.hidden = true;
-    if (authGate) authGate.hidden = false;
-    if (subnav) subnav.hidden = true;
+    const returnUrl = `${window.location.pathname}${window.location.search}${window.location.hash}`;
+    window.location.href = `/login?returnUrl=${encodeURIComponent(returnUrl)}`;
   }
 
   function showDashboard() {
@@ -375,7 +374,6 @@
     const activeStore = resolveStore();
     if (!activeStore) {
       showAuthGate();
-      setAuthFeedback("Não foi possível iniciar sua sessão agora. Tente novamente.", true);
       return;
     }
 
@@ -420,7 +418,6 @@
     const activeStore = resolveStore();
     if (!activeStore) {
       showAuthGate();
-      setAuthFeedback("Não foi possível carregar o login agora. Atualize a página e tente novamente.", true);
       return;
     }
 
@@ -491,15 +488,7 @@
   });
 
   boot().catch(() => {
-    state.user = { name: "Cliente Tsebi", email: "cliente@tsebi.com", title: "nao_informar", phone: "" };
-    state.orders = [];
-    state.favorites = [];
-    state.products = [];
-    renderHeaderUser();
-    navigate("overview", { skipHash: true, skipLoader: true, skipDelay: true, skipLayoutEvent: true }).finally(() => {
-      showDashboard();
-      window.dispatchEvent(new Event("account:layout-change"));
-    });
+    showAuthGate();
   });
 })();
 
