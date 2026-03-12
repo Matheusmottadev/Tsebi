@@ -483,10 +483,6 @@
   gap: 0 28px;
 }
 
-.cardFieldsPreview input {
-  pointer-events: none;
-}
-
 .installmentNote {
   margin: 2px 0 24px;
   padding: 16px 0;

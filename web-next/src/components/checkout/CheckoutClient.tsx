@@ -554,6 +554,12 @@ export function CheckoutClient() {
   const [hasAutoAttemptedIntent, setHasAutoAttemptedIntent] = useState(false);
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<PaymentMethodChoice>("card");
   const [selectedInstallments, setSelectedInstallments] = useState(1);
+  const [paymentDraft, setPaymentDraft] = useState({
+    cardNumber: "",
+    cardholderName: "",
+    expiry: "",
+    cvv: "",
+  });
   const phoneNumberInputRef = useRef<HTMLInputElement | null>(null);
   const lastAutoLookupCepRef = useRef("");
   const imageBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || "";
@@ -1787,22 +1793,69 @@ export function CheckoutClient() {
                     <div className={styles.cardFieldsPreview}>
                       <label className={`${styles.field} ${styles.fieldFull}`}>
                         <span>Numero do cartao</span>
-                        <input type="text" value="" placeholder="0000 0000 0000 0000" readOnly tabIndex={-1} />
+                        <input
+                          type="text"
+                          value={paymentDraft.cardNumber}
+                          onChange={(event) =>
+                            setPaymentDraft((current) => ({
+                              ...current,
+                              cardNumber: String(event.target.value || "").slice(0, 24),
+                            }))
+                          }
+                          placeholder="0000 0000 0000 0000"
+                          inputMode="numeric"
+                          autoComplete="cc-number"
+                        />
                       </label>
 
                       <label className={`${styles.field} ${styles.fieldFull}`}>
                         <span>Nome no cartao</span>
-                        <input type="text" value="" placeholder="Como aparece no cartao" readOnly tabIndex={-1} />
+                        <input
+                          type="text"
+                          value={paymentDraft.cardholderName}
+                          onChange={(event) =>
+                            setPaymentDraft((current) => ({
+                              ...current,
+                              cardholderName: String(event.target.value || "").slice(0, 64),
+                            }))
+                          }
+                          placeholder="Como aparece no cartao"
+                          autoComplete="cc-name"
+                        />
                       </label>
 
                       <label className={styles.field}>
                         <span>Validade</span>
-                        <input type="text" value="" placeholder="MM / AA" readOnly tabIndex={-1} />
+                        <input
+                          type="text"
+                          value={paymentDraft.expiry}
+                          onChange={(event) =>
+                            setPaymentDraft((current) => ({
+                              ...current,
+                              expiry: String(event.target.value || "").slice(0, 7),
+                            }))
+                          }
+                          placeholder="MM / AA"
+                          inputMode="numeric"
+                          autoComplete="cc-exp"
+                        />
                       </label>
 
                       <label className={styles.field}>
                         <span>CVV</span>
-                        <input type="text" value="" placeholder="..." readOnly tabIndex={-1} />
+                        <input
+                          type="text"
+                          value={paymentDraft.cvv}
+                          onChange={(event) =>
+                            setPaymentDraft((current) => ({
+                              ...current,
+                              cvv: String(event.target.value || "").replace(/\D/g, "").slice(0, 4),
+                            }))
+                          }
+                          placeholder="..."
+                          inputMode="numeric"
+                          autoComplete="cc-csc"
+                        />
                       </label>
                     </div>
                   ) : null}
