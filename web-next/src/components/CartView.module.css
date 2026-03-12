@@ -398,12 +398,15 @@
 }
 
 .empty {
-  border: 1px solid #e8e6e2;
-  padding: 32px;
+  width: min(100%, 1160px);
+  margin: 0 auto;
+  padding: 88px 24px;
   font-family: "Jost", sans-serif;
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  align-items: center;
+  text-align: center;
+  gap: 12px;
 }
 
 .empty h2 {
@@ -417,6 +420,29 @@
   margin: 0;
   font-size: 12px;
   color: #9e9890;
+}
+
+.emptyAction {
+  margin-top: 14px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid #e8e6e2;
+  border-radius: 0;
+  background: transparent;
+  color: #9e9890;
+  text-decoration: none;
+  font-family: "Jost", sans-serif;
+  font-size: 9px;
+  font-weight: 200;
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+  padding: 13px 28px;
+}
+
+.emptyAction:hover {
+  color: #111;
+  border-color: #111;
 }
 
 .errorBox {

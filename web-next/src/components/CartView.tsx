@@ -72,6 +72,7 @@ export function CartView() {
       <section className={styles.empty}>
         <h2>Seu carrinho esta vazio</h2>
         <p>Adicione produtos para preparar sua finalizacao da compra.</p>
+        <ContinueShoppingLink className={styles.emptyAction}>Continuar comprando</ContinueShoppingLink>
       </section>
     );
   }
