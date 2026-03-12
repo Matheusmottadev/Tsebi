@@ -1317,12 +1317,33 @@ authRouter.post("/activate", authRateLimit, async (req: any, res: any) => {
 });
 
 authRouter.post("/logout", (req: any, res: any) => {
-  if (!req.session) return res.json({ ok: true });
-  if (req.session.userId) {
-    delete req.session.userId;
+  const sessionCookieName = String(process.env.SESSION_COOKIE_NAME || "tsebi.sid");
+  const isProduction = String(process.env.NODE_ENV || "").trim().toLowerCase() === "production";
+
+  const clearSessionCookie = () => {
+    res.clearCookie(sessionCookieName, {
+      httpOnly: true,
+      sameSite: "lax",
+      secure: isProduction,
+      path: "/"
+    });
+  };
+
+  res.setHeader("Cache-Control", "no-store");
+
+  if (!req.session) {
+    clearSessionCookie();
+    return res.json({ ok: true });
   }
-  req.session.save(() => {
-    res.json({ ok: true });
+
+  delete req.session.userId;
+  delete req.session.passkeyAuthentication;
+  delete req.session.passkeyRegistration;
+  delete req.session.adminAuth;
+
+  return req.session.destroy(() => {
+    clearSessionCookie();
+    return res.json({ ok: true });
   });
 });
 
@@ -1333,6 +1354,9 @@ authRouter.get(
    * @param {import("express").Response} res
    */
   async (req: any, res: any) => {
+  res.setHeader("Cache-Control", "private, no-store, no-cache, must-revalidate");
+  res.setHeader("Pragma", "no-cache");
+  res.setHeader("Expires", "0");
   const userId = req.session?.userId;
   if (!userId) return res.json({ authenticated: false, user: null });
   const user = await findUserById(userId);

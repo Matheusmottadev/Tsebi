@@ -278,8 +278,7 @@
   }
 
   function buildLoginUrl() {
-    const returnTarget = `${window.location.pathname}${window.location.search}${window.location.hash}` || "/account";
-    return `/login?returnUrl=${encodeURIComponent(returnTarget)}`;
+    return "/login?loggedOut=1";
   }
 
   async function navigate(section, options = {}) {
@@ -462,7 +461,11 @@
   logoutBtn?.addEventListener("click", async () => {
     const activeStore = resolveStore();
     if (!activeStore) return;
-    await activeStore.logout();
+    const logoutResult = await activeStore.logout();
+    if (!logoutResult?.ok) {
+      setAuthFeedback(logoutResult?.error || "Nao foi possivel sair da conta agora.", true);
+      return;
+    }
     state.user = null;
     state.orders = [];
     state.favorites = [];

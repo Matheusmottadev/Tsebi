@@ -448,10 +448,13 @@
 
   async function logout() {
     try {
-      await apiRequest("/api/auth/logout", { method: "POST" });
-    } catch {}
-    setCachedUser(null);
-    return { ok: true };
+      await apiRequest("/api/auth/logout", { method: "POST", cache: "no-store" });
+      setCachedUser(null);
+      return { ok: true };
+    } catch (error) {
+      setCachedUser(null);
+      return { ok: false, error: mapAuthError(error.message), code: String(error.message || "") };
+    }
   }
 
   async function fetchMe() {
