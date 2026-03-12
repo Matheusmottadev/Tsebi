@@ -76,6 +76,47 @@ window.initProfileSection = function initProfileSection(options = {}) {
     passkeyFeedback.style.color = isError ? "#9f1f1f" : "#666";
   }
 
+  function mapPasskeyError(code, fallback = "Não foi possível ativar a Passkey.") {
+    const value = String(code || "").trim().toUpperCase();
+    if (!value) return fallback;
+    if (value === "PASSKEY_NOT_CONFIGURED") return "Passkey indisponível no momento (configuração do domínio).";
+    if (value === "PASSKEY_CHALLENGE_NOT_FOUND") return "Sessão de Passkey expirada. Tente novamente.";
+    if (value === "PASSKEY_REGISTRATION_FAILED") return "Falha ao registrar Passkey neste dispositivo.";
+    if (value === "PASSKEY_SAVE_FAILED") return "Falha ao salvar Passkey. Tente novamente.";
+    if (value === "PASSKEY_ALREADY_EXISTS") return "Esta Passkey já está cadastrada.";
+    if (value === "UNAUTHORIZED") return "Sua sessão expirou. Faça login novamente.";
+    if (value === "INVALID_INPUT") return "Dados de Passkey inválidos. Tente novamente.";
+    return fallback;
+  }
+
+  async function syncPasskeyAvailability() {
+    if (!enablePasskeyBtn) return;
+    const passkeySupported = Boolean(window.PublicKeyCredential && navigator.credentials);
+    if (!passkeySupported) {
+      enablePasskeyBtn.disabled = true;
+      setPasskeyFeedback("Este navegador não suporta Passkey.", true);
+      return;
+    }
+
+    try {
+      const response = await fetch("/api/auth/passkey/config", {
+        method: "GET",
+        credentials: "same-origin"
+      });
+      const data = await response.json().catch(() => ({}));
+      const enabled = Boolean(response.ok && data?.ok && data?.enabled);
+      enablePasskeyBtn.disabled = !enabled;
+      if (!enabled) {
+        setPasskeyFeedback(mapPasskeyError("PASSKEY_NOT_CONFIGURED"), true);
+      } else {
+        setPasskeyFeedback("");
+      }
+    } catch {
+      enablePasskeyBtn.disabled = true;
+      setPasskeyFeedback("Não foi possível validar Passkey agora.", true);
+    }
+  }
+
   function toBase64Url(arrayBuffer) {
     const bytes = new Uint8Array(arrayBuffer);
     let str = "";
@@ -625,7 +666,10 @@ window.initProfileSection = function initProfileSection(options = {}) {
         });
         const optionsData = await optionsResponse.json().catch(() => ({}));
         if (!optionsResponse.ok || !optionsData?.ok || !optionsData?.options) {
-          setPasskeyFeedback("Não foi possível iniciar a ativação de Passkey.", true);
+          setPasskeyFeedback(
+            mapPasskeyError(optionsData?.error, "Não foi possível iniciar a ativação de Passkey."),
+            true
+          );
           return;
         }
 
@@ -642,7 +686,7 @@ window.initProfileSection = function initProfileSection(options = {}) {
         });
         const verifyData = await verifyResponse.json().catch(() => ({}));
         if (!verifyResponse.ok || !verifyData?.ok) {
-          setPasskeyFeedback("Falha ao salvar Passkey. Tente novamente.", true);
+          setPasskeyFeedback(mapPasskeyError(verifyData?.error, "Falha ao salvar Passkey. Tente novamente."), true);
           return;
         }
 
@@ -652,7 +696,7 @@ window.initProfileSection = function initProfileSection(options = {}) {
         if (error?.name === "NotAllowedError") {
           setPasskeyFeedback("Ativação de Passkey cancelada.", true);
         } else {
-          setPasskeyFeedback("Não foi possível ativar a Passkey.", true);
+          setPasskeyFeedback(mapPasskeyError(error?.message), true);
         }
       } finally {
         enablePasskeyBtn.disabled = false;
@@ -708,7 +752,9 @@ window.initProfileSection = function initProfileSection(options = {}) {
 
   buildBirthOptions();
   bindEvents();
-  loadUserProfile();
+  loadUserProfile().finally(() => {
+    syncPasskeyAvailability();
+  });
 };
 
 

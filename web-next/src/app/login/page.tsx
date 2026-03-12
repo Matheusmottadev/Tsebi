@@ -67,6 +67,59 @@ function isValidEmail(value: string): boolean {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizeEmail(value));
 }
 
+function toBase64Url(buffer: ArrayBuffer): string {
+  const bytes = new Uint8Array(buffer);
+  let binary = "";
+  for (let index = 0; index < bytes.length; index += 1) {
+    binary += String.fromCharCode(bytes[index]);
+  }
+  return btoa(binary).replace(/\+/g, "-").replace(/\//g, "_").replace(/=/g, "");
+}
+
+function fromBase64Url(value: string): ArrayBuffer {
+  const normalized = String(value || "").replace(/-/g, "+").replace(/_/g, "/");
+  const padded = normalized + "===".slice((normalized.length + 3) % 4);
+  const binary = atob(padded);
+  const bytes = new Uint8Array(binary.length);
+  for (let index = 0; index < binary.length; index += 1) {
+    bytes[index] = binary.charCodeAt(index);
+  }
+  return bytes.buffer;
+}
+
+function decodeAuthenticationOptions(options: any): PublicKeyCredentialRequestOptions {
+  return {
+    ...options,
+    challenge: fromBase64Url(String(options?.challenge || "")),
+    allowCredentials: Array.isArray(options?.allowCredentials)
+      ? options.allowCredentials.map((item: any) => ({
+          ...item,
+          id: fromBase64Url(String(item?.id || "")),
+        }))
+      : [],
+  };
+}
+
+function serializeAuthenticationCredential(credential: PublicKeyCredential | null): Record<string, unknown> | null {
+  if (!credential) return null;
+  const response = credential.response as AuthenticatorAssertionResponse;
+  if (!response) return null;
+
+  return {
+    id: credential.id,
+    rawId: toBase64Url(credential.rawId),
+    type: credential.type,
+    response: {
+      clientDataJSON: toBase64Url(response.clientDataJSON),
+      authenticatorData: toBase64Url(response.authenticatorData),
+      signature: toBase64Url(response.signature),
+      userHandle: response.userHandle ? toBase64Url(response.userHandle) : null,
+    },
+    clientExtensionResults: credential.getClientExtensionResults?.() || {},
+    authenticatorAttachment: credential.authenticatorAttachment || null,
+  };
+}
+
 function randomToken(size = 24): string {
   const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
   const values = new Uint8Array(size);
@@ -90,6 +143,9 @@ function mapAuthError(errorCode: string): string {
   if (value === "EMAIL_DELIVERY_FAILED") return "Nao foi possivel enviar o codigo. Tente novamente.";
   if (value === "TOO_MANY_ATTEMPTS") return "Muitas tentativas. Aguarde alguns minutos.";
   if (value === "PASSWORD_RESET_REQUIRED") return "Sua conta exige redefinicao de senha antes de continuar.";
+  if (value === "PASSKEY_NOT_CONFIGURED") return "Passkey indisponivel no momento (configuracao do dominio).";
+  if (value === "PASSKEY_NOT_FOUND") return "Nenhuma passkey cadastrada para este e-mail.";
+  if (value === "PASSKEY_CHALLENGE_NOT_FOUND") return "Sessao de passkey expirada. Tente novamente.";
   return "Nao foi possivel concluir a operacao.";
 }
 
@@ -136,6 +192,7 @@ export default function LoginPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isResending, setIsResending] = useState(false);
   const [isGoogleSubmitting, setIsGoogleSubmitting] = useState(false);
+  const [isPasskeySubmitting, setIsPasskeySubmitting] = useState(false);
 
   const activeEmailPreview = useMemo(() => normalizeEmail(activeEmail || email), [activeEmail, email]);
   const loginNotice = useMemo(() => {
@@ -543,6 +600,75 @@ export default function LoginPage() {
     }
   }
 
+  async function handlePasskeyLogin(): Promise<void> {
+    clearFeedback();
+
+    if (!(window.PublicKeyCredential && navigator.credentials)) {
+      setErrorMessage("Este navegador nao suporta Passkey.");
+      return;
+    }
+
+    const normalized = normalizeEmail(activeEmail || email);
+    if (!isValidEmail(normalized)) {
+      setFieldErrors({ email: "Informe seu e-mail para entrar com Passkey." });
+      if (step !== "email") goToStep("email");
+      return;
+    }
+
+    setIsPasskeySubmitting(true);
+    try {
+      const optionsResponse = await fetch("/api/auth/passkey/login/options", {
+        method: "POST",
+        credentials: "same-origin",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: normalized }),
+      });
+      const optionsData = await optionsResponse.json().catch(() => ({}));
+      if (!optionsResponse.ok || !optionsData?.ok || !optionsData?.options) {
+        setErrorMessage(mapAuthError(String(optionsData?.error || "PASSKEY_NOT_FOUND")));
+        return;
+      }
+
+      let assertion: PublicKeyCredential | null = null;
+      try {
+        assertion = (await navigator.credentials.get({
+          publicKey: decodeAuthenticationOptions(optionsData.options),
+        })) as PublicKeyCredential | null;
+      } catch (error: any) {
+        if (error?.name === "NotAllowedError") {
+          setErrorMessage("Autenticacao por Passkey cancelada.");
+        } else {
+          setErrorMessage("Falha ao autenticar com Passkey.");
+        }
+        return;
+      }
+
+      const serialized = serializeAuthenticationCredential(assertion);
+      if (!serialized) {
+        setErrorMessage("Falha ao autenticar com Passkey.");
+        return;
+      }
+
+      const verifyResponse = await fetch("/api/auth/passkey/login/verify", {
+        method: "POST",
+        credentials: "same-origin",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: normalized, credential: serialized }),
+      });
+      const verifyData = await verifyResponse.json().catch(() => ({}));
+      if (!verifyResponse.ok || !verifyData?.ok) {
+        setErrorMessage(mapAuthError(String(verifyData?.error || "INVALID_CREDENTIALS")));
+        return;
+      }
+
+      finishLogin();
+    } catch {
+      setErrorMessage("Nao foi possivel concluir o login por Passkey.");
+    } finally {
+      setIsPasskeySubmitting(false);
+    }
+  }
+
   function renderStepContent() {
     if (step === "email") {
       return (
@@ -589,12 +715,13 @@ export default function LoginPage() {
             <button
               type="button"
               className={`${styles.outlineButton} ${styles.iconOutlineButton}`}
-              onClick={() => setErrorMessage("Passkey indisponivel no momento.")}
+              onClick={() => void handlePasskeyLogin()}
+              disabled={isPasskeySubmitting}
             >
               <span className={styles.outlineIcon}>
                 <PasskeyIcon />
               </span>
-              <span>Entrar com Passkey</span>
+              <span>{isPasskeySubmitting ? "Conectando..." : "Entrar com Passkey"}</span>
             </button>
           </form>
 

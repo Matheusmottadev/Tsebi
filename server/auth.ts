@@ -546,17 +546,66 @@ function getGoogleClientIds() {
     .filter(Boolean);
 }
 
-function parseWebauthnOrigins() {
+function normalizeHostCandidate(value: any) {
+  const raw = String(value || "").trim().toLowerCase();
+  if (!raw) return "";
+  return raw.replace(/^\[|\]$/g, "").replace(/:\d+$/, "");
+}
+
+function resolveRequestOrigin(req: any) {
+  if (!req) return "";
+  const originHeader = String(req.get?.("origin") || "").trim();
+  if (originHeader) {
+    try {
+      return new URL(originHeader).origin;
+    } catch {}
+  }
+  const host = String(req.get?.("host") || "").trim();
+  if (!host) return "";
+  const protocol = String(req.protocol || "https").trim() || "https";
+  try {
+    return new URL(`${protocol}://${host}`).origin;
+  } catch {
+    return "";
+  }
+}
+
+function deriveRpIdFromOrigin(origin: string) {
+  if (!origin) return "";
+  try {
+    const hostname = normalizeHostCandidate(new URL(origin).hostname);
+    if (!hostname) return "";
+    if (hostname === "localhost" || /^\d{1,3}(\.\d{1,3}){3}$/.test(hostname)) return hostname;
+    if (hostname.startsWith("www.")) return hostname.slice(4);
+    return hostname;
+  } catch {
+    return "";
+  }
+}
+
+function resolveWebauthnRpId(req: any) {
+  const explicit = normalizeHostCandidate(process.env.WEBAUTHN_RP_ID);
+  if (explicit) return explicit;
+
+  const appBaseOrigin = String(process.env.APP_BASE_URL || "").trim();
+  const fromAppBase = deriveRpIdFromOrigin(appBaseOrigin);
+  if (fromAppBase) return fromAppBase;
+
+  return deriveRpIdFromOrigin(resolveRequestOrigin(req));
+}
+
+function parseWebauthnOrigins(req: any, rpId: string) {
   const fromEnv = String(process.env.WEBAUTHN_ORIGIN || "")
     .split(",")
     .map((item: any) => String(item || "").trim())
     .filter(Boolean);
   const appBase = String(process.env.APP_BASE_URL || "").trim();
   if (appBase) fromEnv.push(appBase);
-  const rpId = String(process.env.WEBAUTHN_RP_ID || "").trim().toLowerCase();
+  const requestOrigin = resolveRequestOrigin(req);
+  if (requestOrigin) fromEnv.push(requestOrigin);
   if (rpId) {
     fromEnv.push(`https://${rpId}`);
-    if (!rpId.startsWith("www.")) {
+    if (!rpId.startsWith("www.") && rpId !== "localhost" && !/^\d{1,3}(\.\d{1,3}){3}$/.test(rpId)) {
       fromEnv.push(`https://www.${rpId}`);
     }
   }
@@ -573,10 +622,10 @@ function parseWebauthnOrigins() {
   return unique;
 }
 
-function getWebauthnConfig() {
-  const rpId = String(process.env.WEBAUTHN_RP_ID || "").trim().toLowerCase();
+function getWebauthnConfig(req: any = null) {
+  const rpId = resolveWebauthnRpId(req);
   const rpName = String(process.env.WEBAUTHN_RP_NAME || process.env.APP_NAME || "Tsebi").trim() || "Tsebi";
-  const origins = parseWebauthnOrigins();
+  const origins = parseWebauthnOrigins(req, rpId);
   return {
     enabled: Boolean(rpId && origins.length > 0),
     rpId,
@@ -585,8 +634,8 @@ function getWebauthnConfig() {
   };
 }
 
-function getWebauthnExpectedOrigin() {
-  const config = getWebauthnConfig();
+function getWebauthnExpectedOrigin(req: any = null) {
+  const config = getWebauthnConfig(req);
   if (config.origins.length <= 1) return config.origins[0] || "";
   return config.origins;
 }
@@ -646,7 +695,7 @@ authRouter.get("/google/config", (req: any, res: any) => {
 });
 
 authRouter.get("/passkey/config", (req: any, res: any) => {
-  const config = getWebauthnConfig();
+  const config = getWebauthnConfig(req);
   return res.json({
     ok: true,
     enabled: config.enabled,
@@ -656,7 +705,7 @@ authRouter.get("/passkey/config", (req: any, res: any) => {
 });
 
 authRouter.post("/passkey/register/options", requireAuth, async (req: any, res: any) => {
-  const config = getWebauthnConfig();
+  const config = getWebauthnConfig(req);
   if (!config.enabled) return res.status(503).json({ error: "PASSKEY_NOT_CONFIGURED" });
 
   const user = await findUserById(req.session.userId);
@@ -693,7 +742,7 @@ authRouter.post("/passkey/register/options", requireAuth, async (req: any, res: 
 });
 
 authRouter.post("/passkey/register/verify", requireAuth, async (req: any, res: any) => {
-  const config = getWebauthnConfig();
+  const config = getWebauthnConfig(req);
   if (!config.enabled) return res.status(503).json({ error: "PASSKEY_NOT_CONFIGURED" });
 
   const parsed = passkeyRegistrationVerifySchema.safeParse(req.body || {});
@@ -709,7 +758,7 @@ authRouter.post("/passkey/register/verify", requireAuth, async (req: any, res: a
     verification = await verifyRegistrationResponse({
       response: parsed.data.credential,
       expectedChallenge: pending.challenge,
-      expectedOrigin: getWebauthnExpectedOrigin(),
+      expectedOrigin: getWebauthnExpectedOrigin(req),
       expectedRPID: config.rpId,
       requireUserVerification: true
     });
@@ -744,7 +793,7 @@ authRouter.post("/passkey/register/verify", requireAuth, async (req: any, res: a
 });
 
 authRouter.post("/passkey/login/options", authRateLimit, async (req: any, res: any) => {
-  const config = getWebauthnConfig();
+  const config = getWebauthnConfig(req);
   if (!config.enabled) return res.status(503).json({ error: "PASSKEY_NOT_CONFIGURED" });
 
   const parsed = passkeyLoginOptionsSchema.safeParse(req.body || {});
@@ -781,7 +830,7 @@ authRouter.post("/passkey/login/options", authRateLimit, async (req: any, res: a
 });
 
 authRouter.post("/passkey/login/verify", authRateLimit, async (req: any, res: any) => {
-  const config = getWebauthnConfig();
+  const config = getWebauthnConfig(req);
   if (!config.enabled) return res.status(503).json({ error: "PASSKEY_NOT_CONFIGURED" });
 
   const parsed = passkeyLoginVerifySchema.safeParse(req.body || {});
@@ -815,7 +864,7 @@ authRouter.post("/passkey/login/verify", authRateLimit, async (req: any, res: an
     verification = await verifyAuthenticationResponse({
       response: parsed.data.credential,
       expectedChallenge: pending.challenge,
-      expectedOrigin: getWebauthnExpectedOrigin(),
+      expectedOrigin: getWebauthnExpectedOrigin(req),
       expectedRPID: config.rpId,
       requireUserVerification: true,
       authenticator: {
