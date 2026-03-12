@@ -7,10 +7,12 @@ import { Price } from "@/components/Price";
 import { ProductImage } from "@/components/ProductImage";
 import { CheckoutPaymentForm } from "@/components/checkout/CheckoutPaymentForm";
 import { cartSelectors, useCartStore } from "@/lib/cart/cartStore";
+import { HttpError } from "@/lib/http";
 import { getOrCreateAnonId, trackCommerceEvent } from "@/lib/analytics";
 import { isCheckoutEnabled } from "@/lib/env";
 import { resolveStripePromise } from "@/lib/stripe";
 import { addAddress, getCheckoutPrefill, getMe } from "@/services/auth";
+import { applyDiscountCode } from "@/services/coupons";
 import { createPaymentIntent, quoteShipping } from "@/services/orders";
 import { listProducts } from "@/services/products";
 import type { CreatePaymentIntentPayload, ShippingQuote } from "@/services/orders";
@@ -20,6 +22,7 @@ import styles from "./CheckoutClient.module.css";
 
 type PaymentMethodChoice = "google_pay" | "card" | "boleto";
 type CheckoutStep = "address" | "delivery" | "payment" | "review";
+type CouponFeedbackTone = "" | "success" | "error";
 
 type CheckoutFormState = {
   guestEmail: string;
@@ -139,6 +142,14 @@ class CheckoutValidationError extends Error {
 
 function normalizePostalCode(value: string): string {
   return String(value || "").replace(/\D/g, "").slice(0, 8);
+}
+
+function normalizeDiscountCode(value: string): string {
+  return String(value || "")
+    .trim()
+    .toUpperCase()
+    .replace(/[^A-Z0-9_-]/g, "")
+    .slice(0, 40);
 }
 
 function normalizePhone(value: string): string {
@@ -418,6 +429,48 @@ function firstRequiredFieldError(errors: CheckoutFieldErrors): string | null {
   return null;
 }
 
+function mapDiscountCodeErrorMessage(raw: string): string {
+  const normalized = String(raw || "").trim().toUpperCase();
+  if (!normalized) return "";
+  if (normalized.includes("INVALID_CODE")) return "Informe um codigo valido.";
+  if (normalized.includes("CODE_NOT_FOUND")) return "Codigo nao encontrado.";
+  if (normalized.includes("CODE_INACTIVE")) return "Codigo inativo.";
+  if (normalized.includes("CODE_NOT_AVAILABLE_NOW")) return "Codigo fora do periodo de validade.";
+  if (normalized.includes("CODE_NOT_APPLICABLE")) return "Codigo nao aplicavel para este carrinho.";
+  return "";
+}
+
+function extractErrorTexts(error: unknown): string[] {
+  const values: string[] = [];
+
+  if (error instanceof HttpError) {
+    const payload = error.payload && typeof error.payload === "object" ? (error.payload as { error?: unknown; message?: unknown }) : null;
+    const payloadError = typeof payload?.error === "string" ? payload.error.trim() : "";
+    const payloadMessage = typeof payload?.message === "string" ? payload.message.trim() : "";
+    if (payloadError) values.push(payloadError);
+    if (payloadMessage) values.push(payloadMessage);
+    if (error.message) values.push(String(error.message).trim());
+    return values.filter(Boolean);
+  }
+
+  if (error instanceof Error) {
+    if (error.message) values.push(String(error.message).trim());
+    return values.filter(Boolean);
+  }
+
+  if (typeof error === "string" && error.trim()) return [error.trim()];
+  return values;
+}
+
+function resolveCheckoutErrorMessage(error: unknown, fallback: string): string {
+  const candidates = extractErrorTexts(error);
+  for (const candidate of candidates) {
+    const mapped = mapDiscountCodeErrorMessage(candidate);
+    if (mapped) return mapped;
+  }
+  return candidates.find(Boolean) || fallback;
+}
+
 function buildPayload(
   items: ReturnType<typeof cartSelectors.items>,
   form: CheckoutFormState,
@@ -425,7 +478,8 @@ function buildPayload(
   checkoutEmail: string,
   companyPaidByStore: boolean,
   installments: number,
-  metaEventId: string
+  metaEventId: string,
+  discountCode = ""
 ): CreatePaymentIntentPayload {
   const firstName = String(form.firstName || "").trim();
   const lastName = String(form.lastName || "").trim();
@@ -488,8 +542,8 @@ function buildPayload(
     },
   };
 
-  const discountCode = String(form.couponCode || "").trim();
-  if (discountCode) payload.discountCode = discountCode;
+  const normalizedDiscountCode = normalizeDiscountCode(discountCode);
+  if (normalizedDiscountCode) payload.discountCode = normalizedDiscountCode;
 
   return payload;
 }
@@ -554,6 +608,11 @@ export function CheckoutClient() {
   const [hasAutoAttemptedIntent, setHasAutoAttemptedIntent] = useState(false);
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<PaymentMethodChoice>("card");
   const [selectedInstallments, setSelectedInstallments] = useState(1);
+  const [discountCents, setDiscountCents] = useState(0);
+  const [appliedCouponCode, setAppliedCouponCode] = useState("");
+  const [couponFeedback, setCouponFeedback] = useState("");
+  const [couponFeedbackTone, setCouponFeedbackTone] = useState<CouponFeedbackTone>("");
+  const [isApplyingCoupon, setIsApplyingCoupon] = useState(false);
   const [paymentDraft, setPaymentDraft] = useState({
     cardNumber: "",
     cardholderName: "",
@@ -562,6 +621,7 @@ export function CheckoutClient() {
   });
   const phoneNumberInputRef = useRef<HTMLInputElement | null>(null);
   const lastAutoLookupCepRef = useRef("");
+  const couponPreviewKeyRef = useRef("");
   const imageBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || "";
 
   const [touchedFields, setTouchedFields] = useState<Partial<Record<RequiredCheckoutField, boolean>>>({});
@@ -582,7 +642,7 @@ export function CheckoutClient() {
   const selectedShippingTag = selectedShippingQuote ? shippingRecommendationById[selectedShippingQuote.id] : undefined;
   const selectedCompanyPaidByStore = Boolean(isCompanyPaidShipping && selectedShippingTag === "free");
   const shippingCents = selectedCompanyPaidByStore ? 0 : Math.max(0, Number(selectedShippingQuote?.priceCents || 0));
-  const totalCents = Math.max(0, subtotal + shippingCents);
+  const totalCents = Math.max(0, subtotal + shippingCents - discountCents);
   const installmentPlan = useMemo(() => resolveInstallmentsByTotal(totalCents), [totalCents]);
   const stripePaymentMethodOrder = useMemo(
     () => buildStripePaymentMethodOrder(selectedPaymentMethod),
@@ -842,8 +902,38 @@ export function CheckoutClient() {
     if (!stripeConfigured) throw new CheckoutValidationError("Pagamento indisponivel.");
   }
 
+  function invalidatePreparedPayment() {
+    setIntent(null);
+    setHasAutoAttemptedIntent(false);
+    setCompleted((current) => ({ ...current, review: false }));
+  }
+
+  function clearAppliedCouponState({ clearFeedback = true }: { clearFeedback?: boolean } = {}) {
+    couponPreviewKeyRef.current = "";
+    setAppliedCouponCode("");
+    setDiscountCents(0);
+    if (clearFeedback) {
+      setCouponFeedback("");
+      setCouponFeedbackTone("");
+    }
+  }
+
   function handleInputChange(event: ChangeEvent<HTMLInputElement>) {
     const { name, value } = event.target;
+    if (name === "couponCode") {
+      const nextCouponCode = normalizeDiscountCode(value);
+      setForm((current) => ({ ...current, couponCode: nextCouponCode }));
+      if (normalizeDiscountCode(appliedCouponCode) && nextCouponCode !== normalizeDiscountCode(appliedCouponCode)) {
+        clearAppliedCouponState();
+        invalidatePreparedPayment();
+      } else {
+        setCouponFeedback("");
+        setCouponFeedbackTone("");
+      }
+      setErrorMessage("");
+      return;
+    }
+
     setForm((current) => {
       if (name === "postalCode") {
         return { ...current, postalCode: normalizePostalCode(value) };
@@ -928,6 +1018,42 @@ export function CheckoutClient() {
       setErrorMessage(message);
     } finally {
       setIsFindingAddress(false);
+    }
+  }
+
+  async function handleApplyCoupon() {
+    const code = normalizeDiscountCode(form.couponCode);
+    if (!code) {
+      clearAppliedCouponState({ clearFeedback: false });
+      setCouponFeedback("Informe um codigo valido.");
+      setCouponFeedbackTone("error");
+      return;
+    }
+
+    setIsApplyingCoupon(true);
+    setCouponFeedback("Validando codigo...");
+    setCouponFeedbackTone("");
+
+    try {
+      const result = await applyDiscountCode(code, {
+        subtotalCents: subtotal,
+        shippingCents,
+      });
+      const resolvedCode = normalizeDiscountCode(String(result.code || code));
+      couponPreviewKeyRef.current = `${resolvedCode}|${subtotal}|${shippingCents}`;
+      setForm((current) => ({ ...current, couponCode: resolvedCode }));
+      setAppliedCouponCode(resolvedCode);
+      setDiscountCents(Math.max(0, Number(result.discountCents || 0)));
+      setCouponFeedback("Codigo aplicado com sucesso.");
+      setCouponFeedbackTone("success");
+      invalidatePreparedPayment();
+    } catch (error: unknown) {
+      clearAppliedCouponState({ clearFeedback: false });
+      setCouponFeedback(resolveCheckoutErrorMessage(error, "Nao foi possivel aplicar o codigo."));
+      setCouponFeedbackTone("error");
+      invalidatePreparedPayment();
+    } finally {
+      setIsApplyingCoupon(false);
     }
   }
 
@@ -1181,7 +1307,8 @@ export function CheckoutClient() {
         checkoutEmail,
         selectedCompanyPaidByStore,
         selectedInstallments,
-        getBeginCheckoutEventId()
+        getBeginCheckoutEventId(),
+        appliedCouponCode
       );
       const result = await createPaymentIntent(payload);
       const clientSecret = String(result.clientSecret || result.paymentIntentClientSecret || "").trim();
@@ -1201,13 +1328,52 @@ export function CheckoutClient() {
       });
       return true;
     } catch (error: unknown) {
-      const message = error instanceof Error ? error.message : "NÃ£o foi possÃ­vel iniciar pagamento.";
+      const message = resolveCheckoutErrorMessage(error, "Nao foi possivel iniciar pagamento.");
       setErrorMessage(message);
       return false;
     } finally {
       setIsCreatingIntent(false);
     }
   }
+
+  useEffect(() => {
+    const code = normalizeDiscountCode(appliedCouponCode);
+    if (!code) return;
+
+    const previewKey = `${code}|${subtotal}|${shippingCents}`;
+    if (couponPreviewKeyRef.current === previewKey) return;
+
+    let isActive = true;
+    setIsApplyingCoupon(true);
+
+    applyDiscountCode(code, {
+      subtotalCents: subtotal,
+      shippingCents,
+    })
+      .then((result) => {
+        if (!isActive) return;
+        couponPreviewKeyRef.current = previewKey;
+        setAppliedCouponCode(normalizeDiscountCode(String(result.code || code)));
+        setDiscountCents(Math.max(0, Number(result.discountCents || 0)));
+        setCouponFeedback("Codigo aplicado com sucesso.");
+        setCouponFeedbackTone("success");
+        invalidatePreparedPayment();
+      })
+      .catch((error: unknown) => {
+        if (!isActive) return;
+        clearAppliedCouponState({ clearFeedback: false });
+        setCouponFeedback(resolveCheckoutErrorMessage(error, "Nao foi possivel aplicar o codigo."));
+        setCouponFeedbackTone("error");
+        invalidatePreparedPayment();
+      })
+      .finally(() => {
+        if (isActive) setIsApplyingCoupon(false);
+      });
+
+    return () => {
+      isActive = false;
+    };
+  }, [appliedCouponCode, shippingCents, subtotal]);
 
   async function syncCartWithCatalog(): Promise<CartItem[]> {
     try {
@@ -2036,6 +2202,12 @@ export function CheckoutClient() {
                   <Price amountCents={shippingCents} currency={currency} className={styles.summaryValue} />
                 )}
               </div>
+              {discountCents > 0 ? (
+                <div className={styles.summaryRow}>
+                  <span>Desconto</span>
+                  <strong className={styles.summaryValue}>- {formatCurrencyBrlFromCents(discountCents)}</strong>
+                </div>
+              ) : null}
             </div>
 
             <label className={styles.couponField}>
@@ -2048,8 +2220,23 @@ export function CheckoutClient() {
                   value={form.couponCode}
                   onChange={handleInputChange}
                 />
-                <button type="button">Aplicar</button>
+                <button type="button" onClick={handleApplyCoupon} disabled={isApplyingCoupon}>
+                  {isApplyingCoupon ? "..." : "Aplicar"}
+                </button>
               </div>
+              {couponFeedback ? (
+                <p
+                  className={`${styles.couponFeedback} ${
+                    couponFeedbackTone === "error"
+                      ? styles.couponFeedbackError
+                      : couponFeedbackTone === "success"
+                        ? styles.couponFeedbackSuccess
+                        : ""
+                  }`}
+                >
+                  {couponFeedback}
+                </p>
+              ) : null}
             </label>
 
             <div className={`${styles.summaryRow} ${styles.summaryTotal}`}>

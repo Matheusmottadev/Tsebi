@@ -794,6 +794,27 @@
   color: #111;
 }
 
+.couponRow button:disabled {
+  cursor: default;
+  color: #c8c4bc;
+}
+
+.couponFeedback {
+  margin: 10px 0 0;
+  font-family: "Jost", sans-serif;
+  font-size: 11px;
+  font-weight: 300;
+  letter-spacing: 0.04em;
+}
+
+.couponFeedbackError {
+  color: #9d1f1f;
+}
+
+.couponFeedbackSuccess {
+  color: #1d6a2d;
+}
+
 .summaryTotal {
   align-items: baseline;
   margin-top: 18px;
