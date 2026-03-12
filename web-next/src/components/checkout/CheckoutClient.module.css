@@ -601,6 +601,17 @@
   gap: 8px;
 }
 
+.hiddenPaymentHost {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  opacity: 0;
+  pointer-events: none;
+}
+
 .securePaymentBox h3 {
   margin: 0;
   font-family: "Cormorant Garamond", serif;

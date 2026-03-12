@@ -613,12 +613,8 @@ export function CheckoutClient() {
   const [couponFeedback, setCouponFeedback] = useState("");
   const [couponFeedbackTone, setCouponFeedbackTone] = useState<CouponFeedbackTone>("");
   const [isApplyingCoupon, setIsApplyingCoupon] = useState(false);
-  const [paymentDraft, setPaymentDraft] = useState({
-    cardNumber: "",
-    cardholderName: "",
-    expiry: "",
-    cvv: "",
-  });
+  const [paymentElementState, setPaymentElementState] = useState({ ready: false, complete: false });
+  const [submitPaymentAction, setSubmitPaymentAction] = useState<null | (() => Promise<boolean>)>(null);
   const phoneNumberInputRef = useRef<HTMLInputElement | null>(null);
   const lastAutoLookupCepRef = useRef("");
   const couponPreviewKeyRef = useRef("");
@@ -905,6 +901,8 @@ export function CheckoutClient() {
   function invalidatePreparedPayment() {
     setIntent(null);
     setHasAutoAttemptedIntent(false);
+    setPaymentElementState({ ready: false, complete: false });
+    setSubmitPaymentAction(null);
     setCompleted((current) => ({ ...current, review: false }));
   }
 
@@ -1450,8 +1448,24 @@ export function CheckoutClient() {
     setHasAutoAttemptedIntent(true);
     const ok = await ensurePaymentIntent();
     if (!ok) return;
+    if (!paymentElementState.ready || !paymentElementState.complete) {
+      setErrorMessage("Preencha os dados de pagamento antes de revisar o pedido.");
+      return;
+    }
     markStepCompleted("review", true);
+    setErrorMessage("");
     setActiveStep("review");
+  }
+
+  async function handleReviewSubmit() {
+    if (!submitPaymentAction) {
+      setErrorMessage("Volte para a etapa de pagamento e preencha os dados antes de confirmar.");
+      setActiveStep("payment");
+      return;
+    }
+
+    setErrorMessage("");
+    await submitPaymentAction();
   }
 
   useEffect(() => {
@@ -1841,7 +1855,7 @@ export function CheckoutClient() {
             </section>
           ) : null}
 
-          {visualCheckoutStep === "payment" ? (
+          {visualCheckoutStep === "payment" || visualCheckoutStep === "review" ? (
             <section className={styles.stepSection}>
               <div className={styles.stepHeader}>
                 <h2 className={styles.sectionTitle}>Pagamento.</h2>
@@ -1956,76 +1970,6 @@ export function CheckoutClient() {
                   </div>
 
                   {selectedPaymentMethod === "card" ? (
-                    <div className={styles.cardFieldsPreview}>
-                      <label className={`${styles.field} ${styles.fieldFull}`}>
-                        <span>Numero do cartao</span>
-                        <input
-                          type="text"
-                          value={paymentDraft.cardNumber}
-                          onChange={(event) =>
-                            setPaymentDraft((current) => ({
-                              ...current,
-                              cardNumber: String(event.target.value || "").slice(0, 24),
-                            }))
-                          }
-                          placeholder="0000 0000 0000 0000"
-                          inputMode="numeric"
-                          autoComplete="cc-number"
-                        />
-                      </label>
-
-                      <label className={`${styles.field} ${styles.fieldFull}`}>
-                        <span>Nome no cartao</span>
-                        <input
-                          type="text"
-                          value={paymentDraft.cardholderName}
-                          onChange={(event) =>
-                            setPaymentDraft((current) => ({
-                              ...current,
-                              cardholderName: String(event.target.value || "").slice(0, 64),
-                            }))
-                          }
-                          placeholder="Como aparece no cartao"
-                          autoComplete="cc-name"
-                        />
-                      </label>
-
-                      <label className={styles.field}>
-                        <span>Validade</span>
-                        <input
-                          type="text"
-                          value={paymentDraft.expiry}
-                          onChange={(event) =>
-                            setPaymentDraft((current) => ({
-                              ...current,
-                              expiry: String(event.target.value || "").slice(0, 7),
-                            }))
-                          }
-                          placeholder="MM / AA"
-                          inputMode="numeric"
-                          autoComplete="cc-exp"
-                        />
-                      </label>
-
-                      <label className={styles.field}>
-                        <span>CVV</span>
-                        <input
-                          type="text"
-                          value={paymentDraft.cvv}
-                          onChange={(event) =>
-                            setPaymentDraft((current) => ({
-                              ...current,
-                              cvv: String(event.target.value || "").replace(/\D/g, "").slice(0, 4),
-                            }))
-                          }
-                          placeholder="..."
-                          inputMode="numeric"
-                          autoComplete="cc-csc"
-                        />
-                      </label>
-                    </div>
-                  ) : null}
-                  {selectedPaymentMethod === "card" ? (
                     <>
                       <label className={`${styles.field} ${styles.fieldFull}`}>
                         <span>Parcelas</span>
@@ -2070,21 +2014,43 @@ export function CheckoutClient() {
 
                   {stripeLoading ? <p className={styles.stepHint}>Carregando metodos de pagamento...</p> : null}
                   {!stripeLoading && !stripeConfigured ? <p className={styles.stepHint}>Pagamento indisponivel no momento.</p> : null}
+                  {intent?.clientSecret && !paymentElementState.complete ? (
+                    <p className={styles.stepHint}>Preencha os dados do metodo escolhido para continuar.</p>
+                  ) : null}
 
-                  <button
-                    type="button"
-                    className={styles.primaryAction}
-                    onClick={handlePaymentConfirm}
-                    disabled={isCreatingIntent || stripeLoading || !stripeConfigured}
-                  >
-                    {isCreatingIntent ? "Preparando pagamento..." : "Revisar pedido"}
-                  </button>
                 </div>
               ) : (
                 <div className={styles.summaryContent}>
-                  <p>Pagamento</p>
+                  <p>{reviewPaymentSummary.line1}</p>
+                  <p>{reviewPaymentSummary.line2}</p>
                 </div>
               )}
+
+              {intent?.clientSecret && stripePromise ? (
+                <div className={activeStep === "payment" ? styles.securePaymentBox : styles.hiddenPaymentHost} aria-hidden={activeStep !== "payment"}>
+                  <Elements stripe={stripePromise} options={elementsOptions}>
+                    <CheckoutPaymentForm
+                      orderId={intent.orderId}
+                      customerEmail={intent.customerEmail || checkoutEmail}
+                      paymentMethodOrder={stripePaymentMethodOrder}
+                      onElementStateChange={setPaymentElementState}
+                      onSubmitActionChange={setSubmitPaymentAction}
+                      showSubmitButton={false}
+                    />
+                  </Elements>
+                </div>
+              ) : null}
+
+              {activeStep === "payment" ? (
+                <button
+                  type="button"
+                  className={styles.primaryAction}
+                  onClick={handlePaymentConfirm}
+                  disabled={isCreatingIntent || stripeLoading || !stripeConfigured || !intent?.clientSecret || !paymentElementState.complete}
+                >
+                  {isCreatingIntent ? "Preparando pagamento..." : "Revisar pedido"}
+                </button>
+              ) : null}
             </section>
           ) : null}
 
@@ -2114,45 +2080,18 @@ export function CheckoutClient() {
                 </div>
               </article>
 
-              <article className={`${styles.reviewCard} ${styles.reviewPaymentCard}`}>
-                <div className={styles.reviewCardHeader}>
-                  <p className={styles.reviewEyebrow}>PAGAMENTO</p>
-                  <button
-                    type="button"
-                    className={styles.reviewEditLink}
-                    onClick={() => {
-                      markStepCompleted("review", false);
-                      setActiveStep("payment");
-                    }}
-                  >
-                    Editar
-                  </button>
-                </div>
-                <div className={styles.reviewCardBody}>
-                  <p>{reviewPaymentSummary.line1}</p>
-                  <p>{reviewPaymentSummary.line2}</p>
-                </div>
-              </article>
-
-              {intent?.clientSecret && stripePromise ? (
-                <div id="checkout-secure-payment" className={styles.securePaymentBox}>
-                  <Elements stripe={stripePromise} options={elementsOptions}>
-                    <CheckoutPaymentForm
-                      orderId={intent.orderId}
-                      customerEmail={intent.customerEmail || checkoutEmail}
-                      paymentMethodOrder={stripePaymentMethodOrder}
-                      submitLabel="Confirmar pedido"
-                    />
-                  </Elements>
-                </div>
+              {submitPaymentAction ? (
+                <button type="button" className={styles.primaryAction} onClick={handleReviewSubmit}>
+                  Confirmar pedido
+                </button>
               ) : (
                 <button
                   type="button"
                   className={`${styles.primaryAction} ${styles.reviewFallbackButton}`}
-                  onClick={handlePaymentConfirm}
+                  onClick={() => setActiveStep("payment")}
                   disabled={isCreatingIntent || stripeLoading || !stripeConfigured}
                 >
-                  {isCreatingIntent ? "Preparando pagamento..." : "Confirmar pedido"}
+                  {isCreatingIntent ? "Preparando pagamento..." : "Voltar para pagamento"}
                 </button>
               )}
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
+import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { PaymentElement, useElements, useStripe } from "@stripe/react-stripe-js";
 import type { StripePaymentElementChangeEvent } from "@stripe/stripe-js";
@@ -13,6 +13,8 @@ type CheckoutPaymentFormProps = {
   paymentMethodOrder?: string[];
   submitLabel?: string;
   onElementStateChange?: (state: { ready: boolean; complete: boolean }) => void;
+  onSubmitActionChange?: (action: null | (() => Promise<boolean>)) => void;
+  showSubmitButton?: boolean;
 };
 
 type ConfirmationStatus = "success" | "failed" | "processing";
@@ -48,7 +50,9 @@ export function CheckoutPaymentForm({
   customerEmail,
   paymentMethodOrder = [],
   submitLabel,
-  onElementStateChange
+  onElementStateChange,
+  onSubmitActionChange,
+  showSubmitButton = true
 }: CheckoutPaymentFormProps) {
   const router = useRouter();
   const clearCart = useCartStore((state) => state.clear);
@@ -101,13 +105,12 @@ export function CheckoutPaymentForm({
 
   const payButtonDisabled = !stripe || !elements || !paymentElementReady || !paymentElementComplete || isSubmitting;
 
-  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
+  const submitPayment = useCallback(async (): Promise<boolean> => {
     setErrorMessage("");
 
     if (!stripe || !elements || !paymentElementReady || !paymentElementComplete) {
       setErrorMessage("Payment form is still loading. Please try again.");
-      return;
+      return false;
     }
 
     setIsSubmitting(true);
@@ -124,29 +127,54 @@ export function CheckoutPaymentForm({
       if (result.error) {
         const failedMessage = String(result.error.message || "Pagamento recusado pelo emissor do cartao.").trim();
         router.push(buildConfirmationPath("failed", orderId, customerEmail, failedMessage));
-        return;
+        return false;
       }
 
       const paymentIntentStatus = String(result.paymentIntent?.status || "").toLowerCase();
       if (paymentIntentStatus === "succeeded") {
         clearCart();
         router.push(successPath);
-        return;
+        return true;
       }
       if (paymentIntentStatus === "processing") {
         clearCart();
         router.push(processingPath);
-        return;
+        return true;
       }
 
       const statusMessage = paymentIntentStatus ? `Status inesperado: ${paymentIntentStatus}` : "Falha ao confirmar pagamento.";
       router.push(buildConfirmationPath("failed", orderId, customerEmail, statusMessage));
+      return false;
     } catch (error) {
       const message = error instanceof Error ? error.message : "Payment confirmation failed.";
       setErrorMessage(message);
+      return false;
     } finally {
       setIsSubmitting(false);
     }
+  }, [
+    clearCart,
+    customerEmail,
+    elements,
+    orderId,
+    paymentElementComplete,
+    paymentElementReady,
+    processingPath,
+    router,
+    stripe,
+    successPath,
+  ]);
+
+  useEffect(() => {
+    onSubmitActionChange?.(submitPayment);
+    return () => {
+      onSubmitActionChange?.(null);
+    };
+  }, [onSubmitActionChange, submitPayment]);
+
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    await submitPayment();
   }
 
   return (
@@ -169,9 +197,11 @@ export function CheckoutPaymentForm({
           {errorMessage}
         </p>
       ) : null}
-      <button type="submit" className={styles.payButton} disabled={payButtonDisabled}>
-        {isSubmitting ? "Processando..." : submitLabel || "Confirmar pagamento"}
-      </button>
+      {showSubmitButton ? (
+        <button type="submit" className={styles.payButton} disabled={payButtonDisabled}>
+          {isSubmitting ? "Processando..." : submitLabel || "Confirmar pagamento"}
+        </button>
+      ) : null}
     </form>
   );
 }
