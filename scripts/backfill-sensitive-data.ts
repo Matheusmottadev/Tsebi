@@ -62,6 +62,12 @@ function asComparableJson(value: unknown): string {
   }
 }
 
+function isEncryptedJsonEnvelope(value: unknown): value is Record<string, unknown> {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return false;
+  const payload = value as Record<string, unknown>;
+  return isEncryptedString(payload.__enc);
+}
+
 async function backfillUsers(dryRun: boolean, limit: number): Promise<{ scanned: number; updated: number }> {
   const result = await query<{
     id?: string;
@@ -90,7 +96,9 @@ async function backfillUsers(dryRun: boolean, limit: number): Promise<{ scanned:
 
     const addressesRaw = unprotectJsonFromStorage<unknown>(row.addresses, row.addresses ?? []);
     const normalizedAddresses = Array.isArray(addressesRaw) ? addressesRaw : addressesRaw ?? [];
-    const nextAddresses = protectJsonForStorage(normalizedAddresses);
+    const nextAddresses = isEncryptedJsonEnvelope(row.addresses)
+      ? row.addresses
+      : protectJsonForStorage(normalizedAddresses);
 
     const changed =
       String(row.phone || "") !== String(nextPhone || "") ||
@@ -143,7 +151,12 @@ async function backfillOrders(dryRun: boolean, limit: number): Promise<{ scanned
     if (!orderId) continue;
 
     const shippingRaw = unprotectJsonFromStorage<unknown>(row.shipping_json, row.shipping_json ?? null);
-    const nextShipping = shippingRaw == null ? null : protectJsonForStorage(shippingRaw);
+    const nextShipping =
+      shippingRaw == null
+        ? null
+        : isEncryptedJsonEnvelope(row.shipping_json)
+          ? row.shipping_json
+          : protectJsonForStorage(shippingRaw);
 
     const changed = asComparableJson(row.shipping_json) !== asComparableJson(nextShipping);
     if (!changed) continue;
