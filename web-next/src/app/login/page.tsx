@@ -785,9 +785,11 @@ export default function LoginPage() {
 
   return (
     <main className={`${styles.loginPage} ${styles.page}`}>
-      <section className={styles.editorialPanel} aria-hidden="true">
+      <section className={styles.editorialPanel}>
         <div className={styles.editorialContent}>
-          <p className={styles.editorialBrand}>TSEBI</p>
+          <Link className={styles.editorialBrand} href="/">
+            TSEBI
+          </Link>
           <div className={styles.editorialQuoteWrap}>
             <p className={styles.editorialQuote} suppressHydrationWarning>
               {EDITORIAL_QUOTE_LINE_1}
