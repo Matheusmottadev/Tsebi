@@ -1,6 +1,7 @@
 import { del, get, HttpError, patch, post } from "@/lib/http";
 import type { HttpRequestOptions } from "@/lib/http";
 import type { AdminMeResponse, Coupon, Order, Product, PublicUser } from "@/types";
+import type { ProductAvailabilityStatus } from "@/types";
 
 /*
 Endpoint mapping used in this file:
@@ -139,6 +140,7 @@ export interface AdminProductCreatePayload {
   sizes?: string[];
   colors?: string[];
   variantStock?: Record<string, number>;
+  availabilityStatus?: ProductAvailabilityStatus;
   collection?: string;
   category?: string;
   subcategory?: string;

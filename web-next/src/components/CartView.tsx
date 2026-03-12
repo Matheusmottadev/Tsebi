@@ -30,6 +30,7 @@ export function CartView() {
   const clear = useCartStore((state) => state.clear);
   const clearError = useCartStore((state) => state.clearError);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [couponCode, setCouponCode] = useState("");
 
   const imageBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || "";
 
@@ -81,99 +82,139 @@ export function CartView() {
         </div>
       ) : null}
 
-      <div className={styles.items}>
-        {items.map((item) => (
-          <article key={item.key} className={styles.itemCard}>
-            <div className={styles.imageWrap}>
-              <ProductImage
-                src={item.imageUrl || ""}
-                alt={item.name}
-                width={220}
-                height={280}
-                className={styles.image}
-                imageBaseUrl={imageBaseUrl}
-              />
-            </div>
+      <div className={styles.itemsColumn}>
+        <header className={styles.pageHeader}>
+          <p className={styles.eyebrow}>SACOLA</p>
+          <h1 className={styles.pageTitle}>Sua selecao.</h1>
+        </header>
 
-            <div className={styles.itemContent}>
-              <h3>{item.name}</h3>
-              {getVariantLabel(item) ? <p className={styles.variant}>{getVariantLabel(item)}</p> : null}
-              <Price amountCents={item.unitAmount} currency={item.currency} className={styles.unitPrice} />
+        <div className={styles.items}>
+          {items.map((item) => (
+            <article key={item.key} className={styles.itemCard}>
+              <div className={styles.imageWrap}>
+                <ProductImage
+                  src={item.imageUrl || ""}
+                  alt={item.name}
+                  width={220}
+                  height={280}
+                  className={styles.image}
+                  imageBaseUrl={imageBaseUrl}
+                />
+              </div>
 
-              <div className={styles.rowActions}>
-                <div className={styles.qtyControl}>
+              <div className={styles.itemContent}>
+                <h3 className={styles.itemName}>{item.name}</h3>
+                {getVariantLabel(item) ? <p className={styles.variant}>{getVariantLabel(item)}</p> : null}
+
+                <div className={styles.rowActions}>
+                  <div className={styles.qtyControl}>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setQty({
+                          productId: item.productId,
+                          variantId: item.variant.variantId,
+                          qty: item.qty - 1,
+                        })
+                      }
+                    >
+                      -
+                    </button>
+                    <span>{item.qty}</span>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setQty({
+                          productId: item.productId,
+                          variantId: item.variant.variantId,
+                          qty: item.qty + 1,
+                        })
+                      }
+                    >
+                      +
+                    </button>
+                  </div>
+
                   <button
                     type="button"
-                    onClick={() =>
-                      setQty({
-                        productId: item.productId,
-                        variantId: item.variant.variantId,
-                        qty: item.qty - 1,
-                      })
-                    }
+                    className={styles.removeButton}
+                    onClick={() => removeItem({ productId: item.productId, variantId: item.variant.variantId })}
                   >
-                    -
-                  </button>
-                  <span>{item.qty}</span>
-                  <button
-                    type="button"
-                    onClick={() =>
-                      setQty({
-                        productId: item.productId,
-                        variantId: item.variant.variantId,
-                        qty: item.qty + 1,
-                      })
-                    }
-                  >
-                    +
+                    Remover
                   </button>
                 </div>
-
-                <button
-                  type="button"
-                  className={styles.removeButton}
-                  onClick={() => removeItem({ productId: item.productId, variantId: item.variant.variantId })}
-                >
-                  Remover
-                </button>
               </div>
-            </div>
-          </article>
-        ))}
+
+              <Price amountCents={item.unitAmount} currency={item.currency} className={styles.itemPrice} />
+            </article>
+          ))}
+        </div>
       </div>
 
       <aside className={styles.summary}>
-        <h2>Resumo do pedido</h2>
+        <p className={styles.summaryEyebrow}>RESUMO</p>
         {!checkoutEnabled ? <p className={styles.checkoutBanner}>Checkout desativado (manutencao)</p> : null}
         <div className={styles.summaryLine}>
           <span>Subtotal</span>
-          <Price amountCents={subtotal} currency={currency} />
+          <Price amountCents={subtotal} currency={currency} className={styles.summaryValue} />
         </div>
-        <p className={styles.checkoutHint}>
-          {checkoutEnabled ? "Checkout em modo de teste para migracao." : "A integracao de checkout esta desativada nesta fase."}
-        </p>
+        <div className={styles.summaryLine}>
+          <span>Entrega</span>
+          <strong>A calcular</strong>
+        </div>
+        <div className={styles.summaryDivider} />
+        <div className={styles.summaryTotal}>
+          <span>Total</span>
+          <Price amountCents={subtotal} currency={currency} className={styles.summaryTotalValue} />
+        </div>
+
+        <div className={styles.coupon}>
+          <label className={styles.couponLabel} htmlFor="cart-coupon">
+            Codigo exclusivo
+          </label>
+          <div className={styles.couponRow}>
+            <input
+              id="cart-coupon"
+              className={styles.couponInput}
+              name="couponCode"
+              type="text"
+              value={couponCode}
+              onChange={(event) => setCouponCode(event.target.value)}
+              placeholder="Insira seu codigo"
+            />
+            <button type="button" className={styles.couponButton}>
+              Aplicar
+            </button>
+          </div>
+        </div>
+
         {checkoutEnabled ? (
-          <>
-            <Link href="/checkout" className={styles.checkoutLink}>
-              {isAuthenticated ? "Ir para o checkout" : "Comprar sem Login"}
-            </Link>
-            {!isAuthenticated ? (
-              <Link href="/login?returnUrl=%2Fcheckout" className={styles.continueLink}>
-                Fazer Login
-              </Link>
-            ) : null}
-          </>
+          <Link href="/checkout" className={styles.primaryAction}>
+            Finalizar compra
+          </Link>
         ) : (
-          <button type="button" className={styles.checkoutButton} disabled>
-            Ir para checkout
+          <button type="button" className={styles.primaryAction} disabled>
+            Finalizar compra
           </button>
         )}
+
+        {!isAuthenticated ? (
+          <p className={styles.loginHint}>
+            Tem uma conta?{" "}
+            <Link href="/login?returnUrl=%2Fcheckout" className={styles.loginLink}>
+              Entrar para finalizar
+            </Link>
+          </p>
+        ) : null}
+
         <div className={styles.summaryActions}>
-          <ContinueShoppingLink className={styles.continueLink} />
-          <button type="button" className={styles.clearButton} onClick={clear}>
-            Limpar carrinho
+          <ContinueShoppingLink className={styles.secondaryAction} />
+          <button type="button" className={styles.secondaryAction} onClick={clear}>
+            Limpar sacola
           </button>
         </div>
+
+        <p className={styles.summaryNote}>Parcelamento em ate 10x sem juros acima de R$ 5.000.</p>
       </aside>
     </section>
   );

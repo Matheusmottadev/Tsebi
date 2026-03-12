@@ -100,6 +100,7 @@ function sanitizeCatalogText(value: unknown): string {
 }
 
 export type VariantStockMap = Record<string, number>;
+export type ProductAvailabilityStatus = "disponivel" | "esgotando" | "esgotado";
 
 export type ListAdminProductsOptions = {
   limit?: number;
@@ -148,6 +149,7 @@ export type ProductWritePayload = {
   sizes?: string[];
   colors?: string[];
   variantStock?: VariantStockMap;
+  availabilityStatus?: ProductAvailabilityStatus;
   collection?: string;
   category?: string;
   subcategory?: string;
@@ -186,6 +188,7 @@ type ProductMetadata = {
   sizes: string[];
   colors: string[];
   variantStock: VariantStockMap;
+  availabilityStatus?: ProductAvailabilityStatus;
   collection?: string;
   category?: string;
   subcategory?: string;
@@ -239,6 +242,7 @@ export type Product = {
   sizes: string[];
   colors: string[];
   variantStock: VariantStockMap;
+  availabilityStatus: ProductAvailabilityStatus;
   gender: string;
   price: number;
   priceLabel: string;
@@ -924,6 +928,32 @@ function sanitizeVariantStockMap(value: unknown, validColors: string[] = [], val
   return normalized;
 }
 
+function normalizeAvailabilityStatus(value: unknown, fallback: unknown = ""): ProductAvailabilityStatus | undefined {
+  const direct = String(value || "")
+    .trim()
+    .toLowerCase();
+  if (direct === "disponivel" || direct === "esgotando" || direct === "esgotado") {
+    return direct;
+  }
+
+  const fallbackValue = String(fallback || "")
+    .trim()
+    .toLowerCase();
+  if (fallbackValue === "disponivel" || fallbackValue === "esgotando" || fallbackValue === "esgotado") {
+    return fallbackValue;
+  }
+
+  return undefined;
+}
+
+function resolveAvailabilityStatus(
+  explicitStatus: ProductAvailabilityStatus | undefined,
+  stockQty: number
+): ProductAvailabilityStatus {
+  if (explicitStatus) return explicitStatus;
+  return Number(stockQty || 0) <= 0 ? "esgotado" : "disponivel";
+}
+
 function normalizeProductMetadata(value: unknown, fallback: ProductStaticMetadata = {}): ProductMetadata {
   const raw = asRecord(value);
   const fallbackSizes = normalizeTextList(fallback.sizes, ["?nico"]);
@@ -952,6 +982,7 @@ function normalizeProductMetadata(value: unknown, fallback: ProductStaticMetadat
     fallbackColors.length ? fallbackColors : ["?nico"]
   );
   let variantStock = sanitizeVariantStockMap(raw.variantStock ?? raw.variant_stock, colors, sizes);
+  const availabilityStatus = normalizeAvailabilityStatus(raw.availabilityStatus ?? raw.availability_status);
 
   const looksLikeLegacyBlackOnly =
     colors.length === 1 &&
@@ -993,6 +1024,7 @@ function normalizeProductMetadata(value: unknown, fallback: ProductStaticMetadat
     sizes: sizes.length ? sizes : ["?nico"],
     colors: colors.length ? colors : ["?nico"],
     variantStock,
+    availabilityStatus,
     collection: collection || undefined,
     category: category || undefined,
     subcategory: subcategory || undefined,
@@ -1202,6 +1234,7 @@ function mapProduct(row: ProductRow | null | undefined): Product {
   );
   const stockQty = Math.max(0, Number(row?.stock_qty || 0));
   const resolvedStock = stockQty > 0 ? stockQty : variantStockTotal;
+  const resolvedAvailability = resolveAvailabilityStatus(metadata.availabilityStatus, resolvedStock);
   const collections = normalizeTextList(
     [String(metadata.collection || "").trim(), ...buildCollectionsArray(staticMetadata)],
     ["Alicerce"]
@@ -1229,6 +1262,7 @@ function mapProduct(row: ProductRow | null | undefined): Product {
     sizes: metadata.sizes,
     colors: metadata.colors,
     variantStock: metadata.variantStock,
+    availabilityStatus: resolvedAvailability,
     gender: resolvedGender,
     price: priceValue,
     priceLabel: formatPriceLabelFromCents(effectivePriceCents),
@@ -1936,6 +1970,7 @@ function buildPersistedMetadata(sku: string, input: unknown = {}): ProductMetada
     sizes: normalized.sizes,
     colors: normalized.colors,
     variantStock: normalized.variantStock,
+    availabilityStatus: normalized.availabilityStatus,
     collection: normalized.collection,
     category: normalized.category,
     subcategory: normalized.subcategory,
@@ -1981,7 +2016,8 @@ async function createProduct(payload: ProductWritePayload = {}): Promise<Product
     careList: payload.careList,
     sizes: payload.sizes,
     colors: payload.colors,
-    variantStock: payload.variantStock
+    variantStock: payload.variantStock,
+    availabilityStatus: payload.availabilityStatus
   });
   const variantStockTotal = sumVariantStock(metadata);
   const resolvedStockQty =
@@ -2075,7 +2111,8 @@ async function updateProductByIdentifier(identifier: string, patch: ProductWrite
     careList: patch.careList ?? currentMetadataRecord.careList,
     sizes: patch.sizes ?? current.sizes,
     colors: patch.colors ?? current.colors,
-    variantStock: patch.variantStock ?? current.variantStock
+    variantStock: patch.variantStock ?? current.variantStock,
+    availabilityStatus: patch.availabilityStatus ?? currentMetadataRecord.availabilityStatus
   });
   const variantStockTotal = sumVariantStock(metadata);
   const resolvedStockQty =

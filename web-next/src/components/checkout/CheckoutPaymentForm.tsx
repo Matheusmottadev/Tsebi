@@ -15,28 +15,24 @@ type CheckoutPaymentFormProps = {
   onElementStateChange?: (state: { ready: boolean; complete: boolean }) => void;
 };
 
-function buildSuccessPath(orderId: string, customerEmail: string): string {
+type ConfirmationStatus = "success" | "failed" | "processing";
+
+function buildConfirmationPath(status: ConfirmationStatus, orderId: string, customerEmail: string): string {
   const params = new URLSearchParams();
-  params.set("orderId", String(orderId || "").trim());
-  const safeEmail = String(customerEmail || "").trim().toLowerCase();
-  if (safeEmail) params.set("email", safeEmail);
-  return `/checkout/success?${params.toString()}`;
+  params.set("status", status);
+  if (status === "success") {
+    const safeOrderId = String(orderId || "").trim();
+    const safeEmail = String(customerEmail || "").trim().toLowerCase();
+    if (safeOrderId) params.set("orderId", safeOrderId);
+    if (safeEmail) params.set("email", safeEmail);
+  }
+  return `/checkout/confirmation?${params.toString()}`;
 }
 
 function buildSuccessUrl(successPath: string): string {
   const siteUrl = String(process.env.NEXT_PUBLIC_SITE_URL || "").trim();
   const baseUrl = siteUrl ? siteUrl.replace(/\/+$/, "") : window.location.origin;
   return `${baseUrl}${successPath}`;
-}
-
-function buildFailurePath(orderId: string, customerEmail: string, message: string): string {
-  const params = new URLSearchParams();
-  if (message) params.set("message", message);
-  const safeOrderId = String(orderId || "").trim();
-  if (safeOrderId) params.set("orderId", safeOrderId);
-  const safeEmail = String(customerEmail || "").trim().toLowerCase();
-  if (safeEmail) params.set("email", safeEmail);
-  return `/checkout/failure?${params.toString()}`;
 }
 
 export function CheckoutPaymentForm({
@@ -57,7 +53,9 @@ export function CheckoutPaymentForm({
   const paymentElementContainerRef = useRef<HTMLDivElement | null>(null);
   const previousCompleteRef = useRef<boolean | null>(null);
 
-  const successPath = useMemo(() => buildSuccessPath(orderId, customerEmail), [orderId, customerEmail]);
+  const successPath = useMemo(() => buildConfirmationPath("success", orderId, customerEmail), [orderId, customerEmail]);
+  const processingPath = useMemo(() => buildConfirmationPath("processing", orderId, customerEmail), [orderId, customerEmail]);
+  const failedPath = useMemo(() => buildConfirmationPath("failed", orderId, customerEmail), [orderId, customerEmail]);
   const successUrl = useMemo(() => buildSuccessUrl(successPath), [successPath]);
   const paymentElementOptions = useMemo(
     () => ({
@@ -117,25 +115,23 @@ export function CheckoutPaymentForm({
       });
 
       if (result.error) {
-        const message = result.error.message || "Payment confirmation failed.";
-        router.push(buildFailurePath(orderId, customerEmail, message));
+        router.push(failedPath);
         return;
       }
 
       const paymentIntentStatus = String(result.paymentIntent?.status || "").toLowerCase();
-      if (paymentIntentStatus === "succeeded" || paymentIntentStatus === "processing") {
+      if (paymentIntentStatus === "succeeded") {
         clearCart();
         router.push(successPath);
         return;
       }
+      if (paymentIntentStatus === "processing") {
+        clearCart();
+        router.push(processingPath);
+        return;
+      }
 
-      router.push(
-        buildFailurePath(
-          orderId,
-          customerEmail,
-          paymentIntentStatus ? `Unexpected payment status: ${paymentIntentStatus}` : "Unexpected payment state."
-        )
-      );
+      router.push(failedPath);
     } catch (error) {
       const message = error instanceof Error ? error.message : "Payment confirmation failed.";
       setErrorMessage(message);

@@ -1,9 +1,10 @@
-"use client";
+﻿"use client";
 
 import { ChangeEvent, FocusEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Elements } from "@stripe/react-stripe-js";
 import type { Stripe } from "@stripe/stripe-js";
 import { Price } from "@/components/Price";
+import { ProductImage } from "@/components/ProductImage";
 import { CheckoutPaymentForm } from "@/components/checkout/CheckoutPaymentForm";
 import { cartSelectors, useCartStore } from "@/lib/cart/cartStore";
 import { getOrCreateAnonId, trackCommerceEvent } from "@/lib/analytics";
@@ -17,7 +18,7 @@ import type { CartItem } from "@/types";
 import type { Address } from "@/types";
 import styles from "./CheckoutClient.module.css";
 
-type PaymentMethodChoice = "apple_pay" | "google_pay" | "card" | "boleto";
+type PaymentMethodChoice = "google_pay" | "card" | "boleto";
 type CheckoutStep = "address" | "delivery" | "payment";
 
 type CheckoutFormState = {
@@ -375,10 +376,10 @@ function curateShippingOptions(destinationZip: string, rawQuotes: ShippingQuote[
 }
 
 function shippingRecommendationLabel(tag?: ShippingRecommendation): string {
-  if (tag === "free") return "Frete grátis";
+  if (tag === "free") return "Frete grÃ¡tis";
   if (tag === "today") return "Envio emergencial";
   if (tag === "cheapest") return "Mais barato";
-  if (tag === "fastest") return "Mais rápido";
+  if (tag === "fastest") return "Mais rÃ¡pido";
   if (tag === "balanced") return "Melhor escolha.";
   return "";
 }
@@ -396,7 +397,7 @@ function collectRequiredFieldErrors(
   if (normalizePhoneNumber(form.phoneNumber).length < 8) errors.phoneNumber = "Numero obrigatorio.";
   if (normalizeCpf(form.cpf).length !== 11) errors.cpf = "CPF obrigatorio.";
   if (!normalizePostalCode(form.postalCode)) errors.postalCode = "CEP obrigatorio.";
-  if (!addressResolved) errors.postalCode = "Encontre o Endereço pelo CEP.";
+  if (!addressResolved) errors.postalCode = "Encontre o EndereÃ§o pelo CEP.";
   if (addressResolved) {
     if (!String(form.line1 || "").trim()) errors.line1 = "Rua obrigatoria.";
     if (!String(form.district || "").trim()) errors.district = "Bairro obrigatorio.";
@@ -494,7 +495,7 @@ function buildPayload(
 }
 
 function buildStripePaymentMethodOrder(selectedMethod: PaymentMethodChoice): string[] {
-  const base: string[] = ["apple_pay", "google_pay", "card", "boleto"];
+  const base: string[] = ["card", "boleto", "google_pay", "apple_pay"];
   const ordered = [selectedMethod, ...base];
   const unique: string[] = [];
   const seen = new Set<string>();
@@ -505,6 +506,12 @@ function buildStripePaymentMethodOrder(selectedMethod: PaymentMethodChoice): str
     unique.push(normalized);
   });
   return unique;
+}
+
+function buildCartItemMeta(item: CartItem): string {
+  const parts = [item.variant.color, item.variant.size].filter(Boolean).map((entry) => String(entry || "").trim());
+  parts.push(`Qtd ${Math.max(1, Number(item.qty || 1))}`);
+  return parts.filter(Boolean).join(" Â· ");
 }
 
 export function CheckoutClient() {
@@ -543,7 +550,10 @@ export function CheckoutClient() {
   const [isSavingAddress, setIsSavingAddress] = useState(false);
   const [isDraftLoaded, setIsDraftLoaded] = useState(false);
   const [hasAutoAttemptedIntent, setHasAutoAttemptedIntent] = useState(false);
+  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<PaymentMethodChoice>("card");
+  const [selectedInstallments, setSelectedInstallments] = useState(1);
   const phoneNumberInputRef = useRef<HTMLInputElement | null>(null);
+  const imageBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || "";
 
   const [touchedFields, setTouchedFields] = useState<Partial<Record<RequiredCheckoutField, boolean>>>({});
   const requiresGuestEmail = !accountEmail;
@@ -554,7 +564,6 @@ export function CheckoutClient() {
     [form, isAddressResolved, requiresGuestEmail]
   );
   const itemCount = useMemo(() => items.reduce((sum, item) => sum + Math.max(0, item.qty), 0), [items]);
-  const firstItem = items[0] || null;
   const selectedShippingQuote = useMemo(
     () =>
       shippingQuotes.find((quote) => quote.id === selectedShippingQuoteId) ||
@@ -566,7 +575,26 @@ export function CheckoutClient() {
   const shippingCents = selectedCompanyPaidByStore ? 0 : Math.max(0, Number(selectedShippingQuote?.priceCents || 0));
   const totalCents = Math.max(0, subtotal + shippingCents);
   const installmentPlan = useMemo(() => resolveInstallmentsByTotal(totalCents), [totalCents]);
-  const stripePaymentMethodOrder = useMemo(() => buildStripePaymentMethodOrder("apple_pay"), []);
+  const stripePaymentMethodOrder = useMemo(
+    () => buildStripePaymentMethodOrder(selectedPaymentMethod),
+    [selectedPaymentMethod]
+  );
+  const installmentOptions = useMemo(() => {
+    const maxInstallments = Math.max(1, Number(installmentPlan.installments || 1));
+    return Array.from({ length: maxInstallments }, (_, index) => {
+      const value = index + 1;
+      const amountPerInstallment = formatCurrencyBrlFromCents(Math.ceil(totalCents / value));
+      return {
+        value,
+        label: `${value}x de ${amountPerInstallment} sem juros`,
+      };
+    });
+  }, [installmentPlan.installments, totalCents]);
+  const visualCheckoutStep = useMemo<"delivery" | "payment" | "review">(() => {
+    if (activeStep === "address" || activeStep === "delivery") return "delivery";
+    if (activeStep === "payment" && intent?.clientSecret) return "review";
+    return "payment";
+  }, [activeStep, intent?.clientSecret]);
   const stripeConfigured = stripeStatus === "ready";
   const stripeLoading = stripeStatus === "loading";
   const hasTrackedBeginCheckoutRef = useRef(false);
@@ -577,6 +605,15 @@ export function CheckoutClient() {
     }
     return beginCheckoutEventIdRef.current;
   }, []);
+
+  useEffect(() => {
+    const maxInstallments = Math.max(1, Number(installmentPlan.installments || 1));
+    setSelectedInstallments((current) => {
+      if (current < 1 || current > maxInstallments) return maxInstallments;
+      if (current === 1 && maxInstallments > 1) return maxInstallments;
+      return current;
+    });
+  }, [installmentPlan.installments]);
 
   useEffect(() => {
     if (hasTrackedBeginCheckoutRef.current) return;
@@ -716,7 +753,7 @@ export function CheckoutClient() {
           prefillCpf = normalizeCpf(String(prefill?.cpf || ""));
           prefillFullName = String(prefill?.fullName || "").trim();
         } catch {
-          // Fallback para dados básicos da conta quando o endpoint de prefill não responder.
+          // Fallback para dados bÃ¡sicos da conta quando o endpoint de prefill nÃ£o responder.
         }
 
         const accountPhone = normalizePhone(String((user as { phone?: string })?.phone || ""));
@@ -820,7 +857,7 @@ export function CheckoutClient() {
   async function handleFindAddress() {
     const cep = normalizePostalCode(form.postalCode);
     if (cep.length !== 8) {
-      setErrorMessage("Informe um CEP válido com 8 digitos.");
+      setErrorMessage("Informe um CEP vÃ¡lido com 8 digitos.");
       setIsAddressResolved(false);
       return;
     }
@@ -830,7 +867,7 @@ export function CheckoutClient() {
 
     try {
       const response = await fetch(`https://viacep.com.br/ws/${cep}/json/`, { method: "GET", cache: "force-cache" });
-      if (!response.ok) throw new Error("Não foi possível consultar o CEP.");
+      if (!response.ok) throw new Error("NÃ£o foi possÃ­vel consultar o CEP.");
       const payload = (await response.json()) as {
         erro?: boolean;
         logradouro?: string;
@@ -839,7 +876,7 @@ export function CheckoutClient() {
         uf?: string;
       };
 
-      if (payload?.erro) throw new Error("CEP não encontrado.");
+      if (payload?.erro) throw new Error("CEP nÃ£o encontrado.");
 
       setForm((current) => ({
         ...current,
@@ -854,12 +891,12 @@ export function CheckoutClient() {
         await loadShippingQuotes(cep);
       } catch (shippingError: unknown) {
         const shippingMessage =
-          shippingError instanceof Error ? shippingError.message : "Não foi possível carregar os fretes.";
-        setErrorMessage(`Endereço encontrado. ${shippingMessage}`);
+          shippingError instanceof Error ? shippingError.message : "NÃ£o foi possÃ­vel carregar os fretes.";
+        setErrorMessage(`EndereÃ§o encontrado. ${shippingMessage}`);
       }
     } catch (error: unknown) {
       setIsAddressResolved(false);
-      const message = error instanceof Error ? error.message : "Erro ao encontrar Endereço.";
+      const message = error instanceof Error ? error.message : "Erro ao encontrar EndereÃ§o.";
       setErrorMessage(message);
     } finally {
       setIsFindingAddress(false);
@@ -886,7 +923,7 @@ export function CheckoutClient() {
     if (String(quote.serviceCode || "").trim().toLowerCase() === "company_emergency") return "Chegara hoje";
     const days = quote.deadlineDays == null ? null : Math.max(0, Number(quote.deadlineDays || 0));
     if (!days || days <= 0) return "Prazo sob consulta";
-    return days === 1 ? "Entrega estimada em 1 dia util" : `Entrega estimada em ${days} dias úteis`;
+    return days === 1 ? "Entrega estimada em 1 dia util" : `Entrega estimada em ${days} dias Ãºteis`;
   }
 
   async function loadShippingQuotes(destinationZipRaw: string): Promise<ShippingQuote[]> {
@@ -953,7 +990,7 @@ export function CheckoutClient() {
   function handleUseSavedAddress() {
     const selected = accountAddresses.find((address) => address.id === selectedSavedAddressId);
     if (!selected) {
-      setErrorMessage("Selecione um Endereço salvo.");
+      setErrorMessage("Selecione um EndereÃ§o salvo.");
       return;
     }
 
@@ -970,7 +1007,7 @@ export function CheckoutClient() {
     setIsAddressResolved(true);
     setErrorMessage("");
     loadShippingQuotes(selected.cep).catch((error: unknown) => {
-      const message = error instanceof Error ? error.message : "Não foi possível carregar os fretes.";
+      const message = error instanceof Error ? error.message : "NÃ£o foi possÃ­vel carregar os fretes.";
       setErrorMessage(message);
     });
   }
@@ -1015,7 +1052,7 @@ export function CheckoutClient() {
     setIsSavingAddress(true);
     try {
       const result = await addAddress({
-        label: "Endereço principal",
+        label: "EndereÃ§o principal",
         fullName: fullName || "Cliente TSEBI",
         cep: normalizePostalCode(form.postalCode),
         street: String(form.line1 || "").trim(),
@@ -1042,7 +1079,7 @@ export function CheckoutClient() {
       nextSet.add(nextFingerprint);
       setSavedAddressFingerprints(nextSet);
     } catch {
-      // Não bloqueia o checkout quando a sincronização da agenda falha.
+      // NÃ£o bloqueia o checkout quando a sincronizaÃ§Ã£o da agenda falha.
       setSavedAddressFingerprints((current) => {
         const nextSet = new Set(current);
         nextSet.add(nextFingerprint);
@@ -1067,7 +1104,7 @@ export function CheckoutClient() {
       }
       await persistAddressOnAccountIfNew();
     } catch (error: unknown) {
-      const message = error instanceof Error ? error.message : "Não foi possível confirmar o Endereço.";
+      const message = error instanceof Error ? error.message : "NÃ£o foi possÃ­vel confirmar o EndereÃ§o.";
       setErrorMessage(message);
       return;
     }
@@ -1080,7 +1117,7 @@ export function CheckoutClient() {
   function handleDeliveryConfirm() {
     if (!completed.address) {
       setActiveStep("address");
-      setErrorMessage("Confirme o Endereço primeiro.");
+      setErrorMessage("Confirme o EndereÃ§o primeiro.");
       return;
     }
     if (isLoadingShippingQuotes) {
@@ -1114,7 +1151,7 @@ export function CheckoutClient() {
       assertCheckoutReady();
       const syncedItems = await syncCartWithCatalog();
       if (syncedItems.length <= 0) {
-        throw new CheckoutValidationError("Seu carrinho está vazio.");
+        throw new CheckoutValidationError("Seu carrinho estÃ¡ vazio.");
       }
       if (!selectedShippingQuote) {
         throw new CheckoutValidationError("Selecione um frete para continuar.");
@@ -1125,7 +1162,7 @@ export function CheckoutClient() {
         selectedShippingQuote,
         checkoutEmail,
         selectedCompanyPaidByStore,
-        installmentPlan.installments,
+        selectedInstallments,
         getBeginCheckoutEventId()
       );
       const result = await createPaymentIntent(payload);
@@ -1146,7 +1183,7 @@ export function CheckoutClient() {
       });
       return true;
     } catch (error: unknown) {
-      const message = error instanceof Error ? error.message : "Não foi possível iniciar pagamento.";
+      const message = error instanceof Error ? error.message : "NÃ£o foi possÃ­vel iniciar pagamento.";
       setErrorMessage(message);
       return false;
     } finally {
@@ -1200,7 +1237,7 @@ export function CheckoutClient() {
 
       if (hasChanges) {
         replaceCartItems(nextItems, currency);
-        const messages: string[] = ["Atualizamos seu carrinho com preço/estoque atuais."];
+        const messages: string[] = ["Atualizamos seu carrinho com preÃ§o/estoque atuais."];
         if (removedOutOfStock) {
           messages.push("Alguns itens foram removidos por falta de estoque.");
         }
@@ -1216,12 +1253,12 @@ export function CheckoutClient() {
   async function handlePaymentConfirm() {
     if (!completed.address) {
       setActiveStep("address");
-      setErrorMessage("Confirme o Endereço antes de pagar.");
+      setErrorMessage("Confirme o EndereÃ§o antes de pagar.");
       return;
     }
     if (!completed.delivery) {
       setActiveStep("delivery");
-      setErrorMessage("Confirme o método de entrega antes de pagar.");
+      setErrorMessage("Confirme o mÃ©todo de entrega antes de pagar.");
       return;
     }
 
@@ -1283,9 +1320,39 @@ export function CheckoutClient() {
         <div className={styles.leftColumn}>
           {errorMessage ? <p className={styles.errorBanner}>{errorMessage}</p> : null}
 
+          <div className={styles.checkoutSteps}>
+            <button
+              type="button"
+              className={`${styles.checkoutStep} ${visualCheckoutStep === "delivery" ? styles.checkoutStepActive : styles.checkoutStepDone}`}
+              onClick={() => setActiveStep("address")}
+            >
+              Entrega
+            </button>
+            <button
+              type="button"
+              className={`${styles.checkoutStep} ${
+                visualCheckoutStep === "payment" ? styles.checkoutStepActive : visualCheckoutStep === "review" ? styles.checkoutStepDone : ""
+              }`}
+              onClick={() => {
+                if (completed.address && completed.delivery) setActiveStep("payment");
+              }}
+            >
+              Pagamento
+            </button>
+            <button
+              type="button"
+              className={`${styles.checkoutStep} ${visualCheckoutStep === "review" ? styles.checkoutStepActive : ""}`}
+              onClick={() => {
+                if (completed.address && completed.delivery) setActiveStep("payment");
+              }}
+            >
+              Revisao
+            </button>
+          </div>
+
           <section className={styles.stepSection}>
             <div className={styles.stepHeader}>
-              <h2>Endereço de entrega</h2>
+              <h2 className={styles.sectionTitle}>Endereco de entrega.</h2>
               {activeStep !== "address" ? (
                 <button type="button" className={styles.stepActionLink} onClick={() => setActiveStep("address")}>
                   Editar
@@ -1295,27 +1362,28 @@ export function CheckoutClient() {
 
             {activeStep === "address" ? (
               <div className={styles.addressFormWrap}>
-                <p className={styles.stepHint}>Selecione seu Endereço de entrega ou insira um novo.</p>
+                <p className={styles.sectionSub}>Selecione seu endereco de entrega ou insira um novo.</p>
                 {accountAddresses.length > 0 ? (
                   <div className={styles.savedAddressBar}>
-                    <label className={styles.savedAddressField}>
-                      <span>Endereço salvo</span>
+                    <label className={`${styles.field} ${styles.fieldFull}`}>
+                      <span>Endereco salvo</span>
                       <select
                         value={selectedSavedAddressId}
                         onChange={(event) => setSelectedSavedAddressId(String(event.target.value || ""))}
                       >
                         {accountAddresses.map((address) => (
                           <option key={address.id} value={address.id}>
-                            {`${String(address.label || "Endereço").trim() || "Endereço"} - ${String(address.street || "").trim()}, ${String(address.number || "").trim()} - ${String(address.city || "").trim()}`}
+                            {`${String(address.label || "Endereco").trim() || "Endereco"} - ${String(address.street || "").trim()}, ${String(address.number || "").trim()} - ${String(address.city || "").trim()}`}
                           </option>
                         ))}
                       </select>
                     </label>
                     <button type="button" className={styles.secondaryAction} onClick={handleUseSavedAddress}>
-                      Usar Endereço salvo
+                      Usar endereco salvo
                     </button>
                   </div>
                 ) : null}
+
                 <div className={styles.formGrid}>
                   <label className={styles.field}>
                     <span>Nome *</span>
@@ -1374,7 +1442,7 @@ export function CheckoutClient() {
                     </label>
 
                     <label className={`${styles.field} ${styles.phoneNumberField}`}>
-                      <span>Numero de telefone *</span>
+                      <span>Telefone *</span>
                       <input
                         name="phoneNumber"
                         type="tel"
@@ -1389,7 +1457,7 @@ export function CheckoutClient() {
                   </div>
 
                   <label className={styles.field}>
-                    <span>Numero do CPF *</span>
+                    <span>CPF *</span>
                     <input
                       name="cpf"
                       type="text"
@@ -1403,9 +1471,9 @@ export function CheckoutClient() {
 
                   <label className={`${styles.field} ${styles.fieldFull}`}>
                     <span>CEP *</span>
-                    <div className={styles.inlineActionRow}>
+                    <div className={styles.cepRow}>
                       <input
-                        className={styles.inlineActionInput}
+                        className={styles.cepInput}
                         name="postalCode"
                         type="text"
                         value={formatPostalCode(form.postalCode)}
@@ -1415,11 +1483,11 @@ export function CheckoutClient() {
                       />
                       <button
                         type="button"
-                        className={styles.secondaryAction}
+                        className={styles.cepButton}
                         onClick={handleFindAddress}
                         disabled={isFindingAddress}
                       >
-                        {isFindingAddress ? "Buscando..." : "Encontrar Endereço"}
+                        {isFindingAddress ? "..." : "Buscar"}
                       </button>
                     </div>
                     {showFieldError("postalCode") ? <small>{showFieldError("postalCode")}</small> : null}
@@ -1502,7 +1570,7 @@ export function CheckoutClient() {
 
                 <div className={styles.stepFooterAction}>
                   <button type="button" className={styles.primaryAction} onClick={handleAddressConfirm} disabled={isSavingAddress}>
-                    {isSavingAddress ? "Salvando Endereço..." : "Confirmar Endereço de entrega"}
+                    {isSavingAddress ? "Salvando endereco..." : "Confirmar endereco de entrega"}
                   </button>
                 </div>
               </div>
@@ -1518,7 +1586,7 @@ export function CheckoutClient() {
 
           <section className={styles.stepSection}>
             <div className={styles.stepHeader}>
-              <h2>método de entrega</h2>
+              <h2 className={styles.sectionTitle}>Entrega.</h2>
               {activeStep !== "delivery" ? (
                 <button type="button" className={styles.stepActionLink} onClick={() => setActiveStep("delivery")}>
                   Editar
@@ -1532,15 +1600,17 @@ export function CheckoutClient() {
 
             {activeStep === "delivery" ? (
               <div className={styles.deliveryWrap}>
+                <p className={styles.sectionSub}>Escolha o metodo de envio.</p>
                 {isLoadingShippingQuotes ? <p className={styles.deliveryLoading}>Buscando opcoes de frete...</p> : null}
                 {shippingQuotes.map((quote) => {
                   const isSelected = quote.id === (selectedShippingQuote?.id || "");
                   const recommendation = shippingRecommendationLabel(shippingRecommendationById[quote.id]);
                   const companyTag = shippingRecommendationById[quote.id];
                   const isFreeCompanyOption = isCompanyPaidShipping && companyTag === "free";
-                  const optionTitle = isCompanyPaidShipping && (companyTag === "free" || companyTag === "today")
-                    ? recommendation
-                    : quote.serviceName || "Entrega";
+                  const optionTitle =
+                    isCompanyPaidShipping && (companyTag === "free" || companyTag === "today")
+                      ? recommendation
+                      : quote.serviceName || "Entrega";
                   return (
                     <button
                       key={quote.id}
@@ -1554,7 +1624,9 @@ export function CheckoutClient() {
                         <p className={styles.deliveryDate}>{formatShippingEstimate(quote)}</p>
                         <p className={styles.deliveryMeta}>{quote.carrierName || quote.provider}</p>
                       </div>
-                      {isFreeCompanyOption ? null : <Price amountCents={Math.max(0, Number(quote.priceCents || 0))} currency={currency} />}
+                      {isFreeCompanyOption ? null : (
+                        <Price amountCents={Math.max(0, Number(quote.priceCents || 0))} currency={currency} />
+                      )}
                     </button>
                   );
                 })}
@@ -1565,7 +1637,7 @@ export function CheckoutClient() {
                     onClick={handleDeliveryConfirm}
                     disabled={isLoadingShippingQuotes || !selectedShippingQuote}
                   >
-                    Confirmar método de entrega
+                    Confirmar metodo de entrega
                   </button>
                 </div>
               </div>
@@ -1582,7 +1654,7 @@ export function CheckoutClient() {
 
           <section className={styles.stepSection}>
             <div className={styles.stepHeader}>
-              <h2>Pagamento</h2>
+              <h2 className={styles.sectionTitle}>Pagamento.</h2>
               {activeStep !== "payment" ? (
                 <button type="button" className={styles.stepActionLink} onClick={() => setActiveStep("payment")}>
                   Editar
@@ -1592,45 +1664,86 @@ export function CheckoutClient() {
 
             {activeStep === "payment" ? (
               <div className={styles.paymentWrap}>
-                <p className={styles.stepHint}>Pagamento seguro</p>
-                <div className={styles.installmentsInfoBox}>
-                  <p className={styles.installmentsInfoTitle}>Parcelamento sem juros</p>
-                  <p className={styles.installmentsInfoText}>
-                    {installmentPlan.rule
-                      ? `Para o total atual, voce pode pagar em ate ${installmentPlan.installments}x sem juros.`
-                      : "Parcelamento sem juros disponivel a partir de R$ 500."}
-                  </p>
-                  <ul className={styles.installmentsInfoList}>
-                    {INSTALLMENT_RULES.map((rule) => (
-                      <li key={`${rule.minCents}-${rule.maxCents}-${rule.installments}`}>
-                        {rule.maxCents === Number.MAX_SAFE_INTEGER
-                          ? `Acima de ${formatCurrencyBrlFromCents(rule.minCents)}: ate ${rule.installments}x sem juros`
-                          : `${formatCurrencyBrlFromCents(rule.minCents)} a ${formatCurrencyBrlFromCents(rule.maxCents)}: ate ${rule.installments}x sem juros`}
-                      </li>
-                    ))}
-                  </ul>
+                <p className={styles.sectionSub}>Seus dados sao protegidos com criptografia.</p>
+
+                <div className={styles.paymentOptions}>
+                  <button
+                    type="button"
+                    className={`${styles.paymentOption} ${selectedPaymentMethod === "card" ? styles.paymentOptionSelected : ""}`}
+                    onClick={() => setSelectedPaymentMethod("card")}
+                  >
+                    <span className={styles.paymentOptionLabel}>Cartao</span>
+                  </button>
+                  <button
+                    type="button"
+                    className={`${styles.paymentOption} ${selectedPaymentMethod === "boleto" ? styles.paymentOptionSelected : ""}`}
+                    onClick={() => setSelectedPaymentMethod("boleto")}
+                  >
+                    <span className={styles.paymentOptionLabel}>Boleto</span>
+                  </button>
+                  <button
+                    type="button"
+                    className={`${styles.paymentOption} ${selectedPaymentMethod === "google_pay" ? styles.paymentOptionSelected : ""}`}
+                    onClick={() => setSelectedPaymentMethod("google_pay")}
+                  >
+                    <span className={styles.paymentOptionLabel}>Google Pay</span>
+                  </button>
                 </div>
+
+                <label className={`${styles.field} ${styles.fieldFull}`}>
+                  <span>Parcelas</span>
+                  <select
+                    value={selectedInstallments}
+                    onChange={(event) => setSelectedInstallments(Math.max(1, Number(event.target.value || 1)))}
+                  >
+                    {installmentOptions.map((option) => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+
+                <p className={styles.installmentNote}>
+                  {installmentPlan.rule
+                    ? `Para o total atual, voce pode pagar em ate ${installmentPlan.installments}x sem juros. `
+                    : "Parcelamento sem juros disponivel a partir de R$ 500. "}
+                  O numero maximo de parcelas varia conforme o valor total do pedido.
+                </p>
+
                 {stripeLoading ? <p className={styles.stepHint}>Carregando metodos de pagamento...</p> : null}
-                {!stripeLoading && !stripeConfigured ? (
-                  <p className={styles.stepHint}>
-                    Pagamento indisponivel no momento.
-                  </p>
+                {!stripeLoading && !stripeConfigured ? <p className={styles.stepHint}>Pagamento indisponivel no momento.</p> : null}
+
+                {!intent?.clientSecret ? (
+                  <button
+                    type="button"
+                    className={styles.primaryAction}
+                    onClick={handlePaymentConfirm}
+                    disabled={isCreatingIntent || stripeLoading || !stripeConfigured}
+                  >
+                    {isCreatingIntent ? "Preparando pagamento..." : "Revisar pedido"}
+                  </button>
                 ) : null}
 
                 {intent?.clientSecret && stripePromise ? (
                   <div id="checkout-secure-payment" className={styles.securePaymentBox}>
-                    <h3>Confirmacao</h3>
+                    <h3>Revisao.</h3>
                     <p>Finalize seu pagamento.</p>
                     <Elements stripe={stripePromise} options={elementsOptions}>
                       <CheckoutPaymentForm
                         orderId={intent.orderId}
                         customerEmail={intent.customerEmail || checkoutEmail}
                         paymentMethodOrder={stripePaymentMethodOrder}
-                        submitLabel="Confirmar"
+                        submitLabel="Confirmar pedido"
                       />
                     </Elements>
                   </div>
                 ) : null}
+
+                <p className={styles.termsText}>
+                  Ao confirmar, voce concorda com os <a href="/aviso-legal">Termos e condicoes</a> e com a{" "}
+                  <a href="/politica-privacidade">Politica de Privacidade</a>.
+                </p>
               </div>
             ) : (
               <div className={styles.summaryContent}>
@@ -1642,33 +1755,68 @@ export function CheckoutClient() {
 
         <aside className={styles.rightColumn}>
           <div className={styles.summaryPanel}>
-            <h3>Resumo</h3>
-            <div className={styles.summaryRow}>
-              <span>{firstItem?.name || "Item"}</span>
-              <Price amountCents={subtotal} currency={currency} />
-            </div>
-            <div className={styles.summaryRow}>
-              <span>Entrega</span>
-              {selectedCompanyPaidByStore ? <span className={styles.shippingSponsoredText}>Por conta da empresa</span> : <Price amountCents={shippingCents} currency={currency} />}
+            <p className={styles.summaryEyebrow}>RESUMO</p>
+            <div className={styles.summaryItems}>
+              {items.map((item) => (
+                <article key={item.key} className={styles.summaryItem}>
+                  <div className={styles.summaryItemThumb}>
+                    <ProductImage
+                      src={item.imageUrl || ""}
+                      alt={item.name}
+                      width={58}
+                      height={74}
+                      className={styles.summaryImage}
+                      imageBaseUrl={imageBaseUrl}
+                    />
+                  </div>
+                  <div className={styles.summaryItemContent}>
+                    <p className={styles.summaryItemName}>{item.name}</p>
+                    <p className={styles.summaryItemMeta}>{buildCartItemMeta(item)}</p>
+                  </div>
+                  <Price amountCents={item.unitAmount * item.qty} currency={item.currency} className={styles.summaryItemPrice} />
+                </article>
+              ))}
             </div>
 
-            <label className={styles.promoField}>
-              <span>Código Exclusivo</span>
-              <input name="couponCode" type="text" placeholder="Insira o Código exclusivo" value={form.couponCode} onChange={handleInputChange} />
+            <div className={styles.summaryLines}>
+              <div className={styles.summaryRow}>
+                <span>Subtotal</span>
+                <Price amountCents={subtotal} currency={currency} className={styles.summaryValue} />
+              </div>
+              <div className={styles.summaryRow}>
+                <span>Entrega</span>
+                {selectedCompanyPaidByStore ? (
+                  <strong>Gratis</strong>
+                ) : (
+                  <Price amountCents={shippingCents} currency={currency} className={styles.summaryValue} />
+                )}
+              </div>
+            </div>
+
+            <label className={styles.couponField}>
+              <span>Codigo exclusivo</span>
+              <div className={styles.couponRow}>
+                <input
+                  name="couponCode"
+                  type="text"
+                  placeholder="Insira seu codigo"
+                  value={form.couponCode}
+                  onChange={handleInputChange}
+                />
+                <button type="button">Aplicar</button>
+              </div>
             </label>
 
             <div className={`${styles.summaryRow} ${styles.summaryTotal}`}>
               <span>Total</span>
-              <Price amountCents={totalCents} currency={currency} />
+              <Price amountCents={totalCents} currency={currency} className={styles.summaryTotalValue} />
             </div>
-            <p className={styles.termsText}>
-              Ao fazer seu pedido, Você concorda com nossos Termos e condições e Política de Privacidade.
-            </p>
+
             {isCreatingIntent ? <p className={styles.stepHint}>Preparando pagamento...</p> : null}
+            {selectedCompanyPaidByStore ? <p className={styles.shippingSponsoredText}>Frete pago pela empresa para este CEP.</p> : null}
           </div>
         </aside>
       </div>
     </section>
   );
 }
-

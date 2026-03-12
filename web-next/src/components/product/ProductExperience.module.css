@@ -99,6 +99,11 @@
   cursor: pointer;
 }
 
+.stickyBuyButton:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
 .stickySelectionWarning {
   position: fixed;
   left: 50%;
@@ -502,6 +507,11 @@
   gap: 4px;
   font-size: 12px;
   font-family: "Montserrat", sans-serif;
+}
+
+.buyButton:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
 }
 
 .signatureQuote {

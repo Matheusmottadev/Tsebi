@@ -3,10 +3,16 @@
 import { ChevronDown, ChevronUp, Plus, X } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { bootstrapAdminCsrfToken, createProductAdmin } from "@/services/admin";
+import type { ProductAvailabilityStatus } from "@/types";
 import { Drawer } from "./Drawer";
 import form from "./DrawerForms.module.css";
 
 const SIZE_OPTIONS = ["PP", "P", "M", "G", "GG", "XG"] as const;
+const AVAILABILITY_OPTIONS: Array<{ value: ProductAvailabilityStatus; label: string }> = [
+  { value: "disponivel", label: "Disponivel" },
+  { value: "esgotando", label: "Esgotando" },
+  { value: "esgotado", label: "Esgotado" },
+];
 
 type VariantRow = {
   key: string;
@@ -49,6 +55,7 @@ export function DrawerNovoProduto({ isOpen, onClose, onSaved }: DrawerNovoProdut
   const [currency, setCurrency] = useState("BRL");
   const [images, setImages] = useState<(File | null)[]>([null, null, null, null, null]);
   const [active, setActive] = useState(true);
+  const [availabilityStatus, setAvailabilityStatus] = useState<ProductAvailabilityStatus>("disponivel");
   const [sizes, setSizes] = useState<string[]>([]);
   const [colors, setColors] = useState<string[]>([]);
   const [colorInput, setColorInput] = useState("");
@@ -166,6 +173,7 @@ export function DrawerNovoProduto({ isOpen, onClose, onSaved }: DrawerNovoProdut
         stockQty: Number(stock),
         currency: currency,
         active,
+        availabilityStatus,
       };
 
       if (sizes.length) payload.sizes = sizes;
@@ -201,6 +209,7 @@ export function DrawerNovoProduto({ isOpen, onClose, onSaved }: DrawerNovoProdut
       setCurrency("BRL");
       setImages([null, null, null, null, null]);
       setActive(true);
+      setAvailabilityStatus("disponivel");
       setSizes([]);
       setColors([]);
       setColorInput("");
@@ -358,6 +367,24 @@ export function DrawerNovoProduto({ isOpen, onClose, onSaved }: DrawerNovoProdut
                   />
                   {active ? "Ativo" : "Inativo"}
                 </span>
+              </div>
+
+              <div className={form.field}>
+                <label className={form.label} htmlFor="product-availability-status">
+                  Disponibilidade no site
+                </label>
+                <select
+                  id="product-availability-status"
+                  className={form.select}
+                  value={availabilityStatus}
+                  onChange={(event) => setAvailabilityStatus(event.target.value as ProductAvailabilityStatus)}
+                >
+                  {AVAILABILITY_OPTIONS.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
               </div>
 
               <div className={form.field}>

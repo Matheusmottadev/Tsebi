@@ -1,4 +1,5 @@
 export type ProductVariantStockMap = Record<string, number>;
+export type ProductAvailabilityStatus = "disponivel" | "esgotando" | "esgotado";
 
 export interface ProductVariant {
   color: string;
@@ -10,6 +11,7 @@ export interface ProductMetadata {
   sizes: string[];
   colors: string[];
   variantStock: ProductVariantStockMap;
+  availabilityStatus?: ProductAvailabilityStatus;
   collection?: string;
   category?: string;
   subcategory?: string;
@@ -38,6 +40,7 @@ export interface Product {
   sizes: string[];
   colors: string[];
   variantStock: ProductVariantStockMap;
+  availabilityStatus?: ProductAvailabilityStatus;
   gender: string;
   priceLabel: string;
   priceValue: number;

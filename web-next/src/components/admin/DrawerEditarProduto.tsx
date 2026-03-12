@@ -3,7 +3,7 @@
 import { GripVertical, Plus, Trash2, X } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { bootstrapAdminCsrfToken, getProductAdmin, updateProductAdmin } from "@/services/admin";
-import type { Product } from "@/types";
+import type { Product, ProductAvailabilityStatus } from "@/types";
 import { Drawer } from "./Drawer";
 import form from "./DrawerForms.module.css";
 import styles from "./DrawerEditarProduto.module.css";
@@ -38,6 +38,11 @@ type PhotoSlot = {
 type ValidationErrors = Record<string, string>;
 
 const SIZE_LABELS = ["PP", "P", "M", "G", "GG", "XG", "Unico"];
+const AVAILABILITY_OPTIONS: Array<{ value: ProductAvailabilityStatus; label: string }> = [
+  { value: "disponivel", label: "Disponivel" },
+  { value: "esgotando", label: "Esgotando" },
+  { value: "esgotado", label: "Esgotado" },
+];
 
 const COLOR_MAP: Record<string, string> = {
   preto: "#111111",
@@ -237,6 +242,7 @@ export function DrawerEditarProduto({
   const [price, setPrice] = useState("");
   const [currency, setCurrency] = useState("BRL");
   const [active, setActive] = useState(true);
+  const [availabilityStatus, setAvailabilityStatus] = useState<ProductAvailabilityStatus>("disponivel");
   const [sizes, setSizes] = useState<SizeRow[]>(SIZE_LABELS.map((label) => ({ label, checked: false, stock: 0 })));
   const [colorInput, setColorInput] = useState("");
   const [colors, setColors] = useState<string[]>([]);
@@ -283,6 +289,12 @@ export function DrawerEditarProduto({
       setPrice(formatMoneyInput(Number(source.unitAmount || 0)));
       setCurrency(String(source.currency || "BRL").toUpperCase() || "BRL");
       setActive(Boolean(source.active));
+      const normalizedAvailability = String(source.availabilityStatus || "").trim().toLowerCase();
+      if (normalizedAvailability === "esgotando" || normalizedAvailability === "esgotado" || normalizedAvailability === "disponivel") {
+        setAvailabilityStatus(normalizedAvailability);
+      } else {
+        setAvailabilityStatus(Number(source.stock || 0) <= 0 ? "esgotado" : "disponivel");
+      }
       const initialSizes = buildInitialSizeRows(source);
       const initialColors = (Array.isArray(source.colors) ? source.colors : []).map((item) => asTitleCase(item)).filter(Boolean);
 
@@ -546,6 +558,7 @@ export function DrawerEditarProduto({
         stockQty,
         currency: String(currency || "BRL").trim().toUpperCase(),
         active,
+        availabilityStatus,
         sizes: sizeLabels,
         colors: normalizedColors,
         variantStock,
@@ -710,6 +723,17 @@ export function DrawerEditarProduto({
               onClick={() => setActive((value) => !value)}
               aria-label="Alternar status"
             />
+          </div>
+
+          <div className={form.field}>
+            <label className={form.label}>Disponibilidade no site</label>
+            <select className={form.select} value={availabilityStatus} onChange={(event) => setAvailabilityStatus(event.target.value as ProductAvailabilityStatus)}>
+              {AVAILABILITY_OPTIONS.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
           </div>
 
           <div className={styles.sizesList}>

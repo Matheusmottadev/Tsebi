@@ -248,6 +248,7 @@ const productVariantStockSchema = z.record(
   z.string().trim().min(3).max(120),
   z.coerce.number().int().min(0).max(999_999)
 );
+const productAvailabilityStatusSchema = z.enum(["disponivel", "esgotando", "esgotado"]);
 
 const productCreateSchema = z.object({
   sku: z.string().trim().min(2).max(80),
@@ -260,6 +261,7 @@ const productCreateSchema = z.object({
   sizes: productOptionListSchema.optional().default([]),
   colors: productOptionListSchema.optional().default([]),
   variantStock: productVariantStockSchema.optional().default({}),
+  availabilityStatus: productAvailabilityStatusSchema.optional().default("disponivel"),
   collection: z.string().trim().max(120).optional().default(""),
   category: z.string().trim().max(120).optional().default(""),
   subcategory: z.string().trim().max(120).optional().default(""),
@@ -286,6 +288,7 @@ const productPatchSchema = z.object({
   sizes: productOptionListSchema.optional(),
   colors: productOptionListSchema.optional(),
   variantStock: productVariantStockSchema.optional(),
+  availabilityStatus: productAvailabilityStatusSchema.optional(),
   collection: z.string().trim().max(120).optional(),
   category: z.string().trim().max(120).optional(),
   subcategory: z.string().trim().max(120).optional(),
@@ -734,6 +737,7 @@ function sanitizeProductForAudit(product: any) {
       product.variantStock && typeof product.variantStock === "object" && !Array.isArray(product.variantStock)
         ? product.variantStock
         : {},
+    availabilityStatus: String(product.availabilityStatus || "").trim().toLowerCase() || "disponivel",
     currency: product.currency || "brl",
     imageUrl: String(product.image || ""),
     active: Boolean(product.active),
@@ -754,6 +758,7 @@ function buildProductPatchFromSnapshot(product: any) {
       product.variantStock && typeof product.variantStock === "object" && !Array.isArray(product.variantStock)
         ? product.variantStock
         : {},
+    availabilityStatus: String(product.availabilityStatus || "").trim().toLowerCase() || "disponivel",
     currency: product.currency || "brl",
     imageUrl: String(product.image || ""),
     active: Boolean(product.active)

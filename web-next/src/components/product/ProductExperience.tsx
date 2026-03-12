@@ -8,7 +8,7 @@ import { useCartStore } from "@/lib/cart/cartStore";
 import { getSmoothScrollEngine } from "@/lib/animation/smoothScrollEngine";
 import { getOrCreateAnonId, trackCommerceEvent } from "@/lib/analytics";
 import { quoteShipping } from "@/services/orders";
-import type { Product } from "@/types";
+import type { Product, ProductAvailabilityStatus } from "@/types";
 import { Drawer } from "./Drawer";
 import {
   GLOBAL_SIZES,
@@ -303,6 +303,20 @@ function hasColorStock(product: Product, rawColor: string): boolean {
   return Math.max(0, Number(product.stock || 0)) > 0;
 }
 
+function normalizeAvailabilityStatus(value: unknown, fallbackStock: number): ProductAvailabilityStatus {
+  const normalized = String(value || "").trim().toLowerCase();
+  if (normalized === "esgotado") return "esgotado";
+  if (normalized === "esgotando") return "esgotando";
+  if (normalized === "disponivel") return "disponivel";
+  return Math.max(0, Number(fallbackStock || 0)) <= 0 ? "esgotado" : "disponivel";
+}
+
+function resolveAvailabilityStatusLabel(status: ProductAvailabilityStatus): string {
+  if (status === "esgotado") return "Esgotado";
+  if (status === "esgotando") return "Esgotando";
+  return "Disponivel";
+}
+
 function emitProductHeaderVisibility(hidden: boolean): void {
   if (typeof window === "undefined") return;
   window.dispatchEvent(
@@ -386,10 +400,16 @@ export function ProductExperience({ product, recommendations, imageBaseUrl }: Pr
 
   const colorRequired = colors.length > 0;
   const sizeRequired = sizes.length > 0;
+  const availabilityStatus = useMemo(
+    () => normalizeAvailabilityStatus(product.availabilityStatus, Number(product.stock || 0)),
+    [product.availabilityStatus, product.stock]
+  );
+  const availabilityStatusLabel = useMemo(() => resolveAvailabilityStatusLabel(availabilityStatus), [availabilityStatus]);
+  const isSoldOutByAvailability = availabilityStatus === "esgotado";
   const isSingleUniqueSizeProduct = sizeRequired && sizes.length === 1 && isUniqueSizeLabel(sizes[0]);
   const hasValidColorSelection = !colorRequired || Boolean(String(selectedColor || "").trim());
   const hasValidSizeSelection = !sizeRequired || Boolean(String(selectedSize || "").trim());
-  const canBuy = hasValidColorSelection && hasValidSizeSelection;
+  const canBuy = hasValidColorSelection && hasValidSizeSelection && !isSoldOutByAvailability;
   const selectedColorLabel = hasValidColorSelection ? selectedColor : "Selecione";
   const drawerSizes = useMemo(() => (sizes.length > 0 ? sizes : [...GLOBAL_SIZES]), [sizes]);
 
@@ -704,6 +724,16 @@ export function ProductExperience({ product, recommendations, imageBaseUrl }: Pr
   }, []);
 
   const handleBuy = (source: "main" | "sticky" = "main") => {
+    if (isSoldOutByAvailability) {
+      if (source === "sticky") {
+        showStickyToast("Produto esgotado.");
+      } else {
+        setFeedback("Produto esgotado.");
+        window.setTimeout(() => setFeedback(""), 1800);
+      }
+      return;
+    }
+
     if (!canBuy) {
       if (source === "sticky") {
         showStickyToast("Você precisa escolher o tamanho e cor da peça", true);
@@ -802,8 +832,13 @@ export function ProductExperience({ product, recommendations, imageBaseUrl }: Pr
               <Price amountCents={product.unitAmount} currency={product.currency} className={styles.stickyPrice} />
             </div>
           </div>
-          <button type="button" className={styles.stickyBuyButton} onClick={() => handleBuy("sticky")}>
-            Adicionar
+          <button
+            type="button"
+            className={styles.stickyBuyButton}
+            onClick={() => handleBuy("sticky")}
+            disabled={isSoldOutByAvailability}
+          >
+            {isSoldOutByAvailability ? "Esgotado" : "Adicionar"}
           </button>
         </div>
       </div>
@@ -844,7 +879,7 @@ export function ProductExperience({ product, recommendations, imageBaseUrl }: Pr
             <div className={styles.swatches}>
               {colors.map((color) => {
                 const token = resolveColorToken(color);
-                const isAvailable = hasColorStock(product, color);
+                const isAvailable = !isSoldOutByAvailability && hasColorStock(product, color);
                 return (
                   <button
                     key={color}
@@ -875,8 +910,14 @@ export function ProductExperience({ product, recommendations, imageBaseUrl }: Pr
                 </button>
               </div>
             ) : null}
-            <button type="button" className={styles.buyButton} onClick={() => handleBuy("main")} ref={buyButtonRef}>
-              Adicionar ao carrinho
+            <button
+              type="button"
+              className={styles.buyButton}
+              onClick={() => handleBuy("main")}
+              ref={buyButtonRef}
+              disabled={isSoldOutByAvailability}
+            >
+              {isSoldOutByAvailability ? "Esgotado" : "Adicionar ao carrinho"}
             </button>
 
             {feedback ? <p className={styles.feedback}>{feedback}</p> : null}
@@ -980,7 +1021,7 @@ export function ProductExperience({ product, recommendations, imageBaseUrl }: Pr
         <div className={styles.drawerSizeGrid}>
           {drawerSizes.map((size) => {
             const stock = getDrawerStockBySize(size);
-            const disabled = stock <= 0;
+            const disabled = isSoldOutByAvailability || stock <= 0;
             const isSelected = selectedSize === size;
             return (
               <button
@@ -991,7 +1032,7 @@ export function ProductExperience({ product, recommendations, imageBaseUrl }: Pr
                 className={`${styles.drawerSizeButton}${isSelected ? ` ${styles.drawerSizeButtonSelected}` : ""}`}
               >
                 <span>{size}</span>
-                <small>{disabled ? "Sem estoque" : `${stock} em estoque`}</small>
+                <small>{availabilityStatusLabel}</small>
               </button>
             );
           })}
@@ -1117,5 +1158,3 @@ export function ProductExperience({ product, recommendations, imageBaseUrl }: Pr
     </div>
   );
 }
-
-

@@ -112,7 +112,15 @@ export default async function ProductPage({ params }: ProductPageProps) {
   const baseUrl = String(process.env.NEXT_PUBLIC_SITE_URL || "https://tsebi.com.br").replace(/\/+$/, "");
   const productUrl = `${baseUrl}${canonicalPath}`;
   const productImage = buildOgImage(product);
-  const availability = Number(product.stock || 0) > 0 ? "https://schema.org/InStock" : "https://schema.org/OutOfStock";
+  const normalizedAvailabilityStatus = String(product.availabilityStatus || "").trim().toLowerCase();
+  const hasKnownAvailabilityStatus =
+    normalizedAvailabilityStatus === "disponivel" ||
+    normalizedAvailabilityStatus === "esgotando" ||
+    normalizedAvailabilityStatus === "esgotado";
+  const isOutOfStock =
+    normalizedAvailabilityStatus === "esgotado" ||
+    (!hasKnownAvailabilityStatus && Number(product.stock || 0) <= 0);
+  const availability = isOutOfStock ? "https://schema.org/OutOfStock" : "https://schema.org/InStock";
   const offerPrice = Number.isFinite(Number(product.priceValue)) ? Number(product.priceValue) : Number(product.unitAmount || 0) / 100;
   const productSchema = {
     "@context": "https://schema.org",
