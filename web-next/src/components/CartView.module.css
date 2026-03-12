@@ -161,7 +161,7 @@
 .summary {
   width: 340px;
   position: sticky;
-  top: 80px;
+  top: calc(var(--top-bar-height, 38px) + var(--header-height, 84px) + 20px);
   border: 1px solid #e8e6e2;
   padding: 32px;
 }

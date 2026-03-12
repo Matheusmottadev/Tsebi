@@ -6,11 +6,5 @@
 .main {
   width: 100%;
   margin: 0 auto;
-  padding: 112px 0 52px;
-}
-
-@media (max-width: 980px) {
-  .main {
-    padding-top: 90px;
-  }
+  padding: calc(var(--top-bar-height, 38px) + var(--header-height, 84px) + 24px) 0 52px;
 }

@@ -920,7 +920,7 @@ export function CheckoutClient() {
 
   function handleInputChange(event: ChangeEvent<HTMLInputElement>) {
     const { name, value } = event.target;
-    if (name === "couponCode") {
+    if (name === "couponCode" || name === "accessCode") {
       const nextCouponCode = normalizeDiscountCode(value);
       setForm((current) => ({ ...current, couponCode: nextCouponCode }));
       if (normalizeDiscountCode(appliedCouponCode) && nextCouponCode !== normalizeDiscountCode(appliedCouponCode)) {
@@ -2214,8 +2214,16 @@ export function CheckoutClient() {
               <span>Codigo exclusivo</span>
               <div className={styles.couponRow}>
                 <input
-                  name="couponCode"
+                  id="checkout-access-code"
+                  name="accessCode"
                   type="text"
+                  inputMode="text"
+                  autoComplete="off"
+                  autoCorrect="off"
+                  autoCapitalize="characters"
+                  spellCheck={false}
+                  data-form-type="other"
+                  data-lpignore="true"
                   placeholder="Insira seu codigo"
                   value={form.couponCode}
                   onChange={handleInputChange}
