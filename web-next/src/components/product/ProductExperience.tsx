@@ -228,17 +228,21 @@ function formatMoneyCentsBRL(cents: number): string {
 }
 
 function resolveColorToken(rawColor: string): { cssColor: string; unknown: boolean } {
-  const normalized = String(rawColor || "").trim().toLowerCase();
+  const normalized = normalizeText(rawColor).replace(/[\s-_]/g, "");
   const map: Record<string, string> = {
     preto: "#111111",
+    preta: "#111111",
     pretoenvernizado: "#101010",
     branco: "#f3f3f1",
+    branca: "#f3f3f1",
     offwhite: "#f5f1e8",
     bege: "#d4c2a1",
     marrom: "#6a4a34",
+    marromescuro: "#4b3629",
     azul: "#1d4f89",
     azulmarinho: "#22314f",
     cinza: "#8a8a8a",
+    grafite: "#555a63",
     prata: "#c3c5c8",
     dourado: "#b6935e",
     verde: "#3d5f45",
@@ -246,25 +250,57 @@ function resolveColorToken(rawColor: string): { cssColor: string; unknown: boole
     rosa: "#cf8ea5",
   };
 
-  const key = normalized.replace(/[\s-_]/g, "");
-  const cssColor = map[key];
+  const cssColor = map[normalized];
   if (cssColor) return { cssColor, unknown: false };
   return { cssColor: "#7f7f7f", unknown: true };
 }
 
+function parseVariantColorFromKey(rawKey: string): string {
+  const key = String(rawKey || "").trim();
+  if (!key) return "";
+
+  if (key.includes("__")) {
+    const [color] = key.split("__");
+    return String(color || "").trim();
+  }
+
+  if (key.includes("|")) {
+    const parts = key.split("|").map((item) => String(item || "").trim());
+    const colorPair = parts.find((part) => part.toLowerCase().startsWith("color:"));
+    if (colorPair) return colorPair.slice("color:".length).trim();
+    if (parts.length === 2) return parts[0] || "";
+  }
+
+  if (key.toLowerCase().startsWith("color:")) {
+    return key.slice("color:".length).trim();
+  }
+
+  return "";
+}
+
 function hasColorStock(product: Product, rawColor: string): boolean {
-  const color = String(rawColor || "").trim().toLowerCase();
+  const color = normalizeText(rawColor);
+  if (!color) return Math.max(0, Number(product.stock || 0)) > 0;
+
   const variants = Object.entries(product.variantStock || {});
   if (variants.length === 0) return true;
 
+  let parsedVariantKeys = 0;
   for (const [key, qty] of variants) {
-    const normalizedKey = key.toLowerCase();
-    if (!normalizedKey.includes("color:")) continue;
-    if (!normalizedKey.includes(color)) continue;
-    if (Number(qty || 0) > 0) return true;
+    const availableQty = Math.max(0, Number(qty || 0));
+    if (availableQty <= 0) continue;
+
+    const variantColor = parseVariantColorFromKey(key);
+    if (!variantColor) continue;
+    parsedVariantKeys += 1;
+
+    if (normalizeText(variantColor) === color) return true;
   }
 
-  return false;
+  if (parsedVariantKeys > 0) return false;
+
+  // Fallback de seguranca para formatos antigos/invalidos de chave.
+  return Math.max(0, Number(product.stock || 0)) > 0;
 }
 
 function emitProductHeaderVisibility(hidden: boolean): void {
@@ -808,7 +844,7 @@ export function ProductExperience({ product, recommendations, imageBaseUrl }: Pr
             <div className={styles.swatches}>
               {colors.map((color) => {
                 const token = resolveColorToken(color);
-                const isAvailable = !token.unknown && hasColorStock(product, color);
+                const isAvailable = hasColorStock(product, color);
                 return (
                   <button
                     key={color}

@@ -220,13 +220,22 @@ function isUuid(value: string): boolean {
   return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(String(value || "").trim());
 }
 
+function normalizeAddressToken(value: string): string {
+  return String(value || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, " ");
+}
+
 function addressFingerprint(payload: AddressLike): string {
   const cep = normalizePostalCode(String(payload.cep || ""));
-  const street = String(payload.street || "").trim().toLowerCase();
-  const number = String(payload.number || "").trim().toLowerCase();
-  const complement = String(payload.complement || "").trim().toLowerCase();
-  const district = String(payload.district || "").trim().toLowerCase();
-  const city = String(payload.city || "").trim().toLowerCase();
+  const street = normalizeAddressToken(String(payload.street || ""));
+  const number = normalizeAddressToken(String(payload.number || ""));
+  const complement = normalizeAddressToken(String(payload.complement || ""));
+  const district = normalizeAddressToken(String(payload.district || ""));
+  const city = normalizeAddressToken(String(payload.city || ""));
   const state = normalizeState(String(payload.state || ""));
   return [cep, street, number, complement, district, city, state].join("|");
 }
@@ -980,7 +989,28 @@ export function CheckoutClient() {
       state: form.state,
     });
 
-    if (!nextFingerprint || savedAddressFingerprints.has(nextFingerprint)) return;
+    const alreadyExistsInAccount = accountAddresses.some((address) =>
+      addressFingerprint({
+        cep: address.cep,
+        street: address.street,
+        number: address.number,
+        complement: address.complement,
+        district: address.district,
+        city: address.city,
+        state: address.state,
+      }) === nextFingerprint
+    );
+
+    if (!nextFingerprint || savedAddressFingerprints.has(nextFingerprint) || alreadyExistsInAccount) {
+      if (nextFingerprint && !savedAddressFingerprints.has(nextFingerprint)) {
+        setSavedAddressFingerprints((current) => {
+          const nextSet = new Set(current);
+          nextSet.add(nextFingerprint);
+          return nextSet;
+        });
+      }
+      return;
+    }
 
     setIsSavingAddress(true);
     try {
@@ -1012,7 +1042,12 @@ export function CheckoutClient() {
       nextSet.add(nextFingerprint);
       setSavedAddressFingerprints(nextSet);
     } catch {
-      throw new CheckoutValidationError("Não foi possível salvar o Endereço na sua conta.");
+      // Não bloqueia o checkout quando a sincronização da agenda falha.
+      setSavedAddressFingerprints((current) => {
+        const nextSet = new Set(current);
+        nextSet.add(nextFingerprint);
+        return nextSet;
+      });
     } finally {
       setIsSavingAddress(false);
     }

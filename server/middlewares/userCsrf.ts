@@ -20,6 +20,33 @@ function sanitizeCookieName(value: unknown, fallback = "tsebi.csrf"): string {
 
 const userCsrfCookieName = sanitizeCookieName(process.env.USER_CSRF_COOKIE_NAME, "tsebi.csrf");
 
+function isLocalOrIpHost(hostname: string): boolean {
+  const value = String(hostname || "").trim().toLowerCase();
+  if (!value) return true;
+  if (value === "localhost") return true;
+  if (/^\d{1,3}(\.\d{1,3}){3}$/.test(value)) return true;
+  return false;
+}
+
+function resolveCookieDomain(): string | undefined {
+  const explicit = String(process.env.USER_CSRF_COOKIE_DOMAIN || process.env.SESSION_COOKIE_DOMAIN || "").trim().toLowerCase();
+  if (explicit && !isLocalOrIpHost(explicit)) {
+    const normalized = explicit.replace(/^\./, "").replace(/^www\./, "");
+    return normalized ? `.${normalized}` : undefined;
+  }
+  if (!appBaseOrigin) return undefined;
+  try {
+    const hostname = String(new URL(appBaseOrigin).hostname || "").trim().toLowerCase();
+    if (isLocalOrIpHost(hostname)) return undefined;
+    const normalized = hostname.replace(/^www\./, "");
+    return normalized ? `.${normalized}` : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+const cookieDomain = resolveCookieDomain();
+
 function parseCookieHeader(cookieHeader: string): Record<string, string> {
   const source = String(cookieHeader || "");
   const out: Record<string, string> = {};
@@ -47,6 +74,7 @@ function setUserCsrfCookie(res: Response, token: string): void {
     sameSite: "strict",
     secure: isProduction,
     path: "/",
+    ...(cookieDomain ? { domain: cookieDomain } : {}),
   });
 }
 
@@ -56,6 +84,7 @@ function clearUserCsrfCookie(res: Response): void {
     sameSite: "strict",
     secure: isProduction,
     path: "/",
+    ...(cookieDomain ? { domain: cookieDomain } : {}),
   });
 }
 

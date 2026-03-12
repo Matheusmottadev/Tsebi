@@ -56,32 +56,7 @@
 }
 
 .headerRow {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(280px, 360px);
-  gap: 20px;
-  align-items: end;
-}
-
-.searchWrap {
-  border-bottom: 1px solid #bcbcbc;
-  min-height: 38px;
-  display: flex;
-  align-items: center;
-}
-
-.searchInput {
-  width: 100%;
-  border: 0;
-  outline: 0;
-  background: transparent;
-  font-size: 14px;
-  color: #1d1d1d;
-  padding: 6px 0;
-}
-
-.searchInput::placeholder {
-  color: #8d8d8d;
-  font-style: italic;
+  display: block;
 }
 
 .faqGrid {
@@ -106,10 +81,6 @@
 
   .panel {
     padding: 24px 18px;
-  }
-
-  .headerRow {
-    grid-template-columns: 1fr;
   }
 
   .faqGrid {

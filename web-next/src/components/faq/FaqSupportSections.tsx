@@ -38,15 +38,6 @@ export function FaqSupportSections() {
         <article className={styles.panel}>
           <div className={styles.headerRow}>
             <h2 className={styles.panelTitle}>PERGUNTAS FREQUENTES</h2>
-            <label className={styles.searchWrap} htmlFor="faqSearchInput">
-              <input
-                id="faqSearchInput"
-                className={styles.searchInput}
-                type="search"
-                placeholder="Como podemos ajudar?"
-                aria-label="Pesquisar perguntas frequentes"
-              />
-            </label>
           </div>
 
           <div className={styles.faqGrid}>

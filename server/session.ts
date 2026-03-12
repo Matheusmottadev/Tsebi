@@ -16,6 +16,33 @@ function getSessionMaxAgeMs(): number {
   return days * 24 * 60 * 60 * 1000;
 }
 
+function isLocalOrIpHost(hostname: string): boolean {
+  const value = String(hostname || "").trim().toLowerCase();
+  if (!value) return true;
+  if (value === "localhost") return true;
+  if (/^\d{1,3}(\.\d{1,3}){3}$/.test(value)) return true;
+  return false;
+}
+
+function resolveCookieDomain(): string | undefined {
+  const explicit = String(process.env.SESSION_COOKIE_DOMAIN || "").trim().toLowerCase();
+  if (explicit && !isLocalOrIpHost(explicit)) {
+    const normalized = explicit.replace(/^\./, "").replace(/^www\./, "");
+    return normalized ? `.${normalized}` : undefined;
+  }
+
+  const appBaseUrl = String(process.env.APP_BASE_URL || "").trim();
+  if (!appBaseUrl) return undefined;
+  try {
+    const hostname = String(new URL(appBaseUrl).hostname || "").trim().toLowerCase();
+    if (isLocalOrIpHost(hostname)) return undefined;
+    const normalized = hostname.replace(/^www\./, "");
+    return normalized ? `.${normalized}` : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
 function createSessionStore(): Store {
   const PgSession = pgSessionFactory(session);
   const store = new PgSession({
@@ -42,6 +69,7 @@ function createSessionMiddleware() {
 
   const hasStrongSessionSecret =
     Boolean(sessionSecret) && sessionSecret !== defaultSessionSecret && sessionSecret.length >= 32;
+  const cookieDomain = resolveCookieDomain();
 
   if (!hasStrongSessionSecret && !isLocalDevelopment) {
     throw new Error("SESSION_SECRET_WEAK_OR_MISSING");
@@ -54,18 +82,23 @@ function createSessionMiddleware() {
 
   const effectiveSessionSecret = hasStrongSessionSecret ? sessionSecret : defaultSessionSecret;
 
+  const cookieConfig: SessionOptions["cookie"] = {
+    httpOnly: true,
+    sameSite: "lax",
+    secure: isProduction,
+    maxAge: getSessionMaxAgeMs()
+  };
+  if (cookieDomain) {
+    cookieConfig.domain = cookieDomain;
+  }
+
   const config: SessionOptions = {
     name: sessionName,
     secret: effectiveSessionSecret,
     resave: false,
     saveUninitialized: false,
     rolling: true,
-    cookie: {
-      httpOnly: true,
-      sameSite: "lax",
-      secure: isProduction,
-      maxAge: getSessionMaxAgeMs()
-    }
+    cookie: cookieConfig
   };
 
   try {

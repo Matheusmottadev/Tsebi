@@ -197,7 +197,7 @@ export default function LoginPage() {
   const activeEmailPreview = useMemo(() => normalizeEmail(activeEmail || email), [activeEmail, email]);
   const loginNotice = useMemo(() => {
     const notice = String(searchParams.get("notice") || "").trim().toLowerCase();
-    if (notice === "private-care") return "Cadastre-se ou faca login para agendar seu atendimento.";
+    if (notice === "private-care") return "Cadastre-se ou faça login para agendar seu atendimento.";
     return "";
   }, [searchParams]);
 
@@ -934,6 +934,11 @@ export default function LoginPage() {
 
       <section className={styles.formPanel}>
         <div className={styles.formWrap}>
+          {loginNotice ? (
+            <p className={styles.noticeBanner} role="status" aria-live="polite">
+              {loginNotice}
+            </p>
+          ) : null}
           {!isSessionReady ? <div className={styles.loadingState}>Carregando...</div> : renderStepContent()}
 
           {errorMessage ? (
@@ -942,7 +947,6 @@ export default function LoginPage() {
             </p>
           ) : null}
           {helperMessage ? <p className={styles.helperMessage}>{helperMessage}</p> : null}
-          {loginNotice ? <p className={styles.notice}>{loginNotice}</p> : null}
         </div>
       </section>
     </main>

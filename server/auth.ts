@@ -1370,19 +1370,42 @@ authRouter.post("/logout", (req: any, res: any) => {
   const sessionCookieName = String(process.env.SESSION_COOKIE_NAME || "tsebi.sid");
   const isProduction = String(process.env.NODE_ENV || "").trim().toLowerCase() === "production";
   const csrfCookieName = String(userCsrfCookieName || process.env.USER_CSRF_COOKIE_NAME || "tsebi.csrf").trim() || "tsebi.csrf";
+  const cookieDomain = (() => {
+    const explicit = String(process.env.SESSION_COOKIE_DOMAIN || "").trim().toLowerCase();
+    const isLocalOrIp = (value: string) =>
+      !value || value === "localhost" || /^\d{1,3}(\.\d{1,3}){3}$/.test(String(value || "").trim().toLowerCase());
+
+    if (explicit && !isLocalOrIp(explicit)) {
+      const normalized = explicit.replace(/^\./, "").replace(/^www\./, "");
+      return normalized ? `.${normalized}` : "";
+    }
+
+    const appBase = String(process.env.APP_BASE_URL || "").trim();
+    if (!appBase) return "";
+    try {
+      const hostname = String(new URL(appBase).hostname || "").trim().toLowerCase();
+      if (isLocalOrIp(hostname)) return "";
+      const normalized = hostname.replace(/^www\./, "");
+      return normalized ? `.${normalized}` : "";
+    } catch {
+      return "";
+    }
+  })();
 
   const clearSessionCookies = () => {
     res.clearCookie(sessionCookieName, {
       httpOnly: true,
       sameSite: "lax",
       secure: isProduction,
-      path: "/"
+      path: "/",
+      ...(cookieDomain ? { domain: cookieDomain } : {})
     });
     res.clearCookie(csrfCookieName, {
       httpOnly: false,
       sameSite: "strict",
       secure: isProduction,
-      path: "/"
+      path: "/",
+      ...(cookieDomain ? { domain: cookieDomain } : {})
     });
   };
 

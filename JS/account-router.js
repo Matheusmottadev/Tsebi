@@ -422,13 +422,12 @@
     }
 
     const me = await activeStore.fetchMe();
-    const fallbackUser = typeof activeStore.getCurrentUser === "function" ? activeStore.getCurrentUser() : null;
-    if ((!me.ok || !me.user) && !fallbackUser) {
+    if (!me.ok || !me.user) {
       const returnUrl = `${window.location.pathname}${window.location.search}${window.location.hash}`;
       window.location.href = `/login?returnUrl=${encodeURIComponent(returnUrl)}`;
       return;
     }
-    state.user = me.user || fallbackUser;
+    state.user = me.user;
     await bootAuthenticated();
   }
 
