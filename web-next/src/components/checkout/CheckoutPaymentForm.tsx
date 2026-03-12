@@ -17,7 +17,12 @@ type CheckoutPaymentFormProps = {
 
 type ConfirmationStatus = "success" | "failed" | "processing";
 
-function buildConfirmationPath(status: ConfirmationStatus, orderId: string, customerEmail: string): string {
+function buildConfirmationPath(
+  status: ConfirmationStatus,
+  orderId: string,
+  customerEmail: string,
+  errorMessage = ""
+): string {
   const params = new URLSearchParams();
   params.set("status", status);
   if (status === "success") {
@@ -25,6 +30,9 @@ function buildConfirmationPath(status: ConfirmationStatus, orderId: string, cust
     const safeEmail = String(customerEmail || "").trim().toLowerCase();
     if (safeOrderId) params.set("orderId", safeOrderId);
     if (safeEmail) params.set("email", safeEmail);
+  } else if (status === "failed") {
+    const safeError = String(errorMessage || "").trim();
+    if (safeError) params.set("error", safeError);
   }
   return `/checkout/confirmation?${params.toString()}`;
 }
@@ -55,7 +63,6 @@ export function CheckoutPaymentForm({
 
   const successPath = useMemo(() => buildConfirmationPath("success", orderId, customerEmail), [orderId, customerEmail]);
   const processingPath = useMemo(() => buildConfirmationPath("processing", orderId, customerEmail), [orderId, customerEmail]);
-  const failedPath = useMemo(() => buildConfirmationPath("failed", orderId, customerEmail), [orderId, customerEmail]);
   const successUrl = useMemo(() => buildSuccessUrl(successPath), [successPath]);
   const paymentElementOptions = useMemo(
     () => ({
@@ -115,7 +122,8 @@ export function CheckoutPaymentForm({
       });
 
       if (result.error) {
-        router.push(failedPath);
+        const failedMessage = String(result.error.message || "Pagamento recusado pelo emissor do cartao.").trim();
+        router.push(buildConfirmationPath("failed", orderId, customerEmail, failedMessage));
         return;
       }
 
@@ -131,7 +139,8 @@ export function CheckoutPaymentForm({
         return;
       }
 
-      router.push(failedPath);
+      const statusMessage = paymentIntentStatus ? `Status inesperado: ${paymentIntentStatus}` : "Falha ao confirmar pagamento.";
+      router.push(buildConfirmationPath("failed", orderId, customerEmail, statusMessage));
     } catch (error) {
       const message = error instanceof Error ? error.message : "Payment confirmation failed.";
       setErrorMessage(message);

@@ -333,6 +333,17 @@
   line-height: 1.5;
 }
 
+.loggedHint {
+  margin: 14px 0 0;
+  text-align: center;
+  color: #9e9890;
+  font-family: "Jost", sans-serif;
+  font-size: 10px;
+  font-weight: 200;
+  letter-spacing: 0.06em;
+  line-height: 1.5;
+}
+
 .loginLink {
   color: #111;
   text-decoration: none;

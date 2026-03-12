@@ -19,7 +19,7 @@ import type { Address } from "@/types";
 import styles from "./CheckoutClient.module.css";
 
 type PaymentMethodChoice = "google_pay" | "card" | "boleto";
-type CheckoutStep = "address" | "delivery" | "payment";
+type CheckoutStep = "address" | "delivery" | "payment" | "review";
 
 type CheckoutFormState = {
   guestEmail: string;
@@ -495,8 +495,9 @@ function buildPayload(
 }
 
 function buildStripePaymentMethodOrder(selectedMethod: PaymentMethodChoice): string[] {
-  const base: string[] = ["card", "boleto", "google_pay", "apple_pay"];
-  const ordered = [selectedMethod, ...base];
+  const selected = selectedMethod === "boleto" ? "boleto" : "card";
+  const base: string[] = ["card", "boleto"];
+  const ordered = [selected, ...base];
   const unique: string[] = [];
   const seen = new Set<string>();
   ordered.forEach((method) => {
@@ -531,6 +532,7 @@ export function CheckoutClient() {
     address: false,
     delivery: false,
     payment: false,
+    review: false,
   });
   const [intent, setIntent] = useState<IntentSnapshot | null>(null);
   const [isCreatingIntent, setIsCreatingIntent] = useState(false);
@@ -553,6 +555,7 @@ export function CheckoutClient() {
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<PaymentMethodChoice>("card");
   const [selectedInstallments, setSelectedInstallments] = useState(1);
   const phoneNumberInputRef = useRef<HTMLInputElement | null>(null);
+  const lastAutoLookupCepRef = useRef("");
   const imageBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || "";
 
   const [touchedFields, setTouchedFields] = useState<Partial<Record<RequiredCheckoutField, boolean>>>({});
@@ -592,9 +595,9 @@ export function CheckoutClient() {
   }, [installmentPlan.installments, totalCents]);
   const visualCheckoutStep = useMemo<"delivery" | "payment" | "review">(() => {
     if (activeStep === "address" || activeStep === "delivery") return "delivery";
-    if (activeStep === "payment" && intent?.clientSecret) return "review";
+    if (activeStep === "review") return "review";
     return "payment";
-  }, [activeStep, intent?.clientSecret]);
+  }, [activeStep]);
   const stripeConfigured = stripeStatus === "ready";
   const stripeLoading = stripeStatus === "loading";
   const hasTrackedBeginCheckoutRef = useRef(false);
@@ -614,6 +617,25 @@ export function CheckoutClient() {
       return current;
     });
   }, [installmentPlan.installments]);
+
+  useEffect(() => {
+    if (selectedPaymentMethod === "card") return;
+    setSelectedInstallments(1);
+  }, [selectedPaymentMethod]);
+
+  useEffect(() => {
+    const cep = normalizePostalCode(form.postalCode);
+    if (activeStep !== "address") return;
+    if (cep.length !== 8) return;
+    if (isFindingAddress) return;
+    if (isAddressResolved && shippingQuotes.length > 0) {
+      lastAutoLookupCepRef.current = cep;
+      return;
+    }
+    if (lastAutoLookupCepRef.current === cep) return;
+    lastAutoLookupCepRef.current = cep;
+    handleFindAddress().catch(() => {});
+  }, [activeStep, form.postalCode, isAddressResolved, isFindingAddress, shippingQuotes.length]);
 
   useEffect(() => {
     if (hasTrackedBeginCheckoutRef.current) return;
@@ -1097,11 +1119,18 @@ export function CheckoutClient() {
       setErrorMessage(validationError);
       return;
     }
+    if (isLoadingShippingQuotes) {
+      setErrorMessage("Aguarde o carregamento dos fretes.");
+      return;
+    }
 
+    let nextSelectedQuote = selectedShippingQuote;
     try {
       if (shippingQuotes.length === 0) {
-        await loadShippingQuotes(form.postalCode);
+        const nextQuotes = await loadShippingQuotes(form.postalCode);
+        nextSelectedQuote = nextQuotes[0] || null;
       }
+      if (!nextSelectedQuote) throw new CheckoutValidationError("Selecione um frete para continuar.");
       await persistAddressOnAccountIfNew();
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : "NÃ£o foi possÃ­vel confirmar o EndereÃ§o.";
@@ -1111,25 +1140,8 @@ export function CheckoutClient() {
 
     setErrorMessage("");
     markStepCompleted("address", true);
-    setActiveStep("delivery");
-  }
-
-  function handleDeliveryConfirm() {
-    if (!completed.address) {
-      setActiveStep("address");
-      setErrorMessage("Confirme o EndereÃ§o primeiro.");
-      return;
-    }
-    if (isLoadingShippingQuotes) {
-      setErrorMessage("Aguarde o carregamento dos fretes.");
-      return;
-    }
-    if (!selectedShippingQuote) {
-      setErrorMessage("Selecione um frete para continuar.");
-      return;
-    }
-    setErrorMessage("");
     markStepCompleted("delivery", true);
+    markStepCompleted("review", false);
     setActiveStep("payment");
   }
 
@@ -1257,8 +1269,8 @@ export function CheckoutClient() {
       return;
     }
     if (!completed.delivery) {
-      setActiveStep("delivery");
-      setErrorMessage("Confirme o mÃ©todo de entrega antes de pagar.");
+      setActiveStep("address");
+      setErrorMessage("Selecione e confirme o frete antes de pagar.");
       return;
     }
 
@@ -1266,7 +1278,8 @@ export function CheckoutClient() {
     setHasAutoAttemptedIntent(true);
     const ok = await ensurePaymentIntent();
     if (!ok) return;
-    setActiveStep("payment");
+    markStepCompleted("review", true);
+    setActiveStep("review");
   }
 
   useEffect(() => {
@@ -1304,6 +1317,33 @@ export function CheckoutClient() {
       line3: [postalFormatted, form.country || "BRASIL"].filter(Boolean).join(" - "),
     };
   }, [form]);
+  const reviewDeliveryLine = useMemo(() => {
+    const city = String(form.city || "").trim();
+    const state = normalizeState(form.state);
+    const postal = formatPostalCode(form.postalCode);
+    return [city, state, postal].filter(Boolean).join(" · ");
+  }, [form.city, form.state, form.postalCode]);
+  const selectedInstallmentLabel = useMemo(() => {
+    return installmentOptions.find((option) => option.value === selectedInstallments)?.label || installmentOptions[0]?.label || "1x";
+  }, [installmentOptions, selectedInstallments]);
+  const reviewPaymentSummary = useMemo(() => {
+    if (selectedPaymentMethod === "card") {
+      return {
+        line1: "Cartao de credito ••••",
+        line2: selectedInstallmentLabel,
+      };
+    }
+    if (selectedPaymentMethod === "boleto") {
+      return {
+        line1: "Boleto bancario",
+        line2: "Pagamento a vista",
+      };
+    }
+    return {
+      line1: "Google Pay",
+      line2: "Pagamento a vista",
+    };
+  }, [selectedInstallmentLabel, selectedPaymentMethod]);
 
   if (gateError && !checkoutEnabled) {
     return (
@@ -1343,378 +1383,475 @@ export function CheckoutClient() {
               type="button"
               className={`${styles.checkoutStep} ${visualCheckoutStep === "review" ? styles.checkoutStepActive : ""}`}
               onClick={() => {
-                if (completed.address && completed.delivery) setActiveStep("payment");
+                if (completed.address && completed.delivery && intent?.clientSecret) setActiveStep("review");
               }}
             >
               Revisao
             </button>
           </div>
 
-          <section className={styles.stepSection}>
-            <div className={styles.stepHeader}>
-              <h2 className={styles.sectionTitle}>Endereco de entrega.</h2>
-              {activeStep !== "address" ? (
-                <button type="button" className={styles.stepActionLink} onClick={() => setActiveStep("address")}>
-                  Editar
-                </button>
-              ) : null}
-            </div>
-
-            {activeStep === "address" ? (
-              <div className={styles.addressFormWrap}>
-                <p className={styles.sectionSub}>Selecione seu endereco de entrega ou insira um novo.</p>
-                {accountAddresses.length > 0 ? (
-                  <div className={styles.savedAddressBar}>
-                    <label className={`${styles.field} ${styles.fieldFull}`}>
-                      <span>Endereco salvo</span>
-                      <select
-                        value={selectedSavedAddressId}
-                        onChange={(event) => setSelectedSavedAddressId(String(event.target.value || ""))}
-                      >
-                        {accountAddresses.map((address) => (
-                          <option key={address.id} value={address.id}>
-                            {`${String(address.label || "Endereco").trim() || "Endereco"} - ${String(address.street || "").trim()}, ${String(address.number || "").trim()} - ${String(address.city || "").trim()}`}
-                          </option>
-                        ))}
-                      </select>
-                    </label>
-                    <button type="button" className={styles.secondaryAction} onClick={handleUseSavedAddress}>
-                      Usar endereco salvo
-                    </button>
-                  </div>
+          {visualCheckoutStep === "delivery" ? (
+            <section className={styles.stepSection}>
+              <div className={styles.stepHeader}>
+                <h2 className={styles.sectionTitle}>Endereco de entrega.</h2>
+                {activeStep !== "address" ? (
+                  <button type="button" className={styles.stepActionLink} onClick={() => setActiveStep("address")}>
+                    Editar
+                  </button>
                 ) : null}
+              </div>
 
-                <div className={styles.formGrid}>
-                  <label className={styles.field}>
-                    <span>Nome *</span>
-                    <input
-                      name="firstName"
-                      type="text"
-                      value={form.firstName}
-                      onChange={handleInputChange}
-                      onBlur={handleRequiredFieldBlur}
-                      aria-invalid={Boolean(showFieldError("firstName"))}
-                    />
-                    {showFieldError("firstName") ? <small>{showFieldError("firstName")}</small> : null}
-                  </label>
-
-                  <label className={styles.field}>
-                    <span>Sobrenome *</span>
-                    <input
-                      name="lastName"
-                      type="text"
-                      value={form.lastName}
-                      onChange={handleInputChange}
-                      onBlur={handleRequiredFieldBlur}
-                      aria-invalid={Boolean(showFieldError("lastName"))}
-                    />
-                    {showFieldError("lastName") ? <small>{showFieldError("lastName")}</small> : null}
-                  </label>
-
-                  {requiresGuestEmail ? (
-                    <label className={`${styles.field} ${styles.fieldFull}`}>
-                      <span>Email *</span>
-                      <input
-                        name="guestEmail"
-                        type="email"
-                        value={form.guestEmail}
-                        onChange={handleInputChange}
-                        onBlur={handleRequiredFieldBlur}
-                        aria-invalid={Boolean(showFieldError("guestEmail"))}
-                      />
-                      {showFieldError("guestEmail") ? <small>{showFieldError("guestEmail")}</small> : null}
-                    </label>
-                  ) : null}
-
-                  <div className={`${styles.phoneInlineRow} ${styles.fieldFull}`}>
-                    <label className={`${styles.field} ${styles.phoneDddField}`}>
-                      <span>DDD *</span>
-                      <input
-                        className={styles.dddInput}
-                        name="phoneDdd"
-                        type="tel"
-                        value={form.phoneDdd}
-                        onChange={handleInputChange}
-                        onBlur={handleRequiredFieldBlur}
-                        aria-invalid={Boolean(showFieldError("phoneDdd"))}
-                      />
-                      {showFieldError("phoneDdd") ? <small>{showFieldError("phoneDdd")}</small> : null}
-                    </label>
-
-                    <label className={`${styles.field} ${styles.phoneNumberField}`}>
-                      <span>Telefone *</span>
-                      <input
-                        name="phoneNumber"
-                        type="tel"
-                        ref={phoneNumberInputRef}
-                        value={form.phoneNumber}
-                        onChange={handleInputChange}
-                        onBlur={handleRequiredFieldBlur}
-                        aria-invalid={Boolean(showFieldError("phoneNumber"))}
-                      />
-                      {showFieldError("phoneNumber") ? <small>{showFieldError("phoneNumber")}</small> : null}
-                    </label>
-                  </div>
-
-                  <label className={styles.field}>
-                    <span>CPF *</span>
-                    <input
-                      name="cpf"
-                      type="text"
-                      value={formatCpf(form.cpf)}
-                      onChange={handleInputChange}
-                      onBlur={handleRequiredFieldBlur}
-                      aria-invalid={Boolean(showFieldError("cpf"))}
-                    />
-                    {showFieldError("cpf") ? <small>{showFieldError("cpf")}</small> : null}
-                  </label>
-
-                  <label className={`${styles.field} ${styles.fieldFull}`}>
-                    <span>CEP *</span>
-                    <div className={styles.cepRow}>
-                      <input
-                        className={styles.cepInput}
-                        name="postalCode"
-                        type="text"
-                        value={formatPostalCode(form.postalCode)}
-                        onChange={handleInputChange}
-                        onBlur={handleRequiredFieldBlur}
-                        aria-invalid={Boolean(showFieldError("postalCode"))}
-                      />
-                      <button
-                        type="button"
-                        className={styles.cepButton}
-                        onClick={handleFindAddress}
-                        disabled={isFindingAddress}
-                      >
-                        {isFindingAddress ? "..." : "Buscar"}
+              {activeStep === "address" ? (
+                <div className={styles.addressFormWrap}>
+                  <p className={styles.sectionSub}>Selecione seu endereco de entrega ou insira um novo.</p>
+                  {accountAddresses.length > 0 ? (
+                    <div className={styles.savedAddressBar}>
+                      <label className={`${styles.field} ${styles.fieldFull}`}>
+                        <span>Endereco salvo</span>
+                        <select
+                          value={selectedSavedAddressId}
+                          onChange={(event) => setSelectedSavedAddressId(String(event.target.value || ""))}
+                        >
+                          {accountAddresses.map((address) => (
+                            <option key={address.id} value={address.id}>
+                              {`${String(address.label || "Endereco").trim() || "Endereco"} - ${String(address.street || "").trim()}, ${String(address.number || "").trim()} - ${String(address.city || "").trim()}`}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+                      <button type="button" className={styles.secondaryAction} onClick={handleUseSavedAddress}>
+                        Usar endereco salvo
                       </button>
                     </div>
-                    {showFieldError("postalCode") ? <small>{showFieldError("postalCode")}</small> : null}
-                  </label>
+                  ) : null}
+
+                  <div className={styles.formGrid}>
+                    <label className={styles.field}>
+                      <span>Nome *</span>
+                      <input
+                        name="firstName"
+                        type="text"
+                        value={form.firstName}
+                        onChange={handleInputChange}
+                        onBlur={handleRequiredFieldBlur}
+                        aria-invalid={Boolean(showFieldError("firstName"))}
+                      />
+                      {showFieldError("firstName") ? <small>{showFieldError("firstName")}</small> : null}
+                    </label>
+
+                    <label className={styles.field}>
+                      <span>Sobrenome *</span>
+                      <input
+                        name="lastName"
+                        type="text"
+                        value={form.lastName}
+                        onChange={handleInputChange}
+                        onBlur={handleRequiredFieldBlur}
+                        aria-invalid={Boolean(showFieldError("lastName"))}
+                      />
+                      {showFieldError("lastName") ? <small>{showFieldError("lastName")}</small> : null}
+                    </label>
+
+                    {requiresGuestEmail ? (
+                      <label className={`${styles.field} ${styles.fieldFull}`}>
+                        <span>Email *</span>
+                        <input
+                          name="guestEmail"
+                          type="email"
+                          value={form.guestEmail}
+                          onChange={handleInputChange}
+                          onBlur={handleRequiredFieldBlur}
+                          aria-invalid={Boolean(showFieldError("guestEmail"))}
+                        />
+                        {showFieldError("guestEmail") ? <small>{showFieldError("guestEmail")}</small> : null}
+                      </label>
+                    ) : null}
+
+                    <div className={`${styles.phoneInlineRow} ${styles.fieldFull}`}>
+                      <label className={`${styles.field} ${styles.phoneDddField}`}>
+                        <span>DDD *</span>
+                        <input
+                          className={styles.dddInput}
+                          name="phoneDdd"
+                          type="tel"
+                          value={form.phoneDdd}
+                          onChange={handleInputChange}
+                          onBlur={handleRequiredFieldBlur}
+                          aria-invalid={Boolean(showFieldError("phoneDdd"))}
+                        />
+                        {showFieldError("phoneDdd") ? <small>{showFieldError("phoneDdd")}</small> : null}
+                      </label>
+
+                      <label className={`${styles.field} ${styles.phoneNumberField}`}>
+                        <span>Telefone *</span>
+                        <input
+                          name="phoneNumber"
+                          type="tel"
+                          ref={phoneNumberInputRef}
+                          value={form.phoneNumber}
+                          onChange={handleInputChange}
+                          onBlur={handleRequiredFieldBlur}
+                          aria-invalid={Boolean(showFieldError("phoneNumber"))}
+                        />
+                        {showFieldError("phoneNumber") ? <small>{showFieldError("phoneNumber")}</small> : null}
+                      </label>
+                    </div>
+
+                    <label className={styles.field}>
+                      <span>CPF *</span>
+                      <input
+                        name="cpf"
+                        type="text"
+                        value={formatCpf(form.cpf)}
+                        onChange={handleInputChange}
+                        onBlur={handleRequiredFieldBlur}
+                        aria-invalid={Boolean(showFieldError("cpf"))}
+                      />
+                      {showFieldError("cpf") ? <small>{showFieldError("cpf")}</small> : null}
+                    </label>
+
+                    <label className={`${styles.field} ${styles.fieldFull}`}>
+                      <span>CEP *</span>
+                      <div className={styles.cepRow}>
+                        <input
+                          className={styles.cepInput}
+                          name="postalCode"
+                          type="text"
+                          value={formatPostalCode(form.postalCode)}
+                          onChange={handleInputChange}
+                          onBlur={handleRequiredFieldBlur}
+                          aria-invalid={Boolean(showFieldError("postalCode"))}
+                        />
+                        <button
+                          type="button"
+                          className={styles.cepButton}
+                          onClick={handleFindAddress}
+                          disabled={isFindingAddress}
+                        >
+                          {isFindingAddress ? "..." : "Buscar"}
+                        </button>
+                      </div>
+                      {showFieldError("postalCode") ? <small>{showFieldError("postalCode")}</small> : null}
+                    </label>
+
+                    {isAddressResolved ? (
+                      <>
+                        <label className={`${styles.field} ${styles.fieldFull}`}>
+                          <span>Rua *</span>
+                          <input
+                            name="line1"
+                            type="text"
+                            value={form.line1}
+                            onChange={handleInputChange}
+                            onBlur={handleRequiredFieldBlur}
+                            aria-invalid={Boolean(showFieldError("line1"))}
+                          />
+                          {showFieldError("line1") ? <small>{showFieldError("line1")}</small> : null}
+                        </label>
+
+                        <label className={styles.field}>
+                          <span>Bairro *</span>
+                          <input
+                            name="district"
+                            type="text"
+                            value={form.district}
+                            onChange={handleInputChange}
+                            onBlur={handleRequiredFieldBlur}
+                            aria-invalid={Boolean(showFieldError("district"))}
+                          />
+                          {showFieldError("district") ? <small>{showFieldError("district")}</small> : null}
+                        </label>
+
+                        <label className={styles.field}>
+                          <span>Cidade *</span>
+                          <input
+                            name="city"
+                            type="text"
+                            value={form.city}
+                            onChange={handleInputChange}
+                            onBlur={handleRequiredFieldBlur}
+                            aria-invalid={Boolean(showFieldError("city"))}
+                          />
+                          {showFieldError("city") ? <small>{showFieldError("city")}</small> : null}
+                        </label>
+
+                        <label className={styles.field}>
+                          <span>UF *</span>
+                          <input
+                            name="state"
+                            type="text"
+                            value={form.state}
+                            onChange={handleInputChange}
+                            onBlur={handleRequiredFieldBlur}
+                            aria-invalid={Boolean(showFieldError("state"))}
+                          />
+                          {showFieldError("state") ? <small>{showFieldError("state")}</small> : null}
+                        </label>
+
+                        <label className={styles.field}>
+                          <span>Numero *</span>
+                          <input
+                            name="number"
+                            type="text"
+                            value={form.number}
+                            onChange={handleInputChange}
+                            onBlur={handleRequiredFieldBlur}
+                            aria-invalid={Boolean(showFieldError("number"))}
+                          />
+                          {showFieldError("number") ? <small>{showFieldError("number")}</small> : null}
+                        </label>
+
+                        <label className={styles.field}>
+                          <span>Complemento</span>
+                          <input name="line2" type="text" value={form.line2} onChange={handleInputChange} />
+                        </label>
+                      </>
+                    ) : null}
+                  </div>
 
                   {isAddressResolved ? (
+                    <div className={styles.deliveryInlineSection}>
+                      <p className={styles.deliveryInlineTitle}>Opcoes de entrega</p>
+                      {isLoadingShippingQuotes ? <p className={styles.deliveryLoading}>Buscando opcoes de frete...</p> : null}
+                      {!isLoadingShippingQuotes && shippingQuotes.length === 0 ? (
+                        <p className={styles.stepHint}>Nenhum frete disponivel para este CEP.</p>
+                      ) : null}
+                      {shippingQuotes.map((quote) => {
+                        const isSelected = quote.id === (selectedShippingQuote?.id || "");
+                        const recommendation = shippingRecommendationLabel(shippingRecommendationById[quote.id]);
+                        const companyTag = shippingRecommendationById[quote.id];
+                        const isFreeCompanyOption = isCompanyPaidShipping && companyTag === "free";
+                        const optionTitle =
+                          isCompanyPaidShipping && (companyTag === "free" || companyTag === "today")
+                            ? recommendation
+                            : quote.serviceName || "Entrega";
+                        return (
+                          <button
+                            key={quote.id}
+                            type="button"
+                            className={`${styles.deliveryCard} ${isSelected ? styles.deliveryCardSelected : ""}`}
+                            onClick={() => setSelectedShippingQuoteId(quote.id)}
+                          >
+                            <div>
+                              {!isCompanyPaidShipping && recommendation ? <p className={styles.deliveryBadge}>{recommendation}</p> : null}
+                              <p className={styles.deliveryTitle}>{optionTitle}</p>
+                              <p className={styles.deliveryDate}>{formatShippingEstimate(quote)}</p>
+                              <p className={styles.deliveryMeta}>{quote.carrierName || quote.provider}</p>
+                            </div>
+                            {isFreeCompanyOption ? null : (
+                              <Price amountCents={Math.max(0, Number(quote.priceCents || 0))} currency={currency} />
+                            )}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  ) : null}
+
+                  <div className={styles.stepFooterAction}>
+                    <button
+                      type="button"
+                      className={styles.primaryAction}
+                      onClick={handleAddressConfirm}
+                      disabled={isSavingAddress || isLoadingShippingQuotes}
+                    >
+                      {isSavingAddress ? "Salvando endereco..." : "Continuar para pagamento"}
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div className={styles.summaryContent}>
+                  <p>{addressDisplay.name}</p>
+                  <p>{addressDisplay.line1}</p>
+                  <p>{addressDisplay.line2}</p>
+                  <p>{addressDisplay.line3}</p>
+                </div>
+              )}
+            </section>
+          ) : null}
+
+          {visualCheckoutStep === "payment" ? (
+            <section className={styles.stepSection}>
+              <div className={styles.stepHeader}>
+                <h2 className={styles.sectionTitle}>Pagamento.</h2>
+                {activeStep !== "payment" ? (
+                  <button type="button" className={styles.stepActionLink} onClick={() => setActiveStep("payment")}>
+                    Editar
+                  </button>
+                ) : null}
+              </div>
+
+              {activeStep === "payment" ? (
+                <div className={styles.paymentWrap}>
+                  <p className={styles.sectionSub}>Seus dados sao protegidos com criptografia.</p>
+
+                  <div className={styles.paymentOptions}>
+                    <button
+                      type="button"
+                      className={`${styles.paymentOption} ${selectedPaymentMethod === "card" ? styles.paymentOptionSelected : ""}`}
+                      onClick={() => setSelectedPaymentMethod("card")}
+                    >
+                      <span className={styles.paymentOptionContent}>
+                        <span className={styles.paymentOptionIcon} aria-hidden style={{ width: 22, height: 22 }}>
+                          <svg viewBox="0 0 24 24" width="20" height="20" style={{ display: "block" }}>
+                            <rect
+                              x="3.5"
+                              y="5.5"
+                              width="17"
+                              height="13"
+                              rx="1.8"
+                              fill="none"
+                              stroke="#4f93bf"
+                              strokeWidth="1.4"
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                            />
+                            <line x1="3.5" y1="10" x2="20.5" y2="10" stroke="#4f93bf" strokeWidth="1.4" strokeLinecap="round" />
+                            <rect
+                              x="6.4"
+                              y="13"
+                              width="4.2"
+                              height="2.4"
+                              rx="0.4"
+                              fill="none"
+                              stroke="#4f93bf"
+                              strokeWidth="1.3"
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                            />
+                          </svg>
+                        </span>
+                        <span className={styles.paymentOptionLabel}>Cartao</span>
+                      </span>
+                    </button>
+                    <button
+                      type="button"
+                      className={`${styles.paymentOption} ${selectedPaymentMethod === "boleto" ? styles.paymentOptionSelected : ""}`}
+                      onClick={() => setSelectedPaymentMethod("boleto")}
+                    >
+                      <span className={styles.paymentOptionContent}>
+                        <span className={styles.paymentOptionIcon} aria-hidden style={{ width: 22, height: 22 }}>
+                          <svg viewBox="0 0 24 24" width="20" height="20" style={{ display: "block" }}>
+                            <rect
+                              x="6.5"
+                              y="4.5"
+                              width="11"
+                              height="15"
+                              rx="1.6"
+                              fill="none"
+                              stroke="#9e9890"
+                              strokeWidth="1.3"
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                            />
+                            <line x1="9.2" y1="8" x2="9.2" y2="16" stroke="#9e9890" strokeWidth="1.2" strokeLinecap="round" />
+                            <line x1="11.3" y1="8" x2="11.3" y2="16" stroke="#9e9890" strokeWidth="1.2" strokeLinecap="round" />
+                            <line x1="13.4" y1="8" x2="13.4" y2="16" stroke="#9e9890" strokeWidth="1.2" strokeLinecap="round" />
+                            <line x1="15.5" y1="8" x2="15.5" y2="16" stroke="#9e9890" strokeWidth="1.2" strokeLinecap="round" />
+                          </svg>
+                        </span>
+                        <span className={styles.paymentOptionLabel}>Boleto</span>
+                      </span>
+                    </button>
+                    <button
+                      type="button"
+                      className={`${styles.paymentOption} ${selectedPaymentMethod === "google_pay" ? styles.paymentOptionSelected : ""}`}
+                      onClick={() => setSelectedPaymentMethod("google_pay")}
+                    >
+                      <span className={styles.paymentOptionContent}>
+                        <span className={styles.paymentOptionIcon} aria-hidden style={{ width: 22, height: 22 }}>
+                          <svg viewBox="0 0 18 18" width="18" height="18" style={{ display: "block" }}>
+                            <path
+                              style={{ fill: "#4285F4" }}
+                              d="M17.64 9.2045c0-.638-.0573-1.2518-.1636-1.8409H9v3.4818h4.8436c-.2086 1.125-.8427 2.0782-1.7959 2.7164v2.2582h2.9086c1.7023-1.5668 2.6837-3.8741 2.6837-6.6155z"
+                            />
+                            <path
+                              style={{ fill: "#34A853" }}
+                              d="M9 18c2.43 0 4.4673-.8068 5.9564-2.18l-2.9086-2.2582c-.8068.54-1.8409.8591-3.0477.8591-2.3432 0-4.3282-1.5818-5.0364-3.7091H.9573v2.3318C2.4382 15.9832 5.4818 18 9 18z"
+                            />
+                            <path
+                              style={{ fill: "#FBBC05" }}
+                              d="M3.9636 10.7118c-.18-.54-.2836-1.1168-.2836-1.7118s.1036-1.1718.2836-1.7118V4.9564H.9573C.3477 6.1718 0 7.5491 0 9s.3477 2.8282.9573 4.0436l3.0063-2.3318z"
+                            />
+                            <path
+                              style={{ fill: "#EA4335" }}
+                              d="M9 3.5795c1.3214 0 2.5077.4541 3.4405 1.345l2.5814-2.5814C13.4632.8918 11.4264 0 9 0 5.4818 0 2.4382 2.0168.9573 4.9564l3.0063 2.3318C4.6718 5.1618 6.6568 3.5795 9 3.5795z"
+                            />
+                          </svg>
+                        </span>
+                        <span className={styles.paymentOptionLabel}>Google Pay</span>
+                      </span>
+                    </button>
+                  </div>
+
+                  {selectedPaymentMethod === "card" ? (
+                    <div className={styles.cardFieldsPreview}>
+                      <label className={`${styles.field} ${styles.fieldFull}`}>
+                        <span>Numero do cartao</span>
+                        <input type="text" value="" placeholder="0000 0000 0000 0000" readOnly tabIndex={-1} />
+                      </label>
+
+                      <label className={`${styles.field} ${styles.fieldFull}`}>
+                        <span>Nome no cartao</span>
+                        <input type="text" value="" placeholder="Como aparece no cartao" readOnly tabIndex={-1} />
+                      </label>
+
+                      <label className={styles.field}>
+                        <span>Validade</span>
+                        <input type="text" value="" placeholder="MM / AA" readOnly tabIndex={-1} />
+                      </label>
+
+                      <label className={styles.field}>
+                        <span>CVV</span>
+                        <input type="text" value="" placeholder="..." readOnly tabIndex={-1} />
+                      </label>
+                    </div>
+                  ) : null}
+                  {selectedPaymentMethod === "card" ? (
                     <>
                       <label className={`${styles.field} ${styles.fieldFull}`}>
-                        <span>Rua *</span>
-                        <input
-                          name="line1"
-                          type="text"
-                          value={form.line1}
-                          onChange={handleInputChange}
-                          onBlur={handleRequiredFieldBlur}
-                          aria-invalid={Boolean(showFieldError("line1"))}
-                        />
-                        {showFieldError("line1") ? <small>{showFieldError("line1")}</small> : null}
+                        <span>Parcelas</span>
+                        <select
+                          value={selectedInstallments}
+                          onChange={(event) => setSelectedInstallments(Math.max(1, Number(event.target.value || 1)))}
+                        >
+                          {installmentOptions.map((option) => (
+                            <option key={option.value} value={option.value}>
+                              {option.label}
+                            </option>
+                          ))}
+                        </select>
                       </label>
 
-                      <label className={styles.field}>
-                        <span>Bairro *</span>
-                        <input
-                          name="district"
-                          type="text"
-                          value={form.district}
-                          onChange={handleInputChange}
-                          onBlur={handleRequiredFieldBlur}
-                          aria-invalid={Boolean(showFieldError("district"))}
-                        />
-                        {showFieldError("district") ? <small>{showFieldError("district")}</small> : null}
-                      </label>
-
-                      <label className={styles.field}>
-                        <span>Cidade *</span>
-                        <input
-                          name="city"
-                          type="text"
-                          value={form.city}
-                          onChange={handleInputChange}
-                          onBlur={handleRequiredFieldBlur}
-                          aria-invalid={Boolean(showFieldError("city"))}
-                        />
-                        {showFieldError("city") ? <small>{showFieldError("city")}</small> : null}
-                      </label>
-
-                      <label className={styles.field}>
-                        <span>UF *</span>
-                        <input
-                          name="state"
-                          type="text"
-                          value={form.state}
-                          onChange={handleInputChange}
-                          onBlur={handleRequiredFieldBlur}
-                          aria-invalid={Boolean(showFieldError("state"))}
-                        />
-                        {showFieldError("state") ? <small>{showFieldError("state")}</small> : null}
-                      </label>
-
-                      <label className={styles.field}>
-                        <span>Numero *</span>
-                        <input
-                          name="number"
-                          type="text"
-                          value={form.number}
-                          onChange={handleInputChange}
-                          onBlur={handleRequiredFieldBlur}
-                          aria-invalid={Boolean(showFieldError("number"))}
-                        />
-                        {showFieldError("number") ? <small>{showFieldError("number")}</small> : null}
-                      </label>
-
-                      <label className={styles.field}>
-                        <span>Complemento</span>
-                        <input name="line2" type="text" value={form.line2} onChange={handleInputChange} />
-                      </label>
+                      <p className={styles.installmentNote}>
+                        {installmentPlan.rule
+                          ? `Para o total atual, voce pode pagar em ate ${installmentPlan.installments}x sem juros. `
+                          : "Parcelamento sem juros disponivel a partir de R$ 500. "}
+                        O numero maximo de parcelas varia conforme o valor total do pedido.
+                      </p>
                     </>
-                  ) : null}
-                </div>
-
-                <div className={styles.stepFooterAction}>
-                  <button type="button" className={styles.primaryAction} onClick={handleAddressConfirm} disabled={isSavingAddress}>
-                    {isSavingAddress ? "Salvando endereco..." : "Confirmar endereco de entrega"}
-                  </button>
-                </div>
-              </div>
-            ) : (
-              <div className={styles.summaryContent}>
-                <p>{addressDisplay.name}</p>
-                <p>{addressDisplay.line1}</p>
-                <p>{addressDisplay.line2}</p>
-                <p>{addressDisplay.line3}</p>
-              </div>
-            )}
-          </section>
-
-          <section className={styles.stepSection}>
-            <div className={styles.stepHeader}>
-              <h2 className={styles.sectionTitle}>Entrega.</h2>
-              {activeStep !== "delivery" ? (
-                <button type="button" className={styles.stepActionLink} onClick={() => setActiveStep("delivery")}>
-                  Editar
-                </button>
-              ) : completed.delivery ? (
-                <button type="button" className={styles.stepActionLink} onClick={() => setActiveStep("payment")}>
-                  Cancelar
-                </button>
-              ) : null}
-            </div>
-
-            {activeStep === "delivery" ? (
-              <div className={styles.deliveryWrap}>
-                <p className={styles.sectionSub}>Escolha o metodo de envio.</p>
-                {isLoadingShippingQuotes ? <p className={styles.deliveryLoading}>Buscando opcoes de frete...</p> : null}
-                {shippingQuotes.map((quote) => {
-                  const isSelected = quote.id === (selectedShippingQuote?.id || "");
-                  const recommendation = shippingRecommendationLabel(shippingRecommendationById[quote.id]);
-                  const companyTag = shippingRecommendationById[quote.id];
-                  const isFreeCompanyOption = isCompanyPaidShipping && companyTag === "free";
-                  const optionTitle =
-                    isCompanyPaidShipping && (companyTag === "free" || companyTag === "today")
-                      ? recommendation
-                      : quote.serviceName || "Entrega";
-                  return (
-                    <button
-                      key={quote.id}
-                      type="button"
-                      className={`${styles.deliveryCard} ${isSelected ? styles.deliveryCardSelected : ""}`}
-                      onClick={() => setSelectedShippingQuoteId(quote.id)}
-                    >
-                      <div>
-                        {!isCompanyPaidShipping && recommendation ? <p className={styles.deliveryBadge}>{recommendation}</p> : null}
-                        <p className={styles.deliveryTitle}>{optionTitle}</p>
-                        <p className={styles.deliveryDate}>{formatShippingEstimate(quote)}</p>
-                        <p className={styles.deliveryMeta}>{quote.carrierName || quote.provider}</p>
-                      </div>
-                      {isFreeCompanyOption ? null : (
-                        <Price amountCents={Math.max(0, Number(quote.priceCents || 0))} currency={currency} />
+                  ) : (
+                    <div className={styles.paymentMethodInfo}>
+                      {selectedPaymentMethod === "boleto" ? (
+                        <>
+                          <p className={styles.paymentMethodInfoTitle}>Boleto bancario</p>
+                          <p className={styles.paymentMethodInfoText}>
+                            Pagamento a vista. O boleto e gerado apos clicar em Revisar pedido, com vencimento de 1 dia util.
+                          </p>
+                        </>
+                      ) : (
+                        <>
+                          <p className={styles.paymentMethodInfoTitle}>Google Pay</p>
+                          <p className={styles.paymentMethodInfoText}>
+                            Pagamento a vista pela carteira Google em dispositivos compativeis. A confirmacao ocorre na etapa final.
+                          </p>
+                        </>
                       )}
-                    </button>
-                  );
-                })}
-                <div className={styles.stepFooterAction}>
-                  <button
-                    type="button"
-                    className={styles.primaryAction}
-                    onClick={handleDeliveryConfirm}
-                    disabled={isLoadingShippingQuotes || !selectedShippingQuote}
-                  >
-                    Confirmar metodo de entrega
-                  </button>
-                </div>
-              </div>
-            ) : (
-              <div className={styles.summaryContent}>
-                <p>
-                  {selectedShippingQuote?.serviceName || "Entrega"}{" "}
-                  {selectedCompanyPaidByStore ? "(Frete por conta da empresa)" : <> (Total <Price amountCents={shippingCents} currency={currency} />)</>}
-                </p>
-                <p>{formatShippingEstimate(selectedShippingQuote)}</p>
-              </div>
-            )}
-          </section>
+                    </div>
+                  )}
 
-          <section className={styles.stepSection}>
-            <div className={styles.stepHeader}>
-              <h2 className={styles.sectionTitle}>Pagamento.</h2>
-              {activeStep !== "payment" ? (
-                <button type="button" className={styles.stepActionLink} onClick={() => setActiveStep("payment")}>
-                  Editar
-                </button>
-              ) : null}
-            </div>
+                  {stripeLoading ? <p className={styles.stepHint}>Carregando metodos de pagamento...</p> : null}
+                  {!stripeLoading && !stripeConfigured ? <p className={styles.stepHint}>Pagamento indisponivel no momento.</p> : null}
 
-            {activeStep === "payment" ? (
-              <div className={styles.paymentWrap}>
-                <p className={styles.sectionSub}>Seus dados sao protegidos com criptografia.</p>
-
-                <div className={styles.paymentOptions}>
-                  <button
-                    type="button"
-                    className={`${styles.paymentOption} ${selectedPaymentMethod === "card" ? styles.paymentOptionSelected : ""}`}
-                    onClick={() => setSelectedPaymentMethod("card")}
-                  >
-                    <span className={styles.paymentOptionLabel}>Cartao</span>
-                  </button>
-                  <button
-                    type="button"
-                    className={`${styles.paymentOption} ${selectedPaymentMethod === "boleto" ? styles.paymentOptionSelected : ""}`}
-                    onClick={() => setSelectedPaymentMethod("boleto")}
-                  >
-                    <span className={styles.paymentOptionLabel}>Boleto</span>
-                  </button>
-                  <button
-                    type="button"
-                    className={`${styles.paymentOption} ${selectedPaymentMethod === "google_pay" ? styles.paymentOptionSelected : ""}`}
-                    onClick={() => setSelectedPaymentMethod("google_pay")}
-                  >
-                    <span className={styles.paymentOptionLabel}>Google Pay</span>
-                  </button>
-                </div>
-
-                <label className={`${styles.field} ${styles.fieldFull}`}>
-                  <span>Parcelas</span>
-                  <select
-                    value={selectedInstallments}
-                    onChange={(event) => setSelectedInstallments(Math.max(1, Number(event.target.value || 1)))}
-                  >
-                    {installmentOptions.map((option) => (
-                      <option key={option.value} value={option.value}>
-                        {option.label}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-
-                <p className={styles.installmentNote}>
-                  {installmentPlan.rule
-                    ? `Para o total atual, voce pode pagar em ate ${installmentPlan.installments}x sem juros. `
-                    : "Parcelamento sem juros disponivel a partir de R$ 500. "}
-                  O numero maximo de parcelas varia conforme o valor total do pedido.
-                </p>
-
-                {stripeLoading ? <p className={styles.stepHint}>Carregando metodos de pagamento...</p> : null}
-                {!stripeLoading && !stripeConfigured ? <p className={styles.stepHint}>Pagamento indisponivel no momento.</p> : null}
-
-                {!intent?.clientSecret ? (
                   <button
                     type="button"
                     className={styles.primaryAction}
@@ -1723,39 +1860,94 @@ export function CheckoutClient() {
                   >
                     {isCreatingIntent ? "Preparando pagamento..." : "Revisar pedido"}
                   </button>
-                ) : null}
+                </div>
+              ) : (
+                <div className={styles.summaryContent}>
+                  <p>Pagamento</p>
+                </div>
+              )}
+            </section>
+          ) : null}
 
-                {intent?.clientSecret && stripePromise ? (
-                  <div id="checkout-secure-payment" className={styles.securePaymentBox}>
-                    <h3>Revisao.</h3>
-                    <p>Finalize seu pagamento.</p>
-                    <Elements stripe={stripePromise} options={elementsOptions}>
-                      <CheckoutPaymentForm
-                        orderId={intent.orderId}
-                        customerEmail={intent.customerEmail || checkoutEmail}
-                        paymentMethodOrder={stripePaymentMethodOrder}
-                        submitLabel="Confirmar pedido"
-                      />
-                    </Elements>
-                  </div>
-                ) : null}
+          {visualCheckoutStep === "review" ? (
+            <section className={styles.stepSection}>
+              <h2 className={styles.sectionTitle}>Revisao.</h2>
+              <p className={styles.sectionSub}>Confirme os dados antes de finalizar.</p>
 
-                <p className={styles.termsText}>
-                  Ao confirmar, voce concorda com os <a href="/aviso-legal">Termos e condicoes</a> e com a{" "}
-                  <a href="/politica-privacidade">Politica de Privacidade</a>.
-                </p>
-              </div>
-            ) : (
-              <div className={styles.summaryContent}>
-                <p>Pagamento</p>
-              </div>
-            )}
-          </section>
+              <article className={styles.reviewCard}>
+                <div className={styles.reviewCardHeader}>
+                  <p className={styles.reviewEyebrow}>ENTREGA</p>
+                  <button
+                    type="button"
+                    className={styles.reviewEditLink}
+                    onClick={() => {
+                      markStepCompleted("review", false);
+                      setActiveStep("address");
+                    }}
+                  >
+                    Editar
+                  </button>
+                </div>
+                <div className={styles.reviewCardBody}>
+                  <p>{addressDisplay.name}</p>
+                  <p>{addressDisplay.line1}</p>
+                  <p>{reviewDeliveryLine}</p>
+                </div>
+              </article>
+
+              <article className={`${styles.reviewCard} ${styles.reviewPaymentCard}`}>
+                <div className={styles.reviewCardHeader}>
+                  <p className={styles.reviewEyebrow}>PAGAMENTO</p>
+                  <button
+                    type="button"
+                    className={styles.reviewEditLink}
+                    onClick={() => {
+                      markStepCompleted("review", false);
+                      setActiveStep("payment");
+                    }}
+                  >
+                    Editar
+                  </button>
+                </div>
+                <div className={styles.reviewCardBody}>
+                  <p>{reviewPaymentSummary.line1}</p>
+                  <p>{reviewPaymentSummary.line2}</p>
+                </div>
+              </article>
+
+              {intent?.clientSecret && stripePromise ? (
+                <div id="checkout-secure-payment" className={styles.securePaymentBox}>
+                  <Elements stripe={stripePromise} options={elementsOptions}>
+                    <CheckoutPaymentForm
+                      orderId={intent.orderId}
+                      customerEmail={intent.customerEmail || checkoutEmail}
+                      paymentMethodOrder={stripePaymentMethodOrder}
+                      submitLabel="Confirmar pedido"
+                    />
+                  </Elements>
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  className={`${styles.primaryAction} ${styles.reviewFallbackButton}`}
+                  onClick={handlePaymentConfirm}
+                  disabled={isCreatingIntent || stripeLoading || !stripeConfigured}
+                >
+                  {isCreatingIntent ? "Preparando pagamento..." : "Confirmar pedido"}
+                </button>
+              )}
+
+              <p className={styles.termsText}>
+                Ao confirmar, voce concorda com os <a href="/aviso-legal">Termos e condicoes</a> e com a{" "}
+                <a href="/politica-privacidade">Politica de Privacidade</a>.
+              </p>
+            </section>
+          ) : null}
         </div>
 
         <aside className={styles.rightColumn}>
           <div className={styles.summaryPanel}>
-            <p className={styles.summaryEyebrow}>RESUMO</p>
+            <p className={styles.summaryEyebrow}>SEU PEDIDO</p>
             <div className={styles.summaryItems}>
               {items.map((item) => (
                 <article key={item.key} className={styles.summaryItem}>

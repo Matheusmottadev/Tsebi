@@ -317,6 +317,23 @@
   gap: 10px;
 }
 
+.deliveryInlineSection {
+  margin: 0 0 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.deliveryInlineTitle {
+  margin: 0 0 2px;
+  font-family: "Jost", sans-serif;
+  font-size: 9px;
+  font-weight: 200;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  color: #9e9890;
+}
+
 .deliveryLoading {
   margin: 0;
   font-family: "Jost", sans-serif;
@@ -397,7 +414,7 @@
   border: 1px solid #e8e6e2;
   background: #fff;
   border-radius: 0;
-  padding: 18px;
+  padding: 16px 18px 15px;
   cursor: pointer;
 }
 
@@ -420,6 +437,56 @@
   text-transform: uppercase;
 }
 
+.paymentOptionContent {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.paymentOptionIcon {
+  display: block;
+  width: 22px;
+  height: 22px;
+}
+
+.paymentIconSvg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.paymentIconSvgCard {
+  fill: none;
+  stroke: #4f93bf;
+  stroke-width: 1.4;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.paymentIconSvgBoleto {
+  fill: none;
+  stroke: #9e9890;
+  stroke-width: 1.3;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.paymentIconSvgGoogle {
+  width: 18px;
+  height: 18px;
+}
+
+.cardFieldsPreview {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0 28px;
+}
+
+.cardFieldsPreview input {
+  pointer-events: none;
+}
+
 .installmentNote {
   margin: 2px 0 24px;
   padding: 16px 0;
@@ -433,12 +500,100 @@
   line-height: 1.65;
 }
 
+.paymentMethodInfo {
+  margin: 2px 0 24px;
+  padding: 16px 0;
+  border-top: 1px solid #e8e6e2;
+  border-bottom: 1px solid #e8e6e2;
+}
+
+.paymentMethodInfoTitle {
+  margin: 0 0 8px;
+  font-family: "Jost", sans-serif;
+  font-size: 9px;
+  font-weight: 200;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  color: #9e9890;
+}
+
+.paymentMethodInfoText {
+  margin: 0;
+  color: #9e9890;
+  font-family: "Jost", sans-serif;
+  font-size: 10px;
+  font-weight: 200;
+  letter-spacing: 0.04em;
+  line-height: 1.65;
+}
+
 .stepHint {
   margin: 10px 0 0;
   font-family: "Jost", sans-serif;
   font-size: 11px;
   font-weight: 300;
   color: #9e9890;
+}
+
+.reviewCard {
+  border: 1px solid #e8e6e2;
+  padding: 24px 28px;
+  margin-bottom: 16px;
+}
+
+.reviewPaymentCard {
+  margin-bottom: 32px;
+}
+
+.reviewCardHeader {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.reviewEyebrow {
+  margin: 0;
+  font-family: "Jost", sans-serif;
+  font-size: 9px;
+  font-weight: 200;
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+  color: #9e9890;
+}
+
+.reviewEditLink {
+  border: 0;
+  background: transparent;
+  padding: 0;
+  cursor: pointer;
+  color: #c8c4bc;
+  font-family: "Jost", sans-serif;
+  font-size: 9px;
+  font-weight: 200;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.reviewEditLink:hover {
+  color: #111;
+}
+
+.reviewCardBody {
+  color: #111;
+  font-family: "Jost", sans-serif;
+  font-size: 12px;
+  font-weight: 300;
+  line-height: 1.7;
+}
+
+.reviewCardBody p {
+  margin: 0;
+}
+
+.reviewFallbackButton {
+  width: 100%;
 }
 
 .securePaymentBox {
@@ -732,6 +887,15 @@
 
   .paymentOptions {
     grid-template-columns: 1fr;
+  }
+
+  .cardFieldsPreview {
+    grid-template-columns: 1fr;
+    gap: 0;
+  }
+
+  .reviewCard {
+    padding: 20px;
   }
 
   .checkoutSteps {

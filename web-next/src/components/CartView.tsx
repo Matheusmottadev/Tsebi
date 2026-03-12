@@ -13,9 +13,12 @@ import styles from "./CartView.module.css";
 function getVariantLabel(item: { variant: { variantName: string | null; color: string | null; size: string | null } }) {
   if (item.variant.variantName) return item.variant.variantName;
 
-  const parts = [item.variant.color, item.variant.size].filter(Boolean);
-  if (parts.length === 0) return null;
-  return parts.join(" / ");
+  const color = String(item.variant.color || "").trim();
+  const size = String(item.variant.size || "").trim();
+  if (color && size) return `${color} · Tamanho ${size}`;
+  if (color) return color;
+  if (size) return `Tamanho ${size}`;
+  return null;
 }
 
 export function CartView() {
@@ -27,9 +30,9 @@ export function CartView() {
   const lastError = useCartStore(cartSelectors.lastError);
   const setQty = useCartStore((state) => state.setQty);
   const removeItem = useCartStore((state) => state.removeItem);
-  const clear = useCartStore((state) => state.clear);
   const clearError = useCartStore((state) => state.clearError);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [accountName, setAccountName] = useState("");
   const [couponCode, setCouponCode] = useState("");
 
   const imageBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || "";
@@ -42,9 +45,11 @@ export function CartView() {
         const user = await getMe({ cache: "no-store" });
         if (!isMounted) return;
         setIsAuthenticated(Boolean(user));
+        setAccountName(String(user?.name || "").trim() || String(user?.email || "").trim());
       } catch {
         if (!isMounted) return;
         setIsAuthenticated(false);
+        setAccountName("");
       }
     }
 
@@ -66,7 +71,7 @@ export function CartView() {
     return (
       <section className={styles.empty}>
         <h2>Seu carrinho esta vazio</h2>
-        <p>Adicione produtos para preparar sua finalizacao de compra.</p>
+        <p>Adicione produtos para preparar sua finalizacao da compra.</p>
       </section>
     );
   }
@@ -85,7 +90,7 @@ export function CartView() {
       <div className={styles.itemsColumn}>
         <header className={styles.pageHeader}>
           <p className={styles.eyebrow}>SACOLA</p>
-          <h1 className={styles.pageTitle}>Sua selecao.</h1>
+          <h1 className={styles.pageTitle}>Sua seleção.</h1>
         </header>
 
         <div className={styles.items}>
@@ -170,7 +175,7 @@ export function CartView() {
 
         <div className={styles.coupon}>
           <label className={styles.couponLabel} htmlFor="cart-coupon">
-            Codigo exclusivo
+            Código exclusivo
           </label>
           <div className={styles.couponRow}>
             <input
@@ -180,7 +185,7 @@ export function CartView() {
               type="text"
               value={couponCode}
               onChange={(event) => setCouponCode(event.target.value)}
-              placeholder="Insira seu codigo"
+              placeholder="Insira seu código"
             />
             <button type="button" className={styles.couponButton}>
               Aplicar
@@ -198,23 +203,22 @@ export function CartView() {
           </button>
         )}
 
-        {!isAuthenticated ? (
+        {isAuthenticated ? (
+          <p className={styles.loggedHint}>Logado como {accountName || "Cliente TSEBI"}</p>
+        ) : (
           <p className={styles.loginHint}>
             Tem uma conta?{" "}
             <Link href="/login?returnUrl=%2Fcheckout" className={styles.loginLink}>
               Entrar para finalizar
             </Link>
           </p>
-        ) : null}
+        )}
 
         <div className={styles.summaryActions}>
           <ContinueShoppingLink className={styles.secondaryAction} />
-          <button type="button" className={styles.secondaryAction} onClick={clear}>
-            Limpar sacola
-          </button>
         </div>
 
-        <p className={styles.summaryNote}>Parcelamento em ate 10x sem juros acima de R$ 5.000.</p>
+        <p className={styles.summaryNote}>Parcelamento em até 10x sem juros acima de R$ 5.000.</p>
       </aside>
     </section>
   );
