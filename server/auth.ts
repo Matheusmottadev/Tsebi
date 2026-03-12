@@ -33,6 +33,7 @@ const { unprotectJsonFromStorage } = require("./lib/data-protection") as {
 const { listOrdersByUserId, updateOrder } = require("./lib/order-repository");
 const { commitStock } = require("./lib/inventory-repository");
 const { requireAuth } = require("./middlewares/requireAuth");
+const { userCsrfCookieName } = require("./middlewares/userCsrf");
 const { issueAuthEmailCode, consumeAuthEmailCode } = require("./lib/auth-email-code-repository");
 const {
   sendAccountVerificationEmail,
@@ -1319,11 +1320,18 @@ authRouter.post("/activate", authRateLimit, async (req: any, res: any) => {
 authRouter.post("/logout", (req: any, res: any) => {
   const sessionCookieName = String(process.env.SESSION_COOKIE_NAME || "tsebi.sid");
   const isProduction = String(process.env.NODE_ENV || "").trim().toLowerCase() === "production";
+  const csrfCookieName = String(userCsrfCookieName || process.env.USER_CSRF_COOKIE_NAME || "tsebi.csrf").trim() || "tsebi.csrf";
 
-  const clearSessionCookie = () => {
+  const clearSessionCookies = () => {
     res.clearCookie(sessionCookieName, {
       httpOnly: true,
       sameSite: "lax",
+      secure: isProduction,
+      path: "/"
+    });
+    res.clearCookie(csrfCookieName, {
+      httpOnly: false,
+      sameSite: "strict",
       secure: isProduction,
       path: "/"
     });
@@ -1332,17 +1340,18 @@ authRouter.post("/logout", (req: any, res: any) => {
   res.setHeader("Cache-Control", "no-store");
 
   if (!req.session) {
-    clearSessionCookie();
+    clearSessionCookies();
     return res.json({ ok: true });
   }
 
   delete req.session.userId;
+  delete req.session.userCsrfToken;
   delete req.session.passkeyAuthentication;
   delete req.session.passkeyRegistration;
   delete req.session.adminAuth;
 
   return req.session.destroy(() => {
-    clearSessionCookie();
+    clearSessionCookies();
     return res.json({ ok: true });
   });
 });

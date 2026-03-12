@@ -108,6 +108,7 @@ function isPublicAuthMutationPath(req: Request): boolean {
   if (!path) return false;
 
   const allowlist = new Set([
+    "/logout",
     "/register",
     "/register-lite",
     "/login",
