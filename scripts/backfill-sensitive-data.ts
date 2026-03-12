@@ -7,11 +7,13 @@ const { query } = require("../server/lib/db") as {
   ) => Promise<{ rows: TRow[]; rowCount: number }>;
 };
 const {
+  isEncryptedString,
   encryptSensitiveString,
   decryptSensitiveString,
   protectJsonForStorage,
   unprotectJsonFromStorage
 } = require("../server/lib/data-protection") as {
+  isEncryptedString: (value: unknown) => boolean;
   encryptSensitiveString: (value: unknown) => string;
   decryptSensitiveString: (value: unknown) => string;
   protectJsonForStorage: (value: unknown) => unknown;
@@ -37,7 +39,18 @@ function normalizeCep(value: unknown): string {
 }
 
 function protectNullableText(value: unknown, normalize: (value: unknown) => string): string | null {
-  const plain = normalize(decryptSensitiveString(value));
+  const raw = String(value ?? "").trim();
+  if (!raw) return null;
+
+  const plain = normalize(decryptSensitiveString(raw));
+  if (!plain) return null;
+
+  // Keep existing ciphertext when it already decrypts to the expected value.
+  // This makes backfill idempotent and avoids churn on every run.
+  if (isEncryptedString(raw)) {
+    return raw;
+  }
+
   return plain ? encryptSensitiveString(plain) : null;
 }
 
@@ -178,4 +191,3 @@ main().catch((error) => {
   console.error("[backfill-sensitive] failed:", error?.message || error);
   process.exit(1);
 });
-
