@@ -1970,6 +1970,25 @@ export function CheckoutClient() {
                   </div>
 
                   {selectedPaymentMethod === "card" ? (
+                    intent?.clientSecret && stripePromise ? (
+                      <div className={styles.securePaymentBox}>
+                        <Elements stripe={stripePromise} options={elementsOptions}>
+                          <CheckoutPaymentForm
+                            orderId={intent.orderId}
+                            customerEmail={intent.customerEmail || checkoutEmail}
+                            clientSecret={intent.clientSecret}
+                            paymentMethodOrder={stripePaymentMethodOrder}
+                            mode="card"
+                            onElementStateChange={setPaymentElementState}
+                            onSubmitActionChange={setSubmitPaymentAction}
+                            showSubmitButton={false}
+                          />
+                        </Elements>
+                      </div>
+                    ) : null
+                  ) : null}
+
+                  {selectedPaymentMethod === "card" ? (
                     <>
                       <label className={`${styles.field} ${styles.fieldFull}`}>
                         <span>Parcelas</span>
@@ -2014,9 +2033,6 @@ export function CheckoutClient() {
 
                   {stripeLoading ? <p className={styles.stepHint}>Carregando metodos de pagamento...</p> : null}
                   {!stripeLoading && !stripeConfigured ? <p className={styles.stepHint}>Pagamento indisponivel no momento.</p> : null}
-                  {intent?.clientSecret && !paymentElementState.complete ? (
-                    <p className={styles.stepHint}>Preencha os dados do metodo escolhido para continuar.</p>
-                  ) : null}
 
                 </div>
               ) : (
@@ -2026,7 +2042,7 @@ export function CheckoutClient() {
                 </div>
               )}
 
-              {intent?.clientSecret && stripePromise ? (
+              {selectedPaymentMethod !== "card" && intent?.clientSecret && stripePromise ? (
                 <div className={activeStep === "payment" ? styles.securePaymentBox : styles.hiddenPaymentHost} aria-hidden={activeStep !== "payment"}>
                   <Elements stripe={stripePromise} options={elementsOptions}>
                     <CheckoutPaymentForm
@@ -2034,8 +2050,7 @@ export function CheckoutClient() {
                       customerEmail={intent.customerEmail || checkoutEmail}
                       clientSecret={intent.clientSecret}
                       paymentMethodOrder={stripePaymentMethodOrder}
-                      mode={selectedPaymentMethod === "card" ? "card" : "payment"}
-                      billingNameDefault={addressDisplay.name}
+                      mode="payment"
                       onElementStateChange={setPaymentElementState}
                       onSubmitActionChange={setSubmitPaymentAction}
                       showSubmitButton={false}
@@ -2047,9 +2062,9 @@ export function CheckoutClient() {
               {activeStep === "payment" ? (
                 <button
                   type="button"
-                  className={styles.primaryAction}
+                  className={`${styles.primaryAction} ${styles.paymentPrimaryAction}`}
                   onClick={handlePaymentConfirm}
-                  disabled={isCreatingIntent || stripeLoading || !stripeConfigured || !intent?.clientSecret || !paymentElementState.complete}
+                  disabled={isCreatingIntent || stripeLoading || !stripeConfigured || !intent?.clientSecret}
                 >
                   {isCreatingIntent ? "Preparando pagamento..." : "Revisar pedido"}
                 </button>

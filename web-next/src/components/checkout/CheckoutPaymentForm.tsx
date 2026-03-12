@@ -54,7 +54,6 @@ export function CheckoutPaymentForm({
   clientSecret,
   paymentMethodOrder = [],
   mode = "payment",
-  billingNameDefault = "",
   submitLabel,
   onElementStateChange,
   onSubmitActionChange,
@@ -68,7 +67,7 @@ export function CheckoutPaymentForm({
   const [errorMessage, setErrorMessage] = useState("");
   const [paymentElementReady, setPaymentElementReady] = useState(false);
   const [paymentElementComplete, setPaymentElementComplete] = useState(false);
-  const [billingName, setBillingName] = useState(String(billingNameDefault || "").trim());
+  const [billingName, setBillingName] = useState("");
   const [cardNumberReady, setCardNumberReady] = useState(false);
   const [cardExpiryReady, setCardExpiryReady] = useState(false);
   const [cardCvcReady, setCardCvcReady] = useState(false);
@@ -92,25 +91,45 @@ export function CheckoutPaymentForm({
     }),
     [paymentMethodOrder]
   );
-  const cardElementOptions = useMemo(
+  const sharedCardElementStyle = useMemo(
     () => ({
-      style: {
-        base: {
-          color: "#111111",
-          fontFamily: "Jost, sans-serif",
-          fontSize: "15px",
-          fontWeight: "300",
-          letterSpacing: "0.04em",
-          "::placeholder": {
-            color: "#8d8a84",
-          },
+      base: {
+        color: "#111111",
+        fontFamily: "Jost, sans-serif",
+        fontSize: "13px",
+        fontWeight: "300",
+        letterSpacing: "0.08em",
+        "::placeholder": {
+          color: "#c8c4bc",
         },
-        invalid: {
-          color: "#9d1f1f",
-        },
+      },
+      invalid: {
+        color: "#9d1f1f",
       },
     }),
     []
+  );
+  const cardNumberOptions = useMemo(
+    () => ({
+      style: sharedCardElementStyle,
+      placeholder: "0000 0000 0000 0000",
+      showIcon: false,
+    }),
+    [sharedCardElementStyle]
+  );
+  const cardExpiryOptions = useMemo(
+    () => ({
+      style: sharedCardElementStyle,
+      placeholder: "MM / AA",
+    }),
+    [sharedCardElementStyle]
+  );
+  const cardCvcOptions = useMemo(
+    () => ({
+      style: sharedCardElementStyle,
+      placeholder: "...",
+    }),
+    [sharedCardElementStyle]
   );
   const isCardMode = mode === "card";
   const paymentReady = isCardMode
@@ -126,12 +145,6 @@ export function CheckoutPaymentForm({
     container.scrollIntoView({ behavior: "smooth", block: "start" });
     container.focus({ preventScroll: true });
   }, []);
-
-  useEffect(() => {
-    if (!billingName.trim() && billingNameDefault) {
-      setBillingName(String(billingNameDefault || "").trim());
-    }
-  }, [billingNameDefault, billingName]);
 
   useEffect(() => {
     onElementStateChange?.({
@@ -167,7 +180,7 @@ export function CheckoutPaymentForm({
     else setErrorMessage("");
   }
 
-  const payButtonDisabled = !stripe || !elements || !paymentReady || !paymentComplete || isSubmitting;
+  const payButtonDisabled = !stripe || !elements || isSubmitting;
 
   const submitPayment = useCallback(async (): Promise<boolean> => {
     setErrorMessage("");
@@ -273,7 +286,7 @@ export function CheckoutPaymentForm({
               <span>Numero do cartao</span>
               <div className={styles.stripeFieldShell}>
                 <CardNumberElement
-                  options={cardElementOptions}
+                  options={cardNumberOptions}
                   onReady={() => setCardNumberReady(true)}
                   onChange={handleCardNumberChange}
                 />
@@ -295,7 +308,7 @@ export function CheckoutPaymentForm({
               <span>Validade</span>
               <div className={styles.stripeFieldShell}>
                 <CardExpiryElement
-                  options={cardElementOptions}
+                  options={cardExpiryOptions}
                   onReady={() => setCardExpiryReady(true)}
                   onChange={handleCardExpiryChange}
                 />
@@ -306,7 +319,7 @@ export function CheckoutPaymentForm({
               <span>CVV</span>
               <div className={styles.stripeFieldShell}>
                 <CardCvcElement
-                  options={cardElementOptions}
+                  options={cardCvcOptions}
                   onReady={() => setCardCvcReady(true)}
                   onChange={handleCardCvcChange}
                 />

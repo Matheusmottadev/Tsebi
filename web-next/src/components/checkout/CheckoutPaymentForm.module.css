@@ -1,7 +1,7 @@
 .form {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 14px;
 }
 
 .paymentElementContainer {
@@ -41,23 +41,24 @@
   background: transparent;
   color: #111;
   font-family: "Jost", sans-serif;
-  font-size: 15px;
+  font-size: 13px;
   font-weight: 300;
+  letter-spacing: 0.08em;
 }
 
 .field input {
-  padding: 10px 0;
+  padding: 8px 0 12px;
   outline: none;
 }
 
 .field input::placeholder {
-  color: #8d8a84;
+  color: #c8c4bc;
 }
 
 .stripeFieldShell {
   display: flex;
   align-items: center;
-  padding: 10px 0;
+  padding: 8px 0 12px;
 }
 
 .error {
