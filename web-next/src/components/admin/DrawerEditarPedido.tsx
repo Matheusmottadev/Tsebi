@@ -357,9 +357,9 @@ export function DrawerEditarPedido({ isOpen, order, onClose, onSaved }: DrawerEd
           qty: Math.max(1, Number(item.qty || 1)),
           unitAmount: Math.max(0, Number(item.unitAmount || 0)),
           currency: String(item.currency || "BRL").toLowerCase(),
-          variantColor: item.variantColor || null,
-          variantSize: item.variantSize || null,
-          variantKey: item.variantColor && item.variantSize ? `${item.variantColor}__${item.variantSize}` : null,
+          variantColor: item.variantColor || undefined,
+          variantSize: item.variantSize || undefined,
+          variantKey: item.variantColor && item.variantSize ? `${item.variantColor}__${item.variantSize}` : undefined,
         })),
       };
 
