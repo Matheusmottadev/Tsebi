@@ -121,6 +121,11 @@ const registerSchema = z.object({
   cpf: z.string().transform((value: any) => String(value || "").replace(/\D/g, "")).refine((value: any) => /^\d{11}$/.test(value)),
   cep: z.string().transform((value: any) => String(value || "").replace(/\D/g, "")).refine((value: any) => /^\d{8}$/.test(value))
 });
+const registerLiteSchema = z.object({
+  title: titleSchema.optional().default("nao_informar"),
+  name: z.string().trim().min(2).max(120),
+  email: emailSchema
+});
 
 const loginSchema = z.object({
   email: emailSchema,
@@ -936,13 +941,63 @@ authRouter.post("/register", authRateLimit, async (req: any, res: any) => {
   }
 });
 
-authRouter.post("/check-email", async (req: any, res: any) => {
+authRouter.post("/register-lite", authRateLimit, async (req: any, res: any) => {
+  const parsed = registerLiteSchema.safeParse(req.body || {});
+  if (!parsed.success) {
+    return res.status(400).json({ error: "INVALID_INPUT" });
+  }
+
+  const payload = parsed.data;
+  const normalizedEmail = normalizeEmail(payload.email);
+  const existing = await findUserByEmail(normalizedEmail);
+  if (existing) {
+    if (existing.emailVerified) {
+      return res.status(409).json({ error: "EMAIL_ALREADY_EXISTS" });
+    }
+
+    try {
+      const resend = await issueAndSendAccountVerifyCode(existing);
+      if (!resend.ok) return res.status(500).json({ error: "AUTH_CODE_ISSUE_FAILED" });
+      return res.json(buildEmailCodeResponseBase(existing.email, "account_verification_required", resend.issued));
+    } catch {
+      return res.status(500).json({ error: "EMAIL_DELIVERY_FAILED" });
+    }
+  }
+
+  const autoPassword = `Tsebi${crypto.randomBytes(12).toString("hex")}1`;
+  const created = await createUser({
+    title: payload.title,
+    name: payload.name,
+    email: normalizedEmail,
+    passwordHash: await bcrypt.hash(autoPassword, 12),
+    birthDate: "",
+    cpf: "",
+    cep: "",
+    emailVerified: false
+  });
+
+  if (!created.ok) {
+    return res.status(409).json({ error: "EMAIL_ALREADY_EXISTS" });
+  }
+
+  try {
+    const sent = await issueAndSendAccountVerifyCode(created.user);
+    if (!sent.ok) return res.status(500).json({ error: "AUTH_CODE_ISSUE_FAILED" });
+    return res.status(201).json(buildEmailCodeResponseBase(created.user.email, "account_verification_required", sent.issued));
+  } catch {
+    return res.status(500).json({ error: "EMAIL_DELIVERY_FAILED" });
+  }
+});
+
+authRouter.post("/check-email", authRateLimit, async (req: any, res: any) => {
   const parsed = checkEmailSchema.safeParse(req.body || {});
   if (!parsed.success) {
     return res.status(400).json({ error: "INVALID_INPUT" });
   }
 
-  return res.json({ ok: true });
+  const email = normalizeEmail(parsed.data.email);
+  const user = await findUserByEmail(email);
+  return res.json({ ok: true, exists: Boolean(user) });
 });
 
 authRouter.post("/email/verify-account", authRateLimit, async (req: any, res: any) => {

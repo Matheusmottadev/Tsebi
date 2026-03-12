@@ -1,0 +1,568 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Entrar | Tsebi</title>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;1,300;1,400&family=Jost:wght@200;300;400&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html, body { height: 100%; }
+
+    body {
+      font-family: 'Jost', sans-serif;
+      background: #fff;
+      color: #111;
+      min-height: 100vh;
+      display: flex;
+      overflow: hidden;
+    }
+
+    /* ── LEFT: FOTO ── */
+    .left {
+      position: relative;
+      width: 44%;
+      overflow: hidden;
+      flex-shrink: 0;
+    }
+
+    .left-img {
+      position: absolute;
+      inset: 0;
+      background: url('https://images.unsplash.com/photo-1509631179647-0177331693ae?w=1200&q=85&fit=crop&crop=center') center/cover no-repeat;
+      transform: scale(1.04);
+      animation: slowzoom 20s ease-out forwards;
+    }
+
+    .left-overlay {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      padding: 48px 52px;
+      z-index: 2;
+      background:
+        linear-gradient(to bottom, rgba(0,0,0,0.25) 0%, transparent 30%),
+        linear-gradient(to top, rgba(0,0,0,0.5) 0%, transparent 40%);
+    }
+
+    .left-brand {
+      font-family: 'Cormorant Garamond', serif;
+      font-weight: 400;
+      font-size: 22px;
+      letter-spacing: 0.45em;
+      color: #fff;
+      text-transform: uppercase;
+      opacity: 0;
+      animation: fadein 0.8s 0.3s forwards;
+    }
+
+    .left-bottom {
+      opacity: 0;
+      animation: fadein 0.8s 0.7s forwards;
+    }
+
+    .left-quote {
+      font-family: 'Cormorant Garamond', serif;
+      font-weight: 300;
+      font-style: italic;
+      font-size: 44px;
+      line-height: 1.1;
+      color: #fff;
+      letter-spacing: 0.01em;
+      margin-bottom: 16px;
+    }
+
+    .left-quote em {
+      color: rgba(255,255,255,0.45);
+      font-style: italic;
+    }
+
+    .left-meta {
+      font-size: 9px;
+      font-weight: 200;
+      letter-spacing: 0.3em;
+      color: rgba(255,255,255,0.5);
+      text-transform: uppercase;
+    }
+
+    @keyframes slowzoom {
+      from { transform: scale(1.04); }
+      to   { transform: scale(1.0); }
+    }
+
+    /* ── RIGHT: FORMULÁRIO ── */
+    .right {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      padding: 48px 40px;
+      align-items: center;
+      background: #fff;
+      position: relative;
+    }
+
+    .right::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0;
+      width: 1px; height: 100%;
+      background: #e8e8e8;
+    }
+
+    .top-brand {
+      font-family: 'Cormorant Garamond', serif;
+      font-weight: 400;
+      font-size: 20px;
+      letter-spacing: 0.45em;
+      color: #111;
+      text-transform: uppercase;
+      opacity: 0;
+      animation: fadein 0.8s 0.2s forwards;
+    }
+
+    @keyframes fadein {
+      from { opacity: 0; transform: translateY(-6px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    /* FORM CENTER */
+    .form-center {
+      flex: 1;
+      display: flex;
+      align-items: center;
+    }
+
+    .form-wrap {
+      width: 100%;
+      max-width: 400px;
+    }
+
+    /* STEPS */
+    .step { display: none; }
+    .step.active {
+      display: block;
+      animation: stepin 0.35s cubic-bezier(0.4,0,0.2,1) forwards;
+    }
+
+    @keyframes stepin {
+      from { opacity: 0; transform: translateY(10px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .step-heading {
+      font-family: 'Cormorant Garamond', serif;
+      font-weight: 300;
+      font-size: 28px;
+      letter-spacing: 0.04em;
+      color: #111;
+      margin-bottom: 6px;
+    }
+
+    .step-sub {
+      font-size: 11px;
+      font-weight: 200;
+      color: #aaa;
+      letter-spacing: 0.1em;
+      margin-bottom: 44px;
+      line-height: 1.6;
+    }
+
+    /* INPUT */
+    .field { margin-bottom: 28px; }
+
+    .field label {
+      display: block;
+      font-size: 9px;
+      letter-spacing: 0.28em;
+      text-transform: uppercase;
+      color: #bbb;
+      font-weight: 300;
+      margin-bottom: 10px;
+    }
+
+    .field input {
+      width: 100%;
+      background: transparent;
+      border: none;
+      border-bottom: 1px solid #ddd;
+      color: #111;
+      font-family: 'Jost', sans-serif;
+      font-size: 14px;
+      font-weight: 300;
+      padding: 8px 0 12px;
+      outline: none;
+      transition: border-color 0.25s;
+      letter-spacing: 0.05em;
+      border-radius: 0;
+      -webkit-appearance: none;
+    }
+
+    .field input::placeholder { color: #ddd; }
+    .field input:focus { border-bottom-color: #999; }
+    .field input.err { border-bottom-color: #c0392b; }
+
+    .err-msg {
+      font-size: 10px;
+      color: #c0392b;
+      font-weight: 200;
+      margin-top: 7px;
+      letter-spacing: 0.06em;
+      display: none;
+    }
+    .err-msg.show { display: block; }
+
+    /* BOTÃO PRINCIPAL */
+    .btn-main {
+      width: 100%;
+      margin-top: 12px;
+      background: #111;
+      border: 1px solid #111;
+      color: #fff;
+      font-family: 'Jost', sans-serif;
+      font-size: 9px;
+      font-weight: 300;
+      letter-spacing: 0.35em;
+      text-transform: uppercase;
+      padding: 15px;
+      cursor: pointer;
+      transition: background 0.2s, color 0.2s;
+    }
+
+    .btn-main:hover { background: #333; border-color: #333; }
+    .btn-main.loading { opacity: 0.4; pointer-events: none; }
+
+    /* DIVIDER */
+    .or-line {
+      display: flex;
+      align-items: center;
+      gap: 18px;
+      margin: 28px 0 22px;
+    }
+    .or-line::before, .or-line::after {
+      content: ''; flex: 1; height: 1px; background: #ebebeb;
+    }
+    .or-line span {
+      font-size: 9px;
+      letter-spacing: 0.25em;
+      color: #ccc;
+      text-transform: uppercase;
+      font-weight: 200;
+    }
+
+    /* BOTÕES ALTERNATIVOS */
+    .btn-alt {
+      width: 100%;
+      background: transparent;
+      border: 1px solid #e8e8e8;
+      color: #aaa;
+      font-family: 'Jost', sans-serif;
+      font-size: 9px;
+      font-weight: 200;
+      letter-spacing: 0.22em;
+      text-transform: uppercase;
+      padding: 13px 16px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 11px;
+      transition: all 0.2s;
+      margin-bottom: 8px;
+    }
+
+    .btn-alt:hover { border-color: #bbb; color: #111; }
+    .btn-alt svg { width: 13px; height: 13px; flex-shrink: 0; }
+
+    /* BACK */
+    .btn-back {
+      background: none; border: none;
+      color: #bbb;
+      font-family: 'Jost', sans-serif;
+      font-size: 9px; font-weight: 200;
+      letter-spacing: 0.22em; text-transform: uppercase;
+      cursor: pointer;
+      display: flex; align-items: center; gap: 7px;
+      padding: 0; margin-bottom: 40px;
+      transition: color 0.2s;
+    }
+    .btn-back:hover { color: #111; }
+    .btn-back svg { width: 11px; height: 11px; }
+
+    /* LINK FORGOT */
+    .link-small {
+      font-size: 10px;
+      font-weight: 200;
+      color: #bbb;
+      letter-spacing: 0.1em;
+      cursor: pointer;
+      text-decoration: none;
+      border-bottom: 1px solid transparent;
+      transition: color 0.2s, border-color 0.2s;
+      display: inline-block;
+      margin-top: 14px;
+    }
+    .link-small:hover { color: #111; border-bottom-color: #bbb; }
+
+    /* FOOTER */
+    .form-foot {
+      font-size: 10px;
+      font-weight: 200;
+      color: #bbb;
+      letter-spacing: 0.1em;
+      margin-top: 44px;
+    }
+    .form-foot a {
+      color: #888;
+      text-decoration: none;
+      border-bottom: 1px solid #ddd;
+      padding-bottom: 1px;
+      cursor: pointer;
+      transition: color 0.2s;
+    }
+    .form-foot a:hover { color: #111; }
+
+    /* PAGE FOOTER */
+    .bottom {
+      font-size: 9px;
+      font-weight: 200;
+      color: #ccc;
+      letter-spacing: 0.15em;
+      opacity: 0;
+      animation: fadein 0.8s 0.5s forwards;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- FOTO -->
+  <div class="left">
+    <div class="left-img"></div>
+    <div class="left-overlay">
+      <div class="left-brand">Tsebi</div>
+      <div class="left-bottom">
+        <div class="left-quote">Forma,<br/><em>princípio</em><br/>e excelência.</div>
+        <div class="left-meta">Coleção atual — São Paulo</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- FORMULÁRIO -->
+  <div class="right">
+
+    <div class="top-brand" style="visibility:hidden;pointer-events:none">Tsebi</div>
+
+    <div class="form-center">
+      <div class="form-wrap">
+
+        <!-- STEP 1: E-MAIL -->
+        <div class="step active" id="step-email">
+          <div class="step-heading">Entrar.</div>
+          <div class="step-sub">Insira seu e-mail para continuar.</div>
+
+          <div class="field">
+            <label>E-mail</label>
+            <input type="email" id="inp-email" placeholder="seu@email.com" autocomplete="email" />
+            <div class="err-msg" id="err-email">Insira um e-mail válido.</div>
+          </div>
+
+          <button class="btn-main" onclick="handleEmail()">Continuar</button>
+
+          <div class="or-line"><span>ou</span></div>
+
+          <button class="btn-alt" onclick="alert('Google')">
+            <svg viewBox="0 0 24 24" fill="none">
+              <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
+              <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+              <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z" fill="#FBBC05"/>
+              <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
+            </svg>
+            Continuar com Google
+          </button>
+
+          <button class="btn-alt" onclick="alert('Passkey')">
+            <svg viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="1.5"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+            Entrar com Passkey
+          </button>
+
+          <div class="form-foot">
+            Ainda não tem conta? <a onclick="goTo('step-criar')">Criar agora</a>
+          </div>
+        </div>
+
+        <!-- STEP 2: SENHA -->
+        <div class="step" id="step-senha">
+          <button class="btn-back" onclick="goTo('step-email')">
+            <svg viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="1.5"><polyline points="15 18 9 12 15 6"/></svg>
+            Voltar
+          </button>
+
+          <div class="step-heading">Bem-vinda de volta.</div>
+          <div class="step-sub" id="label-email">—</div>
+
+          <div class="field">
+            <label>Senha</label>
+            <input type="password" id="inp-senha" placeholder="••••••••" autocomplete="current-password" />
+            <div class="err-msg" id="err-senha">Senha incorreta.</div>
+          </div>
+
+          <button class="btn-main" onclick="handleSenha()">Entrar</button>
+
+          <div class="or-line"><span>ou</span></div>
+
+          <button class="btn-alt" onclick="handleCodigo()">
+            <svg viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="1.5"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg>
+            Entrar com código por e-mail
+          </button>
+
+          <div>
+            <span class="link-small" onclick="handleCodigo()">Esqueceu a senha?</span>
+          </div>
+        </div>
+
+        <!-- STEP 3: CÓDIGO -->
+        <div class="step" id="step-codigo">
+          <button class="btn-back" onclick="goTo('step-email')">
+            <svg viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="1.5"><polyline points="15 18 9 12 15 6"/></svg>
+            Voltar
+          </button>
+
+          <div class="step-heading">Verifique seu e-mail.</div>
+          <div class="step-sub">Enviamos um código de acesso.</div>
+
+          <div class="field">
+            <label>Código</label>
+            <input type="text" id="inp-codigo" placeholder="000000" maxlength="6" autocomplete="one-time-code" />
+            <div class="err-msg" id="err-codigo">Código inválido.</div>
+          </div>
+
+          <button class="btn-main" onclick="handleVerificar()">Verificar</button>
+
+          <div>
+            <span class="link-small" onclick="alert('Reenviado.')">Reenviar código</span>
+          </div>
+        </div>
+
+        <!-- STEP 4: CRIAR CONTA -->
+        <div class="step" id="step-criar">
+          <button class="btn-back" onclick="goTo('step-email')">
+            <svg viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="1.5"><polyline points="15 18 9 12 15 6"/></svg>
+            Voltar
+          </button>
+
+          <div class="step-heading">Criar conta.</div>
+          <div class="step-sub">Junte-se à Tsebi.</div>
+
+          <div class="field">
+            <label>Nome</label>
+            <input type="text" id="inp-nome" placeholder="Seu nome" autocomplete="name" />
+          </div>
+
+          <div class="field">
+            <label>E-mail</label>
+            <input type="email" id="inp-email-criar" placeholder="seu@email.com" autocomplete="email" />
+          </div>
+
+          <button class="btn-main" onclick="handleCriar()">Criar conta</button>
+
+          <div class="or-line"><span>ou</span></div>
+
+          <button class="btn-alt" onclick="alert('Google')">
+            <svg viewBox="0 0 24 24" fill="none">
+              <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
+              <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+              <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z" fill="#FBBC05"/>
+              <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
+            </svg>
+            Continuar com Google
+          </button>
+
+          <div class="form-foot">
+            Já tem conta? <a onclick="goTo('step-email')">Entrar</a>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <div class="bottom">© 2025 Tsebi Brasil</div>
+
+  </div>
+
+  <script>
+    const registeredEmails = ['teste@tsebi.com.br', 'cliente@email.com'];
+
+    function goTo(id) {
+      document.querySelectorAll('.step').forEach(s => s.classList.remove('active'));
+      document.getElementById(id).classList.add('active');
+    }
+
+    function handleEmail() {
+      const inp = document.getElementById('inp-email');
+      const err = document.getElementById('err-email');
+      const val = inp.value.trim();
+      inp.classList.remove('err');
+      err.classList.remove('show');
+
+      if (!val || !val.includes('@')) {
+        inp.classList.add('err');
+        err.classList.add('show');
+        return;
+      }
+
+      if (!registeredEmails.includes(val.toLowerCase())) {
+        document.getElementById('inp-email-criar').value = val;
+        goTo('step-criar');
+        return;
+      }
+
+      document.getElementById('label-email').textContent = val;
+      goTo('step-senha');
+    }
+
+    function handleSenha() {
+      const inp = document.getElementById('inp-senha');
+      const err = document.getElementById('err-senha');
+      inp.classList.remove('err');
+      err.classList.remove('show');
+
+      if (!inp.value || inp.value.length < 4) {
+        inp.classList.add('err');
+        err.classList.add('show');
+        return;
+      }
+      alert('Bem-vinda de volta!');
+    }
+
+    function handleCodigo() { goTo('step-codigo'); }
+
+    function handleVerificar() {
+      const inp = document.getElementById('inp-codigo');
+      const err = document.getElementById('err-codigo');
+      err.classList.remove('show');
+      if (!inp.value || inp.value.length !== 6) {
+        err.classList.add('show');
+        return;
+      }
+      alert('Acesso confirmado!');
+    }
+
+    function handleCriar() { alert('Conta criada!'); }
+
+    document.addEventListener('keydown', e => {
+      if (e.key !== 'Enter') return;
+      const active = document.querySelector('.step.active');
+      if (!active) return;
+      const id = active.id;
+      if (id === 'step-email') handleEmail();
+      else if (id === 'step-senha') handleSenha();
+      else if (id === 'step-codigo') handleVerificar();
+      else if (id === 'step-criar') handleCriar();
+    });
+  </script>
+
+</body>
+</html>

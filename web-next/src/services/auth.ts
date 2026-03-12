@@ -8,6 +8,8 @@ Endpoint mapping used in this file:
 - POST /api/auth/login
 - POST /api/auth/logout
 - POST /api/auth/register
+- POST /api/auth/register-lite
+- POST /api/auth/check-email
 - POST /api/auth/forgot-password
 - POST /api/auth/forgot-password/verify-code
 - POST /api/auth/email/start
@@ -63,6 +65,12 @@ export interface RegisterPayload {
   cep: string;
 }
 
+export interface RegisterLitePayload {
+  title?: Exclude<UserTitle, "">;
+  name: string;
+  email: string;
+}
+
 export interface EmailPayload {
   email: string;
 }
@@ -104,6 +112,11 @@ export interface AuthCodeChallengeResponse {
   devCode?: string | null;
 }
 
+export interface CheckEmailResponse {
+  ok: true;
+  exists: boolean;
+}
+
 export interface BasicOkResponse {
   ok: true;
 }
@@ -126,6 +139,7 @@ export interface FavoritesResponse {
 
 export type LoginResponse = AuthUserResponse | AuthCodeChallengeResponse;
 export type RegisterResponse = AuthCodeChallengeResponse;
+export type RegisterLiteResponse = AuthCodeChallengeResponse;
 export type EmailFlowResponse = AuthUserResponse | AuthCodeChallengeResponse;
 export type ResendAccountCodeResponse = BasicOkResponse | AuthCodeChallengeResponse;
 
@@ -211,6 +225,23 @@ export async function logout(): Promise<BasicOkResponse> {
 export async function register(payload: RegisterPayload): Promise<RegisterResponse> {
   clearClientGetMeCache();
   return post<RegisterResponse>("/api/auth/register", payload);
+}
+
+/**
+ * POST /api/auth/register-lite
+ * Auth: public.
+ */
+export async function registerLite(payload: RegisterLitePayload): Promise<RegisterLiteResponse> {
+  clearClientGetMeCache();
+  return post<RegisterLiteResponse>("/api/auth/register-lite", payload);
+}
+
+/**
+ * POST /api/auth/check-email
+ * Auth: public.
+ */
+export async function checkEmail(payload: EmailPayload): Promise<CheckEmailResponse> {
+  return post<CheckEmailResponse>("/api/auth/check-email", payload);
 }
 
 /**
