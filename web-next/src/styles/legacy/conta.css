@@ -657,6 +657,22 @@ nav.conta-subnav {
   box-shadow: 0 0 0 3px rgba(17, 17, 17, 0.12);
 }
 
+.order-timeline-step.is-delivered .order-timeline-dot {
+  border-color: #16a34a;
+  background: #16a34a;
+  box-shadow: 0 0 0 3px rgba(22, 163, 74, 0.16);
+  display: grid;
+  place-items: center;
+}
+
+.order-timeline-step.is-delivered .order-timeline-dot::before {
+  content: "\2713";
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 1;
+}
+
 .order-timeline-step.is-canceled .order-timeline-dot {
   border-color: #991b1b;
   background: #991b1b;

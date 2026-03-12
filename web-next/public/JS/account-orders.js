@@ -80,8 +80,9 @@
           } else if (index === activeIndex) {
             stateClass = "is-active";
           }
+          const deliveredClass = step === "DELIVERED" && !isCanceled && index <= activeIndex ? "is-delivered" : "";
           return `
-            <li class="order-timeline-step ${stateClass}">
+            <li class="order-timeline-step ${stateClass} ${deliveredClass}" data-step="${step}">
               <span class="order-timeline-dot" aria-hidden="true"></span>
               <span class="order-timeline-name">${escapeHtml(trackingStepLabel(step))}</span>
             </li>
@@ -282,4 +283,3 @@
     renderOrders();
   };
 })();
-

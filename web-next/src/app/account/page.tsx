@@ -23,7 +23,7 @@ const LEGACY_CRITICAL_SCRIPTS = [
 ] as const;
 
 const LEGACY_DEFERRED_SCRIPTS = [
-  "/JS/account-orders.js?v=20260222b",
+  "/JS/account-orders.js?v=20260312a",
   "/JS/account-sections.js?v=20260310a",
   "/JS/account-profile.js?v=20260310a",
   "/JS/posthog.js",
