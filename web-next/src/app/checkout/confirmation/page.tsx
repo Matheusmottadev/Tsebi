@@ -266,41 +266,62 @@ export default function CheckoutConfirmationPage() {
 
   if (status === "failed") {
     return (
-      <main className={`${styles.page} ${styles.splitScreen}`}>
-        <section className={`${styles.leftPanel} ${styles.leftFailed}`}>
-          <div className={styles.leftTop}>
-            <p className={styles.brand}>TSEBI</p>
-          </div>
-          <div className={styles.leftBottom}>
-            <p className={styles.quote}>Tente novamente.</p>
-          </div>
-        </section>
-
-        <section className={styles.rightPanel}>
-          <div className={`${styles.rightInner} ${styles.failedInner}`}>
-            <img src="/images/logo-tsebi.png" alt="Tsebi" className={`${styles.statusLogo} ${styles.failedLogo}`} />
-            <h1 className={styles.title}>Algo deu errado.</h1>
-            <p className={styles.subtitle}>
-              Nao foi possivel processar seu pagamento. Verifique os dados do cartao e tente novamente.
-            </p>
-
-            <section className={styles.errorBox}>
-              <p className={styles.errorLabel}>MOTIVO</p>
-              <p className={styles.errorText}>{error}</p>
-            </section>
-
-            <button type="button" className={styles.btnPrimary} onClick={() => router.back()}>
-              Tentar novamente
-            </button>
-            <Link href="/checkout" className={styles.btnOutline}>
-              Escolher outra forma de pagamento
+      <div className={styles.checkoutConfirmationShell}>
+        <header className={styles.checkoutHeader}>
+          <div className={styles.checkoutHeaderInner}>
+            <Link href="/" className={styles.checkoutBrand}>
+              TSEBI
             </Link>
-            <Link href="/cart" className={styles.btnGhost}>
-              Voltar ao carrinho
-            </Link>
+            <nav className={styles.checkoutTabs} aria-label="Etapas do checkout">
+              <Link href="/cart" className={styles.checkoutTab}>
+                Sacola
+              </Link>
+              <Link href="/checkout" className={styles.checkoutTab}>
+                Checkout
+              </Link>
+              <span className={`${styles.checkoutTab} ${styles.checkoutTabActive}`} aria-current="page">
+                Confirmacao
+              </span>
+            </nav>
           </div>
-        </section>
-      </main>
+        </header>
+
+        <main className={`${styles.page} ${styles.splitScreen} ${styles.splitScreenWithHeader}`}>
+          <section className={`${styles.leftPanel} ${styles.leftFailed}`}>
+            <div className={styles.leftTop}>
+              <p className={styles.brand}>TSEBI</p>
+            </div>
+            <div className={styles.leftBottom}>
+              <p className={styles.quote}>Tente novamente.</p>
+            </div>
+          </section>
+
+          <section className={styles.rightPanel}>
+            <div className={`${styles.rightInner} ${styles.failedInner}`}>
+              <img src="/images/logo-tsebi.png" alt="Tsebi" className={`${styles.statusLogo} ${styles.failedLogo}`} />
+              <h1 className={styles.title}>Algo deu errado.</h1>
+              <p className={styles.subtitle}>
+                Nao foi possivel processar seu pagamento. Verifique os dados do cartao e tente novamente.
+              </p>
+
+              <section className={styles.errorBox}>
+                <p className={styles.errorLabel}>Motivo</p>
+                <p className={styles.errorText}>{error}</p>
+              </section>
+
+              <button type="button" className={styles.btnPrimary} onClick={() => router.back()}>
+                Tentar novamente
+              </button>
+              <Link href="/checkout" className={styles.btnOutline}>
+                Escolher outra forma de pagamento
+              </Link>
+              <Link href="/cart" className={styles.btnGhost}>
+                Voltar ao carrinho
+              </Link>
+            </div>
+          </section>
+        </main>
+      </div>
     );
   }
 

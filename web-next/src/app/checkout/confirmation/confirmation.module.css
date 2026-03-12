@@ -7,6 +7,77 @@
   font-family: "Jost", sans-serif;
 }
 
+.checkoutConfirmationShell {
+  min-height: 100vh;
+  background: #fff;
+}
+
+.checkoutHeader {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 72px;
+  background: #fff;
+  border-bottom: 1px solid #e8e6e2;
+  z-index: 1200;
+}
+
+.checkoutHeaderInner {
+  height: 100%;
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 0 56px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+}
+
+.checkoutBrand {
+  color: #111;
+  text-decoration: none;
+  font-family: "Cormorant Garamond", serif;
+  font-size: 28px;
+  font-weight: 300;
+  letter-spacing: 0.42em;
+  text-transform: uppercase;
+}
+
+.checkoutTabs {
+  display: flex;
+  align-items: stretch;
+  border: 1px solid #e8e6e2;
+}
+
+.checkoutTab {
+  min-width: 160px;
+  padding: 12px 20px;
+  color: #c8c4bc;
+  text-decoration: none;
+  text-align: center;
+  font-family: "Jost", sans-serif;
+  font-size: 10px;
+  font-weight: 300;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  border-right: 1px solid #e8e6e2;
+}
+
+.checkoutTab:last-child {
+  border-right: 0;
+}
+
+.checkoutTabActive {
+  background: #111;
+  color: #fff;
+}
+
+.splitScreenWithHeader {
+  padding-top: 72px;
+  min-height: calc(100vh - 72px);
+}
+
 .processingScreen {
   min-height: 100vh;
   display: flex;
@@ -460,6 +531,34 @@
 }
 
 @media (max-width: 980px) {
+  .checkoutHeader {
+    position: static;
+    height: auto;
+  }
+
+  .checkoutHeaderInner {
+    padding: 18px 20px;
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .checkoutTabs {
+    width: 100%;
+  }
+
+  .checkoutTab {
+    flex: 1;
+    min-width: 0;
+    padding: 12px 10px;
+    font-size: 9px;
+    letter-spacing: 0.18em;
+  }
+
+  .splitScreenWithHeader {
+    padding-top: 0;
+    min-height: auto;
+  }
+
   .splitScreen {
     flex-direction: column;
   }
