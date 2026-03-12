@@ -10,6 +10,7 @@ const { generateRegistrationOptions, verifyRegistrationResponse, generateAuthent
 const { publicUser, normalizeEmail, findUserByEmail, findUserById, createUser, updateUser, markUserLoggedInNow, markUserEmailVerified } = require("./user-repository");
 const { listPasskeysByUserId, findPasskeyByCredentialId, createPasskey, updatePasskeyCounter } = require("./lib/passkey-repository");
 const { query } = require("./lib/db");
+const { unprotectJsonFromStorage } = require("./lib/data-protection");
 const { listOrdersByUserId, updateOrder } = require("./lib/order-repository");
 const { commitStock } = require("./lib/inventory-repository");
 const { requireAuth } = require("./middlewares/requireAuth");
@@ -1375,7 +1376,10 @@ myRouter.get("/checkout-prefill", requireAuth, async (req, res) => {
       LIMIT 20
       `, [normalizeEmail(user.email || "")]);
         for (const row of orderResult.rows || []) {
-            const shipping = row?.shipping_json && typeof row.shipping_json === "object" ? row.shipping_json : {};
+            const shippingRaw = unprotectJsonFromStorage(row?.shipping_json, row?.shipping_json ?? {});
+            const shipping = shippingRaw && typeof shippingRaw === "object" && !Array.isArray(shippingRaw)
+                ? shippingRaw
+                : {};
             if (!historyPhone)
                 historyPhone = normalizePhone(shipping.phone || "");
             if (!historyCpf)

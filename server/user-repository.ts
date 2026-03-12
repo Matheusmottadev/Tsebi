@@ -12,6 +12,17 @@ const { query, withTransaction } = require("./lib/db") as {
   query: <TRow extends JsonRecord = JsonRecord>(text: string, params?: unknown[]) => Promise<QueryResult<TRow>>;
   withTransaction: <T>(work: (client: DbClient) => Promise<T>) => Promise<T>;
 };
+const {
+  encryptSensitiveString,
+  decryptSensitiveString,
+  protectJsonForStorage,
+  unprotectJsonFromStorage
+} = require("./lib/data-protection") as {
+  encryptSensitiveString: (value: unknown) => string;
+  decryptSensitiveString: (value: unknown) => string;
+  protectJsonForStorage: (value: unknown) => unknown;
+  unprotectJsonFromStorage: <T>(value: unknown, fallback: T) => T;
+};
 
 type UserRow = JsonRecord & {
   id?: string;
@@ -192,6 +203,45 @@ function normalizeEmail(email: unknown): string {
   return String(email || "").trim().toLowerCase();
 }
 
+function normalizePhone(value: unknown): string {
+  return String(value || "").trim().slice(0, 40);
+}
+
+function normalizeCpf(value: unknown): string {
+  return String(value || "").replace(/\D/g, "").slice(0, 11);
+}
+
+function normalizeCep(value: unknown): string {
+  return String(value || "").replace(/\D/g, "").slice(0, 8);
+}
+
+function protectPhone(value: unknown): string | null {
+  const normalized = normalizePhone(value);
+  return normalized ? encryptSensitiveString(normalized) : null;
+}
+
+function protectCpf(value: unknown): string | null {
+  const normalized = normalizeCpf(value);
+  return normalized ? encryptSensitiveString(normalized) : null;
+}
+
+function protectCep(value: unknown): string | null {
+  const normalized = normalizeCep(value);
+  return normalized ? encryptSensitiveString(normalized) : null;
+}
+
+function unprotectPhone(value: unknown): string {
+  return normalizePhone(decryptSensitiveString(value));
+}
+
+function unprotectCpf(value: unknown): string {
+  return normalizeCpf(decryptSensitiveString(value));
+}
+
+function unprotectCep(value: unknown): string {
+  return normalizeCep(decryptSensitiveString(value));
+}
+
 function normalizeTitle(value: unknown): string {
   const normalized = String(value || "").trim().toLowerCase();
   const allowed = new Set(["sr", "sra", "srta", "nao_informar"]);
@@ -235,12 +285,13 @@ function toDbAddresses(addresses: unknown): UserAddress[] {
 
 function fromRow(row: UserRow | null | undefined): User | null {
   if (!row) return null;
+  const addressesRaw = unprotectJsonFromStorage<unknown>(row.addresses, row.addresses ?? []);
   return {
     id: String(row.id || ""),
     title: normalizeTitle(row.title),
     name: String(row.name || ""),
     email: normalizeEmail(row.email),
-    phone: String(row.phone || "").trim(),
+    phone: unprotectPhone(row.phone),
     isGuest: Boolean(row.is_guest),
     createdVia: String(row.created_via || "").trim(),
     loginDisabled: Boolean(row.login_disabled),
@@ -248,9 +299,9 @@ function fromRow(row: UserRow | null | undefined): User | null {
     emailVerified: Boolean(row.email_verified),
     emailVerifiedAt: row.email_verified_at || null,
     birthDate: formatBirthDate(row.birth_date),
-    cpf: String(row.cpf || "").trim(),
-    cep: String(row.cep || "").trim(),
-    addresses: toDbAddresses(row.addresses),
+    cpf: unprotectCpf(row.cpf),
+    cep: unprotectCep(row.cep),
+    addresses: toDbAddresses(addressesRaw),
     defaultAddressId: String(row.default_address_id || "").trim(),
     passwordHash: (row.password_hash as string | null) ?? null,
     adminMfaEnabled: Boolean(row.admin_mfa_enabled),
@@ -446,11 +497,11 @@ async function createUser({ title = "", name, email, phone = "", passwordHash, b
           normalizeTitle(title),
           String(name || "").trim(),
           normalizedEmail,
-          String(phone || "").trim().slice(0, 40),
+          protectPhone(phone),
           passwordHash,
           String(birthDate || ""),
-          String(cpf || "").replace(/\D/g, "").slice(0, 11) || null,
-          String(cep || "").replace(/\D/g, "").slice(0, 8) || null,
+          protectCpf(cpf),
+          protectCep(cep),
           Boolean(emailVerified)
         ]
       );
@@ -517,9 +568,9 @@ async function updateUser(id: string, patch: UpdateUserPatch): Promise<User | nu
       String(next.name || "").trim(),
       normalizeTitle(next.title),
       String(next.birthDate || ""),
-      String(next.cpf || "").replace(/\D/g, "").slice(0, 11) || null,
-      String(next.cep || "").replace(/\D/g, "").slice(0, 8) || null,
-      JSON.stringify(toDbAddresses(next.addresses)),
+      protectCpf(next.cpf),
+      protectCep(next.cep),
+      JSON.stringify(protectJsonForStorage(toDbAddresses(next.addresses))),
       String(next.defaultAddressId || ""),
       next.passwordHash,
       Boolean(next.passwordResetRequired),
@@ -602,10 +653,10 @@ async function adminUpdateUser(id: string, patch: Record<string, unknown> = {}) 
         String(next.name || "").trim(),
         normalizeTitle(next.title),
         normalizeEmail(next.email),
-        String(next.phone || "").trim().slice(0, 40),
+        protectPhone(next.phone),
         String(next.birthDate || ""),
-        String(next.cpf || "").replace(/\D/g, "").slice(0, 11) || null,
-        String(next.cep || "").replace(/\D/g, "").slice(0, 8) || null
+        protectCpf(next.cpf),
+        protectCep(next.cep)
       ]
     );
 
@@ -1104,9 +1155,9 @@ async function restoreUserFromSnapshot(snapshot: Record<string, unknown> = {}) {
         email,
         passwordHash,
         String(snapshot.birthDate || "").trim(),
-        String(snapshot.cpf || "").replace(/\D/g, "").slice(0, 11) || null,
-        String(snapshot.cep || "").replace(/\D/g, "").slice(0, 8) || null,
-        JSON.stringify(toDbAddresses(snapshot.addresses)),
+        protectCpf(snapshot.cpf),
+        protectCep(snapshot.cep),
+        JSON.stringify(protectJsonForStorage(toDbAddresses(snapshot.addresses))),
         String(snapshot.defaultAddressId || "").trim(),
         Boolean(snapshot.emailVerified),
         snapshot.emailVerifiedAt || null,
@@ -1193,9 +1244,9 @@ async function upsertCheckoutGuestUser({
   }
 
   const safeName = String(name || "").trim() || normalizedEmail.split("@")[0] || "Cliente Tsebi";
-  const safePhone = String(phone || "").trim().slice(0, 40);
-  const safeCpf = String(cpf || "").replace(/\D/g, "").slice(0, 11) || null;
-  const safeCep = String(cep || "").replace(/\D/g, "").slice(0, 8) || null;
+  const safePhone = normalizePhone(phone);
+  const safeCpf = normalizeCpf(cpf);
+  const safeCep = normalizeCep(cep);
   const candidateAddress = buildCheckoutAddress(shippingAddress, safeName);
 
   const existing = await findUserByEmail(normalizedEmail);
@@ -1230,8 +1281,8 @@ async function upsertCheckoutGuestUser({
       `,
       [
         created.user.id,
-        safePhone,
-        JSON.stringify(toDbAddresses(initialAddresses)),
+        protectPhone(safePhone),
+        JSON.stringify(protectJsonForStorage(toDbAddresses(initialAddresses))),
         initialAddresses[0]?.id || ""
       ]
     );
@@ -1269,10 +1320,10 @@ async function upsertCheckoutGuestUser({
     [
       existing.id,
       safeName,
-      safePhone,
-      safeCpf,
-      safeCep,
-      JSON.stringify(toDbAddresses(nextAddresses)),
+      protectPhone(safePhone),
+      protectCpf(safeCpf),
+      protectCep(safeCep),
+      JSON.stringify(protectJsonForStorage(toDbAddresses(nextAddresses))),
       defaultAddressId
     ]
   );

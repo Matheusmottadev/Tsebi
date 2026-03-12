@@ -16,6 +16,10 @@ const { query, withTransaction } = require("./db") as {
   query: <TRow extends JsonRecord = JsonRecord>(text: string, params?: unknown[]) => Promise<QueryResult<TRow>>;
   withTransaction: <T>(work: (client: DbClient) => Promise<T>) => Promise<T>;
 };
+const { protectJsonForStorage, unprotectJsonFromStorage } = require("./data-protection") as {
+  protectJsonForStorage: (value: unknown) => unknown;
+  unprotectJsonFromStorage: <T>(value: unknown, fallback: T) => T;
+};
 
 let orderSchemaPromise: Promise<void> | null = null;
 
@@ -242,6 +246,11 @@ async function ensureOrderSchema(): Promise<void> {
 
 function mapOrderRow(row: OrderRow | null | undefined, items: OrderItem[] = []): Order | null {
   if (!row) return null;
+  const shippingRaw = unprotectJsonFromStorage<unknown>(row.shipping_json, row.shipping_json ?? null);
+  const shipping =
+    shippingRaw && typeof shippingRaw === "object" && !Array.isArray(shippingRaw)
+      ? (shippingRaw as JsonRecord)
+      : null;
   return {
     id: row.id,
     orderNumber: row.order_number || "",
@@ -271,7 +280,7 @@ function mapOrderRow(row: OrderRow | null | undefined, items: OrderItem[] = []):
     carrier: row.carrier || "",
     lastTrackingUpdate: row.last_tracking_update || null,
     items,
-    shipping: (row.shipping_json as JsonRecord | null) || null,
+    shipping,
     userId: row.user_id || null,
     userEmail: row.user_email || null,
     userName: row.user_name || null,
@@ -402,7 +411,7 @@ async function createOrder(payload: CreateOrderPayload): Promise<Order | null> {
       String(payload.shippingSelectedCarrierName || "").trim() || null,
       payload.shippingDeadlineDays == null ? null : Math.max(0, Number(payload.shippingDeadlineDays || 0)),
       String(payload.shippingDestinationZip || "").replace(/\D/g, "").slice(0, 8) || null,
-      JSON.stringify(payload.shipping || null),
+      JSON.stringify(protectJsonForStorage(payload.shipping || null)),
       payload.userId || null,
       payload.userEmail || null,
       payload.userName || null,
@@ -482,7 +491,11 @@ async function updateOrder(orderId: string, patch: Partial<OrderPatch>): Promise
     const column = PATCH_TO_COLUMN[key];
     let value: unknown = patch[key];
 
-    if (key === "shipping" || key === "stockIssues") {
+    if (key === "shipping") {
+      value = value == null ? null : protectJsonForStorage(value);
+      value = value == null ? null : JSON.stringify(value);
+      assignments.push(`${column} = $${index + 2}::jsonb`);
+    } else if (key === "stockIssues") {
       value = value == null ? null : JSON.stringify(value);
       assignments.push(`${column} = $${index + 2}::jsonb`);
     } else {

@@ -3,6 +3,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const nodeCrypto = require("node:crypto");
 const bcrypt = require("bcrypt");
 const { query, withTransaction } = require("./lib/db");
+const { encryptSensitiveString, decryptSensitiveString, protectJsonForStorage, unprotectJsonFromStorage } = require("./lib/data-protection");
 let userSecuritySchemaPromise = null;
 /**
  * @typedef {{
@@ -77,6 +78,36 @@ async function ensureUserSecurityColumns() {
 function normalizeEmail(email) {
     return String(email || "").trim().toLowerCase();
 }
+function normalizePhone(value) {
+    return String(value || "").trim().slice(0, 40);
+}
+function normalizeCpf(value) {
+    return String(value || "").replace(/\D/g, "").slice(0, 11);
+}
+function normalizeCep(value) {
+    return String(value || "").replace(/\D/g, "").slice(0, 8);
+}
+function protectPhone(value) {
+    const normalized = normalizePhone(value);
+    return normalized ? encryptSensitiveString(normalized) : null;
+}
+function protectCpf(value) {
+    const normalized = normalizeCpf(value);
+    return normalized ? encryptSensitiveString(normalized) : null;
+}
+function protectCep(value) {
+    const normalized = normalizeCep(value);
+    return normalized ? encryptSensitiveString(normalized) : null;
+}
+function unprotectPhone(value) {
+    return normalizePhone(decryptSensitiveString(value));
+}
+function unprotectCpf(value) {
+    return normalizeCpf(decryptSensitiveString(value));
+}
+function unprotectCep(value) {
+    return normalizeCep(decryptSensitiveString(value));
+}
 function normalizeTitle(value) {
     const normalized = String(value || "").trim().toLowerCase();
     const allowed = new Set(["sr", "sra", "srta", "nao_informar"]);
@@ -121,12 +152,13 @@ function toDbAddresses(addresses) {
 function fromRow(row) {
     if (!row)
         return null;
+    const addressesRaw = unprotectJsonFromStorage(row.addresses, row.addresses ?? []);
     return {
         id: String(row.id || ""),
         title: normalizeTitle(row.title),
         name: String(row.name || ""),
         email: normalizeEmail(row.email),
-        phone: String(row.phone || "").trim(),
+        phone: unprotectPhone(row.phone),
         isGuest: Boolean(row.is_guest),
         createdVia: String(row.created_via || "").trim(),
         loginDisabled: Boolean(row.login_disabled),
@@ -134,9 +166,9 @@ function fromRow(row) {
         emailVerified: Boolean(row.email_verified),
         emailVerifiedAt: row.email_verified_at || null,
         birthDate: formatBirthDate(row.birth_date),
-        cpf: String(row.cpf || "").trim(),
-        cep: String(row.cep || "").trim(),
-        addresses: toDbAddresses(row.addresses),
+        cpf: unprotectCpf(row.cpf),
+        cep: unprotectCep(row.cep),
+        addresses: toDbAddresses(addressesRaw),
         defaultAddressId: String(row.default_address_id || "").trim(),
         passwordHash: row.password_hash ?? null,
         adminMfaEnabled: Boolean(row.admin_mfa_enabled),
@@ -299,11 +331,11 @@ async function createUser({ title = "", name, email, phone = "", passwordHash, b
             normalizeTitle(title),
             String(name || "").trim(),
             normalizedEmail,
-            String(phone || "").trim().slice(0, 40),
+            protectPhone(phone),
             passwordHash,
             String(birthDate || ""),
-            String(cpf || "").replace(/\D/g, "").slice(0, 11) || null,
-            String(cep || "").replace(/\D/g, "").slice(0, 8) || null,
+            protectCpf(cpf),
+            protectCep(cep),
             Boolean(emailVerified)
         ]);
         return { ok: true, user: fromRow(result.rows[0]) };
@@ -364,9 +396,9 @@ async function updateUser(id, patch) {
         String(next.name || "").trim(),
         normalizeTitle(next.title),
         String(next.birthDate || ""),
-        String(next.cpf || "").replace(/\D/g, "").slice(0, 11) || null,
-        String(next.cep || "").replace(/\D/g, "").slice(0, 8) || null,
-        JSON.stringify(toDbAddresses(next.addresses)),
+        protectCpf(next.cpf),
+        protectCep(next.cep),
+        JSON.stringify(protectJsonForStorage(toDbAddresses(next.addresses))),
         String(next.defaultAddressId || ""),
         next.passwordHash,
         Boolean(next.passwordResetRequired),
@@ -438,10 +470,10 @@ async function adminUpdateUser(id, patch = {}) {
             String(next.name || "").trim(),
             normalizeTitle(next.title),
             normalizeEmail(next.email),
-            String(next.phone || "").trim().slice(0, 40),
+            protectPhone(next.phone),
             String(next.birthDate || ""),
-            String(next.cpf || "").replace(/\D/g, "").slice(0, 11) || null,
-            String(next.cep || "").replace(/\D/g, "").slice(0, 8) || null
+            protectCpf(next.cpf),
+            protectCep(next.cep)
         ]);
         return fromRow(result.rows[0] || null);
     }
@@ -851,9 +883,9 @@ async function restoreUserFromSnapshot(snapshot = {}) {
             email,
             passwordHash,
             String(snapshot.birthDate || "").trim(),
-            String(snapshot.cpf || "").replace(/\D/g, "").slice(0, 11) || null,
-            String(snapshot.cep || "").replace(/\D/g, "").slice(0, 8) || null,
-            JSON.stringify(toDbAddresses(snapshot.addresses)),
+            protectCpf(snapshot.cpf),
+            protectCep(snapshot.cep),
+            JSON.stringify(protectJsonForStorage(toDbAddresses(snapshot.addresses))),
             String(snapshot.defaultAddressId || "").trim(),
             Boolean(snapshot.emailVerified),
             snapshot.emailVerifiedAt || null,
@@ -920,9 +952,9 @@ async function upsertCheckoutGuestUser({ name = "", email = "", phone = "", cpf 
         return { ok: false, error: "EMAIL_REQUIRED" };
     }
     const safeName = String(name || "").trim() || normalizedEmail.split("@")[0] || "Cliente Tsebi";
-    const safePhone = String(phone || "").trim().slice(0, 40);
-    const safeCpf = String(cpf || "").replace(/\D/g, "").slice(0, 11) || null;
-    const safeCep = String(cep || "").replace(/\D/g, "").slice(0, 8) || null;
+    const safePhone = normalizePhone(phone);
+    const safeCpf = normalizeCpf(cpf);
+    const safeCep = normalizeCep(cep);
     const candidateAddress = buildCheckoutAddress(shippingAddress, safeName);
     const existing = await findUserByEmail(normalizedEmail);
     if (!existing) {
@@ -953,8 +985,8 @@ async function upsertCheckoutGuestUser({ name = "", email = "", phone = "", cpf 
       RETURNING *
       `, [
             created.user.id,
-            safePhone,
-            JSON.stringify(toDbAddresses(initialAddresses)),
+            protectPhone(safePhone),
+            JSON.stringify(protectJsonForStorage(toDbAddresses(initialAddresses))),
             initialAddresses[0]?.id || ""
         ]);
         return { ok: true, user: fromRow(updated.rows[0] || created.user) };
@@ -987,10 +1019,10 @@ async function upsertCheckoutGuestUser({ name = "", email = "", phone = "", cpf 
     `, [
         existing.id,
         safeName,
-        safePhone,
-        safeCpf,
-        safeCep,
-        JSON.stringify(toDbAddresses(nextAddresses)),
+        protectPhone(safePhone),
+        protectCpf(safeCpf),
+        protectCep(safeCep),
+        JSON.stringify(protectJsonForStorage(toDbAddresses(nextAddresses))),
         defaultAddressId
     ]);
     return { ok: true, user: fromRow(updated.rows[0] || existing) };

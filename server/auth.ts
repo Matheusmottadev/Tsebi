@@ -27,6 +27,9 @@ const {
   updatePasskeyCounter
 } = require("./lib/passkey-repository");
 const { query } = require("./lib/db");
+const { unprotectJsonFromStorage } = require("./lib/data-protection") as {
+  unprotectJsonFromStorage: <T>(value: unknown, fallback: T) => T;
+};
 const { listOrdersByUserId, updateOrder } = require("./lib/order-repository");
 const { commitStock } = require("./lib/inventory-repository");
 const { requireAuth } = require("./middlewares/requireAuth");
@@ -1511,7 +1514,11 @@ myRouter.get("/checkout-prefill", requireAuth, async (req: any, res: any) => {
     );
 
     for (const row of orderResult.rows || []) {
-      const shipping = row?.shipping_json && typeof row.shipping_json === "object" ? row.shipping_json : {};
+      const shippingRaw = unprotectJsonFromStorage<unknown>(row?.shipping_json, row?.shipping_json ?? {});
+      const shipping: Record<string, unknown> =
+        shippingRaw && typeof shippingRaw === "object" && !Array.isArray(shippingRaw)
+          ? (shippingRaw as Record<string, unknown>)
+          : {};
       if (!historyPhone) historyPhone = normalizePhone(shipping.phone || "");
       if (!historyCpf) historyCpf = normalizeCpf(shipping.cpf || "");
       if (!historyName) historyName = normalizeName(shipping.fullName || "");

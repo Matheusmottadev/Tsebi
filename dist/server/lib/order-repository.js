@@ -2,6 +2,7 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 const crypto = require("node:crypto");
 const { query, withTransaction } = require("./db");
+const { protectJsonForStorage, unprotectJsonFromStorage } = require("./data-protection");
 let orderSchemaPromise = null;
 async function ensureOrderSchema() {
     if (!orderSchemaPromise) {
@@ -40,6 +41,10 @@ async function ensureOrderSchema() {
 function mapOrderRow(row, items = []) {
     if (!row)
         return null;
+    const shippingRaw = unprotectJsonFromStorage(row.shipping_json, row.shipping_json ?? null);
+    const shipping = shippingRaw && typeof shippingRaw === "object" && !Array.isArray(shippingRaw)
+        ? shippingRaw
+        : null;
     return {
         id: row.id,
         orderNumber: row.order_number || "",
@@ -69,7 +74,7 @@ function mapOrderRow(row, items = []) {
         carrier: row.carrier || "",
         lastTrackingUpdate: row.last_tracking_update || null,
         items,
-        shipping: row.shipping_json || null,
+        shipping,
         userId: row.user_id || null,
         userEmail: row.user_email || null,
         userName: row.user_name || null,
@@ -186,7 +191,7 @@ async function createOrder(payload) {
             String(payload.shippingSelectedCarrierName || "").trim() || null,
             payload.shippingDeadlineDays == null ? null : Math.max(0, Number(payload.shippingDeadlineDays || 0)),
             String(payload.shippingDestinationZip || "").replace(/\D/g, "").slice(0, 8) || null,
-            JSON.stringify(payload.shipping || null),
+            JSON.stringify(protectJsonForStorage(payload.shipping || null)),
             payload.userId || null,
             payload.userEmail || null,
             payload.userName || null,
@@ -250,7 +255,12 @@ async function updateOrder(orderId, patch) {
     keys.forEach((key, index) => {
         const column = PATCH_TO_COLUMN[key];
         let value = patch[key];
-        if (key === "shipping" || key === "stockIssues") {
+        if (key === "shipping") {
+            value = value == null ? null : protectJsonForStorage(value);
+            value = value == null ? null : JSON.stringify(value);
+            assignments.push(`${column} = $${index + 2}::jsonb`);
+        }
+        else if (key === "stockIssues") {
             value = value == null ? null : JSON.stringify(value);
             assignments.push(`${column} = $${index + 2}::jsonb`);
         }
