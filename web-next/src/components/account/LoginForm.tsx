@@ -102,7 +102,7 @@ export function LoginForm() {
   const loginNotice = useMemo(() => {
     const raw = String(searchParams.get("notice") || "").trim().toLowerCase();
     if (raw === "private-care") {
-      return "Cadastre-se ou faÃ§a login para agendar seu atendimento.";
+      return "Cadastre-se ou faça login para agendar seu atendimento.";
     }
     return "";
   }, [searchParams]);
