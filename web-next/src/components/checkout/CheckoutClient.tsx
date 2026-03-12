@@ -2032,7 +2032,10 @@ export function CheckoutClient() {
                     <CheckoutPaymentForm
                       orderId={intent.orderId}
                       customerEmail={intent.customerEmail || checkoutEmail}
+                      clientSecret={intent.clientSecret}
                       paymentMethodOrder={stripePaymentMethodOrder}
+                      mode={selectedPaymentMethod === "card" ? "card" : "payment"}
+                      billingNameDefault={addressDisplay.name}
                       onElementStateChange={setPaymentElementState}
                       onSubmitActionChange={setSubmitPaymentAction}
                       showSubmitButton={false}

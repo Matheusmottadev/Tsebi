@@ -8,6 +8,58 @@
   outline: none;
 }
 
+.cardForm {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0 28px;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+}
+
+.fieldFull {
+  grid-column: 1 / -1;
+}
+
+.field > span {
+  margin: 0 0 10px;
+  color: #9e9890;
+  font-family: "Jost", sans-serif;
+  font-size: 10px;
+  font-weight: 200;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+
+.field input,
+.stripeFieldShell {
+  min-height: 48px;
+  border: 0;
+  border-bottom: 1px solid #e8e6e2;
+  background: transparent;
+  color: #111;
+  font-family: "Jost", sans-serif;
+  font-size: 15px;
+  font-weight: 300;
+}
+
+.field input {
+  padding: 10px 0;
+  outline: none;
+}
+
+.field input::placeholder {
+  color: #8d8a84;
+}
+
+.stripeFieldShell {
+  display: flex;
+  align-items: center;
+  padding: 10px 0;
+}
+
 .error {
   border-radius: 10px;
   border: 1px solid #ffd4cf;

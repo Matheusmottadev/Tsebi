@@ -2,15 +2,18 @@
 
 import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { PaymentElement, useElements, useStripe } from "@stripe/react-stripe-js";
-import type { StripePaymentElementChangeEvent } from "@stripe/stripe-js";
+import { CardCvcElement, CardExpiryElement, CardNumberElement, PaymentElement, useElements, useStripe } from "@stripe/react-stripe-js";
+import type { StripeCardCvcElementChangeEvent, StripeCardExpiryElementChangeEvent, StripeCardNumberElementChangeEvent, StripePaymentElementChangeEvent } from "@stripe/stripe-js";
 import { useCartStore } from "@/lib/cart/cartStore";
 import styles from "./CheckoutPaymentForm.module.css";
 
 type CheckoutPaymentFormProps = {
   orderId: string;
   customerEmail: string;
+  clientSecret: string;
   paymentMethodOrder?: string[];
+  mode?: "card" | "payment";
+  billingNameDefault?: string;
   submitLabel?: string;
   onElementStateChange?: (state: { ready: boolean; complete: boolean }) => void;
   onSubmitActionChange?: (action: null | (() => Promise<boolean>)) => void;
@@ -48,7 +51,10 @@ function buildSuccessUrl(successPath: string): string {
 export function CheckoutPaymentForm({
   orderId,
   customerEmail,
+  clientSecret,
   paymentMethodOrder = [],
+  mode = "payment",
+  billingNameDefault = "",
   submitLabel,
   onElementStateChange,
   onSubmitActionChange,
@@ -62,6 +68,13 @@ export function CheckoutPaymentForm({
   const [errorMessage, setErrorMessage] = useState("");
   const [paymentElementReady, setPaymentElementReady] = useState(false);
   const [paymentElementComplete, setPaymentElementComplete] = useState(false);
+  const [billingName, setBillingName] = useState(String(billingNameDefault || "").trim());
+  const [cardNumberReady, setCardNumberReady] = useState(false);
+  const [cardExpiryReady, setCardExpiryReady] = useState(false);
+  const [cardCvcReady, setCardCvcReady] = useState(false);
+  const [cardNumberComplete, setCardNumberComplete] = useState(false);
+  const [cardExpiryComplete, setCardExpiryComplete] = useState(false);
+  const [cardCvcComplete, setCardCvcComplete] = useState(false);
   const paymentElementContainerRef = useRef<HTMLDivElement | null>(null);
   const previousCompleteRef = useRef<boolean | null>(null);
 
@@ -79,6 +92,33 @@ export function CheckoutPaymentForm({
     }),
     [paymentMethodOrder]
   );
+  const cardElementOptions = useMemo(
+    () => ({
+      style: {
+        base: {
+          color: "#111111",
+          fontFamily: "Jost, sans-serif",
+          fontSize: "15px",
+          fontWeight: "300",
+          letterSpacing: "0.04em",
+          "::placeholder": {
+            color: "#8d8a84",
+          },
+        },
+        invalid: {
+          color: "#9d1f1f",
+        },
+      },
+    }),
+    []
+  );
+  const isCardMode = mode === "card";
+  const paymentReady = isCardMode
+    ? cardNumberReady && cardExpiryReady && cardCvcReady && Boolean(stripe) && Boolean(elements)
+    : paymentElementReady && Boolean(stripe) && Boolean(elements);
+  const paymentComplete = isCardMode
+    ? cardNumberComplete && cardExpiryComplete && cardCvcComplete && billingName.trim().length >= 3
+    : paymentElementComplete;
 
   useEffect(() => {
     const container = paymentElementContainerRef.current;
@@ -88,11 +128,17 @@ export function CheckoutPaymentForm({
   }, []);
 
   useEffect(() => {
+    if (!billingName.trim() && billingNameDefault) {
+      setBillingName(String(billingNameDefault || "").trim());
+    }
+  }, [billingNameDefault, billingName]);
+
+  useEffect(() => {
     onElementStateChange?.({
-      ready: paymentElementReady && Boolean(stripe) && Boolean(elements),
-      complete: paymentElementComplete,
+      ready: paymentReady,
+      complete: paymentComplete,
     });
-  }, [elements, onElementStateChange, paymentElementComplete, paymentElementReady, stripe]);
+  }, [onElementStateChange, paymentComplete, paymentReady]);
 
   function handlePaymentElementChange(event: StripePaymentElementChangeEvent) {
     const complete = Boolean(event.complete);
@@ -103,26 +149,64 @@ export function CheckoutPaymentForm({
     }
   }
 
-  const payButtonDisabled = !stripe || !elements || !paymentElementReady || !paymentElementComplete || isSubmitting;
+  function handleCardNumberChange(event: StripeCardNumberElementChangeEvent) {
+    setCardNumberComplete(Boolean(event.complete));
+    if (event.error?.message) setErrorMessage(String(event.error.message || "").trim());
+    else setErrorMessage("");
+  }
+
+  function handleCardExpiryChange(event: StripeCardExpiryElementChangeEvent) {
+    setCardExpiryComplete(Boolean(event.complete));
+    if (event.error?.message) setErrorMessage(String(event.error.message || "").trim());
+    else setErrorMessage("");
+  }
+
+  function handleCardCvcChange(event: StripeCardCvcElementChangeEvent) {
+    setCardCvcComplete(Boolean(event.complete));
+    if (event.error?.message) setErrorMessage(String(event.error.message || "").trim());
+    else setErrorMessage("");
+  }
+
+  const payButtonDisabled = !stripe || !elements || !paymentReady || !paymentComplete || isSubmitting;
 
   const submitPayment = useCallback(async (): Promise<boolean> => {
     setErrorMessage("");
 
-    if (!stripe || !elements || !paymentElementReady || !paymentElementComplete) {
-      setErrorMessage("Payment form is still loading. Please try again.");
+    if (!stripe || !elements || !paymentReady || !paymentComplete) {
+      setErrorMessage("Preencha corretamente os dados de pagamento para continuar.");
       return false;
     }
 
     setIsSubmitting(true);
     try {
-      const result = await stripe.confirmPayment({
-        elements,
-        confirmParams: {
-          return_url: successUrl,
-          receipt_email: customerEmail || undefined,
-        },
-        redirect: "if_required",
-      });
+      const cardNumberElement = isCardMode ? elements.getElement(CardNumberElement) : null;
+      if (isCardMode && (!cardNumberElement || !String(clientSecret || "").trim())) {
+        setErrorMessage("Nao foi possivel preparar os campos do cartao. Atualize a pagina e tente novamente.");
+        return false;
+      }
+
+      const result = isCardMode
+        ? await stripe.confirmCardPayment(
+            String(clientSecret || "").trim(),
+            {
+              payment_method: {
+                card: cardNumberElement as NonNullable<typeof cardNumberElement>,
+                billing_details: {
+                  name: billingName.trim(),
+                  email: customerEmail || undefined,
+                },
+              },
+            },
+            { handleActions: true }
+          )
+        : await stripe.confirmPayment({
+            elements,
+            confirmParams: {
+              return_url: successUrl,
+              receipt_email: customerEmail || undefined,
+            },
+            redirect: "if_required",
+          });
 
       if (result.error) {
         const failedMessage = String(result.error.message || "Pagamento recusado pelo emissor do cartao.").trim();
@@ -146,23 +230,26 @@ export function CheckoutPaymentForm({
       router.push(buildConfirmationPath("failed", orderId, customerEmail, statusMessage));
       return false;
     } catch (error) {
-      const message = error instanceof Error ? error.message : "Payment confirmation failed.";
+      const message = error instanceof Error ? error.message : "Nao foi possivel confirmar o pagamento.";
       setErrorMessage(message);
       return false;
     } finally {
       setIsSubmitting(false);
     }
   }, [
+    billingName,
+    clientSecret,
     clearCart,
     customerEmail,
     elements,
-    orderId,
-    paymentElementComplete,
-    paymentElementReady,
     processingPath,
     router,
+    successUrl,
     stripe,
     successPath,
+    isCardMode,
+    paymentComplete,
+    paymentReady,
   ]);
 
   useEffect(() => {
@@ -180,17 +267,65 @@ export function CheckoutPaymentForm({
   return (
     <form className={styles.form} onSubmit={handleSubmit}>
       <div ref={paymentElementContainerRef} className={styles.paymentElementContainer} tabIndex={-1}>
-        <PaymentElement
-          options={paymentElementOptions}
-          onReady={() => {
-            setPaymentElementReady(true);
-          }}
-          onLoadError={() => {
-            setPaymentElementReady(false);
-            setErrorMessage("Nao foi possivel carregar os metodos de pagamento. Atualize a pagina e tente novamente.");
-          }}
-          onChange={handlePaymentElementChange}
-        />
+        {isCardMode ? (
+          <div className={styles.cardForm}>
+            <label className={`${styles.field} ${styles.fieldFull}`}>
+              <span>Numero do cartao</span>
+              <div className={styles.stripeFieldShell}>
+                <CardNumberElement
+                  options={cardElementOptions}
+                  onReady={() => setCardNumberReady(true)}
+                  onChange={handleCardNumberChange}
+                />
+              </div>
+            </label>
+
+            <label className={`${styles.field} ${styles.fieldFull}`}>
+              <span>Nome no cartao</span>
+              <input
+                type="text"
+                value={billingName}
+                onChange={(event) => setBillingName(String(event.target.value || "").slice(0, 64))}
+                placeholder="Como aparece no cartao"
+                autoComplete="cc-name"
+              />
+            </label>
+
+            <label className={styles.field}>
+              <span>Validade</span>
+              <div className={styles.stripeFieldShell}>
+                <CardExpiryElement
+                  options={cardElementOptions}
+                  onReady={() => setCardExpiryReady(true)}
+                  onChange={handleCardExpiryChange}
+                />
+              </div>
+            </label>
+
+            <label className={styles.field}>
+              <span>CVV</span>
+              <div className={styles.stripeFieldShell}>
+                <CardCvcElement
+                  options={cardElementOptions}
+                  onReady={() => setCardCvcReady(true)}
+                  onChange={handleCardCvcChange}
+                />
+              </div>
+            </label>
+          </div>
+        ) : (
+          <PaymentElement
+            options={paymentElementOptions}
+            onReady={() => {
+              setPaymentElementReady(true);
+            }}
+            onLoadError={() => {
+              setPaymentElementReady(false);
+              setErrorMessage("Nao foi possivel carregar os metodos de pagamento. Atualize a pagina e tente novamente.");
+            }}
+            onChange={handlePaymentElementChange}
+          />
+        )}
       </div>
       {errorMessage ? (
         <p role="alert" className={styles.error}>
