@@ -68,9 +68,9 @@
 .editorialBrand {
   margin: 0;
   font-family: var(--font-cormorant), serif !important;
-  font-size: 22px;
+  font-size: 24px;
   font-weight: 400;
-  letter-spacing: 9.9px;
+  letter-spacing: 8.1px;
   line-height: 1;
   animation: fadeInUp 0.65s ease-out both;
   text-transform: uppercase;
@@ -266,6 +266,29 @@
   margin-bottom: 8px;
 }
 
+.iconOutlineButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 11px;
+}
+
+.outlineIcon {
+  width: 13px;
+  height: 13px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  color: #b1b1b1;
+}
+
+.outlineIcon svg {
+  width: 13px;
+  height: 13px;
+  display: block;
+}
+
 .primaryButton:disabled,
 .outlineButton:disabled {
   opacity: 0.6;
@@ -430,8 +453,8 @@
   }
 
   .editorialBrand {
-    font-size: 22px;
-    letter-spacing: 7.7px;
+    font-size: 24px;
+    letter-spacing: 6.3px;
   }
 
   .editorialQuote {
