@@ -1,55 +1,140 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
+const fs = require("node:fs/promises");
+const path = require("node:path");
 const { query } = require("./db");
 const DEFAULT_IMAGE = "images/placeholderreal.webp";
 const STOREFRONT_DEFAULT_PRICE_CENTS = 500;
+const INVENTORY_FILE_CANDIDATES = [
+    path.resolve(__dirname, "..", "..", "data", "inventory.json"),
+    path.resolve(__dirname, "..", "..", "..", "data", "inventory.json")
+];
+const AUTO_SYNC_INVENTORY_ON_READ = (() => {
+    const normalized = String(process.env.PRODUCTS_AUTO_SYNC_FROM_INVENTORY || "1")
+        .trim()
+        .toLowerCase();
+    if (!normalized)
+        return true;
+    if (["0", "false", "no", "off"].includes(normalized))
+        return false;
+    if (["1", "true", "yes", "on"].includes(normalized))
+        return true;
+    return true;
+})();
+const BROKEN_ENCODING_REPLACEMENTS = [
+    ["Ã¡", "á"],
+    ["Ãà", "à"],
+    ["Ã¢", "â"],
+    ["Ãã", "ã"],
+    ["Ãä", "ä"],
+    ["Ãé", "é"],
+    ["Ãê", "ê"],
+    ["Ãí", "í"],
+    ["Ãó", "ó"],
+    ["Ãô", "ô"],
+    ["Ãõ", "õ"],
+    ["Ãö", "ö"],
+    ["Ãú", "ú"],
+    ["Ãü", "ü"],
+    ["Ãç", "ç"],
+    ["ÃÁ", "Á"],
+    ["ÃÀ", "À"],
+    ["ÃÂ", "Â"],
+    ["ÃÃ", "Ã"],
+    ["ÃÉ", "É"],
+    ["ÃÊ", "Ê"],
+    ["ÃÍ", "Í"],
+    ["ÃÓ", "Ó"],
+    ["ÃÔ", "Ô"],
+    ["ÃÕ", "Õ"],
+    ["ÃÚ", "Ú"],
+    ["ÃÇ", "Ç"],
+    ["â€“", "–"],
+    ["â€”", "—"],
+    ["â€˜", "‘"],
+    ["â€™", "’"],
+    ["â€œ", "“"],
+    ["â€", "”"]
+];
+const QUESTION_MARK_TEXT_REPLACEMENTS = [
+    [/\?nico/gi, "Único"],
+    [/Cardig\?/gi, "Cardigã"],
+    [/t\?cnico/gi, "técnico"],
+    [/met\?lica/gi, "metálica"],
+    [/precis\?o/gi, "precisão"],
+    [/arquitet\?nico/gi, "arquitetônico"],
+    [/G\?nesis/gi, "Gênesis"],
+    [/cart\?es/gi, "cartões"],
+    [/Len\?o/gi, "Lenço"],
+    [/Cal\?a/gi, "Calça"],
+    [/\bem l\?\b/gi, "em lã"],
+    [/\bl\?(?=\s|$)/gi, "lã"],
+    [/\bL\?(?=\s|$)/g, "Lã"],
+    [/\bL\?\b/g, "Lã"],
+    [/\bl\?\b/g, "lã"]
+];
+function sanitizeCatalogText(value) {
+    let text = String(value || "").trim();
+    if (!text)
+        return "";
+    BROKEN_ENCODING_REPLACEMENTS.forEach(([broken, fixed]) => {
+        text = text.split(broken).join(fixed);
+    });
+    QUESTION_MARK_TEXT_REPLACEMENTS.forEach(([pattern, fixed]) => {
+        text = text.replace(pattern, fixed);
+    });
+    text = text.replace(/\uFFFD/g, "").trim();
+    if (/^[\?\uFFFD]nico$/i.test(text))
+        return "Único";
+    return text;
+}
 const PRODUCT_METADATA = {
     "genesis-bomber": {
-        collection: "GÃƒÂªnesis",
+        collection: "Gênesis",
         category: "Outerwear",
         subcategory: "Jaquetas",
-        material: "Couro e lÃƒÂ£",
+        material: "Couro e lã",
         sizes: ["P", "M", "G"],
         colors: ["Vermelho", "Areia"],
         gender: "Unissex",
-        image: "images/placeholderreal.webp",
-        secondaryImage: "images/placeholderreal.webp",
+        image: "images/product/genesis-bomber-1.jpg",
+        secondaryImage: "images/product/genesis-bomber-2.jpg",
         nameEn: "Italian leather bomber jacket with silk lining"
     },
     "genesis-tailored": {
-        collection: "GÃƒÂªnesis",
+        collection: "Gênesis",
         category: "Ready-to-Wear",
         subcategory: "Calças",
         material: "Sarja premium",
         sizes: ["36", "38", "40", "42"],
         colors: ["Grafite", "Preto"],
         gender: "Feminino",
-        image: "images/placeholderreal.webp",
-        secondaryImage: "images/placeholderreal.webp",
+        image: "images/product/genesis-tailored-1.jpg",
+        secondaryImage: "images/product/genesis-tailored-2.jpg",
         nameEn: "Premium structured tailored twill pants"
     },
     "origem-shirt": {
         collection: "Alicerce",
         category: "Ready-to-Wear",
         subcategory: "Camisas",
-        material: "AlgodÃƒÂ£o egÃƒÂ­pcio",
+        material: "Algodão egípcio",
         sizes: ["P", "M", "G", "GG"],
         colors: ["Branco", "Azul"],
         gender: "Masculino",
-        image: "images/placeholderreal.webp",
-        secondaryImage: "images/placeholderreal.webp",
+        image: "images/product/origem-shirt-1.jpg",
+        secondaryImage: "images/product/origem-shirt-2.jpg",
         nameEn: "Croatian cotton shirt with noble weave"
     },
     "origem-skirt": {
         collection: "Alicerce",
         category: "Ready-to-Wear",
         subcategory: "Saias",
-        material: "LÃƒÂ£ fria",
+        material: "Lã fria",
         sizes: ["36", "38", "40"],
         colors: ["Preto", "Marfim"],
         gender: "Feminino",
-        image: "images/placeholderreal.webp",
-        secondaryImage: "images/placeholderreal.webp",
+        image: "images/product/origem-skirt-1.jpg",
+        secondaryImage: "images/product/origem-skirt-2.jpg",
         nameEn: "Structured cool wool skirt with impeccable finish"
     },
     "atelier-bag": {
@@ -57,23 +142,23 @@ const PRODUCT_METADATA = {
         category: "Leather",
         subcategory: "Jaquetas de couro",
         material: "Couro natural",
-        sizes: ["ÃƒÅ¡nico"],
+        sizes: ["?nico"],
         colors: ["Caramelo", "Preto"],
         gender: "Unissex",
-        image: "images/placeholderreal.webp",
-        secondaryImage: "images/placeholderreal.webp",
+        image: "images/product/atelier-bag-1.jpg",
+        secondaryImage: "images/product/atelier-bag-2.jpg",
         nameEn: "Natural leather bag with plated hardware"
     },
     "atelier-heels": {
-        collection: "GÃƒÂªnesis",
+        collection: "Gênesis",
         category: "Leather",
         subcategory: "Calças de couro",
         material: "Couro envernizado",
         sizes: ["35", "36", "37", "38", "39"],
         colors: ["Preto", "Vinho"],
         gender: "Feminino",
-        image: "images/placeholderreal.webp",
-        secondaryImage: "images/placeholderreal.webp",
+        image: "images/product/atelier-heels-1.jpg",
+        secondaryImage: "images/product/atelier-heels-2.jpg",
         nameEn: "Patent leather pumps with sculpted heel"
     },
     "flux-trench": {
@@ -84,44 +169,44 @@ const PRODUCT_METADATA = {
         sizes: ["P", "M", "G"],
         colors: ["Areia", "Oliva"],
         gender: "Unissex",
-        image: "images/placeholderreal.webp",
-        secondaryImage: "images/placeholderreal.webp",
+        image: "images/product/flux-trench-1.jpg",
+        secondaryImage: "images/product/flux-trench-2.jpg",
         nameEn: "Gabardine trench coat with architectural cut"
     },
     "flux-knit": {
-        collection: "GÃƒÂªnesis",
+        collection: "Gênesis",
         category: "Ready-to-Wear",
         subcategory: "Camisetas",
-        material: "LÃƒÂ£ merino",
+        material: "L? merino",
         sizes: ["P", "M", "G", "GG"],
         colors: ["Off white", "Cinza"],
         gender: "Masculino",
-        image: "images/placeholderreal.webp",
-        secondaryImage: "images/placeholderreal.webp",
+        image: "images/product/flux-knit-1.jpg",
+        secondaryImage: "images/product/flux-knit-2.jpg",
         nameEn: "Ultrafine merino wool knitwear"
     },
     "noir-dress": {
-        collection: "GÃƒÂªnesis",
+        collection: "Gênesis",
         category: "Ready-to-Wear",
         subcategory: "Vestidos",
         material: "Crepe de seda",
         sizes: ["36", "38", "40", "42"],
         colors: ["Preto"],
         gender: "Feminino",
-        image: "images/placeholderreal.webp",
-        secondaryImage: "images/placeholderreal.webp",
+        image: "images/product/noir-dress-1.jpg",
+        secondaryImage: "images/product/noir-dress-2.jpg",
         nameEn: "Silk crepe column dress with couture drape"
     },
     "noir-sneaker": {
         collection: "Alicerce",
         category: "Ready-to-Wear",
         subcategory: "Camisetas",
-        material: "Nylon tÃƒÂ©cnico",
+        material: "Nylon técnico",
         sizes: ["37", "38", "39", "40", "41", "42"],
         colors: ["Preto", "Branco"],
         gender: "Unissex",
-        image: "images/placeholderreal.webp",
-        secondaryImage: "images/placeholderreal.webp",
+        image: "images/product/noir-sneaker-1.jpg",
+        secondaryImage: "images/product/noir-sneaker-2.jpg",
         nameEn: "Technical nylon and premium-finish leather sneaker"
     },
     "essence-blazer": {
@@ -132,20 +217,20 @@ const PRODUCT_METADATA = {
         sizes: ["P", "M", "G"],
         colors: ["Marfim", "Bege"],
         gender: "Feminino",
-        image: "images/placeholderreal.webp",
-        secondaryImage: "images/placeholderreal.webp",
+        image: "images/product/essence-blazer-1.jpg",
+        secondaryImage: "images/product/essence-blazer-2.jpg",
         nameEn: "Premium linen blazer with precision tailoring"
     },
     "essence-trousers": {
-        collection: "GÃƒÂªnesis",
+        collection: "Gênesis",
         category: "Ready-to-Wear",
         subcategory: "Calças",
         material: "Linho premium",
         sizes: ["36", "38", "40", "42", "44"],
         colors: ["Marfim", "Areia"],
         gender: "Feminino",
-        image: "images/placeholderreal.webp",
-        secondaryImage: "images/placeholderreal.webp",
+        image: "images/product/essence-trousers-1.jpg",
+        secondaryImage: "images/product/essence-trousers-2.jpg",
         nameEn: "Premium linen wide-leg trousers with deep pleat"
     },
     "aurora-coat": {
@@ -389,7 +474,7 @@ const PRODUCT_METADATA = {
         nameEn: "Solstice jacket"
     },
     "genesis-hobo-bag": {
-        collection: "G?nesis",
+        collection: "Gênesis",
         category: "Accessories",
         subcategory: "Bolsas",
         material: "Couro",
@@ -415,9 +500,9 @@ const PRODUCT_METADATA = {
         nameEn: "Alicerce mini bag"
     },
     "fleur-silk-scarf": {
-        collection: "G?nesis",
+        collection: "Gênesis",
         category: "Accessories",
-        subcategory: "Len?os",
+        subcategory: "Lenços",
         material: "Seda",
         sizes: ["Unico"],
         colors: ["Marfim", "Preto"],
@@ -454,7 +539,7 @@ const PRODUCT_METADATA = {
         nameEn: "Aura thin belt"
     },
     "marco-duffle-bag": {
-        collection: "G?nesis",
+        collection: "Gênesis",
         category: "Accessories",
         subcategory: "Bolsas",
         material: "Couro",
@@ -480,7 +565,7 @@ const PRODUCT_METADATA = {
         nameEn: "Atlas crossbody bag"
     },
     "pulse-leather-wallet": {
-        collection: "G?nesis",
+        collection: "Gênesis",
         category: "Accessories",
         subcategory: "Carteiras",
         material: "Couro",
@@ -517,6 +602,97 @@ const PRODUCT_METADATA = {
         image: "images/product/titan-buckle-belt-1.jpg",
         secondaryImage: "images/product/titan-buckle-belt-2.jpg",
         nameEn: "Titan buckle belt"
+    },
+    "luna-soft-bag": {
+        collection: "Alicerce",
+        category: "Accessories",
+        subcategory: "Bolsas",
+        material: "Couro",
+        sizes: ["Unico"],
+        colors: ["Marfim", "Preto"],
+        gender: "Feminino",
+        tags: ["acessorios", "bolsas", "new-arrivals"],
+        image: "images/product/genesis-hobo-bag-1.jpg",
+        secondaryImage: "images/product/genesis-hobo-bag-2.jpg",
+        nameEn: "Luna soft bag"
+    },
+    "stella-tote-bag": {
+        collection: "Gênesis",
+        category: "Accessories",
+        subcategory: "Bolsas",
+        material: "Couro",
+        sizes: ["Unico"],
+        colors: ["Areia", "Caramelo"],
+        gender: "Feminino",
+        tags: ["acessorios", "bolsas"],
+        image: "images/product/alicerce-mini-bag-1.jpg",
+        secondaryImage: "images/product/alicerce-mini-bag-2.jpg",
+        nameEn: "Stella tote bag"
+    },
+    "ivy-shoulder-bag": {
+        collection: "Alicerce",
+        category: "Accessories",
+        subcategory: "Bolsas",
+        material: "Couro",
+        sizes: ["Unico"],
+        colors: ["Preto", "Vinho"],
+        gender: "Feminino",
+        tags: ["acessorios", "bolsas"],
+        image: "images/product/atelier-bag-1.jpg",
+        secondaryImage: "images/product/atelier-bag-2.jpg",
+        nameEn: "Ivy shoulder bag"
+    },
+    "drift-bifold-wallet": {
+        collection: "Alicerce",
+        category: "Accessories",
+        subcategory: "Carteiras",
+        material: "Couro",
+        sizes: ["Unico"],
+        colors: ["Preto", "Cafe"],
+        gender: "Masculino",
+        tags: ["acessorios", "carteiras"],
+        image: "images/product/pulse-leather-wallet-1.jpg",
+        secondaryImage: "images/product/pulse-leather-wallet-2.jpg",
+        nameEn: "Drift bifold wallet"
+    },
+    "north-zip-wallet": {
+        collection: "Gênesis",
+        category: "Accessories",
+        subcategory: "Carteiras",
+        material: "Couro",
+        sizes: ["Unico"],
+        colors: ["Grafite", "Preto"],
+        gender: "Masculino",
+        tags: ["acessorios", "carteiras", "signature-pieces"],
+        image: "images/product/nox-card-wallet-1.jpg",
+        secondaryImage: "images/product/nox-card-wallet-2.jpg",
+        nameEn: "North zip wallet"
+    },
+    "orion-buckle-belt": {
+        collection: "Alicerce",
+        category: "Accessories",
+        subcategory: "Cintos",
+        material: "Couro",
+        sizes: ["P", "M", "G", "GG"],
+        colors: ["Preto", "Marrom"],
+        gender: "Masculino",
+        tags: ["acessorios", "cintos"],
+        image: "images/product/titan-buckle-belt-1.jpg",
+        secondaryImage: "images/product/titan-buckle-belt-2.jpg",
+        nameEn: "Orion buckle belt"
+    },
+    "iris-slim-belt": {
+        collection: "Gênesis",
+        category: "Accessories",
+        subcategory: "Cintos",
+        material: "Couro",
+        sizes: ["P", "M", "G"],
+        colors: ["Caramelo", "Preto"],
+        gender: "Feminino",
+        tags: ["acessorios", "cintos"],
+        image: "images/product/aura-thin-belt-1.jpg",
+        secondaryImage: "images/product/aura-thin-belt-2.jpg",
+        nameEn: "Iris slim belt"
     }
 };
 function asRecord(value) {
@@ -527,7 +703,7 @@ function normalizeTextList(value, fallback = []) {
     const cleaned = [];
     const seen = new Set();
     list.forEach((entry) => {
-        const item = String(entry || "").trim();
+        const item = sanitizeCatalogText(entry).trim();
         if (!item)
             return;
         const key = item.toLowerCase();
@@ -567,8 +743,8 @@ function sanitizeVariantStockMap(value, validColors = [], validSizes = []) {
 }
 function normalizeProductMetadata(value, fallback = {}) {
     const raw = asRecord(value);
-    const fallbackSizes = normalizeTextList(fallback.sizes, ["ÃƒÅ¡nico"]);
-    const fallbackColors = normalizeTextList(fallback.colors, ["ÃƒÅ¡nico"]);
+    const fallbackSizes = normalizeTextList(fallback.sizes, ["?nico"]);
+    const fallbackColors = normalizeTextList(fallback.colors, ["?nico"]);
     const rawVariantStock = asRecord(raw.variantStock);
     const extractedColors = [];
     const extractedSizes = [];
@@ -586,8 +762,8 @@ function normalizeProductMetadata(value, fallback = {}) {
         if (size)
             extractedSizes.push(size);
     });
-    let sizes = normalizeTextList([...normalizeTextList(raw.sizes, []), ...normalizeTextList(extractedSizes, [])], fallbackSizes.length ? fallbackSizes : ["ÃƒÅ¡nico"]);
-    let colors = normalizeTextList([...normalizeTextList(raw.colors, []), ...normalizeTextList(extractedColors, [])], fallbackColors.length ? fallbackColors : ["ÃƒÅ¡nico"]);
+    let sizes = normalizeTextList([...normalizeTextList(raw.sizes, []), ...normalizeTextList(extractedSizes, [])], fallbackSizes.length ? fallbackSizes : ["?nico"]);
+    let colors = normalizeTextList([...normalizeTextList(raw.colors, []), ...normalizeTextList(extractedColors, [])], fallbackColors.length ? fallbackColors : ["?nico"]);
     let variantStock = sanitizeVariantStockMap(raw.variantStock ?? raw.variant_stock, colors, sizes);
     const looksLikeLegacyBlackOnly = colors.length === 1 &&
         String(colors[0] || "").trim().toLowerCase() === "preto" &&
@@ -598,10 +774,41 @@ function normalizeProductMetadata(value, fallback = {}) {
         sizes = fallbackSizes.length ? fallbackSizes : sizes;
         variantStock = sanitizeVariantStockMap(raw.variantStock ?? raw.variant_stock, colors, sizes);
     }
+    const collection = sanitizeCatalogText(raw.collection || fallback.collection || "").trim();
+    const category = sanitizeCatalogText(raw.category || fallback.category || "").trim();
+    const subcategory = sanitizeCatalogText(raw.subcategory || fallback.subcategory || "").trim();
+    const material = sanitizeCatalogText(raw.material || fallback.material || "").trim();
+    const genderRaw = sanitizeCatalogText(raw.gender || fallback.gender || "").trim();
+    const gender = genderRaw && ["feminino", "masculino", "unissex"].includes(genderRaw.toLowerCase())
+        ? genderRaw[0].toUpperCase() + genderRaw.slice(1).toLowerCase()
+        : "";
+    const secondaryImage = String(raw.secondaryImage || raw.secondary_image || raw.image2 || raw.hoverImage || fallback.secondaryImage || "").trim();
+    const galleryImages = normalizeTextList(raw.galleryImages || raw.gallery_images || [], []);
+    const careList = normalizeTextList(raw.careList || raw.care_list || [], []);
+    const modelInfo = sanitizeCatalogText(raw.modelInfo || raw.model_info || "").trim();
+    const fitType = sanitizeCatalogText(raw.fitType || raw.fit_type || "").trim();
+    const sizeRecommendation = sanitizeCatalogText(raw.sizeRecommendation || raw.size_recommendation || "").trim();
+    const detailedModeling = sanitizeCatalogText(raw.detailedModeling || raw.detailed_modeling || "").trim();
+    const materialMain = sanitizeCatalogText(raw.materialMain || raw.material_main || "").trim();
+    const cleaningRecommendation = sanitizeCatalogText(raw.cleaningRecommendation || raw.cleaning_recommendation || "").trim();
     return {
-        sizes: sizes.length ? sizes : ["ÃƒÅ¡nico"],
-        colors: colors.length ? colors : ["ÃƒÅ¡nico"],
-        variantStock
+        sizes: sizes.length ? sizes : ["?nico"],
+        colors: colors.length ? colors : ["?nico"],
+        variantStock,
+        collection: collection || undefined,
+        category: category || undefined,
+        subcategory: subcategory || undefined,
+        material: material || undefined,
+        gender: gender || undefined,
+        secondaryImage: secondaryImage || undefined,
+        galleryImages: galleryImages.length ? galleryImages : undefined,
+        modelInfo: modelInfo || undefined,
+        fitType: fitType || undefined,
+        sizeRecommendation: sizeRecommendation || undefined,
+        detailedModeling: detailedModeling || undefined,
+        materialMain: materialMain || undefined,
+        cleaningRecommendation: cleaningRecommendation || undefined,
+        careList: careList.length ? careList : undefined
     };
 }
 const FEMALE_SKUS = new Set([
@@ -625,7 +832,11 @@ const FEMALE_SKUS = new Set([
     "alicerce-mini-bag",
     "fleur-silk-scarf",
     "nox-card-wallet",
-    "aura-thin-belt"
+    "aura-thin-belt",
+    "luna-soft-bag",
+    "stella-tote-bag",
+    "ivy-shoulder-bag",
+    "iris-slim-belt"
 ]);
 const MALE_SKUS = new Set([
     "origem-shirt",
@@ -648,7 +859,10 @@ const MALE_SKUS = new Set([
     "atlas-crossbody-bag",
     "pulse-leather-wallet",
     "vento-wool-scarf",
-    "titan-buckle-belt"
+    "titan-buckle-belt",
+    "drift-bifold-wallet",
+    "north-zip-wallet",
+    "orion-buckle-belt"
 ]);
 const NEW_SKUS = new Set([
     "genesis-bomber",
@@ -659,6 +873,13 @@ const NEW_SKUS = new Set([
     "eclipse-shirt",
     "essence-blazer",
     "essence-trousers",
+    "areia-top",
+    "lunar-blazer",
+    "prisma-skirt",
+    "serif-dress",
+    "nebula-tee",
+    "coral-pants",
+    "birch-cardigan",
     "origem-shirt",
     "atelier-bag",
     "atelier-heels",
@@ -667,10 +888,24 @@ const NEW_SKUS = new Set([
     "noir-sneaker",
     "oslo-parka",
     "riviera-shorts",
+    "vento-trousers",
+    "delta-jeans",
+    "atlas-hoodie",
+    "marco-trench",
+    "vento-knit",
+    "cairo-vest",
+    "pixel-bag",
     "genesis-hobo-bag",
     "fleur-silk-scarf",
     "marco-duffle-bag",
-    "pulse-leather-wallet"
+    "pulse-leather-wallet",
+    "luna-soft-bag",
+    "stella-tote-bag",
+    "ivy-shoulder-bag",
+    "drift-bifold-wallet",
+    "north-zip-wallet",
+    "orion-buckle-belt",
+    "iris-slim-belt"
 ]);
 const BEST_SELLER_SKUS = new Set([
     "origem-shirt",
@@ -745,13 +980,15 @@ function mapProduct(row) {
     const priceValue = effectivePriceCents / 100;
     const dbImage = String(row?.image_url || "").trim();
     const metadataImage = String(metadataRecord.image || metadataRecord.image_url || metadataRecord.imageUrl || "").trim();
-    const metadataSecondaryImage = String(metadataRecord.secondaryImage || metadataRecord.secondary_image || metadataRecord.image2 || metadataRecord.hoverImage || "").trim();
-    const resolvedImage = dbImage || metadataImage || DEFAULT_IMAGE;
-    const resolvedSecondaryImage = metadataSecondaryImage;
-    const collections = buildCollectionsArray(staticMetadata);
-    const resolvedGender = resolveProductGenderBySku(sku, staticMetadata.gender);
-    const category = String(staticMetadata.category || "Colecao");
-    const subcategory = String(staticMetadata.subcategory || category);
+    const staticImage = String(staticMetadata.image || "").trim();
+    const metadataSecondaryImage = String(metadata.secondaryImage || "").trim();
+    const staticSecondaryImage = String(staticMetadata.secondaryImage || "").trim();
+    const resolvedImage = dbImage || metadataImage || staticImage || DEFAULT_IMAGE;
+    const resolvedSecondaryImage = metadataSecondaryImage || staticSecondaryImage;
+    const collections = normalizeTextList([String(metadata.collection || "").trim(), ...buildCollectionsArray(staticMetadata)], ["Alicerce"]);
+    const resolvedGender = resolveProductGenderBySku(sku, metadata.gender || staticMetadata.gender);
+    const category = sanitizeCatalogText(metadata.category || staticMetadata.category || "Colecao");
+    const subcategory = sanitizeCatalogText(metadata.subcategory || staticMetadata.subcategory || category);
     const isNew = Boolean(staticMetadata.isNew ?? NEW_SKUS.has(sku));
     const isBestSeller = Boolean(staticMetadata.isBestSeller ?? BEST_SELLER_SKUS.has(sku));
     const isFeatured = Boolean(staticMetadata.isFeatured ?? FEATURED_SKUS.has(sku));
@@ -761,13 +998,13 @@ function mapProduct(row) {
         sku,
         slug: sku,
         dbId: row?.id,
-        name: String(row?.name || sku),
-        nameEn: String(staticMetadata.nameEn || row?.name || sku),
-        collection: collections[0],
+        name: sanitizeCatalogText(row?.name || sku),
+        nameEn: sanitizeCatalogText(staticMetadata.nameEn || row?.name || sku),
+        collection: sanitizeCatalogText(collections[0]),
         collections,
         category,
         subcategory,
-        material: String(staticMetadata.material || "Material premium"),
+        material: sanitizeCatalogText(metadata.material || staticMetadata.material || "Material premium"),
         sizes: metadata.sizes,
         colors: metadata.colors,
         variantStock: metadata.variantStock,
@@ -785,6 +1022,14 @@ function mapProduct(row) {
         active: Boolean(row?.active),
         image: resolvedImage,
         secondaryImage: resolvedSecondaryImage || undefined,
+        modelInfo: metadata.modelInfo || undefined,
+        fitType: metadata.fitType || undefined,
+        sizeRecommendation: metadata.sizeRecommendation || undefined,
+        detailedModeling: metadata.detailedModeling || undefined,
+        materialMain: metadata.materialMain || undefined,
+        cleaningRecommendation: metadata.cleaningRecommendation || undefined,
+        careList: Array.isArray(metadata.careList) ? metadata.careList : undefined,
+        galleryImages: Array.isArray(metadata.galleryImages) ? metadata.galleryImages : undefined,
         createdAt: row?.created_at || null,
         updatedAt: row?.updated_at || null,
         href: `produto.html?id=${encodeURIComponent(sku)}`
@@ -800,6 +1045,8 @@ function isMissingMetadataColumnError(error) {
     return getErrorCode(error) === "42703" && /metadata/i.test(getErrorMessage(error));
 }
 let ensureMetadataColumnPromise = null;
+let ensureInventorySeedPromise = null;
+let hasEnsuredInventorySeed = false;
 async function ensureProductsMetadataColumn() {
     if (!ensureMetadataColumnPromise) {
         ensureMetadataColumnPromise = query(`
@@ -813,6 +1060,94 @@ async function ensureProductsMetadataColumn() {
         });
     }
     await ensureMetadataColumnPromise;
+}
+function normalizeInventorySeedProduct(value) {
+    const item = asRecord(value);
+    const sku = normalizeSku(item.id || item.sku || "");
+    if (!sku)
+        return null;
+    const name = sanitizeCatalogText(item.name || sku).trim() || sku;
+    const unitAmount = Math.max(0, Math.round(Number(item.unitAmount || item.priceCents || 0)));
+    const stockQty = Math.max(0, Math.floor(Number(item.stock || item.stockQty || 0)));
+    const currency = String(item.currency || "brl").trim().toLowerCase() || "brl";
+    return {
+        sku,
+        name,
+        unitAmount,
+        stockQty,
+        currency
+    };
+}
+async function readInventorySeedProducts() {
+    for (const filePath of INVENTORY_FILE_CANDIDATES) {
+        try {
+            const raw = await fs.readFile(filePath, "utf8");
+            const parsed = JSON.parse(raw);
+            if (!Array.isArray(parsed))
+                return [];
+            const uniqueBySku = new Map();
+            parsed.forEach((entry) => {
+                const normalized = normalizeInventorySeedProduct(entry);
+                if (!normalized)
+                    return;
+                uniqueBySku.set(normalized.sku.toLowerCase(), normalized);
+            });
+            return Array.from(uniqueBySku.values());
+        }
+        catch { }
+    }
+    return [];
+}
+async function ensureInventorySeededFromFile() {
+    if (!AUTO_SYNC_INVENTORY_ON_READ || hasEnsuredInventorySeed)
+        return;
+    if (!ensureInventorySeedPromise) {
+        ensureInventorySeedPromise = (async () => {
+            const inventorySeed = await readInventorySeedProducts();
+            if (inventorySeed.length === 0) {
+                hasEnsuredInventorySeed = true;
+                return;
+            }
+            const existing = await query("SELECT sku FROM products");
+            const existingSkus = new Set(existing.rows.map((row) => String(row?.sku || "").trim().toLowerCase()).filter(Boolean));
+            const missing = inventorySeed.filter((product) => !existingSkus.has(product.sku.toLowerCase()));
+            if (missing.length === 0) {
+                hasEnsuredInventorySeed = true;
+                return;
+            }
+            for (const product of missing) {
+                const metadata = JSON.stringify(buildPersistedMetadata(product.sku, {}));
+                const withMetadataParams = [
+                    product.sku,
+                    product.name,
+                    product.unitAmount,
+                    product.stockQty,
+                    product.currency,
+                    true,
+                    null,
+                    metadata
+                ];
+                const withoutMetadataParams = withMetadataParams.slice(0, 7);
+                await queryWithOptionalMetadata(`
+          INSERT INTO products (sku, name, price_cents, stock_qty, currency, active, image_url, metadata)
+          VALUES ($1, $2, $3, $4, $5, $6, $7, $8::jsonb)
+          ON CONFLICT (sku) DO NOTHING
+          `, `
+          INSERT INTO products (sku, name, price_cents, stock_qty, currency, active, image_url)
+          VALUES ($1, $2, $3, $4, $5, $6, $7)
+          ON CONFLICT (sku) DO NOTHING
+          `, withMetadataParams, withoutMetadataParams);
+            }
+            hasEnsuredInventorySeed = true;
+        })()
+            .catch((error) => {
+            console.warn("[catalog-sync] Failed to auto-seed inventory from data/inventory.json:", getErrorMessage(error));
+        })
+            .finally(() => {
+            ensureInventorySeedPromise = null;
+        });
+    }
+    await ensureInventorySeedPromise;
 }
 async function queryWithOptionalMetadata(sqlWithMetadata, sqlWithoutMetadata, params = [], fallbackParams = null) {
     try {
@@ -833,6 +1168,7 @@ async function queryWithOptionalMetadata(sqlWithMetadata, sqlWithoutMetadata, pa
     }
 }
 async function listProducts() {
+    await ensureInventorySeededFromFile();
     const result = await queryWithOptionalMetadata(`
     SELECT id, sku, name, price_cents, stock_qty, currency, active, image_url, metadata, created_at, updated_at
     FROM products
@@ -1251,6 +1587,7 @@ async function searchAdminProducts({ query: q = "", status = "", stock = "", pag
     };
 }
 async function getProductByIdentifier(identifier) {
+    await ensureInventorySeededFromFile();
     const normalized = String(identifier || "").trim();
     if (!normalized)
         return null;
@@ -1284,7 +1621,21 @@ function buildPersistedMetadata(sku, input = {}) {
     return {
         sizes: normalized.sizes,
         colors: normalized.colors,
-        variantStock: normalized.variantStock
+        variantStock: normalized.variantStock,
+        collection: normalized.collection,
+        category: normalized.category,
+        subcategory: normalized.subcategory,
+        material: normalized.material,
+        gender: normalized.gender,
+        secondaryImage: normalized.secondaryImage,
+        galleryImages: normalized.galleryImages,
+        modelInfo: normalized.modelInfo,
+        fitType: normalized.fitType,
+        sizeRecommendation: normalized.sizeRecommendation,
+        detailedModeling: normalized.detailedModeling,
+        materialMain: normalized.materialMain,
+        cleaningRecommendation: normalized.cleaningRecommendation,
+        careList: normalized.careList
     };
 }
 function sumVariantStock(metadata) {
@@ -1298,6 +1649,20 @@ async function createProduct(payload = {}) {
     if (!sku)
         return { error: "INVALID_SKU" };
     const metadata = buildPersistedMetadata(sku, {
+        collection: payload.collection,
+        category: payload.category,
+        subcategory: payload.subcategory,
+        material: payload.material,
+        gender: payload.gender,
+        secondaryImage: payload.secondaryImage,
+        galleryImages: payload.galleryImages,
+        modelInfo: payload.modelInfo,
+        fitType: payload.fitType,
+        sizeRecommendation: payload.sizeRecommendation,
+        detailedModeling: payload.detailedModeling,
+        materialMain: payload.materialMain,
+        cleaningRecommendation: payload.cleaningRecommendation,
+        careList: payload.careList,
         sizes: payload.sizes,
         colors: payload.colors,
         variantStock: payload.variantStock
@@ -1346,10 +1711,40 @@ async function updateProductByIdentifier(identifier, patch = {}) {
     const normalized = String(identifier || "").trim();
     if (!normalized)
         return null;
-    const current = await getProductByIdentifier(normalized);
-    if (!current)
+    const currentRowResult = await queryWithOptionalMetadata(`
+    SELECT id, sku, name, price_cents, stock_qty, currency, active, image_url, metadata, created_at, updated_at
+    FROM products
+    WHERE id::text = $1
+       OR lower(sku) = lower($1)
+    LIMIT 1
+    `, `
+    SELECT id, sku, name, price_cents, stock_qty, currency, active, image_url, created_at, updated_at
+    FROM products
+    WHERE id::text = $1
+       OR lower(sku) = lower($1)
+    LIMIT 1
+    `, [normalized]);
+    const currentRow = currentRowResult.rows[0] || null;
+    if (!currentRow)
         return null;
+    const current = mapProduct(currentRow);
+    const currentMetadataRecord = asRecord(currentRow.metadata);
     const metadata = buildPersistedMetadata(current.sku, {
+        ...currentMetadataRecord,
+        collection: patch.collection ?? currentMetadataRecord.collection,
+        category: patch.category ?? currentMetadataRecord.category,
+        subcategory: patch.subcategory ?? currentMetadataRecord.subcategory,
+        material: patch.material ?? currentMetadataRecord.material,
+        gender: patch.gender ?? currentMetadataRecord.gender,
+        secondaryImage: patch.secondaryImage ?? currentMetadataRecord.secondaryImage,
+        galleryImages: patch.galleryImages ?? currentMetadataRecord.galleryImages,
+        modelInfo: patch.modelInfo ?? currentMetadataRecord.modelInfo,
+        fitType: patch.fitType ?? currentMetadataRecord.fitType,
+        sizeRecommendation: patch.sizeRecommendation ?? currentMetadataRecord.sizeRecommendation,
+        detailedModeling: patch.detailedModeling ?? currentMetadataRecord.detailedModeling,
+        materialMain: patch.materialMain ?? currentMetadataRecord.materialMain,
+        cleaningRecommendation: patch.cleaningRecommendation ?? currentMetadataRecord.cleaningRecommendation,
+        careList: patch.careList ?? currentMetadataRecord.careList,
         sizes: patch.sizes ?? current.sizes,
         colors: patch.colors ?? current.colors,
         variantStock: patch.variantStock ?? current.variantStock

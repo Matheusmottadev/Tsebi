@@ -58,7 +58,8 @@ async function ensureUserSecurityColumns() {
           ADD COLUMN IF NOT EXISTS title TEXT,
           ADD COLUMN IF NOT EXISTS phone TEXT,
           ADD COLUMN IF NOT EXISTS is_guest BOOLEAN NOT NULL DEFAULT FALSE,
-          ADD COLUMN IF NOT EXISTS created_via TEXT;
+          ADD COLUMN IF NOT EXISTS created_via TEXT,
+          ADD COLUMN IF NOT EXISTS last_login_at TIMESTAMPTZ;
       `);
             // Keep identity fields as text to avoid numeric overflow/casting errors on legacy schemas.
             await query(`
@@ -453,6 +454,26 @@ async function adminUpdateUser(id, patch = {}) {
 }
 /**
  * @param {string} id
+ * @param {boolean} disabled
+ * @returns {Promise<Record<string, unknown> | null>}
+ */
+async function adminSetUserLoginDisabled(id, disabled) {
+    await ensureUserSecurityColumns();
+    const current = await findUserById(id);
+    if (!current)
+        return null;
+    const result = await query(`
+    UPDATE users
+    SET
+      login_disabled = $2,
+      updated_at = NOW()
+    WHERE id = $1
+    RETURNING *
+    `, [id, Boolean(disabled)]);
+    return fromRow(result.rows[0] || null);
+}
+/**
+ * @param {string} id
  * @returns {Promise<Record<string, unknown> | null>}
  */
 async function adminDisableUserLogin(id) {
@@ -531,6 +552,7 @@ async function adminRestoreUserAuthSnapshot(id, snapshot = {}) {
 async function markUserLoggedInNow(userId) {
     if (!userId)
         return null;
+    await ensureUserSecurityColumns();
     const result = await query(`
     UPDATE users
     SET last_login_at = NOW(),
@@ -983,6 +1005,7 @@ module.exports = {
     createUser,
     updateUser,
     adminUpdateUser,
+    adminSetUserLoginDisabled,
     adminDisableUserLogin,
     adminSetUserTempPassword,
     adminRestoreUserAuthSnapshot,

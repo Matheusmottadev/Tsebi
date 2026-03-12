@@ -187,7 +187,7 @@ const productSearchEventSchema = z.object({
 const paymentIntentSchema = z.object({
     paymentMethod: z.string().trim().optional().default("automatic"),
     discountCode: z.string().trim().max(40).optional().default(""),
-    installments: z.coerce.number().int().min(1).max(6).optional().default(1),
+    installments: z.coerce.number().int().min(1).max(10).optional().default(1),
     metaEventId: z.string().trim().max(120).optional().default(""),
     items: z
         .array(z.object({
@@ -700,6 +700,26 @@ function areSameItemSet(a, b) {
 function isReusableOrderStatus(status) {
     const normalized = String(status || "").trim().toLowerCase();
     return normalized === "pending_payment" || normalized === "processing";
+}
+function resolveCheckoutMaxInstallments(orderAmountCents) {
+    const amount = Math.max(0, Math.floor(Number(orderAmountCents || 0)));
+    if (amount >= 50000 && amount <= 79999)
+        return 3;
+    if (amount >= 80000 && amount <= 109999)
+        return 4;
+    if (amount >= 110000 && amount <= 149999)
+        return 5;
+    if (amount >= 150000 && amount <= 199999)
+        return 6;
+    if (amount >= 200000 && amount <= 279999)
+        return 7;
+    if (amount >= 280000 && amount <= 379999)
+        return 8;
+    if (amount >= 380000 && amount <= 499999)
+        return 9;
+    if (amount >= 500000)
+        return 10;
+    return 1;
 }
 async function findReusableCheckoutOrder({ userId, paymentMethod, installments, itemsAmount, shippingAmount, orderAmount, shipping, resolvedItems }) {
     const orders = await listOrdersByUserId(userId);
@@ -1837,7 +1857,7 @@ exports.app.get("/api/config", (req, res) => {
     res.json({
         stripePublishableKey,
         currency: "brl",
-        maxInstallments: 6,
+        maxInstallments: 10,
         posthog: posthogPublicKey
             ? {
                 key: posthogPublicKey,
@@ -1948,7 +1968,7 @@ async (req, res) => {
         }
         const paymentMethod = parsed.data.paymentMethod;
         const requestedDiscountCode = String(parsed.data.discountCode || "").trim();
-        const installments = parsed.data.installments;
+        const requestedInstallments = parsed.data.installments;
         const normalizedItems = normalizeAndAggregateItems(parsed.data.items);
         const shipping = normalizeShipping(parsed.data.shipping || null);
         const sessionUserId = req.session?.userId ? String(req.session.userId) : "";
@@ -2056,6 +2076,8 @@ async (req, res) => {
             discountAmount = Math.max(0, Number(discountResult.discountCents || 0));
         }
         const orderAmount = Math.max(0, itemsAmount + shippingAmount - discountAmount);
+        const maxInstallmentsForOrder = resolveCheckoutMaxInstallments(orderAmount);
+        const installments = Math.max(1, Math.min(maxInstallmentsForOrder, Number(requestedInstallments || 1)));
         const ticketBucket = priceBucketFromCents(orderAmount);
         const checkoutMetaEventId = String(parsed.data.metaEventId || "").trim() || crypto.randomUUID();
         const topCategories = Array.from(new Set(availability.resolvedItems
@@ -2194,7 +2216,7 @@ async (req, res) => {
                 avg_item_ticket_bucket: priceBucketFromCents(Math.floor(itemsAmount / Math.max(1, availability.resolvedItems.length))) || ""
             }
         };
-        if (paymentMethod === "card") {
+        if (stripeCheckoutPaymentMethodTypes.includes("card")) {
             paymentIntentParams.payment_method_options = {
                 card: {
                     installments: {

@@ -214,17 +214,28 @@ async function sendLoginVerificationEmail({ to, code, minutes = 20 }) {
         ...content
     });
 }
-async function sendPasswordResetEmail({ to, code, minutes = 15 }) {
+async function sendPasswordResetEmail({ to, code, minutes = 15, resetUrl = "" }) {
     const content = buildCodeEmail({
         title: "Redefina sua senha",
-        intro: "Use o codigo abaixo para criar uma nova senha.",
+        intro: "Use o codigo abaixo para criar uma nova senha. Se preferir, abra o link de redefinicao.",
         code,
         minutes
     });
+    const safeResetUrl = String(resetUrl || "").trim();
+    const text = safeResetUrl ? `${content.text}\nLink de redefinicao: ${safeResetUrl}` : content.text;
+    const html = safeResetUrl
+        ? `${content.html}
+      <p style="margin:14px 0 0;">
+        <a href="${escapeHtml(safeResetUrl)}" style="color:#111;text-decoration:underline;">
+          Abrir pagina de redefinicao
+        </a>
+      </p>`
+        : content.html;
     return sendEmail({
         to,
         subject: `${getAppName()} - Redefinicao de senha`,
-        ...content
+        text,
+        html
     });
 }
 async function sendOrderConfirmedEmail({ to, order }) {
