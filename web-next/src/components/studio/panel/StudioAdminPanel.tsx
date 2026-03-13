@@ -645,6 +645,7 @@ export function StudioAdminPanel() {
               loading={isLoading}
               errorMessage={errorMessage}
               onRequestRefresh={() => setRefreshIndex((current) => current + 1)}
+              onOpenCreateAppointment={activePage === "atendimentos" ? () => openDrawer("atendimentos") : undefined}
               globalSearchTarget={globalSearchTarget}
               onGlobalSearchTargetHandled={handleGlobalSearchTargetHandled}
             />

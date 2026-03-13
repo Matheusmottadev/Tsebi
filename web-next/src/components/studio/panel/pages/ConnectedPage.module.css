@@ -81,6 +81,63 @@
   font-weight: 300;
 }
 
+.helperCard {
+  margin: 16px 0 20px;
+  padding: 16px 18px;
+  border: 1px solid var(--grey-200);
+  background: #fcfcfc;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.helperTitle {
+  margin: 0 0 6px;
+  color: #111;
+  font-family: var(--font-jost), sans-serif;
+  font-size: 11px;
+  font-weight: 400;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.helperText {
+  margin: 0;
+  color: var(--grey-700);
+  font-family: var(--font-jost), sans-serif;
+  font-size: 12px;
+  line-height: 1.6;
+  font-weight: 300;
+}
+
+.emptyStateCard {
+  margin: 28px auto 36px;
+  max-width: 620px;
+  padding: 28px 24px;
+  border: 1px solid var(--grey-200);
+  background: #fcfcfc;
+  text-align: center;
+}
+
+.emptyStateTitle {
+  margin: 0 0 10px;
+  color: #111;
+  font-family: var(--font-cormorant), serif;
+  font-size: 28px;
+  font-weight: 400;
+}
+
+.emptyStateText {
+  margin: 0 auto 18px;
+  max-width: 500px;
+  color: var(--grey-700);
+  font-family: var(--font-jost), sans-serif;
+  font-size: 12px;
+  line-height: 1.7;
+  font-weight: 300;
+}
+
 .btnEdit {
   background: transparent;
   color: #111;
@@ -148,4 +205,11 @@
   background: #111;
   color: #fff;
   border-color: #111;
+}
+
+@media (max-width: 960px) {
+  .helperCard {
+    flex-direction: column;
+    align-items: flex-start;
+  }
 }

@@ -42,6 +42,7 @@ type ConnectedPageProps = {
   loading: boolean;
   errorMessage: string;
   onRequestRefresh?: () => void;
+  onOpenCreateAppointment?: () => void;
   globalSearchTarget?: GlobalSearchTarget | null;
   onGlobalSearchTargetHandled?: () => void;
 };
@@ -328,6 +329,7 @@ export function ConnectedPage({
   loading,
   errorMessage,
   onRequestRefresh,
+  onOpenCreateAppointment,
   globalSearchTarget,
   onGlobalSearchTargetHandled,
 }: ConnectedPageProps) {
@@ -1545,6 +1547,21 @@ export function ConnectedPage({
             resultsCount={filteredAppointmentSlots.length}
             onClear={resetCareSearch}
           />
+          <div className={styles.helperCard}>
+            <div>
+              <p className={styles.helperTitle}>Controle de horarios do cliente</p>
+              <p className={styles.helperText}>
+                Crie os dias e horarios no botao <strong>+ Novo Atendimento</strong>. O horario so aparece em
+                <strong> Minha Conta &gt; Atendimentos Privados</strong> quando estiver com
+                <strong> Disponivel</strong> ativo e <strong>Bloqueado</strong> desligado.
+              </p>
+            </div>
+            {onOpenCreateAppointment ? (
+              <button type="button" className={styles.btnEdit} onClick={onOpenCreateAppointment}>
+                + Novo Atendimento
+              </button>
+            ) : null}
+          </div>
           {filteredAppointmentSlots.length ? (
             <div className={styles.tableWrap}>
               <table className={styles.table}>
@@ -1617,7 +1634,19 @@ export function ConnectedPage({
               </table>
             </div>
           ) : (
-            <p className={styles.noResults}>{buildNoResultsText(careSearch)}</p>
+            <div className={styles.emptyStateCard}>
+              <p className={styles.emptyStateTitle}>Nenhum horario cadastrado.</p>
+              <p className={styles.emptyStateText}>
+                Para liberar horarios para o cliente, clique em <strong>+ Novo Atendimento</strong>, escolha a
+                data e hora, salve com <strong>Disponivel</strong> marcado e deixe <strong>Bloqueado</strong>{" "}
+                desligado.
+              </p>
+              {onOpenCreateAppointment ? (
+                <button type="button" className={styles.btnEdit} onClick={onOpenCreateAppointment}>
+                  Criar horario
+                </button>
+              ) : null}
+            </div>
           )}
         </>
       ) : null}
