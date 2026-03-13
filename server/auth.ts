@@ -1,9 +1,11 @@
 const express = require("express");
-const bcrypt = require("bcrypt");
 const crypto = require("node:crypto");
 const Stripe = require("stripe");
 const rateLimit = require("express-rate-limit");
 const { z } = require("zod");
+const { hashPassword, verifyPassword } = require("./lib/password-hash");
+const { applyCustomerSessionLifetime } = require("./lib/session-lifetime");
+const { loginLimiter, forgotPasswordLimiter, registerLimiter } = require("./middlewares/rateLimiter");
 const {
   generateRegistrationOptions,
   verifyRegistrationResponse,
@@ -885,6 +887,7 @@ authRouter.post("/passkey/login/verify", authRateLimit, async (req: any, res: an
   await updatePasskeyCounter(storedPasskey.credentialId, Number(verification.authenticationInfo?.newCounter || 0));
   delete req.session.passkeyAuthentication;
   req.session.userId = user.id;
+  applyCustomerSessionLifetime(req);
   markUserLoggedInNow(user.id).catch(() => {});
   return res.json({ ok: true, user: publicUser(user), stage: "authenticated" });
 });
@@ -940,7 +943,7 @@ async function issueAndSendPasswordResetCode(user: any) {
   return { ok: true, issued };
 }
 
-authRouter.post("/register", authRateLimit, async (req: any, res: any) => {
+authRouter.post("/register", registerLimiter, async (req: any, res: any) => {
   const parsed = registerSchema.safeParse(req.body || {});
   if (!parsed.success) {
     return res.status(400).json({ error: "INVALID_INPUT" });
@@ -971,7 +974,7 @@ authRouter.post("/register", authRateLimit, async (req: any, res: any) => {
     title: payload.title,
     name: payload.name,
     email: normalizedEmail,
-    passwordHash: await bcrypt.hash(payload.password, 12),
+    passwordHash: await hashPassword(payload.password),
     birthDate: payload.birthDate,
     cpf: payload.cpf,
     cep: payload.cep,
@@ -991,7 +994,7 @@ authRouter.post("/register", authRateLimit, async (req: any, res: any) => {
   }
 });
 
-authRouter.post("/register-lite", authRateLimit, async (req: any, res: any) => {
+authRouter.post("/register-lite", registerLimiter, async (req: any, res: any) => {
   const parsed = registerLiteSchema.safeParse(req.body || {});
   if (!parsed.success) {
     return res.status(400).json({ error: "INVALID_INPUT" });
@@ -1019,7 +1022,7 @@ authRouter.post("/register-lite", authRateLimit, async (req: any, res: any) => {
     title: payload.title,
     name: payload.name,
     email: normalizedEmail,
-    passwordHash: await bcrypt.hash(autoPassword, 12),
+    passwordHash: await hashPassword(autoPassword),
     birthDate: "",
     cpf: "",
     cep: "",
@@ -1072,6 +1075,7 @@ authRouter.post("/email/verify-account", authRateLimit, async (req: any, res: an
   const verified = await markUserEmailVerified(user.id);
   if (!verified) return res.status(404).json({ error: "USER_NOT_FOUND" });
   req.session.userId = verified.id;
+  applyCustomerSessionLifetime(req);
   return res.json({ ok: true, user: publicUser(verified) });
 });
 
@@ -1159,13 +1163,14 @@ authRouter.post("/email/verify", authRateLimit, async (req: any, res: any) => {
   }
 
   req.session.userId = user.id;
+  applyCustomerSessionLifetime(req);
   markUserLoggedInNow(user.id).catch(() => {});
   return res.json({ ok: true, user: publicUser(user), stage: "authenticated" });
 });
 
 authRouter.post(
   "/login",
-  authRateLimit,
+  loginLimiter,
   /**
    * @param {import("express").Request} req
    * @param {import("express").Response} res
@@ -1178,7 +1183,7 @@ authRouter.post(
 
   const email = normalizeEmail(parsed.data.email);
   const password = parsed.data.password;
-  const user = await findUserByEmail(email);
+  let user = await findUserByEmail(email);
 
   if (!user) {
     return res.status(401).json({ error: "INVALID_CREDENTIALS" });
@@ -1189,15 +1194,17 @@ authRouter.post(
     return res.status(401).json({ error: "INVALID_CREDENTIALS" });
   }
 
-  let isMatch = false;
-  try {
-    isMatch = await bcrypt.compare(password, storedHash);
-  } catch {
+  const passwordCheck = await verifyPassword(password, storedHash);
+  if (!passwordCheck.ok) {
     return res.status(401).json({ error: "INVALID_CREDENTIALS" });
   }
 
-  if (!isMatch) {
-    return res.status(401).json({ error: "INVALID_CREDENTIALS" });
+  if (passwordCheck.needsRehash) {
+    try {
+      const refreshedHash = await hashPassword(password);
+      const refreshedUser = await updateUser(user.id, { passwordHash: refreshedHash });
+      if (refreshedUser) user = refreshedUser;
+    } catch {}
   }
 
   try {
@@ -1219,6 +1226,7 @@ authRouter.post(
 
     if (!isLoginEmailVerificationRequired()) {
       req.session.userId = user.id;
+      applyCustomerSessionLifetime(req);
       markUserLoggedInNow(user.id).catch(() => {});
       return res.json({ ok: true, user: publicUser(user), stage: "authenticated" });
     }
@@ -1260,7 +1268,7 @@ authRouter.post("/google", authRateLimit, async (req: any, res: any) => {
       payload.name ||
       [payload.givenName, payload.familyName].filter(Boolean).join(" ").trim() ||
       "Cliente Tsebi";
-    const randomPasswordHash = await bcrypt.hash(crypto.randomBytes(24).toString("hex"), 12);
+    const randomPasswordHash = await hashPassword(crypto.randomBytes(24).toString("hex"));
     const created = await createUser({
       title: "nao_informar",
       name: fallbackName,
@@ -1284,6 +1292,7 @@ authRouter.post("/google", authRateLimit, async (req: any, res: any) => {
   }
 
   req.session.userId = user.id;
+  applyCustomerSessionLifetime(req);
   markUserLoggedInNow(user.id).catch(() => {});
   return res.json({ ok: true, user: publicUser(user), stage: "authenticated" });
 });
@@ -1308,6 +1317,7 @@ authRouter.post("/login/verify-code", authRateLimit, async (req: any, res: any) 
   }
 
   req.session.userId = user.id;
+  applyCustomerSessionLifetime(req);
   markUserLoggedInNow(user.id).catch(() => {});
   return res.json({ ok: true, user: publicUser(user) });
 });
@@ -1352,7 +1362,7 @@ authRouter.post("/activate", authRateLimit, async (req: any, res: any) => {
     }
   }
 
-  const passwordHash = await bcrypt.hash(payload.password, 12);
+  const passwordHash = await hashPassword(payload.password);
   const updated = await updateUser(user.id, {
     passwordHash,
     passwordResetRequired: false,
@@ -1362,6 +1372,7 @@ authRouter.post("/activate", authRateLimit, async (req: any, res: any) => {
   if (!updated) return res.status(404).json({ error: "USER_NOT_FOUND" });
 
   req.session.userId = updated.id;
+  applyCustomerSessionLifetime(req);
   markUserLoggedInNow(updated.id).catch(() => {});
   return res.json({ ok: true, user: publicUser(updated), stage: "authenticated" });
 });
@@ -1446,7 +1457,7 @@ authRouter.get(
   }
 );
 
-authRouter.post("/forgot-password", resetRateLimit, async (req: any, res: any) => {
+authRouter.post("/forgot-password", forgotPasswordLimiter, async (req: any, res: any) => {
   const parsed = forgotPasswordSchema.safeParse(req.body || {});
   if (!parsed.success) {
     return res.status(400).json({ error: "INVALID_INPUT" });
@@ -1492,7 +1503,7 @@ authRouter.post("/forgot-password", resetRateLimit, async (req: any, res: any) =
   }
 });
 
-authRouter.post("/forgot-password/verify-code", resetRateLimit, async (req: any, res: any) => {
+authRouter.post("/forgot-password/verify-code", forgotPasswordLimiter, async (req: any, res: any) => {
   const parsed = resetPasswordCodeSchema.safeParse(req.body || {});
   if (!parsed.success) {
     return res.status(400).json({ error: "INVALID_INPUT" });
@@ -1514,7 +1525,7 @@ authRouter.post("/forgot-password/verify-code", resetRateLimit, async (req: any,
   }
 
   const updated = await updateUser(user.id, {
-    passwordHash: await bcrypt.hash(parsed.data.password, 12),
+    passwordHash: await hashPassword(parsed.data.password),
     passwordResetRequired: false,
     isGuest: false
   });
@@ -1527,7 +1538,7 @@ authRouter.post("/forgot-password/verify-code", resetRateLimit, async (req: any,
 });
 
 // Compat legado (token antigo): mantido para nao quebrar clientes antigos.
-authRouter.post("/reset-password", resetRateLimit, async (req: any, res: any) => {
+authRouter.post("/reset-password", forgotPasswordLimiter, async (req: any, res: any) => {
   const parsed = resetPasswordSchema.safeParse(req.body || {});
   if (!parsed.success) return res.status(400).json({ error: "INVALID_INPUT" });
   return res.status(410).json({ error: "RESET_TOKEN_FLOW_DEPRECATED_USE_EMAIL_CODE" });

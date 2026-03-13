@@ -12,7 +12,7 @@ function parseIntegerEnv(value: string | undefined, fallback: number): number {
 }
 
 function getSessionMaxAgeMs(): number {
-  const days = parseIntegerEnv(process.env.SESSION_MAX_AGE_DAYS, 180);
+  const days = parseIntegerEnv(process.env.SESSION_MAX_AGE_DAYS, 30);
   return days * 24 * 60 * 60 * 1000;
 }
 

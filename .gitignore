@@ -3,6 +3,7 @@ node_modules/
 
 # Variaveis de ambiente
 .env
+.env.production
 
 # Dados locais legados opcionais
 data/*.local.json

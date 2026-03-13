@@ -1,8 +1,9 @@
 const express = require("express");
-const bcrypt = require("bcrypt");
 const rateLimit = require("express-rate-limit");
 const { z } = require("zod");
 const { normalizeEmail, findUserByEmail, createUser } = require("./user-repository");
+const { hashPassword } = require("./lib/password-hash");
+const { applyCustomerSessionLifetime } = require("./lib/session-lifetime");
 const {
   upsertVipSubscriber,
   listVipSubscribers,
@@ -159,7 +160,7 @@ vipRouter.post("/register", vipRegisterRateLimit, async (req: any, res: any) => 
       const created = await createUser({
         name: payload.name,
         email,
-        passwordHash: await bcrypt.hash(rawPassword, 12),
+        passwordHash: await hashPassword(rawPassword),
         birthDate: payload.birthDate,
         cpf: payload.cpf,
         cep: payload.cep
@@ -168,6 +169,7 @@ vipRouter.post("/register", vipRegisterRateLimit, async (req: any, res: any) => 
       if (created.ok && created.user) {
         accountCreated = true;
         req.session.userId = created.user.id;
+        applyCustomerSessionLifetime(req);
         subscriber = await setVipAccountCreated(email);
       } else if (created.error === "EMAIL_ALREADY_EXISTS") {
         accountExists = true;

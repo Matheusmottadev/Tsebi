@@ -6,12 +6,12 @@ const cors = require("cors");
 const helmet = require("helmet");
 const compression = require("compression");
 const dotenv = require("dotenv");
-const bcrypt = require("bcrypt");
 const Stripe = require("stripe");
 const rateLimit = require("express-rate-limit");
 const { z } = require("zod");
 const { createSessionMiddleware } = require("./session");
 const { attachUserCsrfToken, requireUserCsrfForMutations } = require("./middlewares/userCsrf");
+const { hashPassword } = require("./lib/password-hash");
 const { authRouter, myRouter } = require("./auth");
 const { studioAuthRouter } = require("./studio-auth");
 const { vipRouter } = require("./vip");
@@ -2228,7 +2228,7 @@ app.post(
     if (!checkoutUser.passwordHash) {
       try {
         const tempPassword = generateCheckoutTempPassword();
-        const tempPasswordHash = await bcrypt.hash(tempPassword, 12);
+        const tempPasswordHash = await hashPassword(tempPassword);
         const updatedGuest = await setGuestTempPasswordIfMissing(checkoutUser.id, tempPasswordHash);
         if (updatedGuest) {
           checkoutUser = updatedGuest;

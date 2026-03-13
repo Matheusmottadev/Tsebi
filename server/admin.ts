@@ -2,9 +2,9 @@ const express = require("express");
 const path = require("node:path");
 const rateLimit = require("express-rate-limit");
 const Stripe = require("stripe");
-const bcrypt = require("bcrypt");
 const crypto = require("node:crypto");
 const { z } = require("zod");
+const { hashPassword } = require("./lib/password-hash");
 const {
   listUsers,
   findUserById,
@@ -1369,7 +1369,7 @@ adminRouter.post("/users/:id/reset-password", sensitiveAdminRateLimit, async (re
     if (!before) return res.status(404).json({ error: "NOT_FOUND" });
 
     const tempPassword = generateTempPassword();
-    const hash = await bcrypt.hash(tempPassword, 12);
+    const hash = await hashPassword(tempPassword);
     const updated = await adminSetUserTempPassword(id, hash);
     if (!updated) return res.status(404).json({ error: "NOT_FOUND" });
     await invalidateUserSessions(id);
@@ -1432,7 +1432,7 @@ adminRouter.post("/users/:id/temp-password", sensitiveAdminRateLimit, async (req
     if (!before) return res.status(404).json({ error: "NOT_FOUND" });
 
     const tempPassword = generateTempPassword();
-    const hash = await bcrypt.hash(tempPassword, 12);
+    const hash = await hashPassword(tempPassword);
     const updated = await adminSetUserTempPassword(id, hash);
     if (!updated) return res.status(404).json({ error: "NOT_FOUND" });
 
@@ -1541,7 +1541,7 @@ adminRouter.post("/users", async (req: any, res: any) => {
       name: payload.name,
       email: normalizeEmail(payload.email),
       phone: String(payload.phone || "").trim().slice(0, 40),
-      passwordHash: await bcrypt.hash(payload.password, 12),
+      passwordHash: await hashPassword(payload.password),
       birthDate: payload.birthDate || "",
       cpf: payload.cpf || "",
       cep: payload.cep || ""

@@ -1104,7 +1104,8 @@ export async function getAuditLogAdmin(id: string, options?: HttpRequestOptions)
  * Auth: admin studio session.
  */
 export async function studioAuthMe(options?: HttpRequestOptions): Promise<StudioAuthMeResponse> {
-  const canDeduplicate = typeof window !== "undefined" && !options?.cookie;
+  const canDeduplicate =
+    typeof window !== "undefined" && !options?.cookie && options?.cache !== "no-store";
   if (!canDeduplicate) {
     return get<StudioAuthMeResponse>("/api/studio-auth/me", options);
   }

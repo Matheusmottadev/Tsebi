@@ -23,7 +23,7 @@ function parseInteger(value: unknown, fallback: number): number {
 }
 
 function getAdminIdleTimeoutMs(): number {
-  const minutes = parseInteger(process.env.ADMIN_IDLE_TIMEOUT_MINUTES, 20);
+  const minutes = parseInteger(process.env.ADMIN_IDLE_TIMEOUT_MINUTES, 60 * 24 * 3);
   return minutes * 60 * 1000;
 }
 
