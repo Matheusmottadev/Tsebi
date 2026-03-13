@@ -1,6 +1,6 @@
 .wrap {
   display: grid;
-  gap: 10px;
+  gap: 16px;
 }
 
 .ok,
@@ -23,6 +23,104 @@
   color: #fff2f2;
 }
 
+.createCard {
+  border: 1px solid var(--studio-border);
+  border-radius: 16px;
+  background: var(--studio-surface-soft);
+  padding: 16px;
+  display: grid;
+  gap: 14px;
+}
+
+.sectionTitle {
+  margin: 0;
+  font-size: 16px;
+  color: var(--studio-text);
+}
+
+.formGrid,
+.formGridCompact {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.field {
+  display: grid;
+  gap: 6px;
+}
+
+.field span {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--studio-muted);
+}
+
+.field input,
+.field textarea {
+  width: 100%;
+  min-height: 40px;
+  border-radius: 10px;
+  border: 1px solid var(--studio-border);
+  padding: 10px 12px;
+  background: #101010;
+  color: var(--studio-text);
+  font: inherit;
+}
+
+.field textarea {
+  min-height: 86px;
+  resize: vertical;
+}
+
+.fieldWide {
+  grid-column: 1 / -1;
+}
+
+.toggles {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--studio-text);
+  font-size: 13px;
+}
+
+.toggle input {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--studio-accent);
+}
+
+.primaryButton,
+.actions button {
+  min-height: 38px;
+  border-radius: 10px;
+  border: 1px solid var(--studio-border);
+  background: #111;
+  color: var(--studio-text);
+  cursor: pointer;
+  padding: 0 14px;
+}
+
+.primaryButton {
+  border-color: var(--studio-accent);
+  background: var(--studio-accent-soft);
+}
+
+.primaryButton:disabled,
+.actions button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
 .tableWrap {
   border: 1px solid var(--studio-border);
   border-radius: 16px;
@@ -32,7 +130,7 @@
 
 .table {
   width: 100%;
-  min-width: 1180px;
+  min-width: 1420px;
   border-collapse: collapse;
 }
 
@@ -40,7 +138,7 @@
 .table td {
   border-bottom: 1px solid var(--studio-border-strong);
   text-align: left;
-  padding: 10px 12px;
+  padding: 12px;
   vertical-align: top;
 }
 
@@ -55,25 +153,23 @@
   color: var(--studio-text);
 }
 
-.userCell,
-.requestCell {
+.infoCell,
+.bookingList,
+.actions {
   display: grid;
-  gap: 4px;
+  gap: 6px;
 }
 
-.userCell small,
-.requestCell small {
+.infoCell small,
+.bookingCard small {
   color: var(--studio-muted);
-}
-
-.requestCell p {
-  margin: 0;
 }
 
 .statusChip {
   display: inline-flex;
   align-items: center;
   min-height: 28px;
+  width: fit-content;
   border-radius: 999px;
   border: 1px solid var(--studio-border-strong);
   padding: 0 10px;
@@ -84,44 +180,22 @@
   font-size: 11px;
 }
 
-.textarea {
-  width: 100%;
-  min-height: 86px;
-  border-radius: 10px;
-  border: 1px solid var(--studio-border);
-  padding: 8px 10px;
-  background: #0f0f0f;
-  color: var(--studio-text);
-  resize: vertical;
-  font: inherit;
-  margin-bottom: 8px;
-}
-
-.actions {
+.bookingCard {
   display: grid;
-  gap: 8px;
-}
-
-.actions button {
-  min-height: 36px;
-  border-radius: 8px;
+  gap: 4px;
   border: 1px solid var(--studio-border);
-  background: #111;
-  color: var(--studio-text);
-  cursor: pointer;
-  padding: 0 10px;
-}
-
-.actions button:hover:not(:disabled) {
-  border-color: var(--studio-accent);
-}
-
-.actions button:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
+  border-radius: 10px;
+  padding: 10px;
+  background: rgba(255, 255, 255, 0.02);
 }
 
 .empty {
   color: var(--studio-muted);
 }
 
+@media (max-width: 960px) {
+  .formGrid,
+  .formGridCompact {
+    grid-template-columns: 1fr;
+  }
+}

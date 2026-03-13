@@ -1,6 +1,6 @@
 .filters {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 220px 120px;
+  grid-template-columns: minmax(0, 220px) 220px minmax(0, 1fr) 120px;
   gap: 8px;
 }
 
@@ -23,6 +23,25 @@
   cursor: pointer;
 }
 
+.checkbox {
+  min-height: 40px;
+  border-radius: 10px;
+  border: 1px solid var(--studio-border);
+  padding: 0 12px;
+  font-size: 14px;
+  background: #101010;
+  color: var(--studio-text);
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.checkbox input {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--studio-accent);
+}
+
 .error {
   margin: 0;
   border: 1px solid var(--studio-negative);
@@ -38,4 +57,3 @@
     grid-template-columns: 1fr;
   }
 }
-

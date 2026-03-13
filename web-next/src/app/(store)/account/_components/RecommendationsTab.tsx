@@ -16,15 +16,15 @@ interface RecommendationItem {
   currency?: string;
 }
 
+interface RecommendationApiItem extends RecommendationItem {
+  product_id?: string;
+  image_url?: string | null;
+  link?: string | null;
+}
+
 interface RecommendationsResponse {
-  items?: Array<
-    RecommendationItem & {
-      product_id?: string;
-      image_url?: string | null;
-      link?: string | null;
-    }
-  >;
-  recommendations?: RecommendationItem[];
+  items?: RecommendationApiItem[];
+  recommendations?: RecommendationApiItem[];
 }
 
 function formatBRL(cents: number): string {
