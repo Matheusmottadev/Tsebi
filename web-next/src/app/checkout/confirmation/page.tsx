@@ -47,7 +47,7 @@ function formatOrderId(value: string | null): string {
 
 function formatOrderReference(orderNumber: string | null | undefined, orderId: string | null | undefined): string {
   const primary = String(orderNumber || "").trim() || String(orderId || "").trim();
-  if (!primary) return "#â€”";
+  if (!primary) return "#—";
   return primary.startsWith("#") ? primary : `#${primary}`;
 }
 
@@ -64,15 +64,23 @@ function formatCurrencyFromCents(cents: number): string {
   return formatCurrencyFromUnits(Math.max(0, Number(cents || 0)) / 100);
 }
 
-function formatTotal(raw: string | null, fallback: string): string {
+function formatQueryCurrencyValue(raw: string | number): string {
   const text = String(raw || "").trim();
-  if (!text) return fallback || "R$ —";
+  if (!text) return "R$ —";
   if (/r\$/i.test(text)) return text;
 
   const normalized = text.replace(/\s+/g, "").replace(",", ".");
   const numeric = Number(normalized);
   if (!Number.isFinite(numeric)) return text;
-  return formatCurrencyFromUnits(numeric);
+  return !/[.,]/.test(text) && Number.isInteger(numeric) && Math.abs(numeric) >= 1000
+    ? formatCurrencyFromCents(numeric)
+    : formatCurrencyFromUnits(numeric);
+}
+
+function formatTotal(raw: string | null, fallback: string): string {
+  const text = String(raw || "").trim();
+  if (!text) return fallback || "R$ —";
+  return formatQueryCurrencyValue(text);
 }
 
 function formatItemsCountLabel(value: number): string {
@@ -132,6 +140,7 @@ function parseItemsFromQuery(raw: string | null): ConfirmationItem[] {
           qty?: number;
           image?: string;
           imageUrl?: string;
+          imageSrc?: string;
         };
         const name = String(item.name || "").trim();
         if (!name) return null;
@@ -142,9 +151,9 @@ function parseItemsFromQuery(raw: string | null): ConfirmationItem[] {
 
         let priceLabel = "R$ —";
         if (typeof item.price === "number" && Number.isFinite(item.price)) {
-          priceLabel = formatCurrencyFromUnits(item.price);
+          priceLabel = formatQueryCurrencyValue(item.price);
         } else if (typeof item.price === "string" && String(item.price || "").trim()) {
-          priceLabel = String(item.price || "").trim();
+          priceLabel = formatQueryCurrencyValue(item.price);
         }
 
         return {
@@ -152,7 +161,7 @@ function parseItemsFromQuery(raw: string | null): ConfirmationItem[] {
           name,
           variant,
           priceLabel,
-          imageSrc: resolveImageSrc(item.imageUrl || item.image || ""),
+          imageSrc: resolveImageSrc(item.imageSrc || item.imageUrl || item.image || ""),
           qty,
         } satisfies ConfirmationItem;
       })
@@ -230,7 +239,7 @@ function readConfirmationSnapshot(orderId: string | null): ConfirmationSnapshot 
       orderId: String(parsed.orderId || "").trim(),
       orderNumber: String(parsed.orderNumber || "").trim(),
       email: String(parsed.email || "").trim(),
-      totalLabel: String(parsed.totalLabel || "").trim() || "R$ â€”",
+      totalLabel: String(parsed.totalLabel || "").trim() || "R$ —",
       itemCount: Math.max(0, Math.floor(Number(parsed.itemCount || 0))),
       items: Array.isArray(parsed.items) ? parsed.items : [],
     };
@@ -243,11 +252,11 @@ function buildConfirmationItemsFromOrder(order: Order): ConfirmationItem[] {
   return (Array.isArray(order.items) ? order.items : []).map((item, index) => {
     const color = String(item.variantColor || "").trim();
     const size = String(item.variantSize || "").trim();
-    const variant = [color, size].filter(Boolean).join(" Â· ") || "Sem variante";
+    const variant = [color, size].filter(Boolean).join(" · ") || "Sem variante";
     return {
       id: String(item.id || `order-${index}`),
       name: String(item.name || "").trim() || "Item do pedido",
-      variant: item.qty > 1 ? `${variant} Â· Qtd ${item.qty}` : variant,
+      variant: item.qty > 1 ? `${variant} · Qtd ${item.qty}` : variant,
       priceLabel: formatCurrencyFromCents(Math.max(0, Number(item.unitAmount || 0) * Math.max(1, Number(item.qty || 1)))),
       imageSrc: "",
       qty: Math.max(1, Number(item.qty || 1)),
@@ -372,7 +381,7 @@ export default function CheckoutConfirmationPage() {
   const resolvedOrderLabel = formatOrderReference(accountOrder?.orderNumber, snapshot?.orderNumber || rawOrderId);
   const resolvedEmail = String(accountOrder?.userEmail || snapshot?.email || email || "").trim();
   const resolvedTotalLabel = accountOrder
-    ? formatCurrencyFromUnits(Math.max(0, Number(accountOrder.amount || 0)))
+    ? formatCurrencyFromCents(Math.max(0, Number(accountOrder.amount || 0)))
     : snapshot?.totalLabel || formatTotal(queryTotalRaw, localTotalLabel);
   const resolvedItemsCount = accountOrder
     ? (Array.isArray(accountOrder.items) ? accountOrder.items.reduce((sum, item) => sum + Math.max(1, Number(item.qty || 1)), 0) : 0)

@@ -87,6 +87,7 @@ export function CheckoutPaymentForm({
   const [cardCvcComplete, setCardCvcComplete] = useState(false);
   const paymentElementContainerRef = useRef<HTMLDivElement | null>(null);
   const previousCompleteRef = useRef<boolean | null>(null);
+  const submitPaymentRef = useRef<() => Promise<boolean>>(async () => false);
   const isCardMode = mode === "card";
   const isBoletoMode = mode === "boleto";
   const normalizedPaymentMethodOrder = useMemo(
@@ -329,13 +330,16 @@ export function CheckoutPaymentForm({
     paymentComplete,
     paymentReady,
   ]);
+  submitPaymentRef.current = submitPayment;
 
   useEffect(() => {
-    onSubmitActionChange?.(submitPayment);
+    if (!onSubmitActionChange) return;
+    const registeredAction = () => submitPaymentRef.current();
+    onSubmitActionChange(registeredAction);
     return () => {
-      onSubmitActionChange?.(null);
+      onSubmitActionChange(null);
     };
-  }, [onSubmitActionChange, submitPayment]);
+  }, []);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
