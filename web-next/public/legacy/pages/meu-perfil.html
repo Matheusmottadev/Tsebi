@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8" />
@@ -16,8 +16,8 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600&family=Montserrat:wght@300;400;500;600&display=swap" rel="stylesheet" />
 
-  <link rel="stylesheet" href="/css/style.cssÃ³v=20260220h" />
-  <link rel="stylesheet" href="/css/account.cssÃ³v=20260223j" />
+  <link rel="stylesheet" href="/css/style.css?v=20260220h" />
+  <link rel="stylesheet" href="/css/account.css?v=20260223j" />
 </head>
 <body class="account-profile-page">
   <aside class="header-menu" id="headerMenu" aria-hidden="true">
@@ -27,8 +27,8 @@
       <a href="#">Presentes</a>
       <a href="#">Feminino</a>
       <a href="#">Masculino</a>
-      <a href="#">Bolsas e AcessÃ³rios</a>
-      <a href="#">SeleÃ§Ã£o Tsebi</a>
+      <a href="#">Bolsas e Acessórios</a>
+      <a href="#">Seleção Tsebi</a>
     </nav>
     <div class="header-menu-utilities" aria-label="Utilidades do menu">
       <a class="header-menu-utility" href="login.html">
@@ -49,14 +49,14 @@
       </a>
       </div>  </aside>
 
-  <nav class="account-subnav" aria-label="NavegaÃ§Ã£o da conta">
-    <a href="conta.html" data-section="overview" data-target="conta.html">VisÃ£o Geral</a>
+  <nav class="account-subnav" aria-label="Navegação da conta">
+    <a href="conta.html" data-section="overview" data-target="conta.html">Visão Geral</a>
     <a href="meu-perfil.html" data-section="profile" data-target="meu-perfil.html" class="is-active">Meu Perfil</a>
     <a href="conta.html#card-orders" data-section="orders" data-target="conta.html#card-orders">Meus Pedidos</a>
     <a href="conta.html#card-private" data-section="private" data-target="conta.html#card-private">Atendimentos Privados</a>
-    <a href="conta.html#card-recommendations" data-section="recommendations" data-target="conta.html#card-recommendations">RecomendaÃ§Ãµes</a>
+    <a href="conta.html#card-recommendations" data-section="recommendations" data-target="conta.html#card-recommendations">Recomendações</a>
     <a href="conta.html#card-wishlist" data-section="wishlist" data-target="conta.html#card-wishlist">Lista de Desejos</a>
-    <a href="conta.html#card-repairs" data-section="repairs" data-target="conta.html#card-repairs">ServiÃ§o de Reparos</a>
+    <a href="conta.html#card-repairs" data-section="repairs" data-target="conta.html#card-repairs">Serviço de Reparos</a>
   </nav>
 
   <main class="account-profile-wrap" id="accountProfileWrap" hidden>
@@ -72,11 +72,11 @@
 
     <section class="account-grid">
       <div class="account-panel">
-        <h2>InformaÃ§Ã£o Pessoal</h2>
+        <h2>Informação Pessoal</h2>
 
         <form id="profileForm" novalidate>
           <div class="field">
-            <label for="profileTitle">TÃ­tulo <span>*</span></label>
+            <label for="profileTitle">Título <span>*</span></label>
             <select id="profileTitle" required>
               <option value="">Selecione</option>
               <option value="sr">Sr.</option>
@@ -101,7 +101,7 @@
           </div>
 
           <div class="field">
-            <label for="profileCountry">PaÃ­s/RegiÃ£o <span>*</span></label>
+            <label for="profileCountry">País/Região <span>*</span></label>
             <select id="profileCountry" required>
               <option value="Brasil">Brasil</option>
               <option value="Portugal">Portugal</option>
@@ -121,20 +121,20 @@
             <label>Data de Nascimento</label>
             <div class="birth-grid">
               <select id="birthDay"><option value="">Dia</option></select>
-              <select id="birthMonth"><option value="">MÃªs</option></select>
+              <select id="birthMonth"><option value="">Mês</option></select>
               <select id="birthYear"><option value="">Ano</option></select>
             </div>
           </div>
 
-          <button type="submit" class="btn-primary btn-full">Salve as suas informaÃ§Ãµes</button>
+          <button type="submit" class="btn-primary btn-full">Salve as suas informações</button>
         </form>
       </div>
 
       <div class="account-right-col">
         <section class="account-panel">
-          <h2>Minhas PreferÃªncias</h2>
-          <p class="panel-note">Selecione os canais em que vocÃª deseja receber notÃ­cias e lanÃ§amentos!</p>
-          <a class="policy-link" href="politica-privacidade.html">PolÃ­tica de Privacidade</a>
+          <h2>Minhas Preferências</h2>
+          <p class="panel-note">Selecione os canais em que você deseja receber notícias e lançamentos!</p>
+          <a class="policy-link" href="politica-privacidade.html">Política de Privacidade</a>
 
           <div class="switch-list">
             <label class="switch-row">E-mail <input type="checkbox" id="prefEmail" /><span class="switch-ui"></span></label>
@@ -145,7 +145,7 @@
         </section>
 
         <section class="account-panel">
-          <h2>InformaÃ§Ãµes para Login</h2>
+          <h2>Informações para Login</h2>
           <div class="field">
             <label>Email</label>
             <input id="loginEmail" type="email" readonly />
@@ -162,10 +162,10 @@
         </section>
 
         <section class="account-panel">
-          <h2>Meus EndereÃ§os</h2>
-          <div id="addressesEmpty" class="empty-copy">VocÃª nÃ£o possui nenhum endereÃ§o salvo</div>
+          <h2>Meus Endereços</h2>
+          <div id="addressesEmpty" class="empty-copy">Você não possui nenhum endereço salvo</div>
           <div id="addressesList" class="address-list"></div>
-          <button type="button" class="btn-outline" id="addAddressBtn">Adicionar novo endereÃ§o</button>
+          <button type="button" class="btn-outline" id="addAddressBtn">Adicionar novo endereço</button>
         </section>
       </div>
     </section>
@@ -193,11 +193,11 @@
     </div>
   </div>
 
-  <script src="/JS/user-utils.jsÃ³v=20260222a"></script>
-  <script src="/JS/script.jsÃ³v=20260224a"></script>
-  <script src="/JS/account-header-stack-fix.jsÃ³v=20260222a"></script>
-  <script src="/JS/account-loader.jsÃ³v=20260220a"></script>
-  <script src="/JS/account-profile.jsÃ³v=20260224a"></script>
+  <script src="/JS/user-utils.js?v=20260222a"></script>
+  <script src="/JS/script.js?v=20260224a"></script>
+  <script src="/JS/account-header-stack-fix.js?v=20260222a"></script>
+  <script src="/JS/account-loader.js?v=20260220a"></script>
+  <script src="/JS/account-profile.js?v=20260224a"></script>
   <script src="/JS/posthog.js"></script>
 </body>
 </html>

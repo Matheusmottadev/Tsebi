@@ -1,7 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import type { PublicUser } from "@/types";
+import { logout } from "@/services/auth";
 import { AccountNav } from "./AccountNav";
 import { AccountOverview } from "./AccountOverview";
 import { ProfileTab } from "./ProfileTab";
@@ -31,6 +33,8 @@ function normalizeTab(hash: string): AccountTab {
 
 export function AccountShell({ user }: { user: PublicUser }) {
   const [activeTab, setActiveTab] = useState<AccountTab>("overview");
+  const [loggingOut, setLoggingOut] = useState(false);
+  const router = useRouter();
 
   useEffect(() => {
     const sync = () => setActiveTab(normalizeTab(window.location.hash));
@@ -44,6 +48,16 @@ export function AccountShell({ user }: { user: PublicUser }) {
     setActiveTab(tab);
   };
 
+  const handleLogout = async () => {
+    if (loggingOut) return;
+    setLoggingOut(true);
+    try {
+      await logout();
+    } finally {
+      router.push("/login");
+    }
+  };
+
   return (
     <>
       <AccountNav activeTab={activeTab} onNavigate={navigate} />
@@ -55,6 +69,16 @@ export function AccountShell({ user }: { user: PublicUser }) {
         {activeTab === "wishlist" && <WishlistTab />}
         {activeTab === "recommendations" && <RecommendationsTab />}
         {activeTab === "repairs" && <RepairsTab user={user} />}
+      </div>
+      <div className={styles.logoutRow}>
+        <button
+          type="button"
+          className={styles.logoutBtn}
+          onClick={handleLogout}
+          disabled={loggingOut}
+        >
+          {loggingOut ? "Saindo…" : "Sair da conta"}
+        </button>
       </div>
     </>
   );
