@@ -336,9 +336,6 @@ export function CheckoutPaymentForm({
     if (!onSubmitActionChange) return;
     const registeredAction = () => submitPaymentRef.current();
     onSubmitActionChange(registeredAction);
-    return () => {
-      onSubmitActionChange(null);
-    };
   }, []);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
