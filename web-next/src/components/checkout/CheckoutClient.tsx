@@ -1661,7 +1661,11 @@ export function CheckoutClient() {
     }
 
     setErrorMessage("");
-    await submitPaymentAction();
+    const confirmed = await submitPaymentAction();
+    if (!confirmed) {
+      setErrorMessage("Revise os dados de pagamento e tente novamente.");
+      setActiveStep("payment");
+    }
   }
 
   useEffect(() => {
