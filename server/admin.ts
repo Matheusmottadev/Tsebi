@@ -61,6 +61,12 @@ const {
   deleteAccessCode,
   normalizeCode
 } = require("./lib/access-code-repository");
+const {
+  listAdminAppointmentSlots,
+  createAdminAppointmentSlot,
+  updateAdminAppointmentSlot,
+  deleteAdminAppointmentSlot
+} = require("./lib/appointments-repository");
 const { query, withTransaction } = require("./lib/db");
 // Lazy load R2 upload module to avoid build-time errors
 let uploadR2Buffer: any = null;
@@ -337,6 +343,30 @@ const privateCarePatchSchema = z.object({
   decision: z.enum(["accept", "decline"]).optional(),
   adminNote: z.string().trim().max(2000).optional(),
   availableSlots: z.array(z.string().trim().min(1).max(120)).max(12).optional()
+});
+
+const appointmentSlotCreateSchema = z.object({
+  startsAt: z.string().trim().max(80),
+  endsAt: z.string().trim().max(80),
+  label: z.string().trim().max(160).optional().default(""),
+  modality: z.string().trim().max(120).optional().default(""),
+  location: z.string().trim().max(160).optional().default(""),
+  adminNote: z.string().trim().max(2000).optional().default(""),
+  capacity: z.coerce.number().int().min(1).max(20).optional().default(1),
+  isAvailable: z.coerce.boolean().optional().default(true),
+  isBlocked: z.coerce.boolean().optional().default(false)
+});
+
+const appointmentSlotPatchSchema = z.object({
+  startsAt: z.string().trim().max(80).optional(),
+  endsAt: z.string().trim().max(80).optional(),
+  label: z.string().trim().max(160).optional(),
+  modality: z.string().trim().max(120).optional(),
+  location: z.string().trim().max(160).optional(),
+  adminNote: z.string().trim().max(2000).optional(),
+  capacity: z.coerce.number().int().min(1).max(20).optional(),
+  isAvailable: z.coerce.boolean().optional(),
+  isBlocked: z.coerce.boolean().optional()
 });
 
 const accessCodeUpsertSchema = z.object({
@@ -2412,6 +2442,96 @@ adminRouter.delete("/products/:id", async (req: any, res: any) => {
     return res.json({ ok: true, product: archived });
   } catch {
     return res.status(500).json({ error: "ADMIN_PRODUCT_DELETE_FAILED" });
+  }
+});
+
+adminRouter.get("/appointment-slots", async (req: any, res: any) => {
+  try {
+    const rows = await listAdminAppointmentSlots({
+      date: String(req.query.date || "").trim(),
+      status: String(req.query.status || "").trim(),
+      includePast: String(req.query.includePast || "").trim(),
+    });
+    return res.json({ rows, total: rows.length });
+  } catch (error: any) {
+    return res.status(Number(error?.status || 500) || 500).json({ error: error?.message || "ADMIN_APPOINTMENT_SLOTS_LIST_FAILED" });
+  }
+});
+
+adminRouter.post("/appointment-slots", async (req: any, res: any) => {
+  const parsed = appointmentSlotCreateSchema.safeParse(req.body || {});
+  if (!parsed.success) return res.status(400).json({ error: "INVALID_INPUT" });
+
+  try {
+    const slot = await createAdminAppointmentSlot({
+      ...parsed.data,
+      createdByAdminId: String(req.adminProfile?.id || "").trim() || null,
+    });
+
+    await recordAuditLog(req, {
+      action: "create",
+      entityType: "appointment_slot",
+      entityId: slot.id,
+      summary: `Horario criado: ${slot.date} ${slot.time}`,
+      before: null,
+      after: slot,
+    });
+
+    return res.status(201).json({ ok: true, slot });
+  } catch (error: any) {
+    return res.status(Number(error?.status || 500) || 500).json({ error: error?.message || "ADMIN_APPOINTMENT_SLOT_CREATE_FAILED" });
+  }
+});
+
+adminRouter.patch("/appointment-slots/:id", async (req: any, res: any) => {
+  const slotId = String(req.params.id || "").trim();
+  if (!slotId) return res.status(400).json({ error: "INVALID_ID" });
+
+  const parsed = appointmentSlotPatchSchema.safeParse(req.body || {});
+  if (!parsed.success) return res.status(400).json({ error: "INVALID_INPUT" });
+  if (Object.keys(parsed.data).length === 0) return res.status(400).json({ error: "INVALID_INPUT" });
+
+  try {
+    const before = (await listAdminAppointmentSlots({ includePast: true })).find((row: any) => String(row.id || "") === slotId) || null;
+    const slot = await updateAdminAppointmentSlot(slotId, parsed.data);
+
+    await recordAuditLog(req, {
+      action: "save",
+      entityType: "appointment_slot",
+      entityId: slot.id,
+      summary: `Horario atualizado: ${slot.date} ${slot.time}`,
+      before,
+      after: slot,
+      reversible: false,
+    });
+
+    return res.json({ ok: true, slot });
+  } catch (error: any) {
+    return res.status(Number(error?.status || 500) || 500).json({ error: error?.message || "ADMIN_APPOINTMENT_SLOT_UPDATE_FAILED" });
+  }
+});
+
+adminRouter.delete("/appointment-slots/:id", sensitiveAdminRateLimit, async (req: any, res: any) => {
+  const slotId = String(req.params.id || "").trim();
+  if (!slotId) return res.status(400).json({ error: "INVALID_ID" });
+
+  try {
+    const before = (await listAdminAppointmentSlots({ includePast: true })).find((row: any) => String(row.id || "") === slotId) || null;
+    const removed = await deleteAdminAppointmentSlot(slotId);
+
+    await recordAuditLog(req, {
+      action: "delete",
+      entityType: "appointment_slot",
+      entityId: slotId,
+      summary: `Horario removido: ${removed.date} ${removed.time}`,
+      before,
+      after: null,
+      reversible: false,
+    });
+
+    return res.json({ ok: true, removed });
+  } catch (error: any) {
+    return res.status(Number(error?.status || 500) || 500).json({ error: error?.message || "ADMIN_APPOINTMENT_SLOT_DELETE_FAILED" });
   }
 });
 

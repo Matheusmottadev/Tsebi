@@ -363,6 +363,87 @@ export interface DeletePrivateCareAdminResponse {
   removed?: AdminPrivateCareRequest;
 }
 
+export interface AdminAppointmentBooking {
+  id: string;
+  slotId: string;
+  userId: string;
+  userName: string;
+  userEmail: string;
+  status: "scheduled" | "completed" | "canceled";
+  serviceType: string;
+  modality: string;
+  notes: string;
+  adminNote: string;
+  createdAt: string | null;
+  updatedAt: string | null;
+  startsAt: string | null;
+  endsAt: string | null;
+  date: string;
+  time: string;
+  label: string;
+  location: string;
+}
+
+export interface AdminAppointmentSlot {
+  id: string;
+  startsAt: string | null;
+  endsAt: string | null;
+  date: string;
+  time: string;
+  label: string;
+  modality: string;
+  location: string;
+  adminNote: string;
+  isAvailable: boolean;
+  isBlocked: boolean;
+  capacity: number;
+  bookedCount: number;
+  remainingCount: number;
+  status: "available" | "unavailable" | "blocked" | "filled" | "booked";
+  createdByAdminId: string | null;
+  createdAt: string | null;
+  updatedAt: string | null;
+  appointments: AdminAppointmentBooking[];
+}
+
+export interface ListAppointmentSlotsAdminParams {
+  date?: string;
+  status?: string;
+  includePast?: boolean;
+}
+
+export interface ListAppointmentSlotsAdminResponse {
+  rows: AdminAppointmentSlot[];
+  total: number;
+}
+
+export interface UpsertAppointmentSlotAdminPayload {
+  startsAt?: string;
+  endsAt?: string;
+  label?: string;
+  modality?: string;
+  location?: string;
+  adminNote?: string;
+  capacity?: number;
+  isAvailable?: boolean;
+  isBlocked?: boolean;
+}
+
+export interface CreateAppointmentSlotAdminResponse {
+  ok: true;
+  slot: AdminAppointmentSlot;
+}
+
+export interface UpdateAppointmentSlotAdminResponse {
+  ok: true;
+  slot: AdminAppointmentSlot;
+}
+
+export interface DeleteAppointmentSlotAdminResponse {
+  ok: true;
+  removed: AdminAppointmentSlot;
+}
+
 export interface AdminAuditLog {
   id: string;
   action: string;
@@ -1050,6 +1131,73 @@ export async function deletePrivateCareAdmin(
   const token = await resolveCsrfToken(csrfToken, options);
   return del<DeletePrivateCareAdminResponse>(
     `/api/admin/private-care/${encodeURIComponent(String(id || "").trim())}`,
+    mergeOptionsWithHeaders(options, buildCsrfHeader(token))
+  );
+}
+
+/**
+ * GET /api/admin/appointment-slots
+ * Auth: admin session required.
+ */
+export async function listAppointmentSlotsAdmin(
+  params: ListAppointmentSlotsAdminParams = {},
+  options?: HttpRequestOptions
+): Promise<ListAppointmentSlotsAdminResponse> {
+  const query = buildQuery({
+    date: params.date,
+    status: params.status,
+    includePast: params.includePast ? "1" : undefined,
+  });
+  return get<ListAppointmentSlotsAdminResponse>(`/api/admin/appointment-slots${query}`, options);
+}
+
+/**
+ * POST /api/admin/appointment-slots
+ * Auth: admin session required + CSRF header.
+ */
+export async function createAppointmentSlotAdmin(
+  payload: UpsertAppointmentSlotAdminPayload,
+  csrfToken?: string,
+  options?: HttpRequestOptions
+): Promise<CreateAppointmentSlotAdminResponse> {
+  const token = await resolveCsrfToken(csrfToken, options);
+  return post<CreateAppointmentSlotAdminResponse>(
+    "/api/admin/appointment-slots",
+    payload,
+    mergeOptionsWithHeaders(options, buildCsrfHeader(token))
+  );
+}
+
+/**
+ * PATCH /api/admin/appointment-slots/:id
+ * Auth: admin session required + CSRF header.
+ */
+export async function updateAppointmentSlotAdmin(
+  id: string,
+  payload: UpsertAppointmentSlotAdminPayload,
+  csrfToken?: string,
+  options?: HttpRequestOptions
+): Promise<UpdateAppointmentSlotAdminResponse> {
+  const token = await resolveCsrfToken(csrfToken, options);
+  return patch<UpdateAppointmentSlotAdminResponse>(
+    `/api/admin/appointment-slots/${encodeURIComponent(String(id || "").trim())}`,
+    payload,
+    mergeOptionsWithHeaders(options, buildCsrfHeader(token))
+  );
+}
+
+/**
+ * DELETE /api/admin/appointment-slots/:id
+ * Auth: admin session required + CSRF header.
+ */
+export async function deleteAppointmentSlotAdmin(
+  id: string,
+  csrfToken?: string,
+  options?: HttpRequestOptions
+): Promise<DeleteAppointmentSlotAdminResponse> {
+  const token = await resolveCsrfToken(csrfToken, options);
+  return del<DeleteAppointmentSlotAdminResponse>(
+    `/api/admin/appointment-slots/${encodeURIComponent(String(id || "").trim())}`,
     mergeOptionsWithHeaders(options, buildCsrfHeader(token))
   );
 }

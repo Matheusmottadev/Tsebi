@@ -34,6 +34,7 @@ const { unprotectJsonFromStorage } = require("./lib/data-protection") as {
 };
 const { listOrdersByUserId, updateOrder } = require("./lib/order-repository");
 const { commitStock } = require("./lib/inventory-repository");
+const { listMyAppointments } = require("./lib/appointments-repository");
 const { requireAuth } = require("./middlewares/requireAuth");
 const { userCsrfCookieName } = require("./middlewares/userCsrf");
 const { issueAuthEmailCode, consumeAuthEmailCode } = require("./lib/auth-email-code-repository");
@@ -2003,6 +2004,15 @@ myRouter.post("/private-care", requireAuth, async (req: any, res: any) => {
   );
 
   return res.status(201).json({ request: entry, history });
+});
+
+myRouter.get("/appointments", requireAuth, async (req: any, res: any) => {
+  try {
+    const appointments = await listMyAppointments(String(req.session.userId || ""));
+    return res.json({ appointments });
+  } catch (error: any) {
+    return res.status(Number(error?.status || 500) || 500).json({ error: error?.message || "APPOINTMENTS_LIST_FAILED" });
+  }
 });
 
 myRouter.get("/repairs", requireAuth, async (req: any, res: any) => {

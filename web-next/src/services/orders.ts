@@ -74,6 +74,7 @@ export interface CheckoutShippingInput {
   shippingMethod?: string;
   shippingCost?: number;
   shippingEstimate?: string;
+  shippingDeadlineDays?: number | null;
   quoteId?: string | null;
 }
 

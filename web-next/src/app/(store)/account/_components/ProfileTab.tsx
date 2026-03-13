@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import type { PublicUser } from "@/types";
+import type { PublicUser, UserTitle } from "@/types";
 import styles from "../account.module.css";
 
 type Props = { user: PublicUser };
@@ -25,7 +25,7 @@ export function ProfileTab({ user }: Props) {
   const [phone, setPhone] = useState(user.phone ?? "");
   const [cpf, setCpf] = useState(user.cpf ?? "");
   const [birthDate, setBirthDate] = useState(user.birthDate ?? "");
-  const [title, setTitle] = useState(user.title ?? "");
+  const [title, setTitle] = useState<UserTitle>(user.title ?? "nao_informar");
 
   // Address
   const [cep, setCep] = useState(defaultAddr?.cep ?? user.cep ?? "");
@@ -117,9 +117,9 @@ export function ProfileTab({ user }: Props) {
             <select
               className={styles.fieldSelect}
               value={title}
-              onChange={(e) => setTitle(e.target.value)}
+              onChange={(e) => setTitle(e.target.value as UserTitle)}
             >
-              <option value="">Não informar</option>
+              <option value="nao_informar">Não informar</option>
               <option value="sr">Sr.</option>
               <option value="sra">Sra.</option>
               <option value="srta">Srta.</option>

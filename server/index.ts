@@ -42,6 +42,7 @@ const {
   getRecommendationsForActor,
   priceBucketFromCents
 } = require("./lib/behavior-analytics-repository");
+const { listAppointmentSlotsForDate, createAppointment } = require("./lib/appointments-repository");
 const { shippingRouter } = require("../src/routes/shipping.routes");
 const { adminShippingRouter } = require("../src/routes/admin.shipping.routes");
 const { adminWhatsAppRouter } = require("../src/routes/admin.whatsapp.routes");
@@ -307,6 +308,13 @@ const behaviorEventSchema = z.object({
 const identifySchema = z.object({
   anon_id: z.string().trim().min(6).max(160),
   user_id: z.string().trim().min(6).max(120)
+});
+
+const appointmentCreateSchema = z.object({
+  slotId: z.string().trim().uuid(),
+  serviceType: z.string().trim().min(2).max(120),
+  modality: z.string().trim().max(120).optional().default(""),
+  notes: z.string().trim().max(2000).optional().default("")
 });
 
 const metaCapiEventSchema = z.object({
@@ -2030,6 +2038,37 @@ app.get("/api/recommendations", async (req: any, res: any) => {
     });
   } catch {
     return res.status(500).json({ error: "RECOMMENDATIONS_FAILED" });
+  }
+});
+
+app.get("/api/appointments/slots", async (req: any, res: any) => {
+  try {
+    const date = String(req.query.date || "").trim();
+    const slots = await listAppointmentSlotsForDate(date);
+    return res.json({ slots });
+  } catch (error: any) {
+    return res.status(Number(error?.status || 500) || 500).json({ error: error?.message || "APPOINTMENT_SLOTS_FAILED" });
+  }
+});
+
+app.post("/api/appointments", requireUserCsrfForMutations, async (req: any, res: any) => {
+  const sessionUserId = String(req.session?.userId || "").trim();
+  if (!sessionUserId) return res.status(401).json({ error: "UNAUTHORIZED" });
+
+  const parsed = appointmentCreateSchema.safeParse(req.body || {});
+  if (!parsed.success) return res.status(400).json({ error: "INVALID_INPUT" });
+
+  try {
+    const appointment = await createAppointment({
+      slotId: parsed.data.slotId,
+      userId: sessionUserId,
+      serviceType: parsed.data.serviceType,
+      modality: parsed.data.modality,
+      notes: parsed.data.notes,
+    });
+    return res.status(201).json({ appointment });
+  } catch (error: any) {
+    return res.status(Number(error?.status || 500) || 500).json({ error: error?.message || "APPOINTMENT_CREATE_FAILED" });
   }
 });
 
