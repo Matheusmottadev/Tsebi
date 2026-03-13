@@ -85,6 +85,8 @@ type CheckoutConfirmationSnapshot = {
   totalLabel: string;
   itemCount: number;
   items: CheckoutConfirmationSnapshotItem[];
+  shippingEstimate: string;
+  shippingDeadlineDays: number | null;
 };
 
 type SubmitPaymentAction = {
@@ -1419,6 +1421,9 @@ export function CheckoutClient() {
         email: String(result.customerEmail || checkoutEmail || "").trim(),
         totalLabel: formatCurrencyBrlFromCents(totalCents),
         itemCount: syncedItems.reduce((sum, item) => sum + Math.max(1, Number(item.qty || 1)), 0),
+        shippingEstimate: String(payload.shipping?.shippingEstimate || "").trim(),
+        shippingDeadlineDays:
+          payload.shipping?.shippingDeadlineDays == null ? null : Math.max(0, Number(payload.shipping.shippingDeadlineDays || 0)),
         items: syncedItems.map((item) => ({
           id: String(item.key || item.productId || "").trim(),
           name: item.name,

@@ -30,6 +30,8 @@ type ConfirmationSnapshot = {
   totalLabel: string;
   itemCount: number;
   items: ConfirmationItem[];
+  shippingEstimate?: string;
+  shippingDeadlineDays?: number | null;
 };
 
 function resolveStatus(value: string | null): ConfirmationStatus {
@@ -87,6 +89,24 @@ function formatItemsCountLabel(value: number): string {
   const count = Math.max(0, Math.floor(Number(value || 0)));
   if (count <= 0) return "—";
   return `${count} ${count === 1 ? "peca" : "pecas"}`;
+}
+
+function formatDeliveryEstimate(days: number | null | undefined, estimate?: string | null): string {
+  const numericDays = Number(days);
+  if (Number.isFinite(numericDays) && numericDays > 0) {
+    const roundedDays = Math.max(1, Math.floor(numericDays));
+    return roundedDays === 1 ? "1 dia util" : `${roundedDays} dias uteis`;
+  }
+
+  const rawEstimate = String(estimate || "").trim();
+  if (!rawEstimate) return "A definir";
+
+  const parsedDays = Number((rawEstimate.match(/(\d+)/)?.[1] || ""));
+  if (Number.isFinite(parsedDays) && parsedDays > 0) {
+    return parsedDays === 1 ? "1 dia util" : `${parsedDays} dias uteis`;
+  }
+
+  return rawEstimate;
 }
 
 function resolveImageSrc(raw: string | null | undefined): string {
@@ -241,6 +261,11 @@ function readConfirmationSnapshot(orderId: string | null): ConfirmationSnapshot 
       email: String(parsed.email || "").trim(),
       totalLabel: String(parsed.totalLabel || "").trim() || "R$ —",
       itemCount: Math.max(0, Math.floor(Number(parsed.itemCount || 0))),
+      shippingEstimate: String(parsed.shippingEstimate || "").trim(),
+      shippingDeadlineDays:
+        parsed.shippingDeadlineDays == null || !Number.isFinite(Number(parsed.shippingDeadlineDays))
+          ? null
+          : Math.max(0, Math.floor(Number(parsed.shippingDeadlineDays || 0))),
       items: Array.isArray(parsed.items) ? parsed.items : [],
     };
   } catch {
@@ -387,6 +412,10 @@ export default function CheckoutConfirmationPage() {
     ? (Array.isArray(accountOrder.items) ? accountOrder.items.reduce((sum, item) => sum + Math.max(1, Number(item.qty || 1)), 0) : 0)
     : snapshot?.itemCount ?? queryItemsCount ?? localItemCount;
   const processingItemsLabel = formatItemsCountLabel(resolvedItemsCount);
+  const resolvedShippingEstimate = formatDeliveryEstimate(
+    accountOrder?.shippingDeadlineDays ?? accountOrder?.shipping?.shippingDeadlineDays ?? snapshot?.shippingDeadlineDays ?? null,
+    accountOrder?.shipping?.shippingEstimate ?? snapshot?.shippingEstimate ?? ""
+  );
   const successItems =
     accountOrder && Array.isArray(accountOrder.items) && accountOrder.items.length > 0
       ? buildConfirmationItemsFromOrder(accountOrder)
@@ -534,7 +563,7 @@ export default function CheckoutConfirmationPage() {
             </div>
             <div className={styles.detailRow}>
               <span className={styles.detailLabel}>Entrega estimada</span>
-              <span className={styles.detailValue}>5 a 8 dias uteis</span>
+              <span className={styles.detailValue}>{resolvedShippingEstimate}</span>
             </div>
             <div className={styles.detailRow}>
               <span className={styles.detailLabel}>Confirmacao enviada</span>
