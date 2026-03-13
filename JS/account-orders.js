@@ -1,12 +1,26 @@
 (function initAccountOrdersModule() {
-  function statusLabel(status) {
-    const value = String(status || '').trim().toLowerCase();
+  function statusLabel(orderOrStatus) {
+    const order = orderOrStatus && typeof orderOrStatus === 'object' ? orderOrStatus : null;
+    const value = String(order ? order.status : orderOrStatus || '').trim().toLowerCase();
+    const currentStatus = String(order?.currentStatus || order?.trackingStatus || '').trim().toUpperCase();
+    const canceledAt = String(order?.canceledAt || '').trim();
+    const refundedAt = String(order?.refundedAt || '').trim();
+    if (value === 'refunded' || refundedAt) return 'Reembolsado';
+    if (
+      canceledAt ||
+      currentStatus === 'CANCELED' ||
+      currentStatus === 'CANCELLED' ||
+      value === 'canceled' ||
+      value === 'cancelled' ||
+      value === 'cancelado'
+    ) return 'Cancelado';
+    if (value === 'failed') return 'Falhou';
+    if (currentStatus === 'DELIVERED') return 'Entregue';
+    if (currentStatus === 'OUT_FOR_DELIVERY') return 'Saiu para entrega';
+    if (currentStatus === 'IN_TRANSIT' || currentStatus === 'SHIPPED') return 'Em transporte';
     if (value === 'paid') return 'Pago';
     if (value === 'processing') return 'Processando';
     if (value === 'pending_payment') return 'Aguardando pagamento';
-    if (value === 'canceled') return 'Cancelado';
-    if (value === 'failed') return 'Falhou';
-    if (value === 'refunded') return 'Reembolsado';
     return 'Em análise';
   }
 
@@ -49,6 +63,9 @@
           number: String(order.orderNumber || order.id || '').trim(),
           createdAt: order.createdAt || order.created_at || '',
           status: String(order.status || ''),
+          currentStatus: String(order.currentStatus || order.trackingStatus || ''),
+          canceledAt: order.canceledAt || '',
+          refundedAt: order.refundedAt || '',
           currency: String(order.currency || 'brl'),
           items,
           amount,
@@ -78,7 +95,7 @@
     if (orders.length) {
       const first = orders[0];
       if (lastEl) lastEl.textContent = `#${first.number || '-'} • ${formatDateBR(first.createdAt)}`;
-      if (statusEl) statusEl.textContent = statusLabel(first.status);
+      if (statusEl) statusEl.textContent = statusLabel(first);
     } else {
       if (lastEl) lastEl.textContent = '-';
       if (statusEl) statusEl.textContent = '-';
@@ -179,7 +196,7 @@
             <article class="order-card" data-order-id="${escapeHtml(order.id)}">
               <div class="order-card-head">
                 <h3>Pedido #${escapeHtml(order.number || order.id || '-')}</h3>
-                <span class="order-status">${escapeHtml(statusLabel(order.status))}</span>
+                <span class="order-status">${escapeHtml(statusLabel(order))}</span>
               </div>
               <p class="order-meta">${escapeHtml(formatDateBR(order.createdAt))} • ${escapeHtml(formatCurrencyBRL(order.amount, order.currency))}</p>
               <p class="order-items-preview">${escapeHtml(orderItemsLine(order.items))}</p>
