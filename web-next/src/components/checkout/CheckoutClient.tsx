@@ -2167,23 +2167,25 @@ export function CheckoutClient() {
                   </button>
                 </div>
 
-                {selectedPaymentMethod === "card" ? (
-                  intent?.clientSecret && stripePromise ? (
-                    <div className={styles.securePaymentBox}>
-                      <Elements stripe={stripePromise} options={elementsOptions}>
-                        <CheckoutPaymentForm
-                          orderId={intent.orderId}
-                          customerEmail={intent.customerEmail || checkoutEmail}
-                          clientSecret={intent.clientSecret}
-                          paymentMethodOrder={stripePaymentMethodOrder}
-                          mode="card"
-                          onElementStateChange={setPaymentElementState}
-                          onSubmitActionChange={setSubmitPaymentAction}
-                          showSubmitButton={false}
-                        />
-                      </Elements>
-                    </div>
-                  ) : null
+                {intent?.clientSecret && stripePromise ? (
+                  <div
+                    className={styles.securePaymentBox}
+                    style={{ display: selectedPaymentMethod === "card" ? undefined : "none" }}
+                    aria-hidden={selectedPaymentMethod !== "card"}
+                  >
+                    <Elements stripe={stripePromise} options={elementsOptions}>
+                      <CheckoutPaymentForm
+                        mode="card"
+                        orderId={intent.orderId}
+                        customerEmail={intent.customerEmail || checkoutEmail}
+                        clientSecret={intent.clientSecret}
+                        paymentMethodOrder={stripePaymentMethodOrder}
+                        onElementStateChange={setPaymentElementState}
+                        onSubmitActionChange={setSubmitPaymentAction}
+                        showSubmitButton={false}
+                      />
+                    </Elements>
+                  </div>
                 ) : null}
 
                 {selectedPaymentMethod === "card" ? (
