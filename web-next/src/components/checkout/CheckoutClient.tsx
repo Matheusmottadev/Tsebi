@@ -2050,7 +2050,7 @@ export function CheckoutClient() {
             </section>
           ) : null}
 
-          {visualCheckoutStep === "payment" || visualCheckoutStep === "review" ? (
+          {visualCheckoutStep === "payment" ? (
             <section className={styles.stepSection}>
               <div className={styles.stepHeader}>
                 <h2 className={styles.sectionTitle}>Pagamento.</h2>
@@ -2296,20 +2296,73 @@ export function CheckoutClient() {
                 </div>
               </article>
 
-              {selectedPaymentMethod === "boleto" || submitPaymentAction ? (
-                <button type="button" className={styles.primaryAction} onClick={handleReviewSubmit}>
-                  Confirmar pedido
-                </button>
-              ) : (
-                <button
-                  type="button"
-                  className={`${styles.primaryAction} ${styles.reviewFallbackButton}`}
-                  onClick={() => setActiveStep("payment")}
-                  disabled={isCreatingIntent || stripeLoading || !stripeConfigured}
-                >
-                  {isCreatingIntent ? "Preparando pagamento..." : "Voltar para pagamento"}
-                </button>
-              )}
+              <article className={`${styles.reviewCard} ${styles.reviewPaymentCard}`}>
+                <div className={styles.reviewCardHeader}>
+                  <p className={styles.reviewEyebrow}>PAGAMENTO</p>
+                  <button
+                    type="button"
+                    className={styles.reviewEditLink}
+                    onClick={() => {
+                      markStepCompleted("review", false);
+                      setActiveStep("payment");
+                    }}
+                  >
+                    Editar
+                  </button>
+                </div>
+                <div className={styles.reviewCardBody}>
+                  <p>{reviewPaymentSummary.line1}</p>
+                  <p>{reviewPaymentSummary.line2}</p>
+                </div>
+              </article>
+
+              {selectedPaymentMethod === "card" && intent?.clientSecret && stripePromise ? (
+                <div className={styles.hiddenPaymentHost} aria-hidden="true">
+                  <Elements stripe={stripePromise} options={elementsOptions}>
+                    <CheckoutPaymentForm
+                      orderId={intent.orderId}
+                      customerEmail={intent.customerEmail || checkoutEmail}
+                      clientSecret={intent.clientSecret}
+                      paymentMethodOrder={stripePaymentMethodOrder}
+                      mode="card"
+                      onElementStateChange={setPaymentElementState}
+                      onSubmitActionChange={setSubmitPaymentAction}
+                      showSubmitButton={false}
+                    />
+                  </Elements>
+                </div>
+              ) : null}
+
+              {selectedPaymentMethod === "google_pay" && intent?.clientSecret && stripePromise ? (
+                <div className={styles.hiddenPaymentHost} aria-hidden="true">
+                  <Elements stripe={stripePromise} options={elementsOptions}>
+                    <CheckoutPaymentForm
+                      orderId={intent.orderId}
+                      customerEmail={intent.customerEmail || checkoutEmail}
+                      clientSecret={intent.clientSecret}
+                      paymentMethodOrder={stripePaymentMethodOrder}
+                      mode="payment"
+                      onElementStateChange={setPaymentElementState}
+                      onSubmitActionChange={setSubmitPaymentAction}
+                      showSubmitButton={false}
+                    />
+                  </Elements>
+                </div>
+              ) : null}
+
+              <button
+                type="button"
+                className={styles.primaryAction}
+                onClick={handleReviewSubmit}
+                disabled={
+                  isCreatingIntent ||
+                  stripeLoading ||
+                  !stripeConfigured ||
+                  (selectedPaymentMethod !== "boleto" && !submitPaymentAction)
+                }
+              >
+                {isCreatingIntent ? "Preparando pagamento..." : "Confirmar pedido"}
+              </button>
 
               <p className={styles.termsText}>
                 Ao confirmar, voce concorda com os <a href="/aviso-legal">Termos e condicoes</a> e com a{" "}

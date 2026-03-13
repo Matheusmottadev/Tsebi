@@ -502,8 +502,14 @@ export default function CheckoutConfirmationPage() {
           <p className={styles.brand}>TSEBI</p>
         </div>
         <div className={styles.leftBottom}>
-          <p className={styles.quote}>Cada peca e um principio.</p>
-          <p className={styles.tagline}>FORMA, PRINCIPIO E EXCELENCIA</p>
+          <p className={styles.quote}>
+            Forma,
+            <br />
+            principio
+            <br />
+            e excelencia.
+          </p>
+          <p className={styles.tagline}>COLECAO ATUAL - SAO PAULO</p>
         </div>
       </section>
 
