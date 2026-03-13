@@ -22,7 +22,6 @@ export function LayoutChrome({ children }: LayoutChromeProps) {
     return query ? `${currentPath}?${query}` : currentPath;
   }, [currentPath, searchParams]);
   const normalizedPath = currentPath.replace(/\/+$/, "") || "/";
-  const shouldHideForAccount = currentPath === "/account" || currentPath.startsWith("/account/");
   const shouldHideForStudio = currentPath === "/studio" || currentPath.startsWith("/studio/");
   const shouldHideForAdmin = currentPath === "/admin" || currentPath.startsWith("/admin/");
   const shouldHideForLogin = normalizedPath === "/login";
@@ -39,7 +38,6 @@ export function LayoutChrome({ children }: LayoutChromeProps) {
     shouldHideForLegacyAdminLogin;
   const shouldRenderHeader =
     !ROUTES_WITHOUT_GLOBAL_HEADER.has(currentPath) &&
-    !shouldHideForAccount &&
     !shouldHideForStudio &&
     !shouldHideForLogin &&
     !shouldHideForPasswordRecovery &&

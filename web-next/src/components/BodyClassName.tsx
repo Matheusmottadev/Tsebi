@@ -1,12 +1,13 @@
 "use client";
 
-import { useLayoutEffect } from "react";
+import { useLayoutEffect, type ReactNode } from "react";
 
 type BodyClassNameProps = {
   className: string;
+  children?: ReactNode;
 };
 
-export function BodyClassName({ className }: BodyClassNameProps) {
+export function BodyClassName({ className, children }: BodyClassNameProps) {
   useLayoutEffect(() => {
     const value = String(className || "").trim();
     if (!value) return;
@@ -17,5 +18,5 @@ export function BodyClassName({ className }: BodyClassNameProps) {
     };
   }, [className]);
 
-  return null;
+  return <>{children}</>;
 }

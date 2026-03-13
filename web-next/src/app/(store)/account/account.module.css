@@ -1,0 +1,1106 @@
+/* ─── Keyframes ──────────────────────────────────── */
+@keyframes pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(10, 10, 10, 0.3); }
+  50%       { box-shadow: 0 0 0 5px rgba(10, 10, 10, 0); }
+}
+
+@keyframes pulseFailed {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(192, 57, 43, 0.35); }
+  50%       { box-shadow: 0 0 0 5px rgba(192, 57, 43, 0); }
+}
+
+@keyframes fillLine {
+  from { transform: scaleX(0); }
+  to   { transform: scaleX(1); }
+}
+
+@keyframes popDot {
+  0%   { transform: scale(0.4); opacity: 0; }
+  70%  { transform: scale(1.2); }
+  100% { transform: scale(1);   opacity: 1; }
+}
+
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateX(-50%) translateY(12px); }
+  to   { opacity: 1; transform: translateX(-50%) translateY(0); }
+}
+
+/* ─── CSS Variables ──────────────────────────────── */
+.root {
+  --black: #0a0a0a;
+  --white: #fafaf8;
+  --grey-light: #f2f1ef;
+  --grey-mid: #e0dedd;
+  --grey-dark: #8a8885;
+  --text: #1a1a1a;
+  --border: #d8d6d3;
+  --success: #2d6a4f;
+  --error: #c0392b;
+  --warning: #b7791f;
+  font-family: var(--font-montserrat), Montserrat, sans-serif;
+  color: var(--text);
+  background: var(--white);
+  min-height: 100vh;
+}
+
+/* ─── Hero ───────────────────────────────────────── */
+.hero {
+  width: 100%;
+  height: 480px;
+  background: linear-gradient(135deg, #d4cfc9 0%, #b8b3ac 50%, #c9c4bc 100%);
+  position: relative;
+  overflow: hidden;
+}
+
+/* ─── Avatar & User Info ─────────────────────────── */
+.avatarBlock {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-top: -36px;
+  position: relative;
+  z-index: 10;
+  padding-bottom: 8px;
+}
+
+.avatar {
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  background: var(--white);
+  border: 2px solid var(--border);
+  box-shadow: 0 2px 16px rgba(0, 0, 0, 0.1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-montserrat), sans-serif;
+  font-weight: 500;
+  font-size: 22px;
+  color: var(--black);
+  letter-spacing: 0.02em;
+  flex-shrink: 0;
+}
+
+.userRole {
+  font-family: var(--font-montserrat), sans-serif;
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--grey-dark);
+  margin: 14px 0 0;
+}
+
+.userName {
+  font-family: var(--font-cormorant), "Cormorant Garamond", Georgia, serif;
+  font-size: 28px;
+  font-weight: 400;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--black);
+  margin: 4px 0 0;
+}
+
+/* ─── Sticky Nav ─────────────────────────────────── */
+.nav {
+  position: sticky;
+  top: 68px;
+  z-index: 100;
+  background: var(--white);
+  border-bottom: 1px solid var(--border);
+  margin-top: 28px;
+}
+
+.navInner {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 0 40px;
+  display: flex;
+  overflow-x: auto;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+}
+
+.navInner::-webkit-scrollbar {
+  display: none;
+}
+
+.navTab {
+  font-family: var(--font-montserrat), sans-serif;
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--grey-dark);
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  padding: 14px 20px;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: color 0.15s, border-color 0.15s;
+  flex-shrink: 0;
+}
+
+.navTab:hover {
+  color: var(--black);
+}
+
+.navTabActive {
+  color: var(--black);
+  border-bottom-color: var(--black);
+}
+
+/* ─── Content Area ───────────────────────────────── */
+.content {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 40px 40px 100px;
+}
+
+/* ─── Section Title (shared) ─────────────────────── */
+.sectionTitle {
+  font-family: var(--font-cormorant), "Cormorant Garamond", serif;
+  font-size: 20px;
+  font-weight: 400;
+  color: var(--black);
+  letter-spacing: 0.04em;
+  margin: 0 0 24px;
+}
+
+/* ─── Overview Card Grid ─────────────────────────── */
+.cardGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 18px;
+}
+
+.card {
+  background: var(--grey-light);
+  border: 1px solid var(--border);
+  padding: 30px 32px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.cardTitle {
+  font-family: var(--font-cormorant), "Cormorant Garamond", serif;
+  font-size: 22px;
+  font-weight: 400;
+  color: var(--black);
+  letter-spacing: 0.03em;
+  margin: 0;
+}
+
+.cardDesc {
+  font-size: 12px;
+  font-weight: 300;
+  color: var(--grey-dark);
+  line-height: 1.7;
+  flex: 1;
+  margin: 0;
+}
+
+.cardActions {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-top: 8px;
+  flex-wrap: wrap;
+}
+
+/* ─── Buttons ────────────────────────────────────── */
+.btnPill {
+  font-family: var(--font-montserrat), sans-serif;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--black);
+  background: transparent;
+  border: 1px solid var(--black);
+  border-radius: 100px;
+  padding: 10px 22px;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+}
+
+.btnPill:hover {
+  background: var(--black);
+  color: var(--white);
+}
+
+.btnPillFilled {
+  background: var(--black);
+  color: var(--white);
+}
+
+.btnPillFilled:hover {
+  background: #2a2a2a;
+}
+
+.btnSmall {
+  font-size: 9.5px;
+  padding: 8px 16px;
+}
+
+.btnText {
+  font-family: var(--font-montserrat), sans-serif;
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--black);
+  background: none;
+  border: none;
+  border-bottom: 1px solid currentColor;
+  padding: 0 0 1px;
+  cursor: pointer;
+  transition: color 0.15s;
+  text-decoration: none;
+}
+
+.btnText:hover {
+  color: var(--grey-dark);
+}
+
+.btnSquare {
+  font-family: var(--font-montserrat), sans-serif;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--white);
+  background: var(--black);
+  border: none;
+  border-radius: 0;
+  padding: 14px;
+  width: 100%;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.btnSquare:hover {
+  background: #2a2a2a;
+}
+
+.btnSquare:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+/* ─── Profile / Forms ────────────────────────────── */
+.formSection {
+  margin-bottom: 0;
+}
+
+.formGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px 32px;
+}
+
+.formGrid1 {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 24px;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.fieldLabel {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--grey-dark);
+}
+
+.fieldInput,
+.fieldSelect,
+.fieldTextarea {
+  font-family: var(--font-montserrat), sans-serif;
+  font-size: 14px;
+  font-weight: 300;
+  color: var(--black);
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid var(--border);
+  padding: 8px 0;
+  outline: none;
+  width: 100%;
+  transition: border-color 0.15s;
+  -webkit-appearance: none;
+  appearance: none;
+  border-radius: 0;
+}
+
+.fieldInput:focus,
+.fieldSelect:focus,
+.fieldTextarea:focus {
+  border-bottom-color: var(--black);
+}
+
+.fieldTextarea {
+  resize: vertical;
+  min-height: 80px;
+}
+
+.formDivider {
+  border: none;
+  border-top: 1px solid var(--border);
+  margin: 40px 0;
+}
+
+.formActions {
+  display: flex;
+  gap: 12px;
+  margin-top: 32px;
+}
+
+/* ─── Orders Tab ─────────────────────────────────── */
+.orderList {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--border);
+}
+
+.orderRow {
+  border-bottom: 1px solid var(--border);
+}
+
+.orderRow:last-child {
+  border-bottom: none;
+}
+
+.orderHeader {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  padding: 18px 24px;
+  cursor: pointer;
+  transition: background 0.12s;
+  background: none;
+  border: none;
+  width: 100%;
+  text-align: left;
+}
+
+.orderHeader:hover {
+  background: var(--grey-light);
+}
+
+.orderNumber {
+  font-family: var(--font-cormorant), "Cormorant Garamond", serif;
+  font-size: 18px;
+  font-weight: 400;
+  color: var(--black);
+  flex: 1;
+  text-align: left;
+}
+
+.orderDate {
+  font-size: 12px;
+  font-weight: 300;
+  color: var(--grey-dark);
+}
+
+.orderTotal {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--black);
+}
+
+.statusBadge {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 4px 10px;
+  border-radius: 100px;
+}
+
+.statusGreen {
+  background: #d4edda;
+  color: var(--success);
+}
+
+.statusYellow {
+  background: #fff3cd;
+  color: var(--warning);
+}
+
+.statusRed {
+  background: #f8d7da;
+  color: var(--error);
+}
+
+.statusBlue {
+  background: #cce5ff;
+  color: #0056b3;
+}
+
+.statusGray {
+  background: var(--grey-light);
+  color: var(--grey-dark);
+}
+
+.orderChevron {
+  font-size: 11px;
+  color: var(--grey-dark);
+  transition: transform 0.2s;
+  flex-shrink: 0;
+}
+
+.orderChevronOpen {
+  transform: rotate(180deg);
+}
+
+.orderExpanded {
+  padding: 28px 24px 32px;
+  border-top: 1px solid var(--border);
+  background: var(--grey-light);
+}
+
+/* Tracking Bar */
+.trackingBar {
+  display: flex;
+  align-items: flex-start;
+  margin-bottom: 28px;
+}
+
+.trackLine {
+  flex: 1;
+  height: 1px;
+  background: var(--grey-mid);
+  margin-top: 6px;
+  min-width: 8px;
+}
+
+.trackLineDone {
+  background: var(--black);
+  transform-origin: left;
+  animation: fillLine 0.5s ease forwards;
+}
+
+.trackingStep {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.trackingDot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  border: 1.5px solid var(--grey-mid);
+  background: var(--white);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 7px;
+  color: transparent;
+}
+
+.trackingDotDone {
+  background: var(--black);
+  border-color: var(--black);
+  color: var(--white);
+  animation: popDot 0.35s ease forwards;
+}
+
+.trackingDotCurrent {
+  border: 2px solid var(--black);
+  background: var(--white);
+  animation: pulse 1.8s ease-in-out infinite;
+}
+
+.trackingDotFailed {
+  background: var(--error);
+  border-color: var(--error);
+  animation: pulseFailed 1.8s ease-in-out infinite;
+}
+
+.trackingLabelFailed {
+  color: var(--error);
+  font-weight: 600;
+}
+
+.trackingLabel {
+  font-size: 9px;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--grey-dark);
+  text-align: center;
+  white-space: nowrap;
+}
+
+.trackingLabelDone {
+  color: var(--black);
+}
+
+.trackingInfo {
+  font-size: 12px;
+  color: var(--grey-dark);
+  margin-bottom: 24px;
+}
+
+/* Order Items */
+.orderItems {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin-top: 24px;
+}
+
+.orderItem {
+  display: flex;
+  gap: 16px;
+  align-items: flex-start;
+}
+
+.orderItemImg {
+  width: 60px;
+  height: 80px;
+  object-fit: cover;
+  background: var(--grey-mid);
+  flex-shrink: 0;
+}
+
+.orderItemImgPlaceholder {
+  width: 60px;
+  height: 80px;
+  background: var(--grey-mid);
+  flex-shrink: 0;
+}
+
+.orderItemInfo {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.orderItemName {
+  font-family: var(--font-cormorant), "Cormorant Garamond", serif;
+  font-size: 16px;
+  font-weight: 400;
+  color: var(--black);
+}
+
+.orderItemMeta {
+  font-size: 11px;
+  color: var(--grey-dark);
+  font-weight: 300;
+}
+
+.orderItemPrice {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--black);
+}
+
+.orderActions {
+  display: flex;
+  gap: 12px;
+  margin-top: 24px;
+  flex-wrap: wrap;
+}
+
+/* ─── Toast ──────────────────────────────────────── */
+.toastBar {
+  position: fixed;
+  bottom: 28px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 9999;
+  padding: 12px 28px;
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  pointer-events: none;
+  animation: fadeInUp 0.3s ease forwards;
+}
+
+.toastBarSuccess {
+  background: var(--black);
+  color: var(--white);
+}
+
+.toastBarWarn {
+  background: var(--warning);
+  color: var(--white);
+}
+
+.orderErrorMsg {
+  font-size: 13px;
+  color: var(--error);
+  background: #f8d7da;
+  padding: 12px 16px;
+  margin-bottom: 20px;
+}
+
+/* ─── Appointments ───────────────────────────────── */
+.appointmentsGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 48px;
+  align-items: start;
+}
+
+.calendarHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 20px;
+}
+
+.calMonth {
+  font-family: var(--font-cormorant), "Cormorant Garamond", serif;
+  font-size: 20px;
+  font-weight: 400;
+  color: var(--black);
+  text-transform: capitalize;
+}
+
+.calNavBtn {
+  background: none;
+  border: 1px solid var(--border);
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: var(--black);
+  font-size: 14px;
+  transition: background 0.12s;
+}
+
+.calNavBtn:hover {
+  background: var(--grey-light);
+}
+
+.dayNamesRow {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  margin-bottom: 6px;
+}
+
+.dayName {
+  text-align: center;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--grey-dark);
+  padding: 4px 0;
+}
+
+.dayGrid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 2px;
+}
+
+.day {
+  aspect-ratio: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  font-weight: 300;
+  cursor: pointer;
+  border-radius: 50%;
+  transition: background 0.1s;
+  color: var(--text);
+  background: none;
+  border: none;
+}
+
+.day:hover:not(.dayDisabled):not(.daySelected):not(.dayEmpty) {
+  background: var(--grey-light);
+}
+
+.dayDisabled {
+  color: var(--grey-mid);
+  cursor: default;
+  pointer-events: none;
+}
+
+.dayToday {
+  border: 1px solid var(--black);
+}
+
+.daySelected {
+  background: var(--black) !important;
+  color: var(--white);
+}
+
+.dayEmpty {
+  cursor: default;
+}
+
+.slotsSection {
+  margin-top: 24px;
+}
+
+.slotsTitle {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--grey-dark);
+  margin-bottom: 12px;
+}
+
+.slotsGrid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+
+.slot {
+  padding: 8px;
+  font-size: 12px;
+  font-weight: 400;
+  text-align: center;
+  border: 1px solid var(--border);
+  background: transparent;
+  cursor: pointer;
+  transition: background 0.12s, border-color 0.12s;
+  color: var(--black);
+  font-family: var(--font-montserrat), sans-serif;
+}
+
+.slot:hover:not(.slotTaken):not(.slotSelected) {
+  border-color: var(--black);
+}
+
+.slotSelected {
+  background: var(--black);
+  color: var(--white);
+  border-color: var(--black);
+}
+
+.slotTaken {
+  text-decoration: line-through;
+  color: var(--grey-mid);
+  cursor: default;
+  pointer-events: none;
+}
+
+.appointmentForm {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.summaryBox {
+  background: var(--white);
+  border: 1px solid var(--border);
+  padding: 20px;
+}
+
+.summaryRow {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 6px;
+  font-size: 12px;
+}
+
+.summaryRow:last-child {
+  margin-bottom: 0;
+}
+
+.summaryKey {
+  font-weight: 600;
+  color: var(--grey-dark);
+  text-transform: uppercase;
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  min-width: 80px;
+  margin-top: 1px;
+}
+
+.summaryVal {
+  color: var(--text);
+}
+
+/* ─── Recommendations ────────────────────────────── */
+.recsGrid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 24px;
+}
+
+.recCard {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.recImgWrap {
+  position: relative;
+  aspect-ratio: 3 / 4;
+  background: var(--grey-light);
+  overflow: hidden;
+}
+
+.recBadge {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  background: var(--black);
+  color: var(--white);
+  padding: 4px 8px;
+  z-index: 1;
+}
+
+.recName {
+  font-family: var(--font-cormorant), "Cormorant Garamond", serif;
+  font-size: 17px;
+  font-weight: 400;
+  color: var(--black);
+  margin: 0;
+}
+
+.recPrice {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--black);
+  margin: 0;
+}
+
+.recReason {
+  font-size: 11px;
+  font-style: italic;
+  color: var(--grey-dark);
+  line-height: 1.5;
+  margin: 0;
+}
+
+/* ─── Wishlist ───────────────────────────────────── */
+.wishGrid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 24px;
+}
+
+.wishCard {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.wishImgWrap {
+  position: relative;
+  aspect-ratio: 3 / 4;
+  background: var(--grey-light);
+  overflow: hidden;
+}
+
+.wishRemove {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: var(--white);
+  border: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 13px;
+  color: var(--black);
+  z-index: 1;
+  transition: background 0.12s;
+}
+
+.wishRemove:hover {
+  background: var(--grey-light);
+}
+
+.wishName {
+  font-family: var(--font-cormorant), "Cormorant Garamond", serif;
+  font-size: 17px;
+  font-weight: 400;
+  color: var(--black);
+  margin: 0;
+}
+
+.wishPrice {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--black);
+  margin: 0;
+}
+
+.wishActions {
+  display: flex;
+  gap: 8px;
+}
+
+/* ─── Repairs ────────────────────────────────────── */
+.repairBanner {
+  background: var(--grey-light);
+  border: 1px solid var(--border);
+  padding: 32px 36px;
+  margin-bottom: 40px;
+}
+
+.repairBannerTitle {
+  font-family: var(--font-cormorant), "Cormorant Garamond", serif;
+  font-size: 24px;
+  font-weight: 400;
+  color: var(--black);
+  margin: 0 0 10px;
+  letter-spacing: 0.02em;
+}
+
+.repairBannerDesc {
+  font-size: 13px;
+  font-weight: 300;
+  color: var(--grey-dark);
+  line-height: 1.7;
+  max-width: 540px;
+  margin: 0;
+}
+
+.stepsRow {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 32px;
+  margin-bottom: 48px;
+  padding-bottom: 40px;
+  border-bottom: 1px solid var(--border);
+}
+
+.step {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.stepNum {
+  font-family: var(--font-cormorant), "Cormorant Garamond", serif;
+  font-size: 52px;
+  font-weight: 300;
+  color: var(--grey-mid);
+  line-height: 1;
+}
+
+.stepTitle {
+  font-family: var(--font-cormorant), "Cormorant Garamond", serif;
+  font-size: 18px;
+  font-weight: 400;
+  color: var(--black);
+  margin: 0;
+}
+
+.stepDesc {
+  font-size: 12px;
+  font-weight: 300;
+  color: var(--grey-dark);
+  line-height: 1.6;
+  margin: 0;
+}
+
+/* ─── Shared / Utility ───────────────────────────── */
+.emptyState {
+  text-align: center;
+  padding: 60px 20px;
+}
+
+.emptyTitle {
+  font-family: var(--font-cormorant), "Cormorant Garamond", serif;
+  font-size: 22px;
+  font-weight: 400;
+  color: var(--black);
+  margin: 0 0 8px;
+}
+
+.emptyDesc {
+  font-size: 13px;
+  font-weight: 300;
+  color: var(--grey-dark);
+  margin: 0;
+}
+
+.loading {
+  text-align: center;
+  padding: 60px 20px;
+  font-size: 13px;
+  font-weight: 300;
+  color: var(--grey-dark);
+}
+
+.errorState {
+  text-align: center;
+  padding: 40px 20px;
+  font-size: 13px;
+  color: var(--error);
+}
+
+/* ─── Responsive ─────────────────────────────────── */
+@media (max-width: 768px) {
+  .navInner {
+    padding: 0 16px;
+    justify-content: flex-start;
+  }
+
+  .content {
+    padding: 24px 20px 80px;
+  }
+
+  .cardGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .formGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .appointmentsGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .recsGrid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .wishGrid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .stepsRow {
+    grid-template-columns: 1fr;
+  }
+
+  .trackingStep {
+    width: 44px;
+  }
+
+  .trackingLabel {
+    font-size: 8px;
+  }
+}

@@ -46,10 +46,5 @@ async function requireAuthenticatedUser() {
 export default async function AccountLayout({ children }: AccountLayoutProps) {
   await requireAuthenticatedUser();
 
-  return (
-    <>
-      <BodyClassName className="conta-page" />
-      {children}
-    </>
-  );
+  return <BodyClassName className="conta-page">{children}</BodyClassName>;
 }

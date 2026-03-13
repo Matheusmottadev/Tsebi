@@ -11,6 +11,20 @@ body.conta-page {
   padding-top: calc(var(--conta-fixed-stack) + var(--conta-subnav-height));
 }
 
+body.conta-page > .top-bar,
+body.conta-page .legacy-account-root > .top-bar {
+  display: flex !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  width: 100%;
+  height: var(--conta-topbar-height);
+  z-index: 5700;
+}
+
 body.conta-page > .home-header,
 body.conta-page .legacy-account-root > .home-header {
   display: block !important;
