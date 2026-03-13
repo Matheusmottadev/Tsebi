@@ -87,6 +87,10 @@ type CheckoutConfirmationSnapshot = {
   items: CheckoutConfirmationSnapshotItem[];
 };
 
+type SubmitPaymentAction = {
+  fn: () => Promise<boolean>;
+};
+
 const INITIAL_FORM: CheckoutFormState = {
   guestEmail: "",
   firstName: "",
@@ -662,7 +666,7 @@ export function CheckoutClient() {
   const [couponFeedbackTone, setCouponFeedbackTone] = useState<CouponFeedbackTone>("");
   const [isApplyingCoupon, setIsApplyingCoupon] = useState(false);
   const [paymentElementState, setPaymentElementState] = useState({ ready: false, complete: false });
-  const [submitPaymentAction, setSubmitPaymentAction] = useState<null | (() => Promise<boolean>)>(null);
+  const [submitPaymentAction, setSubmitPaymentAction] = useState<SubmitPaymentAction | null>(null);
   const phoneNumberInputRef = useRef<HTMLInputElement | null>(null);
   const lastAutoLookupCepRef = useRef("");
   const couponPreviewKeyRef = useRef("");
@@ -1661,7 +1665,7 @@ export function CheckoutClient() {
     }
 
     setErrorMessage("");
-    const confirmed = await submitPaymentAction();
+    const confirmed = await submitPaymentAction.fn();
     if (!confirmed) {
       setErrorMessage("Revise os dados de pagamento e tente novamente.");
       setActiveStep("payment");

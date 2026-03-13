@@ -24,7 +24,7 @@ type CheckoutPaymentFormProps = {
   };
   submitLabel?: string;
   onElementStateChange?: (state: { ready: boolean; complete: boolean }) => void;
-  onSubmitActionChange?: (action: null | (() => Promise<boolean>)) => void;
+  onSubmitActionChange?: (action: { fn: () => Promise<boolean> } | null) => void;
   showSubmitButton?: boolean;
 };
 
@@ -335,8 +335,11 @@ export function CheckoutPaymentForm({
   useEffect(() => {
     if (!onSubmitActionChange) return;
     const registeredAction = () => submitPaymentRef.current();
-    onSubmitActionChange(registeredAction);
-  }, []);
+    onSubmitActionChange({ fn: registeredAction });
+    return () => {
+      onSubmitActionChange(null);
+    };
+  }, [onSubmitActionChange]);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();

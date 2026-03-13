@@ -22,7 +22,7 @@ body.conta-page > .home-header {
   right: 0;
   width: 100%;
   min-height: var(--conta-header-height);
-  padding: 8px 16px;
+  padding: 16px 34px;
   border-bottom: 1px solid #ececec;
   z-index: 5600;
   background: #ffffff;
@@ -35,9 +35,9 @@ body.conta-page > .home-header .header-search-trigger {
 
 body.conta-page > .home-header .header-row {
   width: 100%;
-  max-width: 1200px;
-  margin: 0 auto;
-  min-height: calc(var(--conta-header-height) - 16px);
+  max-width: none;
+  margin: 0;
+  min-height: calc(var(--conta-header-height) - 32px);
   align-items: center;
 }
 
@@ -822,6 +822,14 @@ nav.conta-subnav {
 @media (max-width: 760px) {
   body.conta-page {
     --conta-header-height: 72px;
+  }
+
+  body.conta-page > .home-header {
+    padding: 10px 12px;
+  }
+
+  body.conta-page > .home-header .header-row {
+    min-height: calc(var(--conta-header-height) - 20px);
   }
 
   .conta-wrap {
