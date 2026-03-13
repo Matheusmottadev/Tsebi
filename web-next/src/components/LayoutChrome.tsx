@@ -27,17 +27,24 @@ export function LayoutChrome({ children }: LayoutChromeProps) {
   const shouldHideForStudio = currentPath === "/studio" || currentPath.startsWith("/studio/");
   const shouldHideForAdmin = currentPath === "/admin" || currentPath.startsWith("/admin/");
   const shouldHideForLogin = normalizedPath === "/login";
+  const shouldHideForPasswordRecovery = normalizedPath.startsWith("/recuperar-senha");
   const shouldHideForAdminLogin = normalizedPath === "/admin/login";
   const shouldHideForLegacyAdminLogin =
     normalizedPath === "/login/admin" || normalizedPath === "/login/admin/login";
   const shouldHideFailedCheckoutConfirmation =
     normalizedPath === "/checkout/confirmation" && confirmationStatus === "failed";
-  const shouldBypassChrome = shouldHideForAdmin || shouldHideForLogin || shouldHideForAdminLogin || shouldHideForLegacyAdminLogin;
+  const shouldBypassChrome =
+    shouldHideForAdmin ||
+    shouldHideForLogin ||
+    shouldHideForPasswordRecovery ||
+    shouldHideForAdminLogin ||
+    shouldHideForLegacyAdminLogin;
   const shouldRenderHeader =
     !ROUTES_WITHOUT_GLOBAL_HEADER.has(currentPath) &&
     !shouldHideForAccount &&
     !shouldHideForStudio &&
     !shouldHideForLogin &&
+    !shouldHideForPasswordRecovery &&
     !shouldHideForAdmin &&
     !shouldHideForAdminLogin &&
     !shouldHideForLegacyAdminLogin &&

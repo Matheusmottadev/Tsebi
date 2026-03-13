@@ -9,10 +9,12 @@ const WHATSAPP_URL =
 
 export function WhatsAppContactButton() {
   const pathname = usePathname();
+  const normalizedPath = String(pathname || "").replace(/\/+$/, "") || "/";
   const isStudioRoute = pathname === "/studio" || pathname.startsWith("/studio/");
   const isAdminRoute = pathname === "/admin" || pathname.startsWith("/admin/");
+  const isPasswordRecoveryRoute = normalizedPath.startsWith("/recuperar-senha");
 
-  if (isStudioRoute || isAdminRoute) return null;
+  if (isStudioRoute || isAdminRoute || isPasswordRecoveryRoute) return null;
 
   return (
     <a

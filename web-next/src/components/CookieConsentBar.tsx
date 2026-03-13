@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { usePathname } from "next/navigation";
 import styles from "./CookieConsentBar.module.css";
 
 export const CONSENT_KEY = "tsebi_cookie_consent_v1";
@@ -125,11 +126,14 @@ function toState(input: ConsentInput): ConsentState {
 }
 
 export function CookieConsentBar() {
+  const pathname = usePathname();
+  const normalizedPath = String(pathname || "").replace(/\/+$/, "") || "/";
   const [visible, setVisible] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [functionalEnabled, setFunctionalEnabled] = useState(false);
   const [analyticsEnabled, setAnalyticsEnabled] = useState(false);
   const [adsEnabled, setAdsEnabled] = useState(false);
+  const isPasswordRecoveryRoute = normalizedPath.startsWith("/recuperar-senha");
 
   useEffect(() => {
     const savedConsent = readStoredConsent();
@@ -196,6 +200,10 @@ export function CookieConsentBar() {
     setVisible(false);
     setIsModalOpen(false);
   };
+
+  if (isPasswordRecoveryRoute) {
+    return null;
+  }
 
   return (
     <>
