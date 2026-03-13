@@ -1984,7 +1984,7 @@ adminRouter.patch("/orders/:id", async (req: any, res: any) => {
       return res.status(409).json({ error: "ORDER_REFUNDED_LOCKED" });
     }
 
-    if ((requestedStatus === "canceled" || requestedStatus === "refunded") && beforeStatus !== "refunded") {
+    if ((requestedStatus === "refunded" || (requestedStatus === "canceled" && before.stripePaymentIntentId)) && beforeStatus !== "refunded") {
       if (!before.stripePaymentIntentId) {
         return res.status(409).json({ error: "ORDER_NOT_REFUNDABLE" });
       }
@@ -1995,10 +1995,16 @@ adminRouter.patch("/orders/:id", async (req: any, res: any) => {
         payment_intent: before.stripePaymentIntentId
       });
 
-      nextPatch.status = "refunded";
-      nextPatch.refundedAt = new Date().toISOString();
       nextPatch.stripeRefundId = refund?.id || before.stripeRefundId || null;
-      nextPatch.cancellationReason = nextPatch.cancellationReason || "refunded_by_admin";
+      if (requestedStatus === "refunded") {
+        nextPatch.status = "refunded";
+        nextPatch.refundedAt = new Date().toISOString();
+        nextPatch.cancellationReason = nextPatch.cancellationReason || "refunded_by_admin";
+      } else {
+        nextPatch.status = "canceled";
+        nextPatch.canceledAt = nextPatch.canceledAt || before.canceledAt || new Date().toISOString();
+        nextPatch.cancellationReason = nextPatch.cancellationReason || "refund_requested_by_admin";
+      }
     }
 
     let updated = await updateOrder(req.params.id, nextPatch);

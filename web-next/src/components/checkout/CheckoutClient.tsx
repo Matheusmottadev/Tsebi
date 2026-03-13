@@ -2050,8 +2050,8 @@ export function CheckoutClient() {
             </section>
           ) : null}
 
-          {visualCheckoutStep === "payment" ? (
-            <section className={styles.stepSection}>
+          {visualCheckoutStep === "payment" || visualCheckoutStep === "review" ? (
+            <section className={activeStep === "payment" ? styles.stepSection : styles.hiddenStepSection} aria-hidden={activeStep !== "payment"}>
               <div className={styles.stepHeader}>
                 <h2 className={styles.sectionTitle}>Pagamento.</h2>
                 {activeStep !== "payment" ? (
@@ -2061,181 +2061,173 @@ export function CheckoutClient() {
                 ) : null}
               </div>
 
-              {activeStep === "payment" ? (
-                <div className={styles.paymentWrap}>
-                  <p className={styles.sectionSub}>Seus dados sao protegidos com criptografia.</p>
+              <div className={styles.paymentWrap}>
+                <p className={styles.sectionSub}>Seus dados sao protegidos com criptografia.</p>
 
-                  <div className={styles.paymentOptions}>
-                    <button
-                      type="button"
-                      className={`${styles.paymentOption} ${selectedPaymentMethod === "card" ? styles.paymentOptionSelected : ""}`}
-                      onClick={() => setSelectedPaymentMethod("card")}
-                    >
-                      <span className={styles.paymentOptionContent}>
-                        <span className={styles.paymentOptionIcon} aria-hidden style={{ width: 22, height: 22 }}>
-                          <svg viewBox="0 0 24 24" width="20" height="20" style={{ display: "block" }}>
-                            <rect
-                              x="3.5"
-                              y="5.5"
-                              width="17"
-                              height="13"
-                              rx="1.8"
-                              fill="none"
-                              stroke="#4f93bf"
-                              strokeWidth="1.4"
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                            />
-                            <line x1="3.5" y1="10" x2="20.5" y2="10" stroke="#4f93bf" strokeWidth="1.4" strokeLinecap="round" />
-                            <rect
-                              x="6.4"
-                              y="13"
-                              width="4.2"
-                              height="2.4"
-                              rx="0.4"
-                              fill="none"
-                              stroke="#4f93bf"
-                              strokeWidth="1.3"
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                            />
-                          </svg>
-                        </span>
-                        <span className={styles.paymentOptionLabel}>Cartao</span>
-                      </span>
-                    </button>
-                    <button
-                      type="button"
-                      className={`${styles.paymentOption} ${selectedPaymentMethod === "boleto" ? styles.paymentOptionSelected : ""}`}
-                      onClick={() => setSelectedPaymentMethod("boleto")}
-                    >
-                      <span className={styles.paymentOptionContent}>
-                        <span className={styles.paymentOptionIcon} aria-hidden style={{ width: 22, height: 22 }}>
-                          <svg viewBox="0 0 24 24" width="20" height="20" style={{ display: "block" }}>
-                            <rect
-                              x="6.5"
-                              y="4.5"
-                              width="11"
-                              height="15"
-                              rx="1.6"
-                              fill="none"
-                              stroke="#9e9890"
-                              strokeWidth="1.3"
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                            />
-                            <line x1="9.2" y1="8" x2="9.2" y2="16" stroke="#9e9890" strokeWidth="1.2" strokeLinecap="round" />
-                            <line x1="11.3" y1="8" x2="11.3" y2="16" stroke="#9e9890" strokeWidth="1.2" strokeLinecap="round" />
-                            <line x1="13.4" y1="8" x2="13.4" y2="16" stroke="#9e9890" strokeWidth="1.2" strokeLinecap="round" />
-                            <line x1="15.5" y1="8" x2="15.5" y2="16" stroke="#9e9890" strokeWidth="1.2" strokeLinecap="round" />
-                          </svg>
-                        </span>
-                        <span className={styles.paymentOptionLabel}>Boleto</span>
-                      </span>
-                    </button>
-                    <button
-                      type="button"
-                      className={`${styles.paymentOption} ${selectedPaymentMethod === "google_pay" ? styles.paymentOptionSelected : ""}`}
-                      onClick={() => setSelectedPaymentMethod("google_pay")}
-                    >
-                      <span className={styles.paymentOptionContent}>
-                        <span className={styles.paymentOptionIcon} aria-hidden style={{ width: 22, height: 22 }}>
-                          <svg viewBox="0 0 18 18" width="18" height="18" style={{ display: "block" }}>
-                            <path
-                              style={{ fill: "#4285F4" }}
-                              d="M17.64 9.2045c0-.638-.0573-1.2518-.1636-1.8409H9v3.4818h4.8436c-.2086 1.125-.8427 2.0782-1.7959 2.7164v2.2582h2.9086c1.7023-1.5668 2.6837-3.8741 2.6837-6.6155z"
-                            />
-                            <path
-                              style={{ fill: "#34A853" }}
-                              d="M9 18c2.43 0 4.4673-.8068 5.9564-2.18l-2.9086-2.2582c-.8068.54-1.8409.8591-3.0477.8591-2.3432 0-4.3282-1.5818-5.0364-3.7091H.9573v2.3318C2.4382 15.9832 5.4818 18 9 18z"
-                            />
-                            <path
-                              style={{ fill: "#FBBC05" }}
-                              d="M3.9636 10.7118c-.18-.54-.2836-1.1168-.2836-1.7118s.1036-1.1718.2836-1.7118V4.9564H.9573C.3477 6.1718 0 7.5491 0 9s.3477 2.8282.9573 4.0436l3.0063-2.3318z"
-                            />
-                            <path
-                              style={{ fill: "#EA4335" }}
-                              d="M9 3.5795c1.3214 0 2.5077.4541 3.4405 1.345l2.5814-2.5814C13.4632.8918 11.4264 0 9 0 5.4818 0 2.4382 2.0168.9573 4.9564l3.0063 2.3318C4.6718 5.1618 6.6568 3.5795 9 3.5795z"
-                            />
-                          </svg>
-                        </span>
-                        <span className={styles.paymentOptionLabel}>Google Pay</span>
-                      </span>
-                    </button>
-                  </div>
-
-                  {selectedPaymentMethod === "card" ? (
-                    intent?.clientSecret && stripePromise ? (
-                      <div className={styles.securePaymentBox}>
-                        <Elements stripe={stripePromise} options={elementsOptions}>
-                          <CheckoutPaymentForm
-                            orderId={intent.orderId}
-                            customerEmail={intent.customerEmail || checkoutEmail}
-                            clientSecret={intent.clientSecret}
-                            paymentMethodOrder={stripePaymentMethodOrder}
-                            mode="card"
-                            onElementStateChange={setPaymentElementState}
-                            onSubmitActionChange={setSubmitPaymentAction}
-                            showSubmitButton={false}
+                <div className={styles.paymentOptions}>
+                  <button
+                    type="button"
+                    className={`${styles.paymentOption} ${selectedPaymentMethod === "card" ? styles.paymentOptionSelected : ""}`}
+                    onClick={() => setSelectedPaymentMethod("card")}
+                  >
+                    <span className={styles.paymentOptionContent}>
+                      <span className={styles.paymentOptionIcon} aria-hidden style={{ width: 22, height: 22 }}>
+                        <svg viewBox="0 0 24 24" width="20" height="20" style={{ display: "block" }}>
+                          <rect
+                            x="3.5"
+                            y="5.5"
+                            width="17"
+                            height="13"
+                            rx="1.8"
+                            fill="none"
+                            stroke="#4f93bf"
+                            strokeWidth="1.4"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
                           />
-                        </Elements>
-                      </div>
-                    ) : null
-                  ) : null}
+                          <line x1="3.5" y1="10" x2="20.5" y2="10" stroke="#4f93bf" strokeWidth="1.4" strokeLinecap="round" />
+                          <rect
+                            x="6.4"
+                            y="13"
+                            width="4.2"
+                            height="2.4"
+                            rx="0.4"
+                            fill="none"
+                            stroke="#4f93bf"
+                            strokeWidth="1.3"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          />
+                        </svg>
+                      </span>
+                      <span className={styles.paymentOptionLabel}>Cartao</span>
+                    </span>
+                  </button>
+                  <button
+                    type="button"
+                    className={`${styles.paymentOption} ${selectedPaymentMethod === "boleto" ? styles.paymentOptionSelected : ""}`}
+                    onClick={() => setSelectedPaymentMethod("boleto")}
+                  >
+                    <span className={styles.paymentOptionContent}>
+                      <span className={styles.paymentOptionIcon} aria-hidden style={{ width: 22, height: 22 }}>
+                        <svg viewBox="0 0 24 24" width="20" height="20" style={{ display: "block" }}>
+                          <rect
+                            x="6.5"
+                            y="4.5"
+                            width="11"
+                            height="15"
+                            rx="1.6"
+                            fill="none"
+                            stroke="#9e9890"
+                            strokeWidth="1.3"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          />
+                          <line x1="9.2" y1="8" x2="9.2" y2="16" stroke="#9e9890" strokeWidth="1.2" strokeLinecap="round" />
+                          <line x1="11.3" y1="8" x2="11.3" y2="16" stroke="#9e9890" strokeWidth="1.2" strokeLinecap="round" />
+                          <line x1="13.4" y1="8" x2="13.4" y2="16" stroke="#9e9890" strokeWidth="1.2" strokeLinecap="round" />
+                          <line x1="15.5" y1="8" x2="15.5" y2="16" stroke="#9e9890" strokeWidth="1.2" strokeLinecap="round" />
+                        </svg>
+                      </span>
+                      <span className={styles.paymentOptionLabel}>Boleto</span>
+                    </span>
+                  </button>
+                  <button
+                    type="button"
+                    className={`${styles.paymentOption} ${selectedPaymentMethod === "google_pay" ? styles.paymentOptionSelected : ""}`}
+                    onClick={() => setSelectedPaymentMethod("google_pay")}
+                  >
+                    <span className={styles.paymentOptionContent}>
+                      <span className={styles.paymentOptionIcon} aria-hidden style={{ width: 22, height: 22 }}>
+                        <svg viewBox="0 0 18 18" width="18" height="18" style={{ display: "block" }}>
+                          <path
+                            style={{ fill: "#4285F4" }}
+                            d="M17.64 9.2045c0-.638-.0573-1.2518-.1636-1.8409H9v3.4818h4.8436c-.2086 1.125-.8427 2.0782-1.7959 2.7164v2.2582h2.9086c1.7023-1.5668 2.6837-3.8741 2.6837-6.6155z"
+                          />
+                          <path
+                            style={{ fill: "#34A853" }}
+                            d="M9 18c2.43 0 4.4673-.8068 5.9564-2.18l-2.9086-2.2582c-.8068.54-1.8409.8591-3.0477.8591-2.3432 0-4.3282-1.5818-5.0364-3.7091H.9573v2.3318C2.4382 15.9832 5.4818 18 9 18z"
+                          />
+                          <path
+                            style={{ fill: "#FBBC05" }}
+                            d="M3.9636 10.7118c-.18-.54-.2836-1.1168-.2836-1.7118s.1036-1.1718.2836-1.7118V4.9564H.9573C.3477 6.1718 0 7.5491 0 9s.3477 2.8282.9573 4.0436l3.0063-2.3318z"
+                          />
+                          <path
+                            style={{ fill: "#EA4335" }}
+                            d="M9 3.5795c1.3214 0 2.5077.4541 3.4405 1.345l2.5814-2.5814C13.4632.8918 11.4264 0 9 0 5.4818 0 2.4382 2.0168.9573 4.9564l3.0063 2.3318C4.6718 5.1618 6.6568 3.5795 9 3.5795z"
+                          />
+                        </svg>
+                      </span>
+                      <span className={styles.paymentOptionLabel}>Google Pay</span>
+                    </span>
+                  </button>
+                </div>
 
-                  {selectedPaymentMethod === "card" ? (
-                    <>
-                      <label className={`${styles.field} ${styles.fieldFull}`}>
-                        <span>Parcelas</span>
-                        <select
-                          value={selectedInstallments}
-                          onChange={(event) => setSelectedInstallments(Math.max(1, Number(event.target.value || 1)))}
-                        >
-                          {installmentOptions.map((option) => (
-                            <option key={option.value} value={option.value}>
-                              {option.label}
-                            </option>
-                          ))}
-                        </select>
-                      </label>
-
-                      <p className={styles.installmentNote}>
-                        {installmentPlan.rule
-                          ? `Para o total atual, voce pode pagar em ate ${installmentPlan.installments}x sem juros. `
-                          : "Parcelamento sem juros disponivel a partir de R$ 500. "}
-                        O numero maximo de parcelas varia conforme o valor total do pedido.
-                      </p>
-                    </>
-                  ) : (
-                    <div className={styles.paymentMethodInfo}>
-                      {selectedPaymentMethod === "boleto" ? (
-                        <>
-                          <p className={styles.paymentMethodInfoTitle}>Boleto bancario</p>
-                          <p className={styles.paymentMethodInfoText}>
-                            Pagamento a vista. O boleto e gerado apos clicar em Revisar pedido, com vencimento de 1 dia util.
-                          </p>
-                        </>
-                      ) : (
-                        <>
-                          <p className={styles.paymentMethodInfoTitle}>Google Pay</p>
-                          <p className={styles.paymentMethodInfoText}>
-                            Pagamento a vista pela carteira Google em dispositivos compativeis. A confirmacao ocorre na etapa final.
-                          </p>
-                        </>
-                      )}
+                {selectedPaymentMethod === "card" ? (
+                  intent?.clientSecret && stripePromise ? (
+                    <div className={styles.securePaymentBox}>
+                      <Elements stripe={stripePromise} options={elementsOptions}>
+                        <CheckoutPaymentForm
+                          orderId={intent.orderId}
+                          customerEmail={intent.customerEmail || checkoutEmail}
+                          clientSecret={intent.clientSecret}
+                          paymentMethodOrder={stripePaymentMethodOrder}
+                          mode="card"
+                          onElementStateChange={setPaymentElementState}
+                          onSubmitActionChange={setSubmitPaymentAction}
+                          showSubmitButton={false}
+                        />
+                      </Elements>
                     </div>
-                  )}
+                  ) : null
+                ) : null}
 
-                  {stripeLoading ? <p className={styles.stepHint}>Carregando metodos de pagamento...</p> : null}
-                  {!stripeLoading && !stripeConfigured ? <p className={styles.stepHint}>Pagamento indisponivel no momento.</p> : null}
+                {selectedPaymentMethod === "card" ? (
+                  <>
+                    <label className={`${styles.field} ${styles.fieldFull}`}>
+                      <span>Parcelas</span>
+                      <select
+                        value={selectedInstallments}
+                        onChange={(event) => setSelectedInstallments(Math.max(1, Number(event.target.value || 1)))}
+                      >
+                        {installmentOptions.map((option) => (
+                          <option key={option.value} value={option.value}>
+                            {option.label}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
 
-                </div>
-              ) : (
-                <div className={styles.summaryContent}>
-                  <p>{reviewPaymentSummary.line1}</p>
-                  <p>{reviewPaymentSummary.line2}</p>
-                </div>
-              )}
+                    <p className={styles.installmentNote}>
+                      {installmentPlan.rule
+                        ? `Para o total atual, voce pode pagar em ate ${installmentPlan.installments}x sem juros. `
+                        : "Parcelamento sem juros disponivel a partir de R$ 500. "}
+                      O numero maximo de parcelas varia conforme o valor total do pedido.
+                    </p>
+                  </>
+                ) : (
+                  <div className={styles.paymentMethodInfo}>
+                    {selectedPaymentMethod === "boleto" ? (
+                      <>
+                        <p className={styles.paymentMethodInfoTitle}>Boleto bancario</p>
+                        <p className={styles.paymentMethodInfoText}>
+                          Pagamento a vista. O boleto e gerado apos clicar em Revisar pedido, com vencimento de 1 dia util.
+                        </p>
+                      </>
+                    ) : (
+                      <>
+                        <p className={styles.paymentMethodInfoTitle}>Google Pay</p>
+                        <p className={styles.paymentMethodInfoText}>
+                          Pagamento a vista pela carteira Google em dispositivos compativeis. A confirmacao ocorre na etapa final.
+                        </p>
+                      </>
+                    )}
+                  </div>
+                )}
+
+                {stripeLoading ? <p className={styles.stepHint}>Carregando metodos de pagamento...</p> : null}
+                {!stripeLoading && !stripeConfigured ? <p className={styles.stepHint}>Pagamento indisponivel no momento.</p> : null}
+              </div>
 
               {selectedPaymentMethod === "google_pay" && intent?.clientSecret && stripePromise ? (
                 <div

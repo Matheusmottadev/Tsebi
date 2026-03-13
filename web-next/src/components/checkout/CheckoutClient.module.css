@@ -69,6 +69,17 @@
   margin-bottom: 34px;
 }
 
+.hiddenStepSection {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  opacity: 0;
+  pointer-events: none;
+}
+
 .stepHeader {
   display: flex;
   align-items: baseline;
