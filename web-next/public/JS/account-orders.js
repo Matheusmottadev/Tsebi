@@ -1,14 +1,28 @@
 (function initAccountOrdersModule() {
   const TRACKING_FLOW = ["RECEIVED", "CONFIRMED", "IN_TRANSIT", "OUT_FOR_DELIVERY", "DELIVERED", "CANCELED"];
 
-  function statusLabel(status) {
-    const value = String(status || "").trim().toLowerCase();
+  function statusLabel(orderOrStatus) {
+    const order = orderOrStatus && typeof orderOrStatus === "object" ? orderOrStatus : null;
+    const value = String(order ? order.status : orderOrStatus || "").trim().toLowerCase();
+    const currentStatus = String(order?.currentStatus || order?.trackingStatus || "").trim().toUpperCase();
+    const canceledAt = String(order?.canceledAt || "").trim();
+    const refundedAt = String(order?.refundedAt || "").trim();
+    if (value === "refunded" || refundedAt) return "Reembolsado";
+    if (
+      canceledAt ||
+      currentStatus === "CANCELED" ||
+      currentStatus === "CANCELLED" ||
+      value === "canceled" ||
+      value === "cancelled" ||
+      value === "cancelado"
+    ) return "Cancelado";
+    if (value === "failed") return "Falhou";
+    if (currentStatus === "DELIVERED") return "Entregue";
+    if (currentStatus === "OUT_FOR_DELIVERY") return "Saiu para entrega";
+    if (currentStatus === "IN_TRANSIT" || currentStatus === "SHIPPED") return "Em transporte";
     if (value === "paid") return "Pago";
     if (value === "processing") return "Processando";
     if (value === "pending_payment") return "Aguardando pagamento";
-    if (value === "canceled") return "Cancelado";
-    if (value === "failed") return "Falhou";
-    if (value === "refunded") return "Reembolsado";
     return "Em análise";
   }
 
@@ -81,9 +95,13 @@
             stateClass = "is-active";
           }
           const deliveredClass = step === "DELIVERED" && !isCanceled && index <= activeIndex ? "is-delivered" : "";
+          const dotInlineStyle =
+            stateClass === "is-active" && step !== "DELIVERED" && step !== "CANCELED"
+              ? ' style="border-color:#111;background:#111;box-shadow:0 0 0 3px rgba(17,17,17,0.12)"'
+              : "";
           return `
             <li class="order-timeline-step ${stateClass} ${deliveredClass}" data-step="${step}">
-              <span class="order-timeline-dot" aria-hidden="true"></span>
+              <span class="order-timeline-dot" aria-hidden="true"${dotInlineStyle}></span>
               <span class="order-timeline-name">${escapeHtml(trackingStepLabel(step))}</span>
             </li>
           `;
@@ -117,6 +135,8 @@
           shipping,
           currentStatus: String(order.currentStatus || order.current_status || "").trim(),
           trackingStatus: String(order.trackingStatus || order.tracking_status || "").trim(),
+          canceledAt: order.canceledAt || order.canceled_at || "",
+          refundedAt: order.refundedAt || order.refunded_at || "",
           shippingDeadline: String(order.shippingDeadline || order.shipping_deadline || "").trim(),
           deliveredAt: String(order.deliveredAt || order.delivered_at || "").trim(),
           trackingUrl,
@@ -142,7 +162,7 @@
     if (orders.length) {
       const first = orders[0];
       if (lastEl) lastEl.textContent = `#${first.number || "-"} • ${formatDateBR(first.createdAt)}`;
-      if (statusEl) statusEl.textContent = statusLabel(first.status);
+      if (statusEl) statusEl.textContent = statusLabel(first);
     } else {
       if (lastEl) lastEl.textContent = "-";
       if (statusEl) statusEl.textContent = "-";
@@ -252,7 +272,7 @@
             <article class="order-card" data-order-id="${escapeHtml(order.id)}">
               <div class="order-card-head">
                 <h3>Pedido #${escapeHtml(order.number || order.id || "-")}</h3>
-                <span class="order-status">${escapeHtml(statusLabel(order.status))}</span>
+                <span class="order-status">${escapeHtml(statusLabel(order))}</span>
               </div>
               <p class="order-meta">${escapeHtml(formatDateBR(order.createdAt))} • ${escapeHtml(formatCurrencyBRL(order.amount, order.currency))}</p>
               <p class="order-items-preview">${escapeHtml(orderItemsLine(order.items))}</p>

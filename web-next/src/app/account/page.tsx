@@ -19,11 +19,11 @@ const LEGACY_CRITICAL_SCRIPTS = [
   "/JS/user-utils.js?v=20260312b",
   "/JS/account-header-ui.js?v=20260310a",
   "/JS/account-header-stack-fix.js?v=20260222a",
-  "/JS/account-router.js?v=20260312d",
+  "/JS/account-router.js?v=20260313a",
 ] as const;
 
 const LEGACY_DEFERRED_SCRIPTS = [
-  "/JS/account-orders.js?v=20260312a",
+  "/JS/account-orders.js?v=20260313a",
   "/JS/account-sections.js?v=20260310a",
   "/JS/account-profile.js?v=20260312b",
   "/JS/posthog.js",

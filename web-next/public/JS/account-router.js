@@ -144,14 +144,28 @@
     });
   }
 
-  function orderStatus(status) {
-    const s = String(status || "").toLowerCase();
+  function orderStatus(orderOrStatus) {
+    const order = orderOrStatus && typeof orderOrStatus === "object" ? orderOrStatus : null;
+    const s = String(order ? order.status : orderOrStatus || "").trim().toLowerCase();
+    const currentStatus = String(order?.currentStatus || order?.trackingStatus || "").trim().toUpperCase();
+    const canceledAt = String(order?.canceledAt || "").trim();
+    const refundedAt = String(order?.refundedAt || "").trim();
+    if (s === "refunded" || refundedAt) return "Reembolsado";
+    if (
+      canceledAt ||
+      currentStatus === "CANCELED" ||
+      currentStatus === "CANCELLED" ||
+      s === "canceled" ||
+      s === "cancelled" ||
+      s === "cancelado"
+    ) return "Cancelado";
+    if (s === "failed") return "Falhou";
+    if (currentStatus === "DELIVERED") return "Entregue";
+    if (currentStatus === "OUT_FOR_DELIVERY") return "Saiu para entrega";
+    if (currentStatus === "IN_TRANSIT" || currentStatus === "SHIPPED") return "Em transporte";
     if (s === "paid") return "Pago";
     if (s === "processing") return "Processando";
     if (s === "pending_payment") return "Aguardando pagamento";
-    if (s === "canceled") return "Cancelado";
-    if (s === "failed") return "Falhou";
-    if (s === "refunded") return "Reembolsado";
     return "Em análise";
   }
 
@@ -177,7 +191,7 @@
         ordersSummary.textContent = "Não há compras em aberto.";
       } else {
         const last = state.orders[0];
-        ordersSummary.textContent = `Último pedido: ${orderStatus(last.status)} • ${money(last.amount, last.currency)}`;
+        ordersSummary.textContent = `Último pedido: ${orderStatus(last)} • ${money(last.amount, last.currency)}`;
       }
     }
     if (wishlistSummary) {
@@ -205,7 +219,7 @@
     }
     if (kind === "orders") {
       if (!state.orders.length) return '<p class="conta-muted">Não há compras em aberto.</p>';
-      state.detailCache[kind] = state.orders.slice(0, 5).map((order) => `<div class="conta-detail-row"><span>Pedido #${escapeHtml(String(order.orderNumber || order.id || "").slice(0, 12))}</span><strong>${escapeHtml(orderStatus(order.status))} • ${escapeHtml(money(order.amount, order.currency))}</strong></div>`).join("");
+      state.detailCache[kind] = state.orders.slice(0, 5).map((order) => `<div class="conta-detail-row"><span>Pedido #${escapeHtml(String(order.orderNumber || order.id || "").slice(0, 12))}</span><strong>${escapeHtml(orderStatus(order))} • ${escapeHtml(money(order.amount, order.currency))}</strong></div>`).join("");
       return state.detailCache[kind];
     }
     if (kind === "private") {
