@@ -74,6 +74,16 @@ function readAdminAuth(req: any) {
   return auth;
 }
 
+async function persistSession(req: any): Promise<boolean> {
+  if (!req?.session || typeof req.session.save !== "function") return false;
+  return new Promise((resolve) => {
+    req.session.save((error: any) => {
+      if (error) return resolve(false);
+      return resolve(true);
+    });
+  });
+}
+
 async function verifyAndUpgradePassword(user: any, rawPassword: string): Promise<{ ok: boolean; user: any }> {
   const check = await verifyPassword(rawPassword, String(user?.passwordHash || "").trim());
   if (!check.ok) return { ok: false, user };
@@ -298,6 +308,9 @@ studioAuthRouter.post("/login", adminLoginLimiter, async (req: any, res: any) =>
     };
     applyAdminSessionLifetime(req);
     clearAdminCsrfCookie(res);
+    if (!(await persistSession(req))) {
+      return res.status(500).json({ error: "SESSION_SAVE_FAILED" });
+    }
 
     return res.json({
       ok: true,
@@ -343,6 +356,9 @@ studioAuthRouter.post("/mfa/setup/init", mfaRateLimit, async (req: any, res: any
     };
     applyAdminSessionLifetime(req);
     clearAdminCsrfCookie(res);
+    if (!(await persistSession(req))) {
+      return res.status(500).json({ error: "SESSION_SAVE_FAILED" });
+    }
 
     return res.json({
       stage: "mfa_setup_required",
@@ -394,6 +410,9 @@ studioAuthRouter.post("/mfa/verify", mfaRateLimit, async (req: any, res: any) =>
       });
 
       grantVerifiedStudioSession(req, res, persisted || state.user, state.auth);
+      if (!(await persistSession(req))) {
+        return res.status(500).json({ error: "SESSION_SAVE_FAILED" });
+      }
       return res.json({
         ok: true,
         stage: "authenticated",
@@ -427,6 +446,9 @@ studioAuthRouter.post("/mfa/verify", mfaRateLimit, async (req: any, res: any) =>
     }
 
     grantVerifiedStudioSession(req, res, state.user, state.auth);
+    if (!(await persistSession(req))) {
+      return res.status(500).json({ error: "SESSION_SAVE_FAILED" });
+    }
     ensureAdminProfile({
       userId: state.user.id,
       email: state.user.email,
@@ -516,6 +538,9 @@ studioAuthRouter.post("/mfa/disable", mfaRateLimit, async (req: any, res: any) =
     };
     applyAdminSessionLifetime(req);
     clearAdminCsrfCookie(res);
+    if (!(await persistSession(req))) {
+      return res.status(500).json({ error: "SESSION_SAVE_FAILED" });
+    }
 
     return res.json({ ok: true, stage: "mfa_setup_required" });
   } catch (error: any) {

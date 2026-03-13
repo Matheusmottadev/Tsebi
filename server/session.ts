@@ -69,7 +69,7 @@ function createSessionMiddleware() {
 
   const hasStrongSessionSecret =
     Boolean(sessionSecret) && sessionSecret !== defaultSessionSecret && sessionSecret.length >= 32;
-  const cookieDomain = resolveCookieDomain();
+  const cookieDomain = isLocalDevelopment ? undefined : resolveCookieDomain();
 
   if (!hasStrongSessionSecret && !isLocalDevelopment) {
     throw new Error("SESSION_SECRET_WEAK_OR_MISSING");

@@ -72,6 +72,16 @@ const vipAdminUpsertSchema = z.object({
   accountCreated: z.boolean().optional().default(false)
 });
 
+async function persistSession(req: any): Promise<boolean> {
+  if (!req?.session || typeof req.session.save !== "function") return false;
+  return new Promise((resolve) => {
+    req.session.save((error: any) => {
+      if (error) return resolve(false);
+      return resolve(true);
+    });
+  });
+}
+
 function parseBirthDate(value: any) {
   const date = new Date(`${value}T00:00:00.000Z`);
   if (Number.isNaN(date.getTime())) return false;
@@ -170,6 +180,9 @@ vipRouter.post("/register", vipRegisterRateLimit, async (req: any, res: any) => 
         accountCreated = true;
         req.session.userId = created.user.id;
         applyCustomerSessionLifetime(req);
+        if (!(await persistSession(req))) {
+          return res.status(500).json({ error: "SESSION_SAVE_FAILED" });
+        }
         subscriber = await setVipAccountCreated(email);
       } else if (created.error === "EMAIL_ALREADY_EXISTS") {
         accountExists = true;

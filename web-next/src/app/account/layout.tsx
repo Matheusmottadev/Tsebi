@@ -15,7 +15,8 @@ async function requireAuthenticatedUser() {
   const forwardedProto = String(headerStore.get("x-forwarded-proto") || "").trim();
   const forwardedHost = String(headerStore.get("x-forwarded-host") || "").trim();
   const host = forwardedHost || String(headerStore.get("host") || "").trim();
-  const protocol = forwardedProto || "https";
+  const isLocalHost = /^localhost(?::\d+)?$/i.test(host) || /^127(?:\.\d{1,3}){3}(?::\d+)?$/.test(host);
+  const protocol = forwardedProto || (isLocalHost ? "http" : "https");
 
   if (!host) {
     redirect("/login");

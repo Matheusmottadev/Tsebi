@@ -89,6 +89,16 @@ function resolveConfiguredEmailProvider(): string {
   return "console";
 }
 
+async function persistSession(req: any): Promise<boolean> {
+  if (!req?.session || typeof req.session.save !== "function") return false;
+  return new Promise((resolve) => {
+    req.session.save((error: any) => {
+      if (error) return resolve(false);
+      return resolve(true);
+    });
+  });
+}
+
 const authRateLimit = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 10,
@@ -888,6 +898,9 @@ authRouter.post("/passkey/login/verify", authRateLimit, async (req: any, res: an
   delete req.session.passkeyAuthentication;
   req.session.userId = user.id;
   applyCustomerSessionLifetime(req);
+  if (!(await persistSession(req))) {
+    return res.status(500).json({ error: "SESSION_SAVE_FAILED" });
+  }
   markUserLoggedInNow(user.id).catch(() => {});
   return res.json({ ok: true, user: publicUser(user), stage: "authenticated" });
 });
@@ -1076,6 +1089,9 @@ authRouter.post("/email/verify-account", authRateLimit, async (req: any, res: an
   if (!verified) return res.status(404).json({ error: "USER_NOT_FOUND" });
   req.session.userId = verified.id;
   applyCustomerSessionLifetime(req);
+  if (!(await persistSession(req))) {
+    return res.status(500).json({ error: "SESSION_SAVE_FAILED" });
+  }
   return res.json({ ok: true, user: publicUser(verified) });
 });
 
@@ -1164,6 +1180,9 @@ authRouter.post("/email/verify", authRateLimit, async (req: any, res: any) => {
 
   req.session.userId = user.id;
   applyCustomerSessionLifetime(req);
+  if (!(await persistSession(req))) {
+    return res.status(500).json({ error: "SESSION_SAVE_FAILED" });
+  }
   markUserLoggedInNow(user.id).catch(() => {});
   return res.json({ ok: true, user: publicUser(user), stage: "authenticated" });
 });
@@ -1227,6 +1246,9 @@ authRouter.post(
     if (!isLoginEmailVerificationRequired()) {
       req.session.userId = user.id;
       applyCustomerSessionLifetime(req);
+      if (!(await persistSession(req))) {
+        return res.status(500).json({ error: "SESSION_SAVE_FAILED" });
+      }
       markUserLoggedInNow(user.id).catch(() => {});
       return res.json({ ok: true, user: publicUser(user), stage: "authenticated" });
     }
@@ -1293,6 +1315,9 @@ authRouter.post("/google", authRateLimit, async (req: any, res: any) => {
 
   req.session.userId = user.id;
   applyCustomerSessionLifetime(req);
+  if (!(await persistSession(req))) {
+    return res.status(500).json({ error: "SESSION_SAVE_FAILED" });
+  }
   markUserLoggedInNow(user.id).catch(() => {});
   return res.json({ ok: true, user: publicUser(user), stage: "authenticated" });
 });
@@ -1318,6 +1343,9 @@ authRouter.post("/login/verify-code", authRateLimit, async (req: any, res: any) 
 
   req.session.userId = user.id;
   applyCustomerSessionLifetime(req);
+  if (!(await persistSession(req))) {
+    return res.status(500).json({ error: "SESSION_SAVE_FAILED" });
+  }
   markUserLoggedInNow(user.id).catch(() => {});
   return res.json({ ok: true, user: publicUser(user) });
 });
@@ -1373,6 +1401,9 @@ authRouter.post("/activate", authRateLimit, async (req: any, res: any) => {
 
   req.session.userId = updated.id;
   applyCustomerSessionLifetime(req);
+  if (!(await persistSession(req))) {
+    return res.status(500).json({ error: "SESSION_SAVE_FAILED" });
+  }
   markUserLoggedInNow(updated.id).catch(() => {});
   return res.json({ ok: true, user: publicUser(updated), stage: "authenticated" });
 });
