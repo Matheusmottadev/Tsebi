@@ -149,6 +149,14 @@ function mapAuthError(errorCode: string): string {
   return "Nao foi possivel concluir a operacao.";
 }
 
+function readHttpErrorCode(error: HttpError): string {
+  const payload = error.payload;
+  if (payload && typeof payload === "object" && "error" in payload) {
+    return String((payload as { error?: unknown }).error || "").trim().toUpperCase();
+  }
+  return String(error.message || "").trim().toUpperCase();
+}
+
 function resolveReturnUrl(raw: string): string {
   const trimmed = String(raw || "").trim();
   if (!trimmed) return FALLBACK_RETURN_URL;
@@ -392,9 +400,9 @@ export default function LoginPage() {
 
     const normalized = normalizeEmail(activeEmail || email);
     if (!isValidEmail(normalized)) {
-      setFieldErrors({ email: "Informe um e-mail valido." });
+      setFieldErrors({ email: "Informe um e-mail valido para continuar." });
+      setErrorMessage("Nao conseguimos validar o e-mail desta sessao. Tente novamente.");
       setIsSubmitting(false);
-      goToStep("email");
       return;
     }
 
@@ -429,7 +437,13 @@ export default function LoginPage() {
       setErrorMessage("Nao foi possivel concluir o login agora.");
     } catch (error) {
       if (error instanceof HttpError) {
-        setErrorMessage(mapAuthError(error.message || "INVALID_CREDENTIALS"));
+        const code = readHttpErrorCode(error);
+        if (code === "INVALID_CREDENTIALS") {
+          setFieldErrors({ password: "Senha incorreta." });
+          setErrorMessage("Email ou senha invalidos.");
+        } else {
+          setErrorMessage(mapAuthError(code || "INVALID_CREDENTIALS"));
+        }
       } else if (error instanceof Error) {
         setErrorMessage(error.message);
       } else {
