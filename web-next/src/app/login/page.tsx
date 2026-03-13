@@ -513,7 +513,19 @@ export default function LoginPage() {
     }
 
     try {
-      await verifyEmailCode({ email: normalized, code: normalizedCode });
+      const response = await verifyEmailCode({ email: normalized, code: normalizedCode });
+
+      if (codeOrigin === "create") {
+        const stage = String((response as { stage?: unknown })?.stage || "").trim().toLowerCase();
+        const passwordResetRequired = Boolean(
+          (response as { user?: { passwordResetRequired?: unknown } })?.user?.passwordResetRequired
+        );
+        if (passwordResetRequired || stage === "password_reset_required") {
+          redirectToForcedPasswordReset(normalized);
+          return;
+        }
+      }
+
       finishLogin();
     } catch (error) {
       if (error instanceof HttpError) {
