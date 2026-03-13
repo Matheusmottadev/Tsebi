@@ -2308,40 +2308,6 @@ export function CheckoutClient() {
                 </div>
               </article>
 
-              {selectedPaymentMethod === "card" && intent?.clientSecret && stripePromise ? (
-                <div className={styles.hiddenPaymentHost} aria-hidden="true">
-                  <Elements stripe={stripePromise} options={elementsOptions}>
-                    <CheckoutPaymentForm
-                      orderId={intent.orderId}
-                      customerEmail={intent.customerEmail || checkoutEmail}
-                      clientSecret={intent.clientSecret}
-                      paymentMethodOrder={stripePaymentMethodOrder}
-                      mode="card"
-                      onElementStateChange={setPaymentElementState}
-                      onSubmitActionChange={setSubmitPaymentAction}
-                      showSubmitButton={false}
-                    />
-                  </Elements>
-                </div>
-              ) : null}
-
-              {selectedPaymentMethod === "google_pay" && intent?.clientSecret && stripePromise ? (
-                <div className={styles.hiddenPaymentHost} aria-hidden="true">
-                  <Elements stripe={stripePromise} options={elementsOptions}>
-                    <CheckoutPaymentForm
-                      orderId={intent.orderId}
-                      customerEmail={intent.customerEmail || checkoutEmail}
-                      clientSecret={intent.clientSecret}
-                      paymentMethodOrder={stripePaymentMethodOrder}
-                      mode="payment"
-                      onElementStateChange={setPaymentElementState}
-                      onSubmitActionChange={setSubmitPaymentAction}
-                      showSubmitButton={false}
-                    />
-                  </Elements>
-                </div>
-              ) : null}
-
               <button
                 type="button"
                 className={styles.primaryAction}
