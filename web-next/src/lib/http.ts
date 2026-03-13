@@ -36,6 +36,11 @@ function assertApiPath(path: string): void {
 
 function buildAbsoluteUrl(path: string): string {
   assertApiPath(path);
+  // On the browser, force same-origin API calls so session cookies stay on the active host
+  // (avoids login loops when env points to a different subdomain).
+  if (typeof window !== "undefined" && window.location?.origin) {
+    return new URL(path, `${window.location.origin}/`).toString();
+  }
   const { apiBaseUrl } = readPublicEnv();
   return new URL(path, `${apiBaseUrl}/`).toString();
 }

@@ -1,8 +1,6 @@
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { BodyClassName } from "@/components/BodyClassName";
-import { HttpError } from "@/lib/http";
-import { getMe } from "@/services/auth";
 import "../../styles/legacy/account.css";
 import "../../styles/legacy/conta.css";
 import "../../styles/legacy/order-tracking.css";
@@ -14,16 +12,33 @@ type AccountLayoutProps = {
 async function requireAuthenticatedUser() {
   const headerStore = await headers();
   const cookie = headerStore.get("cookie") || undefined;
+  const forwardedProto = String(headerStore.get("x-forwarded-proto") || "").trim();
+  const forwardedHost = String(headerStore.get("x-forwarded-host") || "").trim();
+  const host = forwardedHost || String(headerStore.get("host") || "").trim();
+  const protocol = forwardedProto || "https";
+
+  if (!host) {
+    redirect("/login");
+  }
 
   try {
-    const user = await getMe({ cookie, cache: "no-store" });
-    if (!user) redirect("/login");
-    return user;
-  } catch (error) {
-    if (error instanceof HttpError && error.status === 401) {
+    const response = await fetch(`${protocol}://${host}/api/auth/me`, {
+      method: "GET",
+      cache: "no-store",
+      headers: cookie ? { cookie } : undefined,
+    });
+
+    if (!response.ok) {
       redirect("/login");
     }
-    throw error;
+
+    const payload = (await response.json().catch(() => ({}))) as { authenticated?: boolean };
+    if (!payload?.authenticated) {
+      redirect("/login");
+    }
+    return payload;
+  } catch {
+    redirect("/login");
   }
 }
 
