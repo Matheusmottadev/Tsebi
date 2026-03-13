@@ -17,7 +17,6 @@
   const nameEl = document.getElementById("contaClientName");
 
   const previewMode = String(new URLSearchParams(window.location.search).get("preview") || "") === "1";
-  if (subnav) subnav.hidden = true;
 
   const state = {
     user: null,
