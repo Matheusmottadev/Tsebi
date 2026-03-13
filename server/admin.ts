@@ -1984,7 +1984,7 @@ adminRouter.patch("/orders/:id", async (req: any, res: any) => {
       return res.status(409).json({ error: "ORDER_REFUNDED_LOCKED" });
     }
 
-    if (requestedStatus === "canceled") {
+    if ((requestedStatus === "canceled" || requestedStatus === "refunded") && beforeStatus !== "refunded") {
       if (!before.stripePaymentIntentId) {
         return res.status(409).json({ error: "ORDER_NOT_REFUNDABLE" });
       }
