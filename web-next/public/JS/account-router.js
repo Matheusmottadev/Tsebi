@@ -1,11 +1,14 @@
 (function initAccountRouter() {
+  document.body?.classList.add("conta-page");
   let store = window.TsebiUserStore || null;
-  const subnav = document.querySelector(".conta-subnav");
-  const subnavLinks = Array.from(document.querySelectorAll(".conta-subnav [data-section]"));
+  let subnav = document.querySelector(".account-route-toolbar") || document.getElementById("accountToolbarShell") || document.querySelector(".conta-subnav");
+  let subnavLinks = subnav ? Array.from(subnav.querySelectorAll("[data-section]")) : [];
   const mount = document.getElementById("accountSectionMount");
   const loader = document.getElementById("sectionLoader");
   const authGate = document.getElementById("contaAuthGate");
   const dashboard = document.getElementById("contaDashboard");
+  const mainWrap = document.querySelector(".conta-wrap");
+  const heroSection = document.getElementById("accountHero");
   const authForm = document.getElementById("contaAuthForm");
   const authEmail = document.getElementById("contaAuthEmail");
   const authPassword = document.getElementById("contaAuthPassword");
@@ -33,6 +36,86 @@
     return store;
   }
 
+  function toolbarMarkup() {
+    return `
+      <a href="#overview" data-section="overview" class="is-active">Visao Geral</a>
+      <a href="#profile" data-section="profile">Meu Perfil</a>
+      <a href="#orders" data-section="orders">Meus Pedidos</a>
+      <a href="#private-care" data-section="private-care">Atendimentos Privados</a>
+      <a href="#recommendations" data-section="recommendations">Recomendacoes</a>
+      <a href="#wishlist" data-section="wishlist">Lista de Desejos</a>
+      <a href="#repairs" data-section="repairs">Servico de Reparos</a>
+    `;
+  }
+
+  function applyToolbarStyles(node) {
+    if (!node) return;
+    node.style.display = "flex";
+    node.style.visibility = "visible";
+    node.style.opacity = "1";
+    node.style.height = "60px";
+    node.style.minHeight = "60px";
+    node.style.position = "relative";
+    node.style.zIndex = "30";
+    node.style.alignItems = "center";
+    node.style.justifyContent = "center";
+    node.style.gap = "0";
+    node.style.padding = "0 16px";
+    node.style.background = "#fff";
+    node.style.borderBottom = "1px solid #eaeaea";
+    node.style.overflowX = "auto";
+    node.style.whiteSpace = "nowrap";
+
+    Array.from(node.querySelectorAll("[data-section]")).forEach((link, index) => {
+      link.style.display = "inline-flex";
+      link.style.alignItems = "center";
+      link.style.height = "60px";
+      link.style.padding = "0 14px";
+      link.style.color = "#111";
+      link.style.textDecoration = "none";
+      link.style.fontSize = "13px";
+      link.style.fontFamily = "\"Montserrat\", sans-serif";
+      link.style.borderBottom = "2px solid transparent";
+      if (index > 0) {
+        link.style.borderLeft = "1px solid #e6e6e6";
+      }
+    });
+  }
+
+  function ensureSubnavPlacement() {
+    const routeToolbar = document.querySelector(".account-route-toolbar");
+    if (routeToolbar) {
+      subnav = routeToolbar;
+      subnavLinks = Array.from(subnav.querySelectorAll("[data-section]"));
+      return;
+    }
+    if (!dashboard && !mainWrap) return;
+    const oldSubnavs = Array.from(document.querySelectorAll(".conta-subnav"));
+    oldSubnavs.forEach((node) => {
+      if (node.id !== "accountToolbarShell") node.remove();
+    });
+    subnav = document.getElementById("accountToolbarShell");
+    if (!subnav) {
+      subnav = document.createElement("nav");
+      subnav.id = "accountToolbarShell";
+      subnav.className = "account-toolbar-shell";
+      subnav.setAttribute("aria-label", "Navegacao da conta");
+      subnav.innerHTML = toolbarMarkup();
+    }
+    if (dashboard && heroSection) {
+      if (subnav.parentElement !== dashboard || subnav.nextElementSibling !== heroSection) {
+        dashboard.insertBefore(subnav, heroSection);
+      }
+    } else if (mainWrap && subnav.nextElementSibling !== mainWrap) {
+      mainWrap.parentNode?.insertBefore(subnav, mainWrap);
+    }
+
+    subnav.hidden = false;
+    subnav.removeAttribute("hidden");
+    applyToolbarStyles(subnav);
+    subnavLinks = Array.from(subnav.querySelectorAll("[data-section]"));
+  }
+
   function showLoader() {
     if (!loader) return;
     loader.classList.add("is-active");
@@ -57,9 +140,14 @@
   }
 
   function showDashboard() {
+    ensureSubnavPlacement();
     if (authGate) authGate.hidden = true;
     if (dashboard) dashboard.hidden = false;
-    if (subnav) subnav.hidden = false;
+    if (subnav) {
+      subnav.hidden = false;
+      subnav.removeAttribute("hidden");
+      applyToolbarStyles(subnav);
+    }
   }
 
   function normalizeTitle(value) {
@@ -100,24 +188,22 @@
   }
 
   function setActiveSubnav(section) {
+    ensureSubnavPlacement();
     const active = normalizeSection(section);
     subnavLinks.forEach((link) => {
       const linkSection = normalizeSection(link.getAttribute("data-section") || "");
       link.classList.toggle("is-active", linkSection === active);
+      link.style.borderBottomColor = linkSection === active ? "#111" : "transparent";
+      link.style.fontWeight = linkSection === active ? "500" : "400";
     });
   }
 
-  function toggleHeroImages(section) {
+  function toggleHeroImages() {
     const banner = document.querySelector(".account-hero-banner");
     const avatar = document.querySelector(".account-hero-avatar");
     if (!banner || !avatar) return;
-    if (section === "overview") {
-      banner.style.display = "";
-      avatar.style.display = "";
-    } else {
-      banner.style.display = "none";
-      avatar.style.display = "none";
-    }
+    banner.style.display = "";
+    avatar.style.display = "";
   }
 
   function renderTemplate(templateId) {
@@ -294,9 +380,9 @@
   }
 
   async function navigate(section, options = {}) {
+    bindSubnavLinks();
     const next = normalizeSection(section);
-    const targetSection = next === "overview" ? "overview" : "profile";
-    toggleHeroImages(targetSection);
+    toggleHeroImages();
     const useLoader = !options.skipLoader;
     if (useLoader) showLoader();
 
@@ -422,6 +508,7 @@
   }
 
   async function boot() {
+    ensureSubnavPlacement();
     if (previewMode) {
       state.user = { name: "Cliente Tsebi", email: "cliente@tsebi.com", title: "nao_informar", phone: "" };
       state.orders = [];
@@ -454,13 +541,20 @@
     await bootAuthenticated();
   }
 
-  subnavLinks.forEach((link) => {
-    link.addEventListener("click", async (event) => {
-      event.preventDefault();
-      const section = String(link.getAttribute("data-section") || "overview");
-      await navigate(section);
+  function bindSubnavLinks() {
+    ensureSubnavPlacement();
+    subnavLinks.forEach((link) => {
+      if (link.dataset.boundSectionNav === "1") return;
+      link.dataset.boundSectionNav = "1";
+      link.addEventListener("click", async (event) => {
+        event.preventDefault();
+        const section = String(link.getAttribute("data-section") || "overview");
+        await navigate(section);
+      });
     });
-  });
+  }
+
+  bindSubnavLinks();
 
   window.addEventListener("hashchange", () => {
     if (!dashboard || dashboard.hidden) return;

@@ -8,7 +8,7 @@ body.conta-page {
   --conta-header-height: 84px;
   --conta-subnav-height: 60px;
   --conta-fixed-stack: calc(var(--conta-topbar-height) + var(--conta-header-height));
-  padding-top: var(--conta-fixed-stack);
+  padding-top: calc(var(--conta-fixed-stack) + var(--conta-subnav-height));
 }
 
 body.conta-page > .home-header,
@@ -54,6 +54,10 @@ body.conta-page .legacy-account-root > .home-header .header-right {
 }
 
 .conta-subnav {
+  display: none !important;
+}
+
+.account-route-toolbar {
   height: var(--conta-subnav-height);
   border-bottom: 1px solid #eaeaea;
   background: #ffffff;
@@ -62,21 +66,26 @@ body.conta-page .legacy-account-root > .home-header .header-right {
   justify-content: center;
   padding: 0 16px;
   gap: 2px;
-  position: relative;
-  top: 0 !important;
+  position: fixed;
+  top: var(--conta-fixed-stack);
+  left: 0;
+  right: 0;
   margin: 0 !important;
-  z-index: 20;
+  z-index: 5500;
+  overflow-x: auto;
+  white-space: nowrap;
 }
 
-nav.conta-subnav {
+nav.conta-subnav,
+nav.account-route-toolbar {
   margin: 0 !important;
 }
 
-.conta-subnav::-webkit-scrollbar {
+.account-route-toolbar::-webkit-scrollbar {
   display: none;
 }
 
-.conta-subnav a {
+.account-route-toolbar a {
   font-size: 13px;
   color: #111111;
   padding: 0 14px;
@@ -88,11 +97,11 @@ nav.conta-subnav {
   border-bottom: 2px solid transparent;
 }
 
-.conta-subnav a + a {
+.account-route-toolbar a + a {
   border-left: 1px solid #e6e6e6;
 }
 
-.conta-subnav a.is-active {
+.account-route-toolbar a.is-active {
   border-bottom-color: #111111;
   font-weight: 500;
 }
@@ -945,10 +954,9 @@ nav.conta-subnav {
     padding: 0 16px 24px;
   }
 
-  .conta-subnav {
+  .account-route-toolbar {
     justify-content: flex-start;
     padding: 0 8px;
-    overflow-x: auto;
   }
 
   .conta-hero-banner {

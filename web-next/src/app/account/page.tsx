@@ -2,6 +2,7 @@ import path from "node:path";
 import { readFile } from "node:fs/promises";
 import type { Metadata } from "next";
 import Script from "next/script";
+import { AccountRouteToolbar } from "@/components/account/AccountRouteToolbar";
 
 export const revalidate = 3600;
 
@@ -18,12 +19,12 @@ const LEGACY_ACCOUNT_FILE = path.resolve(process.cwd(), "public/legacy/pages/con
 const LEGACY_CRITICAL_SCRIPTS = [
   "/JS/user-utils.js?v=20260312b",
   "/JS/account-header-ui.js?v=20260310a",
-  "/JS/account-header-stack-fix.js?v=20260222a",
-  "/JS/account-router.js?v=20260313b",
+  "/JS/account-header-stack-fix.js?v=20260313a",
+  "/JS/account-router.js?v=20260313h",
 ] as const;
 
 const LEGACY_DEFERRED_SCRIPTS = [
-  "/JS/account-orders.js?v=20260313a",
+  "/JS/account-orders.js?v=20260313d",
   "/JS/account-sections.js?v=20260310a",
   "/JS/account-profile.js?v=20260312b",
   "/JS/posthog.js",
@@ -75,6 +76,7 @@ export default async function AccountPage() {
 
   return (
     <>
+      <AccountRouteToolbar />
       <div className="legacy-account-root" suppressHydrationWarning dangerouslySetInnerHTML={{ __html: legacyMarkup }} />
       {LEGACY_CRITICAL_SCRIPTS.map((src) => (
         <Script key={src} src={src} strategy="afterInteractive" />

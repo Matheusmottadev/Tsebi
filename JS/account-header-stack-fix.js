@@ -2,9 +2,11 @@
   const body = document.body;
   if (!body) return;
 
-  const isConta = body.classList.contains('conta-page');
+  const hasContaShell = Boolean(document.querySelector('.conta-subnav') || document.getElementById('contaDashboard'));
+  const isConta = body.classList.contains('conta-page') || hasContaShell;
   const isProfile = body.classList.contains('account-profile-page');
   if (!isConta && !isProfile) return;
+  if (isConta) body.classList.add('conta-page');
 
   const topBar = document.querySelector('.top-bar');
   const header = document.querySelector('.home-header');
@@ -31,6 +33,7 @@
   window.addEventListener('resize', setVars, { passive: true });
   window.addEventListener('orientationchange', setVars, { passive: true });
   window.addEventListener('load', setVars, { passive: true });
+  window.addEventListener('account:layout-change', setVars);
 
   setTimeout(setVars, 150);
   setTimeout(setVars, 600);

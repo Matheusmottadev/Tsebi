@@ -1,28 +1,34 @@
 (function initAccountOrdersModule() {
   const TRACKING_FLOW = ["RECEIVED", "CONFIRMED", "IN_TRANSIT", "OUT_FOR_DELIVERY", "DELIVERED", "CANCELED"];
+  const PAID_STATUSES = new Set(["paid", "pago", "approved", "aprovado"]);
+  const PROCESSING_STATUSES = new Set(["processing", "processando"]);
+  const PENDING_STATUSES = new Set(["pending_payment", "pending", "pendente", "aguardando_pagamento", "aguardando pagamento"]);
+  const CANCELED_STATUSES = new Set(["canceled", "cancelled", "cancelado", "failed"]);
+  const REFUNDED_STATUSES = new Set(["refunded", "reembolsado"]);
+
+  function normalizeOrderStatus(value) {
+    return String(value || "").trim().toLowerCase();
+  }
 
   function statusLabel(orderOrStatus) {
     const order = orderOrStatus && typeof orderOrStatus === "object" ? orderOrStatus : null;
-    const value = String(order ? order.status : orderOrStatus || "").trim().toLowerCase();
+    const value = normalizeOrderStatus(order ? order.status : orderOrStatus);
     const currentStatus = String(order?.currentStatus || order?.trackingStatus || "").trim().toUpperCase();
     const canceledAt = String(order?.canceledAt || "").trim();
     const refundedAt = String(order?.refundedAt || "").trim();
-    if (value === "refunded" || refundedAt) return "Reembolsado";
+    if (REFUNDED_STATUSES.has(value) || refundedAt) return "Reembolsado";
     if (
       canceledAt ||
       currentStatus === "CANCELED" ||
       currentStatus === "CANCELLED" ||
-      value === "canceled" ||
-      value === "cancelled" ||
-      value === "cancelado"
+      CANCELED_STATUSES.has(value)
     ) return "Cancelado";
-    if (value === "failed") return "Falhou";
     if (currentStatus === "DELIVERED") return "Entregue";
     if (currentStatus === "OUT_FOR_DELIVERY") return "Saiu para entrega";
     if (currentStatus === "IN_TRANSIT" || currentStatus === "SHIPPED") return "Em transporte";
-    if (value === "paid") return "Pago";
-    if (value === "processing") return "Processando";
-    if (value === "pending_payment") return "Aguardando pagamento";
+    if (PAID_STATUSES.has(value)) return "Pago";
+    if (PROCESSING_STATUSES.has(value)) return "Processando";
+    if (PENDING_STATUSES.has(value)) return "Aguardando pagamento";
     return "Em análise";
   }
 
@@ -59,8 +65,10 @@
   }
 
   function resolveTrackingStep(order) {
-    const paymentStatus = String(order?.status || "").trim().toLowerCase();
-    if (paymentStatus === "canceled" || paymentStatus === "failed" || paymentStatus === "refunded") {
+    const paymentStatus = normalizeOrderStatus(order?.status);
+    const canceledAt = String(order?.canceledAt || "").trim();
+    const refundedAt = String(order?.refundedAt || "").trim();
+    if (canceledAt || refundedAt || CANCELED_STATUSES.has(paymentStatus) || REFUNDED_STATUSES.has(paymentStatus)) {
       return "CANCELED";
     }
 
@@ -71,10 +79,10 @@
     if (raw === "PROCESSING" || raw === "ORDER_CONFIRMED") return "CONFIRMED";
 
     // Quando o pagamento ja foi aprovado, o pedido deve ficar pelo menos em confirmado.
-    if (paymentStatus === "paid" || paymentStatus === "processing") return "CONFIRMED";
+    if (PAID_STATUSES.has(paymentStatus) || PROCESSING_STATUSES.has(paymentStatus)) return "CONFIRMED";
 
     if (raw === "ORDER_PLACED" || raw === "PENDING_PAYMENT") return "RECEIVED";
-    if (paymentStatus === "pending_payment") return "RECEIVED";
+    if (PENDING_STATUSES.has(paymentStatus)) return "RECEIVED";
     return "RECEIVED";
   }
 
@@ -82,6 +90,19 @@
     const currentStep = resolveTrackingStep(order);
     const activeIndex = Math.max(0, TRACKING_FLOW.indexOf(currentStep));
     const isCanceled = currentStep === "CANCELED";
+
+    function dotStyleForStep(step, stateClass) {
+      if (stateClass === "is-canceled") {
+        return ' style="border-color:#991b1b;background:#991b1b"';
+      }
+      if (step === "DELIVERED" && !isCanceled && stateClass !== "is-pending") {
+        return ' style="border-color:#16a34a;background:#16a34a;box-shadow:0 0 0 3px rgba(22,163,74,0.16)"';
+      }
+      if (stateClass === "is-complete" || stateClass === "is-active") {
+        return ' style="border-color:#111;background:#111;box-shadow:0 0 0 3px rgba(17,17,17,0.12)"';
+      }
+      return ' style="border-color:#cfcfcf;background:#f3f3f3"';
+    }
 
     return `
       <ol class="order-timeline">
@@ -95,10 +116,7 @@
             stateClass = "is-active";
           }
           const deliveredClass = step === "DELIVERED" && !isCanceled && index <= activeIndex ? "is-delivered" : "";
-          const dotInlineStyle =
-            stateClass === "is-active" && step !== "DELIVERED" && step !== "CANCELED"
-              ? ' style="border-color:#111;background:#111;box-shadow:0 0 0 3px rgba(17,17,17,0.12)"'
-              : "";
+          const dotInlineStyle = dotStyleForStep(step, stateClass);
           return `
             <li class="order-timeline-step ${stateClass} ${deliveredClass}" data-step="${step}">
               <span class="order-timeline-dot" aria-hidden="true"${dotInlineStyle}></span>
