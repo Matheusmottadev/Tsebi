@@ -163,11 +163,14 @@ export default function RootLayout({
   };
 
   return (
-    <html lang="pt-BR">
+    <html lang="pt-BR" suppressHydrationWarning>
       <head>
         {isProduction ? <MetaPixelBase /> : null}
       </head>
-      <body className={`${montserrat.variable} ${playfairDisplay.variable} ${cormorant.variable} ${jost.variable}`}>
+      <body
+        suppressHydrationWarning
+        className={`${montserrat.variable} ${playfairDisplay.variable} ${cormorant.variable} ${jost.variable}`}
+      >
         <Script id="google-consent-default" strategy="beforeInteractive">
           {`
             window.dataLayer = window.dataLayer || [];

@@ -88,6 +88,10 @@
   text-align: center;
 }
 
+.processingHero {
+  transform: translateY(90px);
+}
+
 .runningLogo {
   width: 120px;
   height: 120px;

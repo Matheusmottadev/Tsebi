@@ -391,16 +391,18 @@ export default function CheckoutConfirmationPage() {
   if (status === "processing") {
     return (
       <main className={`${styles.page} ${styles.processingScreen}`}>
-        <img src="/images/logo-tsebi.png" alt="Tsebi" className={styles.runningLogo} />
-        <h1 className={styles.processingTitle}>
-          Processando
-          <span className={styles.dots}>
-            <span>.</span>
-            <span>.</span>
-            <span>.</span>
-          </span>
-        </h1>
-        <p className={styles.processingSub}>Te avisaremos por email quando estiver tudo certo</p>
+        <div className={styles.processingHero}>
+          <img src="/images/logo-tsebi.png" alt="Tsebi" className={styles.runningLogo} />
+          <h1 className={styles.processingTitle}>
+            Processando
+            <span className={styles.dots}>
+              <span>.</span>
+              <span>.</span>
+              <span>.</span>
+            </span>
+          </h1>
+          <p className={styles.processingSub}>Te avisaremos por email quando estiver tudo certo</p>
+        </div>
         <div className={styles.processingDivider} />
         <section className={styles.processingMetaGrid} aria-label="Resumo do processamento">
           <article className={styles.metaCard}>
