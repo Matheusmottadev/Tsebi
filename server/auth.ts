@@ -1421,17 +1421,7 @@ authRouter.post("/logout", (req: any, res: any) => {
       const normalized = explicit.replace(/^\./, "").replace(/^www\./, "");
       return normalized ? `.${normalized}` : "";
     }
-
-    const appBase = String(process.env.APP_BASE_URL || "").trim();
-    if (!appBase) return "";
-    try {
-      const hostname = String(new URL(appBase).hostname || "").trim().toLowerCase();
-      if (isLocalOrIp(hostname)) return "";
-      const normalized = hostname.replace(/^www\./, "");
-      return normalized ? `.${normalized}` : "";
-    } catch {
-      return "";
-    }
+    return "";
   })();
 
   const clearSessionCookies = () => {

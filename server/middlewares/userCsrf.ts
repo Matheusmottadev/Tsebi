@@ -2,15 +2,7 @@ import type { NextFunction, Request, Response } from "express";
 const nodeCrypto = require("node:crypto");
 
 const isProduction = process.env.NODE_ENV === "production";
-const appBaseOrigin = (() => {
-  const raw = String(process.env.APP_BASE_URL || "").trim();
-  if (!raw) return "";
-  try {
-    return new URL(raw).origin;
-  } catch {
-    return "";
-  }
-})();
+const appBaseOrigin = "";
 
 function sanitizeCookieName(value: unknown, fallback = "tsebi.csrf"): string {
   const raw = String(value || "").trim();
@@ -34,15 +26,7 @@ function resolveCookieDomain(): string | undefined {
     const normalized = explicit.replace(/^\./, "").replace(/^www\./, "");
     return normalized ? `.${normalized}` : undefined;
   }
-  if (!appBaseOrigin) return undefined;
-  try {
-    const hostname = String(new URL(appBaseOrigin).hostname || "").trim().toLowerCase();
-    if (isLocalOrIpHost(hostname)) return undefined;
-    const normalized = hostname.replace(/^www\./, "");
-    return normalized ? `.${normalized}` : undefined;
-  } catch {
-    return undefined;
-  }
+  return undefined;
 }
 
 const cookieDomain = resolveCookieDomain();

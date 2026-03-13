@@ -30,17 +30,7 @@ function resolveCookieDomain(): string | undefined {
     const normalized = explicit.replace(/^\./, "").replace(/^www\./, "");
     return normalized ? `.${normalized}` : undefined;
   }
-
-  const appBaseUrl = String(process.env.APP_BASE_URL || "").trim();
-  if (!appBaseUrl) return undefined;
-  try {
-    const hostname = String(new URL(appBaseUrl).hostname || "").trim().toLowerCase();
-    if (isLocalOrIpHost(hostname)) return undefined;
-    const normalized = hostname.replace(/^www\./, "");
-    return normalized ? `.${normalized}` : undefined;
-  } catch {
-    return undefined;
-  }
+  return undefined;
 }
 
 function createSessionStore(): Store {
