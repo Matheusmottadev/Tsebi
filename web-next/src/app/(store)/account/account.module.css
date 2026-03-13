@@ -809,6 +809,12 @@
   gap: 8px;
 }
 
+.appointmentsHint {
+  margin: 12px 0 0;
+  font-size: 12px;
+  color: var(--grey-dark);
+}
+
 .slot {
   padding: 8px;
   font-size: 12px;
@@ -843,6 +849,72 @@
   display: flex;
   flex-direction: column;
   gap: 20px;
+}
+
+.appointmentsHistory {
+  margin-top: 32px;
+  border-top: 1px solid var(--border);
+  padding-top: 24px;
+}
+
+.appointmentsHistoryHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.appointmentHistoryList {
+  display: grid;
+  gap: 12px;
+}
+
+.appointmentHistoryCard {
+  border: 1px solid var(--border);
+  background: var(--white);
+  padding: 16px;
+  display: grid;
+  gap: 6px;
+}
+
+.appointmentHistoryRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.appointmentHistoryMeta {
+  margin: 0;
+  font-size: 12px;
+  color: var(--grey-dark);
+}
+
+.appointmentStatusBadge {
+  display: inline-flex;
+  align-items: center;
+  min-height: 24px;
+  border-radius: 999px;
+  padding: 0 10px;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.appointmentStatusScheduled {
+  background: #e8f1ff;
+  color: #315b91;
+}
+
+.appointmentStatusCompleted {
+  background: #e7f4ea;
+  color: #2d6a45;
+}
+
+.appointmentStatusCanceled {
+  background: #fdebec;
+  color: #a14348;
 }
 
 .summaryBox {

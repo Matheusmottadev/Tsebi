@@ -10,13 +10,20 @@ interface RecommendationItem {
   name: string;
   price: number;
   imageUrl?: string | null;
+  href?: string | null;
   badge?: string | null;
   reason?: string | null;
   currency?: string;
 }
 
 interface RecommendationsResponse {
-  items?: RecommendationItem[];
+  items?: Array<
+    RecommendationItem & {
+      product_id?: string;
+      image_url?: string | null;
+      link?: string | null;
+    }
+  >;
   recommendations?: RecommendationItem[];
 }
 
@@ -45,9 +52,19 @@ export function RecommendationsTab() {
   const [error, setError] = useState(false);
 
   useEffect(() => {
-    get<RecommendationsResponse>("/api/recommendations")
+    get<RecommendationsResponse>("/api/recommendations?placement=account")
       .then((res) => {
-        setItems(res.items ?? res.recommendations ?? []);
+        const resolved = (res.items ?? res.recommendations ?? []).map((item) => ({
+          id: String(item.id || item.product_id || "").trim(),
+          name: String(item.name || "").trim(),
+          price: Number(item.price || 0),
+          imageUrl: String(item.imageUrl || item.image_url || "").trim() || null,
+          href: String(item.href || item.link || "").trim() || null,
+          badge: item.badge || null,
+          reason: item.reason || null,
+          currency: item.currency || "BRL",
+        }));
+        setItems(resolved);
       })
       .catch(() => setError(true))
       .finally(() => setLoading(false));
@@ -85,9 +102,15 @@ export function RecommendationsTab() {
           <p className={styles.recName}>{item.name}</p>
           <p className={styles.recPrice}>{formatBRL(item.price)}</p>
           {item.reason && <p className={styles.recReason}>"{item.reason}"</p>}
-          <button type="button" className={styles.btnPill}>
-            Adicionar ao carrinho
-          </button>
+          {item.href ? (
+            <a href={item.href} className={styles.btnPill}>
+              Ver produto
+            </a>
+          ) : (
+            <button type="button" className={styles.btnPill}>
+              Ver produto
+            </button>
+          )}
         </div>
       ))}
     </div>
