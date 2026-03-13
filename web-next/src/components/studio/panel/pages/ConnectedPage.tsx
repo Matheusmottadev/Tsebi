@@ -5,17 +5,19 @@ import { DrawerDetalhesUsuario } from "@/components/admin/DrawerDetalhesUsuario"
 import { DrawerEditarCupom } from "@/components/admin/DrawerEditarCupom";
 import { DrawerEditarPedido } from "@/components/admin/DrawerEditarPedido";
 import { DrawerEditarProduto } from "@/components/admin/DrawerEditarProduto";
+import { DrawerNovoAtendimento } from "@/components/admin/DrawerNovoAtendimento";
 import { Toast } from "@/components/admin/Toast";
 import { SearchBar, type FilterConfig, type SortOption } from "@/components/studio/panel/SearchBar";
 import {
+  deleteAppointmentSlotAdmin,
   deleteCouponAdmin,
   deleteNewsletterAdmin,
-  deletePrivateCareAdmin,
+  updateAppointmentSlotAdmin,
+  type AdminAppointmentSlot,
   deleteVipAdmin,
   type AdminAuditLog,
   type AdminNewsletterRow,
   type AdminOrderSummary,
-  type AdminPrivateCareRequest,
   type AdminUserRow,
   type AdminVipRow,
 } from "@/services/admin";
@@ -27,7 +29,7 @@ export interface ConnectedPanelData {
   orders: AdminOrderSummary[];
   products: Product[];
   users: AdminUserRow[];
-  privateCare: AdminPrivateCareRequest[];
+  appointmentSlots: AdminAppointmentSlot[];
   vip: AdminVipRow[];
   newsletter: AdminNewsletterRow[];
   coupons: Coupon[];
@@ -46,7 +48,7 @@ type ConnectedPageProps = {
 
 type ConfirmDeleteTarget =
   | { kind: "coupon"; id: string; label: string }
-  | { kind: "attendance"; id: string; label: string }
+  | { kind: "appointment_slot"; id: string; label: string }
   | { kind: "vip"; id: string; label: string }
   | { kind: "newsletter"; id: string; label: string };
 
@@ -165,12 +167,31 @@ function readTotalSpentCents(row: Record<string, unknown>): number {
   return 0;
 }
 
-function normalizePrivateCareStatus(value: string): "aberto" | "em_andamento" | "resolvido" | "fechado" {
+function normalizeAppointmentSlotStatus(value: string): "disponivel" | "com_agendamento" | "indisponivel" | "bloqueado" | "lotado" {
   const status = normalizeTextForCompare(value);
-  if (status.includes("fechado") || status.includes("closed")) return "fechado";
-  if (status.includes("resol") || status.includes("concl") || status.includes("finaliz")) return "resolvido";
-  if (status.includes("andamento") || status.includes("progress") || status.includes("process")) return "em_andamento";
-  return "aberto";
+  if (status.includes("bloqueado") || status.includes("blocked")) return "bloqueado";
+  if (status.includes("lotado") || status.includes("filled")) return "lotado";
+  if (status.includes("indisponivel") || status.includes("unavailable")) return "indisponivel";
+  if (status.includes("booked") || status.includes("agend")) return "com_agendamento";
+  return "disponivel";
+}
+
+function formatAppointmentSlotStatus(value: string): string {
+  const normalized = normalizeAppointmentSlotStatus(value);
+  if (normalized === "bloqueado") return "Bloqueado";
+  if (normalized === "lotado") return "Lotado";
+  if (normalized === "indisponivel") return "Indisponivel";
+  if (normalized === "com_agendamento") return "Com agendamento";
+  return "Disponivel";
+}
+
+function getAppointmentClients(row: AdminAppointmentSlot): string {
+  if (!Array.isArray(row.appointments) || row.appointments.length === 0) return "-";
+  return row.appointments
+    .map((appointment) => String(appointment.userName || appointment.userEmail || "").trim())
+    .filter(Boolean)
+    .slice(0, 3)
+    .join(", ");
 }
 
 function normalizeAuditEventType(action: string): "login" | "logout" | "criacao" | "edicao" | "exclusao" | "erro" | "outro" {
@@ -278,10 +299,10 @@ function getDeleteContent(target: ConfirmDeleteTarget): {
     };
   }
 
-  if (target.kind === "attendance") {
+  if (target.kind === "appointment_slot") {
     return {
       title: "Confirmar exclusao",
-      text: `Tem certeza que deseja excluir o atendimento de ${target.label}?`,
+      text: `Tem certeza que deseja excluir o horario ${target.label}?`,
       confirmLabel: "Excluir permanentemente",
     };
   }
@@ -313,7 +334,7 @@ export function ConnectedPage({
   const [ordersRows, setOrdersRows] = useState<AdminOrderSummary[]>(data.orders || []);
   const [productsRows, setProductsRows] = useState<Product[]>(data.products || []);
   const [usersRows, setUsersRows] = useState<AdminUserRow[]>(data.users || []);
-  const [privateCareRows, setPrivateCareRows] = useState<AdminPrivateCareRequest[]>(data.privateCare || []);
+  const [appointmentSlotRows, setAppointmentSlotRows] = useState<AdminAppointmentSlot[]>(data.appointmentSlots || []);
   const [vipRows, setVipRows] = useState<AdminVipRow[]>(data.vip || []);
   const [newsletterRows, setNewsletterRows] = useState<AdminNewsletterRow[]>(data.newsletter || []);
   const [couponsRows, setCouponsRows] = useState<Coupon[]>(data.coupons || []);
@@ -375,6 +396,8 @@ export function ConnectedPage({
 
   const [selectedCoupon, setSelectedCoupon] = useState<Coupon | null>(null);
   const [isCouponDrawerOpen, setIsCouponDrawerOpen] = useState(false);
+  const [selectedAppointmentSlot, setSelectedAppointmentSlot] = useState<AdminAppointmentSlot | null>(null);
+  const [isAppointmentDrawerOpen, setIsAppointmentDrawerOpen] = useState(false);
 
   const [confirmTarget, setConfirmTarget] = useState<ConfirmDeleteTarget | null>(null);
   const [confirmLoading, setConfirmLoading] = useState(false);
@@ -396,8 +419,8 @@ export function ConnectedPage({
   }, [data.users]);
 
   useEffect(() => {
-    setPrivateCareRows(data.privateCare || []);
-  }, [data.privateCare]);
+    setAppointmentSlotRows(data.appointmentSlots || []);
+  }, [data.appointmentSlots]);
 
   useEffect(() => {
     setVipRows(data.vip || []);
@@ -471,6 +494,16 @@ export function ConnectedPage({
   const closeCouponDrawer = () => {
     setIsCouponDrawerOpen(false);
     setSelectedCoupon(null);
+  };
+
+  const openAppointmentDrawer = (slot: AdminAppointmentSlot) => {
+    setSelectedAppointmentSlot(slot);
+    setIsAppointmentDrawerOpen(true);
+  };
+
+  const closeAppointmentDrawer = () => {
+    setIsAppointmentDrawerOpen(false);
+    setSelectedAppointmentSlot(null);
   };
 
   const showToast = (message: string) => {
@@ -620,21 +653,32 @@ export function ConnectedPage({
     return nextRows;
   }, [usersEmailFilter, usersPeriodFilter, usersRows, usersSearch, usersSort, usersStatusFilter]);
 
-  const filteredPrivateCare = useMemo(() => {
+  const filteredAppointmentSlots = useMemo(() => {
     const query = normalizeTextForCompare(careSearch);
-    const nextRows = [...privateCareRows].filter((row) => {
-      const matchesQuery = !query || normalizeTextForCompare([row.userName, row.userEmail, row.subject].join(" ")).includes(query);
+    const nextRows = [...appointmentSlotRows].filter((row) => {
+      const matchesQuery =
+        !query ||
+        normalizeTextForCompare([
+          row.label,
+          row.modality,
+          row.location,
+          row.adminNote,
+          getAppointmentClients(row),
+          ...(Array.isArray(row.appointments)
+            ? row.appointments.flatMap((appointment) => [appointment.userName, appointment.userEmail, appointment.serviceType])
+            : []),
+        ].join(" ")).includes(query);
       if (!matchesQuery) return false;
-      if (careStatusFilter !== "todos" && normalizePrivateCareStatus(row.status) !== careStatusFilter) return false;
-      return matchesPeriod(row.createdAt, carePeriodFilter);
+      if (careStatusFilter !== "todos" && normalizeAppointmentSlotStatus(row.status) !== careStatusFilter) return false;
+      return matchesPeriod(row.startsAt || row.createdAt, carePeriodFilter);
     });
 
     nextRows.sort((a, b) => {
-      if (careSort === "mais_antigo") return toTimestamp(a.createdAt) - toTimestamp(b.createdAt);
-      return toTimestamp(b.createdAt) - toTimestamp(a.createdAt);
+      if (careSort === "mais_antigo") return toTimestamp(a.startsAt || a.createdAt) - toTimestamp(b.startsAt || b.createdAt);
+      return toTimestamp(b.startsAt || b.createdAt) - toTimestamp(a.startsAt || a.createdAt);
     });
     return nextRows;
-  }, [carePeriodFilter, careSearch, careSort, careStatusFilter, privateCareRows]);
+  }, [appointmentSlotRows, carePeriodFilter, careSearch, careSort, careStatusFilter]);
 
   const filteredVip = useMemo(() => {
     const queryText = normalizeTextForCompare(vipSearch);
@@ -971,10 +1015,11 @@ export function ConnectedPage({
       onChange: setCareStatusFilter,
       options: [
         { value: "todos", label: "Status: Todos" },
-        { value: "aberto", label: "Aberto" },
-        { value: "em_andamento", label: "Em andamento" },
-        { value: "resolvido", label: "Resolvido" },
-        { value: "fechado", label: "Fechado" },
+        { value: "disponivel", label: "Disponivel" },
+        { value: "com_agendamento", label: "Com agendamento" },
+        { value: "lotado", label: "Lotado" },
+        { value: "bloqueado", label: "Bloqueado" },
+        { value: "indisponivel", label: "Indisponivel" },
       ],
     },
     {
@@ -1276,6 +1321,23 @@ export function ConnectedPage({
     onRequestRefresh?.();
   };
 
+  const handleAppointmentSlotSaved = () => {
+    closeAppointmentDrawer();
+    showToast("Horario salvo.");
+    onRequestRefresh?.();
+  };
+
+  const handleAppointmentStatusToggle = async (slot: AdminAppointmentSlot, patch: { isAvailable?: boolean; isBlocked?: boolean }) => {
+    try {
+      const response = await updateAppointmentSlotAdmin(slot.id, patch);
+      setAppointmentSlotRows((current) => current.map((row) => (String(row.id || "") === String(slot.id || "") ? response.slot : row)));
+      showToast("Horario atualizado.");
+      onRequestRefresh?.();
+    } catch (error) {
+      showToast(pickErrorMessage(error));
+    }
+  };
+
   const openDeleteConfirm = (target: ConfirmDeleteTarget) => {
     setConfirmTarget(target);
   };
@@ -1296,10 +1358,10 @@ export function ConnectedPage({
         showToast("Cupom excluido.");
       }
 
-      if (confirmTarget.kind === "attendance") {
-        await deletePrivateCareAdmin(confirmTarget.id);
-        setPrivateCareRows((current) => current.filter((row) => String(row.id || "") !== confirmTarget.id));
-        showToast("Atendimento excluido.");
+      if (confirmTarget.kind === "appointment_slot") {
+        await deleteAppointmentSlotAdmin(confirmTarget.id);
+        setAppointmentSlotRows((current) => current.filter((row) => String(row.id || "") !== confirmTarget.id));
+        showToast("Horario excluido.");
       }
 
       if (confirmTarget.kind === "vip") {
@@ -1475,43 +1537,74 @@ export function ConnectedPage({
       {page === "atendimentos" ? (
         <>
           <SearchBar
-            placeholder="Buscar por cliente, e-mail ou assunto"
+            placeholder="Buscar por titulo, cliente, e-mail ou local"
             value={careSearch}
             onChange={setCareSearch}
             filters={careFilterConfigs}
             sortOptions={careSortOptions}
-            resultsCount={filteredPrivateCare.length}
+            resultsCount={filteredAppointmentSlots.length}
             onClear={resetCareSearch}
           />
-          {filteredPrivateCare.length ? (
+          {filteredAppointmentSlots.length ? (
             <div className={styles.tableWrap}>
               <table className={styles.table}>
                 <thead>
                   <tr>
-                    <th>Cliente</th>
-                    <th>Assunto</th>
+                    <th>Horario</th>
+                    <th>Clientes</th>
                     <th>Status</th>
-                    <th>Canal</th>
-                    <th>Criado em</th>
+                    <th>Vagas</th>
+                    <th>Modalidade</th>
                     <th></th>
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredPrivateCare.slice(0, 200).map((care) => (
-                    <tr key={care.id}>
-                      <td>{care.userName || care.userEmail || "-"}</td>
-                      <td>{care.subject || "-"}</td>
-                      <td>{care.status || "-"}</td>
-                      <td>{care.channel || "-"}</td>
-                      <td>{formatDateTime(care.createdAt)}</td>
+                  {filteredAppointmentSlots.slice(0, 200).map((slot) => (
+                    <tr key={slot.id}>
+                      <td>
+                        <strong>{slot.label || "Horario privado"}</strong>
+                        <br />
+                        {formatDateTime(slot.startsAt)}
+                      </td>
+                      <td>{getAppointmentClients(slot)}</td>
+                      <td>{formatAppointmentSlotStatus(slot.status)}</td>
+                      <td>
+                        {slot.bookedCount}/{slot.capacity}
+                      </td>
+                      <td>{[slot.modality, slot.location].filter(Boolean).join(" - ") || "-"}</td>
                       <td className={styles.actionCell}>
+                        <button className={styles.btnEdit} onClick={() => openAppointmentDrawer(slot)}>
+                          <PencilLine size={12} /> Editar
+                        </button>
+                        <button
+                          className={styles.btnEdit}
+                          onClick={() =>
+                            handleAppointmentStatusToggle(slot, {
+                              isBlocked: !slot.isBlocked,
+                              isAvailable: slot.isBlocked ? true : slot.isAvailable,
+                            })
+                          }
+                        >
+                          {slot.isBlocked ? "Desbloquear" : "Bloquear"}
+                        </button>
+                        <button
+                          className={styles.btnEdit}
+                          onClick={() =>
+                            handleAppointmentStatusToggle(slot, {
+                              isAvailable: !slot.isAvailable,
+                              isBlocked: false,
+                            })
+                          }
+                        >
+                          {slot.isAvailable ? "Indisponivel" : "Disponivel"}
+                        </button>
                         <button
                           className={styles.btnDelete}
                           onClick={() =>
                             openDeleteConfirm({
-                              kind: "attendance",
-                              id: String(care.id || ""),
-                              label: String(care.userName || care.userEmail || "cliente"),
+                              kind: "appointment_slot",
+                              id: String(slot.id || ""),
+                              label: String(slot.label || formatDateTime(slot.startsAt)),
                             })
                           }
                         >
@@ -1785,6 +1878,15 @@ export function ConnectedPage({
           coupon={selectedCoupon}
           onClose={closeCouponDrawer}
           onSaved={handleCouponSaved}
+        />
+      ) : null}
+
+      {page === "atendimentos" ? (
+        <DrawerNovoAtendimento
+          isOpen={isAppointmentDrawerOpen}
+          slot={selectedAppointmentSlot}
+          onClose={closeAppointmentDrawer}
+          onSaved={handleAppointmentSlotSaved}
         />
       ) : null}
 

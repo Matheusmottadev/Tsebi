@@ -6,10 +6,10 @@ import { Search } from "lucide-react";
 import { HttpError } from "@/lib/http";
 import {
   listAuditLogsAdmin,
+  listAppointmentSlotsAdmin,
   listCouponsAdmin,
   listNewsletterAdmin,
   listOrdersAdmin,
-  listPrivateCareAdmin,
   listProductsAdmin,
   listUsersAdmin,
   listVipAdmin,
@@ -37,7 +37,7 @@ const EMPTY_CONNECTED_DATA: ConnectedPanelData = {
   orders: [],
   products: [],
   users: [],
-  privateCare: [],
+  appointmentSlots: [],
   vip: [],
   newsletter: [],
   coupons: [],
@@ -268,20 +268,6 @@ const OPEN_ORDER_STATUSES = new Set([
   "em_andamento",
 ]);
 
-const CLOSED_CARE_STATUSES = new Set([
-  "completed",
-  "closed",
-  "resolved",
-  "declined",
-  "canceled",
-  "cancelled",
-  "cancelado",
-  "recusado",
-  "concluido",
-  "concluído",
-  "finalizado",
-]);
-
 const TOPBAR_BUTTONS: Record<AdminPageKey, { label: string }> = {
   inicio: { label: "Sair" },
   pedidos: { label: "+ Novo Pedido" },
@@ -376,7 +362,7 @@ export function StudioAdminPanel() {
         listOrdersAdmin({ page: 1, pageSize: 200 }, { cache: "no-store" }),
         listProductsAdmin({ page: 1, pageSize: 200 }, { cache: "no-store" }),
         listUsersAdmin({ page: 1, pageSize: 200 }, { cache: "no-store" }),
-        listPrivateCareAdmin({ page: 1, pageSize: 200 }, { cache: "no-store" }),
+        listAppointmentSlotsAdmin({ includePast: true }, { cache: "no-store" }),
         listVipAdmin({ page: 1, pageSize: 200 }, { cache: "no-store" }),
         listNewsletterAdmin({ page: 1, pageSize: 200 }, { cache: "no-store" }),
         listCouponsAdmin({ page: 1, pageSize: 200 }, { cache: "no-store" }),
@@ -389,7 +375,7 @@ export function StudioAdminPanel() {
         orders: [],
         products: [],
         users: [],
-        privateCare: [],
+        appointmentSlots: [],
         vip: [],
         newsletter: [],
         coupons: [],
@@ -433,9 +419,9 @@ export function StudioAdminPanel() {
         failures.push("Usuários indisponíveis");
       }
 
-      const privateCareResult = results[4];
-      if (privateCareResult.status === "fulfilled") {
-        next.privateCare = Array.isArray(privateCareResult.value.rows) ? privateCareResult.value.rows : [];
+      const appointmentSlotsResult = results[4];
+      if (appointmentSlotsResult.status === "fulfilled") {
+        next.appointmentSlots = Array.isArray(appointmentSlotsResult.value.rows) ? appointmentSlotsResult.value.rows : [];
       } else {
         failures.push("Atendimentos indisponíveis");
       }
@@ -489,13 +475,13 @@ export function StudioAdminPanel() {
   }, [connectedData.orders]);
 
   const openCare = useMemo(() => {
-    const openCount = connectedData.privateCare.filter((row) => {
+    const openCount = connectedData.appointmentSlots.filter((row) => {
       const status = String(row.status || "").trim().toLowerCase();
-      return !CLOSED_CARE_STATUSES.has(status);
+      return status === "available" || status === "booked";
     }).length;
     if (openCount > 0) return openCount;
-    return connectedData.privateCare.length;
-  }, [connectedData.privateCare]);
+    return connectedData.appointmentSlots.length;
+  }, [connectedData.appointmentSlots]);
 
   const kpis = useMemo(() => buildDashboardKpis(connectedData), [connectedData]);
   const recentOrders = useMemo(() => buildRecentOrders(connectedData), [connectedData]);
@@ -725,7 +711,9 @@ export function StudioAdminPanel() {
       {activeDrawer === "usuarios" ? (
         <DrawerNovoUsuario isOpen={true} onClose={closeDrawer} onSaved={() => handleSaved(true)} />
       ) : null}
-      {activeDrawer === "atendimentos" ? <DrawerNovoAtendimento isOpen={true} onClose={closeDrawer} /> : null}
+      {activeDrawer === "atendimentos" ? (
+        <DrawerNovoAtendimento isOpen={true} onClose={closeDrawer} onSaved={() => handleSaved(true)} />
+      ) : null}
       {activeDrawer === "lista_vip" ? <DrawerNovoCadastroVIP isOpen={true} onClose={closeDrawer} /> : null}
       {activeDrawer === "newsletter" ? (
         <DrawerNewsletter

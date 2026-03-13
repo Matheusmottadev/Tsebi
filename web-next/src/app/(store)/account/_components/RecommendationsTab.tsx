@@ -27,12 +27,12 @@ interface RecommendationsResponse {
   recommendations?: RecommendationApiItem[];
 }
 
-function formatBRL(cents: number): string {
+function formatBRL(amount: number): string {
   return new Intl.NumberFormat("pt-BR", {
     style: "currency",
     currency: "BRL",
     minimumFractionDigits: 2,
-  }).format(cents / 100);
+  }).format(Number(amount || 0));
 }
 
 function getRecommendationKey(item: RecommendationItem, index: number): string {
