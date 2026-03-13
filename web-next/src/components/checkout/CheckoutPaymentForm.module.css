@@ -8,6 +8,15 @@
   outline: none;
 }
 
+.paymentElementContainer :global(.StripeElement) {
+  width: 100%;
+  display: block;
+}
+
+.paymentElementContainer iframe {
+  width: 100% !important;
+}
+
 .cardForm {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -59,6 +68,13 @@
   display: flex;
   align-items: center;
   padding: 8px 0 12px;
+  width: 100%;
+  cursor: text;
+}
+
+.stripeFieldShell :global(.StripeElement) {
+  width: 100%;
+  display: block;
 }
 
 .error {

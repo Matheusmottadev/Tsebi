@@ -549,9 +549,8 @@ function buildPayload(
 }
 
 function buildStripePaymentMethodOrder(selectedMethod: PaymentMethodChoice): string[] {
-  const selected = selectedMethod === "boleto" ? "boleto" : "card";
-  const base: string[] = ["card", "boleto"];
-  const ordered = [selected, ...base];
+  const selected = selectedMethod === "google_pay" ? "google_pay" : selectedMethod;
+  const ordered = [selected];
   const unique: string[] = [];
   const seen = new Set<string>();
   ordered.forEach((method) => {
@@ -1530,6 +1529,20 @@ export function CheckoutClient() {
       line2: "Pagamento a vista",
     };
   }, [selectedInstallmentLabel, selectedPaymentMethod]);
+  const billingFullName = useMemo(
+    () => [String(form.firstName || "").trim(), String(form.lastName || "").trim()].filter(Boolean).join(" ").trim(),
+    [form.firstName, form.lastName]
+  );
+  const boletoBillingAddress = useMemo(
+    () => ({
+      line1: [String(form.line1 || "").trim(), String(form.number || "").trim()].filter(Boolean).join(", "),
+      city: String(form.city || "").trim(),
+      state: normalizeState(form.state),
+      postalCode: normalizePostalCode(form.postalCode),
+      country: normalizeCountry(form.country) || "BR",
+    }),
+    [form.city, form.country, form.line1, form.number, form.postalCode, form.state]
+  );
 
   if (gateError && !checkoutEnabled) {
     return (
@@ -2043,14 +2056,26 @@ export function CheckoutClient() {
               )}
 
               {selectedPaymentMethod !== "card" && intent?.clientSecret && stripePromise ? (
-                <div className={activeStep === "payment" ? styles.securePaymentBox : styles.hiddenPaymentHost} aria-hidden={activeStep !== "payment"}>
+                <div
+                  className={
+                    selectedPaymentMethod === "boleto"
+                      ? styles.hiddenPaymentHost
+                      : activeStep === "payment"
+                        ? styles.securePaymentBox
+                        : styles.hiddenPaymentHost
+                  }
+                  aria-hidden={selectedPaymentMethod === "boleto" || activeStep !== "payment"}
+                >
                   <Elements stripe={stripePromise} options={elementsOptions}>
                     <CheckoutPaymentForm
                       orderId={intent.orderId}
                       customerEmail={intent.customerEmail || checkoutEmail}
                       clientSecret={intent.clientSecret}
                       paymentMethodOrder={stripePaymentMethodOrder}
-                      mode="payment"
+                      mode={selectedPaymentMethod === "boleto" ? "boleto" : "payment"}
+                      billingNameDefault={billingFullName}
+                      billingTaxId={normalizeCpf(form.cpf)}
+                      billingAddress={boletoBillingAddress}
                       onElementStateChange={setPaymentElementState}
                       onSubmitActionChange={setSubmitPaymentAction}
                       showSubmitButton={false}

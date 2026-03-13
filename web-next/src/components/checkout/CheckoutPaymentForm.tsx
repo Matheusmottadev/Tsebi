@@ -12,8 +12,16 @@ type CheckoutPaymentFormProps = {
   customerEmail: string;
   clientSecret: string;
   paymentMethodOrder?: string[];
-  mode?: "card" | "payment";
+  mode?: "card" | "payment" | "boleto";
   billingNameDefault?: string;
+  billingTaxId?: string;
+  billingAddress?: {
+    line1: string;
+    city: string;
+    state: string;
+    postalCode: string;
+    country?: string;
+  };
   submitLabel?: string;
   onElementStateChange?: (state: { ready: boolean; complete: boolean }) => void;
   onSubmitActionChange?: (action: null | (() => Promise<boolean>)) => void;
@@ -54,6 +62,9 @@ export function CheckoutPaymentForm({
   clientSecret,
   paymentMethodOrder = [],
   mode = "payment",
+  billingNameDefault = "",
+  billingTaxId = "",
+  billingAddress,
   submitLabel,
   onElementStateChange,
   onSubmitActionChange,
@@ -76,20 +87,34 @@ export function CheckoutPaymentForm({
   const [cardCvcComplete, setCardCvcComplete] = useState(false);
   const paymentElementContainerRef = useRef<HTMLDivElement | null>(null);
   const previousCompleteRef = useRef<boolean | null>(null);
+  const isCardMode = mode === "card";
+  const isBoletoMode = mode === "boleto";
+  const normalizedPaymentMethodOrder = useMemo(
+    () => (Array.isArray(paymentMethodOrder) ? paymentMethodOrder.filter(Boolean) : []),
+    [paymentMethodOrder]
+  );
 
   const successPath = useMemo(() => buildConfirmationPath("success", orderId, customerEmail), [orderId, customerEmail]);
   const processingPath = useMemo(() => buildConfirmationPath("processing", orderId, customerEmail), [orderId, customerEmail]);
   const successUrl = useMemo(() => buildSuccessUrl(successPath), [successPath]);
   const paymentElementOptions = useMemo(
     () => ({
-      layout: "tabs" as const,
+      layout:
+        normalizedPaymentMethodOrder.length === 1 && normalizedPaymentMethodOrder[0] === "google_pay"
+          ? ({
+              type: "accordion" as const,
+              defaultCollapsed: false,
+              radios: false,
+              spacedAccordionItems: false,
+            })
+          : ("tabs" as const),
       wallets: {
-        applePay: "auto" as const,
-        googlePay: "auto" as const,
+        applePay: normalizedPaymentMethodOrder.includes("apple_pay") ? ("auto" as const) : ("never" as const),
+        googlePay: normalizedPaymentMethodOrder.includes("google_pay") ? ("auto" as const) : ("never" as const),
       },
-      paymentMethodOrder: Array.isArray(paymentMethodOrder) ? paymentMethodOrder.filter(Boolean) : []
+      paymentMethodOrder: normalizedPaymentMethodOrder
     }),
-    [paymentMethodOrder]
+    [normalizedPaymentMethodOrder]
   );
   const sharedCardElementStyle = useMemo(
     () => ({
@@ -131,13 +156,16 @@ export function CheckoutPaymentForm({
     }),
     [sharedCardElementStyle]
   );
-  const isCardMode = mode === "card";
   const paymentReady = isCardMode
     ? cardNumberReady && cardExpiryReady && cardCvcReady && Boolean(stripe) && Boolean(elements)
-    : paymentElementReady && Boolean(stripe) && Boolean(elements);
+    : isBoletoMode
+      ? Boolean(stripe)
+      : paymentElementReady && Boolean(stripe) && Boolean(elements);
   const paymentComplete = isCardMode
     ? cardNumberComplete && cardExpiryComplete && cardCvcComplete && billingName.trim().length >= 3
-    : paymentElementComplete;
+    : isBoletoMode
+      ? Boolean(String(billingNameDefault || "").trim() && String(customerEmail || "").trim() && String(billingTaxId || "").trim())
+      : paymentElementComplete;
 
   useEffect(() => {
     const container = paymentElementContainerRef.current;
@@ -212,6 +240,25 @@ export function CheckoutPaymentForm({
             },
             { handleActions: true }
           )
+        : isBoletoMode
+          ? await stripe.confirmBoletoPayment(String(clientSecret || "").trim(), {
+              payment_method: {
+                boleto: {
+                  tax_id: String(billingTaxId || "").trim(),
+                },
+                billing_details: {
+                  name: String(billingNameDefault || "").trim(),
+                  email: String(customerEmail || "").trim(),
+                  address: {
+                    line1: String(billingAddress?.line1 || "").trim(),
+                    city: String(billingAddress?.city || "").trim(),
+                    state: String(billingAddress?.state || "").trim(),
+                    postal_code: String(billingAddress?.postalCode || "").trim(),
+                    country: String(billingAddress?.country || "BR").trim() || "BR",
+                  },
+                },
+              },
+            })
         : await stripe.confirmPayment({
             elements,
             confirmParams: {
@@ -238,6 +285,11 @@ export function CheckoutPaymentForm({
         router.push(processingPath);
         return true;
       }
+      if (paymentIntentStatus === "requires_action" && isBoletoMode) {
+        clearCart();
+        router.push(processingPath);
+        return true;
+      }
 
       const statusMessage = paymentIntentStatus ? `Status inesperado: ${paymentIntentStatus}` : "Falha ao confirmar pagamento.";
       router.push(buildConfirmationPath("failed", orderId, customerEmail, statusMessage));
@@ -254,6 +306,13 @@ export function CheckoutPaymentForm({
     clientSecret,
     clearCart,
     customerEmail,
+    billingAddress?.city,
+    billingAddress?.country,
+    billingAddress?.line1,
+    billingAddress?.postalCode,
+    billingAddress?.state,
+    billingNameDefault,
+    billingTaxId,
     elements,
     processingPath,
     router,
@@ -261,6 +320,7 @@ export function CheckoutPaymentForm({
     stripe,
     successPath,
     isCardMode,
+    isBoletoMode,
     paymentComplete,
     paymentReady,
   ]);
@@ -326,7 +386,7 @@ export function CheckoutPaymentForm({
               </div>
             </label>
           </div>
-        ) : (
+        ) : isBoletoMode ? null : (
           <PaymentElement
             options={paymentElementOptions}
             onReady={() => {
