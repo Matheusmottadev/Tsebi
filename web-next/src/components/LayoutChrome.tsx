@@ -16,7 +16,6 @@ export function LayoutChrome({ children }: LayoutChromeProps) {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const currentPath = String(pathname || "").trim();
-  const confirmationStatus = String(searchParams?.get("status") || "").trim().toLowerCase();
   const previousUrlRef = useRef("");
   const currentUrl = useMemo(() => {
     const query = String(searchParams?.toString() || "").trim();
@@ -31,8 +30,7 @@ export function LayoutChrome({ children }: LayoutChromeProps) {
   const shouldHideForAdminLogin = normalizedPath === "/admin/login";
   const shouldHideForLegacyAdminLogin =
     normalizedPath === "/login/admin" || normalizedPath === "/login/admin/login";
-  const shouldHideFailedCheckoutConfirmation =
-    normalizedPath === "/checkout/confirmation" && confirmationStatus === "failed";
+  const shouldHideCheckoutConfirmation = normalizedPath === "/checkout/confirmation";
   const shouldBypassChrome =
     shouldHideForAdmin ||
     shouldHideForLogin ||
@@ -48,7 +46,7 @@ export function LayoutChrome({ children }: LayoutChromeProps) {
     !shouldHideForAdmin &&
     !shouldHideForAdminLogin &&
     !shouldHideForLegacyAdminLogin &&
-    !shouldHideFailedCheckoutConfirmation;
+    !shouldHideCheckoutConfirmation;
 
   useEffect(() => {
     const previousUrl = String(previousUrlRef.current || "").trim();
