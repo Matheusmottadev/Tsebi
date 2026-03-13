@@ -166,6 +166,7 @@
   max-width: 100%;
   display: flex;
   border: 1px solid #e8e6e2;
+  margin-bottom: 20px;
 }
 
 .metaCard {
@@ -196,6 +197,28 @@
   font-size: 16px;
   font-weight: 300;
   letter-spacing: 0.02em;
+}
+
+.processingAction {
+  min-width: 280px;
+  max-width: 100%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid #111;
+  background: #111;
+  color: #fff;
+  padding: 14px 18px;
+  text-decoration: none;
+  font-family: "Jost", sans-serif;
+  font-size: 9px;
+  font-weight: 300;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+}
+
+.processingAction:hover {
+  background: #2a2a2a;
 }
 
 .splitScreen {

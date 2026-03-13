@@ -3,6 +3,9 @@
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
+import { getMe } from "@/services/auth";
+import { getMyOrder, getOrderTracking } from "@/services/orders";
+import type { Order } from "@/types";
 import styles from "./confirmation.module.css";
 
 type ConfirmationStatus = "processing" | "success" | "failed";
@@ -17,7 +20,17 @@ type ConfirmationItem = {
 };
 
 const CART_STORAGE_KEY = "tsebi.web_next.cart.v1";
+const CHECKOUT_CONFIRMATION_SNAPSHOT_KEY = "checkout_confirmation_snapshot_v1";
 const FALLBACK_FAILED_ERROR = "Pagamento recusado pelo emissor do cartao.";
+
+type ConfirmationSnapshot = {
+  orderId: string;
+  orderNumber: string;
+  email: string;
+  totalLabel: string;
+  itemCount: number;
+  items: ConfirmationItem[];
+};
 
 function resolveStatus(value: string | null): ConfirmationStatus {
   const normalized = String(value || "").trim().toLowerCase();
@@ -30,6 +43,12 @@ function formatOrderId(value: string | null): string {
   const raw = String(value || "").trim();
   if (!raw) return "#—";
   return raw.startsWith("#") ? raw : `#${raw}`;
+}
+
+function formatOrderReference(orderNumber: string | null | undefined, orderId: string | null | undefined): string {
+  const primary = String(orderNumber || "").trim() || String(orderId || "").trim();
+  if (!primary) return "#â€”";
+  return primary.startsWith("#") ? primary : `#${primary}`;
 }
 
 function formatCurrencyFromUnits(amount: number): string {
@@ -199,16 +218,57 @@ function readCartFromLocalStorage(): { items: ConfirmationItem[]; totalLabel: st
   }
 }
 
+function readConfirmationSnapshot(orderId: string | null): ConfirmationSnapshot | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = window.localStorage.getItem(CHECKOUT_CONFIRMATION_SNAPSHOT_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as ConfirmationSnapshot | null;
+    if (!parsed || typeof parsed !== "object") return null;
+    if (orderId && String(parsed.orderId || "").trim() !== String(orderId || "").trim()) return null;
+    return {
+      orderId: String(parsed.orderId || "").trim(),
+      orderNumber: String(parsed.orderNumber || "").trim(),
+      email: String(parsed.email || "").trim(),
+      totalLabel: String(parsed.totalLabel || "").trim() || "R$ â€”",
+      itemCount: Math.max(0, Math.floor(Number(parsed.itemCount || 0))),
+      items: Array.isArray(parsed.items) ? parsed.items : [],
+    };
+  } catch {
+    return null;
+  }
+}
+
+function buildConfirmationItemsFromOrder(order: Order): ConfirmationItem[] {
+  return (Array.isArray(order.items) ? order.items : []).map((item, index) => {
+    const color = String(item.variantColor || "").trim();
+    const size = String(item.variantSize || "").trim();
+    const variant = [color, size].filter(Boolean).join(" Â· ") || "Sem variante";
+    return {
+      id: String(item.id || `order-${index}`),
+      name: String(item.name || "").trim() || "Item do pedido",
+      variant: item.qty > 1 ? `${variant} Â· Qtd ${item.qty}` : variant,
+      priceLabel: formatCurrencyFromCents(Math.max(0, Number(item.unitAmount || 0) * Math.max(1, Number(item.qty || 1)))),
+      imageSrc: "",
+      qty: Math.max(1, Number(item.qty || 1)),
+    } satisfies ConfirmationItem;
+  });
+}
+
 export default function CheckoutConfirmationPage() {
   const searchParams = useSearchParams();
   const router = useRouter();
+  const rawOrderId = String(searchParams.get("orderId") || "").trim();
 
   const [localItems, setLocalItems] = useState<ConfirmationItem[]>([]);
   const [localItemCount, setLocalItemCount] = useState(0);
+  const [snapshot, setSnapshot] = useState<ConfirmationSnapshot | null>(null);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [accountOrder, setAccountOrder] = useState<Order | null>(null);
   const [localTotalLabel, setLocalTotalLabel] = useState("R$ —");
 
   const status = resolveStatus(searchParams.get("status"));
-  const orderId = formatOrderId(searchParams.get("orderId"));
+  const orderId = formatOrderId(rawOrderId);
   const email = String(searchParams.get("email") || "").trim();
   const error = String(searchParams.get("error") || "").trim() || FALLBACK_FAILED_ERROR;
   const installments = String(searchParams.get("installments") || searchParams.get("parcelas") || "").trim();
@@ -225,12 +285,108 @@ export default function CheckoutConfirmationPage() {
     setLocalTotalLabel(data.totalLabel);
   }, []);
 
-  const totalLabel = formatTotal(queryTotalRaw, localTotalLabel);
-  const processingItemsLabel = queryItemsCount != null
-    ? formatItemsCountLabel(queryItemsCount)
-    : formatItemsCountLabel(localItemCount);
-  const successItems = queryItems.length > 0 ? queryItems : localItems;
-  const totalPaidLabel = installments ? `${totalLabel} - ${installments}` : totalLabel;
+  useEffect(() => {
+    setSnapshot(readConfirmationSnapshot(rawOrderId));
+  }, [rawOrderId]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadAccountOrder() {
+      try {
+        const me = await getMe({ cache: "no-store" });
+        if (cancelled) return;
+        setIsAuthenticated(Boolean(me));
+        if (!me || !rawOrderId) return;
+
+        const directOrder = await getMyOrder(rawOrderId, { cache: "no-store" });
+        if (cancelled) return;
+        if (directOrder) {
+          setAccountOrder(directOrder);
+          return;
+        }
+
+        const tracking = await getOrderTracking(rawOrderId);
+        if (cancelled || !tracking) return;
+        setAccountOrder({
+          id: String(tracking.id || "").trim(),
+          orderNumber: String(tracking.orderNumber || "").trim(),
+          status: "processing",
+          currentStatus: "PROCESSING",
+          stockCommitted: true,
+          createdAt: String(tracking.createdAt || "").trim(),
+          updatedAt: String(tracking.updatedAt || tracking.createdAt || "").trim(),
+          paymentMethod: null,
+          installments: 1,
+          currency: "brl",
+          amount: 0,
+          itemsAmount: 0,
+          shippingAmount: 0,
+          shippingPriceCents: 0,
+          shippingSelectedProvider: "",
+          shippingSelectedService: "",
+          shippingSelectedServiceCode: "",
+          shippingSelectedCarrierName: String(tracking.carrier || "").trim(),
+          shippingDeadlineDays: null,
+          shippingDestinationZip: "",
+          shippingDeadline: null,
+          adminNotes: "",
+          trackingCode: String(tracking.trackingCode || "").trim(),
+          trackingId: "",
+          trackingStatus: String(tracking.currentStatus || "").trim(),
+          carrier: String(tracking.carrier || "").trim(),
+          lastTrackingUpdate: tracking.lastTrackingUpdate,
+          items: tracking.items.map((item) => ({
+            id: String(item.id || "").trim(),
+            name: String(item.name || "").trim(),
+            qty: Math.max(1, Number(item.qty || 1)),
+            unitAmount: Math.max(0, Number(item.unitAmount || 0)),
+            currency: String(item.currency || "brl").trim() || "brl",
+          })),
+          shipping: null,
+          userId: String(tracking.userId || "").trim() || null,
+          userEmail: String(tracking.email || "").trim() || null,
+          userName: null,
+          stripePaymentIntentId: null,
+          stripeRefundId: null,
+          paidAt: null,
+          shippedAt: tracking.shippedAt,
+          deliveredAt: tracking.deliveredAt,
+          canceledAt: null,
+          refundedAt: null,
+          failureReason: null,
+          cancellationReason: null,
+          stockIssues: null,
+        });
+      } catch {
+        if (!cancelled) setIsAuthenticated(false);
+      }
+    }
+
+    loadAccountOrder();
+    return () => {
+      cancelled = true;
+    };
+  }, [rawOrderId]);
+
+  const resolvedOrderLabel = formatOrderReference(accountOrder?.orderNumber, snapshot?.orderNumber || rawOrderId);
+  const resolvedEmail = String(accountOrder?.userEmail || snapshot?.email || email || "").trim();
+  const resolvedTotalLabel = accountOrder
+    ? formatCurrencyFromUnits(Math.max(0, Number(accountOrder.amount || 0)))
+    : snapshot?.totalLabel || formatTotal(queryTotalRaw, localTotalLabel);
+  const resolvedItemsCount = accountOrder
+    ? (Array.isArray(accountOrder.items) ? accountOrder.items.reduce((sum, item) => sum + Math.max(1, Number(item.qty || 1)), 0) : 0)
+    : snapshot?.itemCount ?? queryItemsCount ?? localItemCount;
+  const processingItemsLabel = formatItemsCountLabel(resolvedItemsCount);
+  const successItems =
+    accountOrder && Array.isArray(accountOrder.items) && accountOrder.items.length > 0
+      ? buildConfirmationItemsFromOrder(accountOrder)
+      : queryItems.length > 0
+        ? queryItems
+        : snapshot?.items?.length
+          ? snapshot.items
+          : localItems;
+  const totalPaidLabel = installments ? `${resolvedTotalLabel} - ${installments}` : resolvedTotalLabel;
 
   if (status === "processing") {
     return (
@@ -244,12 +400,12 @@ export default function CheckoutConfirmationPage() {
             <span>.</span>
           </span>
         </h1>
-        <p className={styles.processingSub}>Aguarde enquanto confirmamos seu pedido com seguranca</p>
+        <p className={styles.processingSub}>Te avisaremos por email quando estiver tudo certo</p>
         <div className={styles.processingDivider} />
         <section className={styles.processingMetaGrid} aria-label="Resumo do processamento">
           <article className={styles.metaCard}>
             <p className={styles.metaLabel}>Pedido</p>
-            <p className={styles.metaValue}>{orderId}</p>
+            <p className={styles.metaValue}>{resolvedOrderLabel}</p>
           </article>
           <article className={styles.metaCard}>
             <p className={styles.metaLabel}>Itens</p>
@@ -257,9 +413,12 @@ export default function CheckoutConfirmationPage() {
           </article>
           <article className={styles.metaCard}>
             <p className={styles.metaLabel}>Total</p>
-            <p className={styles.metaValue}>{totalLabel}</p>
+            <p className={styles.metaValue}>{resolvedTotalLabel}</p>
           </article>
         </section>
+        <Link href={isAuthenticated ? "/account#pedidos" : "/"} className={styles.processingAction}>
+          {isAuthenticated ? "Ir para minha conta" : "Ir para o inicio"}
+        </Link>
       </main>
     );
   }
@@ -344,13 +503,13 @@ export default function CheckoutConfirmationPage() {
           <p className={styles.subtitle}>
             Obrigada pela sua confianca.
             <br />
-            {email || "Em breve voce recebera os detalhes por email."}
+            {resolvedEmail || "Em breve voce recebera os detalhes por email."}
           </p>
 
           <section className={styles.detailsBox}>
             <div className={styles.detailRow}>
               <span className={styles.detailLabel}>Pedido</span>
-              <span className={styles.detailValue}>{orderId}</span>
+              <span className={styles.detailValue}>{resolvedOrderLabel}</span>
             </div>
             <div className={styles.detailRow}>
               <span className={styles.detailLabel}>Status</span>
@@ -362,7 +521,7 @@ export default function CheckoutConfirmationPage() {
             </div>
             <div className={styles.detailRow}>
               <span className={styles.detailLabel}>Confirmacao enviada</span>
-              <span className={styles.detailValue}>{email || "cliente@email.com"}</span>
+              <span className={styles.detailValue}>{resolvedEmail || "cliente@email.com"}</span>
             </div>
             <div className={styles.detailRow}>
               <span className={styles.detailLabel}>Total pago</span>

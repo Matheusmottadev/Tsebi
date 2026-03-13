@@ -1,6 +1,7 @@
 ﻿"use client";
 
 import { ChangeEvent, FocusEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import { Elements } from "@stripe/react-stripe-js";
 import type { Stripe } from "@stripe/stripe-js";
 import { Price } from "@/components/Price";
@@ -23,6 +24,7 @@ import styles from "./CheckoutClient.module.css";
 type PaymentMethodChoice = "google_pay" | "card" | "boleto";
 type CheckoutStep = "address" | "delivery" | "payment" | "review";
 type CouponFeedbackTone = "" | "success" | "error";
+type ConfirmationStatus = "success" | "failed" | "processing";
 
 type CheckoutFormState = {
   guestEmail: string;
@@ -67,6 +69,24 @@ type IntentSnapshot = {
   paymentMethodTypes: string[];
 };
 
+type CheckoutConfirmationSnapshotItem = {
+  id: string;
+  name: string;
+  variant: string;
+  priceLabel: string;
+  imageSrc: string;
+  qty: number;
+};
+
+type CheckoutConfirmationSnapshot = {
+  orderId: string;
+  orderNumber: string;
+  email: string;
+  totalLabel: string;
+  itemCount: number;
+  items: CheckoutConfirmationSnapshotItem[];
+};
+
 const INITIAL_FORM: CheckoutFormState = {
   guestEmail: "",
   firstName: "",
@@ -97,6 +117,7 @@ const REQUIRED_FIELDS: RequiredCheckoutField[] = [
 ];
 
 const CHECKOUT_DRAFT_KEY = "checkout_address_draft_v1";
+const CHECKOUT_CONFIRMATION_SNAPSHOT_KEY = "checkout_confirmation_snapshot_v1";
 
 const INSTALLMENT_RULES: InstallmentRule[] = [
   { minCents: 50000, maxCents: 79999, installments: 3 },
@@ -562,13 +583,41 @@ function buildStripePaymentMethodOrder(selectedMethod: PaymentMethodChoice): str
   return unique;
 }
 
+function buildConfirmationPath(
+  status: ConfirmationStatus,
+  orderId: string,
+  customerEmail: string,
+  errorMessage = ""
+): string {
+  const params = new URLSearchParams();
+  params.set("status", status);
+  if (status === "success" || status === "processing") {
+    const safeOrderId = String(orderId || "").trim();
+    const safeEmail = String(customerEmail || "").trim().toLowerCase();
+    if (safeOrderId) params.set("orderId", safeOrderId);
+    if (safeEmail) params.set("email", safeEmail);
+  } else if (status === "failed") {
+    const safeError = String(errorMessage || "").trim();
+    if (safeError) params.set("error", safeError);
+  }
+  return `/checkout/confirmation?${params.toString()}`;
+}
+
 function buildCartItemMeta(item: CartItem): string {
   const parts = [item.variant.color, item.variant.size].filter(Boolean).map((entry) => String(entry || "").trim());
   parts.push(`Qtd ${Math.max(1, Number(item.qty || 1))}`);
   return parts.filter(Boolean).join(" Â· ");
 }
 
+function persistCheckoutConfirmationSnapshot(snapshot: CheckoutConfirmationSnapshot): void {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.setItem(CHECKOUT_CONFIRMATION_SNAPSHOT_KEY, JSON.stringify(snapshot));
+  } catch {}
+}
+
 export function CheckoutClient() {
+  const router = useRouter();
   const checkoutEnabled = isCheckoutEnabled();
   const [stripePromise, setStripePromise] = useState<Promise<Stripe | null> | null>(null);
   const [stripeStatus, setStripeStatus] = useState<"loading" | "ready" | "missing">("loading");
@@ -622,6 +671,34 @@ export function CheckoutClient() {
   const [touchedFields, setTouchedFields] = useState<Partial<Record<RequiredCheckoutField, boolean>>>({});
   const requiresGuestEmail = !accountEmail;
   const checkoutEmail = normalizeEmail(accountEmail || form.guestEmail);
+  const billingFullName = useMemo(
+    () => [String(form.firstName || "").trim(), String(form.lastName || "").trim()].filter(Boolean).join(" ").trim(),
+    [form.firstName, form.lastName]
+  );
+  const boletoBillingAddress = useMemo(
+    () => ({
+      line1: [String(form.line1 || "").trim(), String(form.number || "").trim()].filter(Boolean).join(", "),
+      city: String(form.city || "").trim(),
+      state: normalizeState(form.state),
+      postalCode: normalizePostalCode(form.postalCode),
+      country: normalizeCountry(form.country) || "BR",
+    }),
+    [form.city, form.country, form.line1, form.number, form.postalCode, form.state]
+  );
+  const boletoPaymentReady = useMemo(
+    () =>
+      Boolean(
+        intent?.clientSecret &&
+          billingFullName &&
+          checkoutEmail &&
+          normalizeCpf(form.cpf).length === 11 &&
+          boletoBillingAddress.line1 &&
+          boletoBillingAddress.city &&
+          boletoBillingAddress.state &&
+          boletoBillingAddress.postalCode
+      ),
+    [billingFullName, boletoBillingAddress, checkoutEmail, form.cpf, intent?.clientSecret]
+  );
 
   const fieldErrors = useMemo(
     () => collectRequiredFieldErrors(form, isAddressResolved, requiresGuestEmail),
@@ -683,6 +760,15 @@ export function CheckoutClient() {
     if (selectedPaymentMethod === "card") return;
     setSelectedInstallments(1);
   }, [selectedPaymentMethod]);
+
+  useEffect(() => {
+    if (selectedPaymentMethod === "boleto") {
+      setSubmitPaymentAction(null);
+      setPaymentElementState({ ready: boletoPaymentReady, complete: boletoPaymentReady });
+      return;
+    }
+    setPaymentElementState({ ready: false, complete: false });
+  }, [boletoPaymentReady, selectedPaymentMethod]);
 
   useEffect(() => {
     const cep = normalizePostalCode(form.postalCode);
@@ -1323,6 +1409,21 @@ export function CheckoutClient() {
           ? result.paymentMethodTypes.map((entry) => String(entry || "").trim().toLowerCase()).filter(Boolean)
           : [],
       });
+      persistCheckoutConfirmationSnapshot({
+        orderId: String(result.orderId || "").trim(),
+        orderNumber: String(result.orderNumber || "").trim(),
+        email: String(result.customerEmail || checkoutEmail || "").trim(),
+        totalLabel: formatCurrencyBrlFromCents(totalCents),
+        itemCount: syncedItems.reduce((sum, item) => sum + Math.max(1, Number(item.qty || 1)), 0),
+        items: syncedItems.map((item) => ({
+          id: String(item.key || item.productId || "").trim(),
+          name: item.name,
+          variant: buildCartItemMeta(item),
+          priceLabel: formatCurrencyBrlFromCents(Math.max(0, Number(item.unitAmount || 0) * Math.max(1, Number(item.qty || 1)))),
+          imageSrc: item.imageUrl || "",
+          qty: Math.max(1, Number(item.qty || 1)),
+        })),
+      });
       return true;
     } catch (error: unknown) {
       const message = resolveCheckoutErrorMessage(error, "Nao foi possivel iniciar pagamento.");
@@ -1431,6 +1532,92 @@ export function CheckoutClient() {
     }
   }
 
+  const submitBoletoPayment = useCallback(async (): Promise<boolean> => {
+    if (!intent?.clientSecret) {
+      setErrorMessage("Pagamento ainda nao foi preparado.");
+      return false;
+    }
+    if (!boletoPaymentReady) {
+      setErrorMessage("Preencha os dados obrigatorios antes de confirmar o boleto.");
+      return false;
+    }
+    if (!stripePromise) {
+      setErrorMessage("Pagamento indisponivel no momento.");
+      return false;
+    }
+
+    const stripe = await stripePromise;
+    if (!stripe) {
+      setErrorMessage("Pagamento indisponivel no momento.");
+      return false;
+    }
+
+    const result = await stripe.confirmBoletoPayment(String(intent.clientSecret || "").trim(), {
+      payment_method: {
+        boleto: {
+          tax_id: normalizeCpf(form.cpf),
+        },
+        billing_details: {
+          name: billingFullName,
+          email: intent.customerEmail || checkoutEmail,
+          address: {
+            line1: boletoBillingAddress.line1,
+            city: boletoBillingAddress.city,
+            state: boletoBillingAddress.state,
+            postal_code: boletoBillingAddress.postalCode,
+            country: boletoBillingAddress.country,
+          },
+        },
+      },
+    });
+
+    if (result.error) {
+      router.push(
+        buildConfirmationPath(
+          "failed",
+          intent.orderId,
+          intent.customerEmail || checkoutEmail,
+          String(result.error.message || "Nao foi possivel gerar o boleto.").trim()
+        )
+      );
+      return false;
+    }
+
+    const status = String(result.paymentIntent?.status || "").toLowerCase();
+    if (status === "processing" || status === "requires_action" || status === "succeeded") {
+      replaceCartItems([], currency);
+      router.push(buildConfirmationPath("processing", intent.orderId, intent.customerEmail || checkoutEmail));
+      return true;
+    }
+
+    router.push(
+      buildConfirmationPath(
+        "failed",
+        intent.orderId,
+        intent.customerEmail || checkoutEmail,
+        status ? `Status inesperado: ${status}` : "Nao foi possivel gerar o boleto."
+      )
+    );
+    return false;
+  }, [
+    billingFullName,
+    boletoBillingAddress.city,
+    boletoBillingAddress.country,
+    boletoBillingAddress.line1,
+    boletoBillingAddress.postalCode,
+    boletoBillingAddress.state,
+    boletoPaymentReady,
+    checkoutEmail,
+    currency,
+    form.cpf,
+    intent?.clientSecret,
+    intent?.customerEmail,
+    intent?.orderId,
+    replaceCartItems,
+    router,
+    stripePromise,
+  ]);
+
   async function handlePaymentConfirm() {
     if (!completed.address) {
       setActiveStep("address");
@@ -1447,7 +1634,12 @@ export function CheckoutClient() {
     setHasAutoAttemptedIntent(true);
     const ok = await ensurePaymentIntent();
     if (!ok) return;
-    if (!paymentElementState.ready || !paymentElementState.complete) {
+    if (selectedPaymentMethod === "boleto") {
+      if (!boletoPaymentReady) {
+        setErrorMessage("Preencha os dados obrigatorios antes de revisar o pedido.");
+        return;
+      }
+    } else if (!paymentElementState.ready || !paymentElementState.complete) {
       setErrorMessage("Preencha os dados de pagamento antes de revisar o pedido.");
       return;
     }
@@ -1457,6 +1649,11 @@ export function CheckoutClient() {
   }
 
   async function handleReviewSubmit() {
+    if (selectedPaymentMethod === "boleto") {
+      setErrorMessage("");
+      await submitBoletoPayment();
+      return;
+    }
     if (!submitPaymentAction) {
       setErrorMessage("Volte para a etapa de pagamento e preencha os dados antes de confirmar.");
       setActiveStep("payment");
@@ -1529,21 +1726,6 @@ export function CheckoutClient() {
       line2: "Pagamento a vista",
     };
   }, [selectedInstallmentLabel, selectedPaymentMethod]);
-  const billingFullName = useMemo(
-    () => [String(form.firstName || "").trim(), String(form.lastName || "").trim()].filter(Boolean).join(" ").trim(),
-    [form.firstName, form.lastName]
-  );
-  const boletoBillingAddress = useMemo(
-    () => ({
-      line1: [String(form.line1 || "").trim(), String(form.number || "").trim()].filter(Boolean).join(", "),
-      city: String(form.city || "").trim(),
-      state: normalizeState(form.state),
-      postalCode: normalizePostalCode(form.postalCode),
-      country: normalizeCountry(form.country) || "BR",
-    }),
-    [form.city, form.country, form.line1, form.number, form.postalCode, form.state]
-  );
-
   if (gateError && !checkoutEnabled) {
     return (
       <section className={styles.maintenanceBox}>
@@ -2055,16 +2237,10 @@ export function CheckoutClient() {
                 </div>
               )}
 
-              {selectedPaymentMethod !== "card" && intent?.clientSecret && stripePromise ? (
+              {selectedPaymentMethod === "google_pay" && intent?.clientSecret && stripePromise ? (
                 <div
-                  className={
-                    selectedPaymentMethod === "boleto"
-                      ? styles.hiddenPaymentHost
-                      : activeStep === "payment"
-                        ? styles.securePaymentBox
-                        : styles.hiddenPaymentHost
-                  }
-                  aria-hidden={selectedPaymentMethod === "boleto" || activeStep !== "payment"}
+                  className={activeStep === "payment" ? styles.securePaymentBox : styles.hiddenPaymentHost}
+                  aria-hidden={activeStep !== "payment"}
                 >
                   <Elements stripe={stripePromise} options={elementsOptions}>
                     <CheckoutPaymentForm
@@ -2072,10 +2248,7 @@ export function CheckoutClient() {
                       customerEmail={intent.customerEmail || checkoutEmail}
                       clientSecret={intent.clientSecret}
                       paymentMethodOrder={stripePaymentMethodOrder}
-                      mode={selectedPaymentMethod === "boleto" ? "boleto" : "payment"}
-                      billingNameDefault={billingFullName}
-                      billingTaxId={normalizeCpf(form.cpf)}
-                      billingAddress={boletoBillingAddress}
+                      mode="payment"
                       onElementStateChange={setPaymentElementState}
                       onSubmitActionChange={setSubmitPaymentAction}
                       showSubmitButton={false}
@@ -2123,7 +2296,7 @@ export function CheckoutClient() {
                 </div>
               </article>
 
-              {submitPaymentAction ? (
+              {selectedPaymentMethod === "boleto" || submitPaymentAction ? (
                 <button type="button" className={styles.primaryAction} onClick={handleReviewSubmit}>
                   Confirmar pedido
                 </button>
