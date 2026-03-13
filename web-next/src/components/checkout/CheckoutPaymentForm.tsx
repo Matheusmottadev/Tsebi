@@ -285,7 +285,12 @@ export function CheckoutPaymentForm({
         router.push(processingPath);
         return true;
       }
-      if (paymentIntentStatus === "requires_action" && isBoletoMode) {
+      if (paymentIntentStatus === "requires_action") {
+        clearCart();
+        router.push(processingPath);
+        return true;
+      }
+      if (paymentIntentStatus === "requires_capture") {
         clearCart();
         router.push(processingPath);
         return true;

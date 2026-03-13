@@ -237,6 +237,40 @@
   border-bottom-color: #999;
 }
 
+.passwordInputWrap {
+  position: relative;
+}
+
+.passwordInput {
+  padding-right: 36px !important;
+}
+
+.passwordToggle {
+  position: absolute;
+  right: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 24px;
+  height: 24px;
+  border: 0;
+  background: transparent;
+  color: #a9a9a9;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+}
+
+.passwordToggle:hover {
+  color: #444;
+}
+
+.passwordToggle svg {
+  width: 16px;
+  height: 16px;
+  display: block;
+}
+
 .inputError {
   border-bottom-color: #c12424 !important;
 }

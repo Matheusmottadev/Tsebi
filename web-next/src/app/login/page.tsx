@@ -59,6 +59,25 @@ function PasskeyIcon() {
   );
 }
 
+function EyeIcon({ open }: { open: boolean }) {
+  if (open) {
+    return (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" aria-hidden="true">
+        <path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6-10-6-10-6z" />
+        <circle cx="12" cy="12" r="3" />
+      </svg>
+    );
+  }
+
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" aria-hidden="true">
+      <path d="M3 3l18 18" />
+      <path d="M10.6 6.3A10.7 10.7 0 0 1 12 6c6.5 0 10 6 10 6a18 18 0 0 1-4 4.8" />
+      <path d="M6.5 6.8A18.7 18.7 0 0 0 2 12s3.5 6 10 6c1.3 0 2.5-.2 3.6-.6" />
+    </svg>
+  );
+}
+
 function normalizeEmail(value: string): string {
   return String(value || "").trim().toLowerCase();
 }
@@ -190,6 +209,7 @@ export default function LoginPage() {
   const [activeEmail, setActiveEmail] = useState("");
   const [name, setName] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [code, setCode] = useState("");
 
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
@@ -783,15 +803,25 @@ export default function LoginPage() {
               <label className={styles.label} htmlFor="login-password">
                 SENHA
               </label>
-              <input
-                id="login-password"
-                className={`${styles.input} ${fieldErrors.password ? styles.inputError : ""}`}
-                type="password"
-                autoComplete="current-password"
-                value={password}
-                onChange={(event) => setPassword(event.target.value)}
-                placeholder="Digite sua senha"
-              />
+              <div className={styles.passwordInputWrap}>
+                <input
+                  id="login-password"
+                  className={`${styles.input} ${styles.passwordInput} ${fieldErrors.password ? styles.inputError : ""}`}
+                  type={showPassword ? "text" : "password"}
+                  autoComplete="current-password"
+                  value={password}
+                  onChange={(event) => setPassword(event.target.value)}
+                  placeholder="Digite sua senha"
+                />
+                <button
+                  type="button"
+                  className={styles.passwordToggle}
+                  onClick={() => setShowPassword((current) => !current)}
+                  aria-label={showPassword ? "Ocultar senha" : "Mostrar senha"}
+                >
+                  <EyeIcon open={showPassword} />
+                </button>
+              </div>
               {fieldErrors.password ? <small className={styles.fieldError}>{fieldErrors.password}</small> : null}
             </div>
 
