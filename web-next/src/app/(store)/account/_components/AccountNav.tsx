@@ -10,7 +10,7 @@ const TABS: { key: AccountTab; label: string }[] = [
   { key: "appointments", label: "Atendimentos Privados" },
   { key: "wishlist", label: "Lista de Desejos" },
   { key: "recommendations", label: "Recomendações" },
-  { key: "repairs", label: "Serviço de Reparos" },
+  { key: "repairs", label: "Serviços de Reparo" },
 ];
 
 type Props = {

@@ -22,11 +22,16 @@ const STEPS = [
   },
   {
     num: "02",
+    title: "Análise",
+    desc: "Nossa equipe avalia a solicitação e define o melhor procedimento para o reparo.",
+  },
+  {
+    num: "03",
     title: "Envio",
     desc: "Envie a peça para o nosso ateliê. Instruções de envio serão enviadas por email.",
   },
   {
-    num: "03",
+    num: "04",
     title: "Devolução",
     desc: "Após o reparo, a peça é devolvida ao endereço indicado com frete incluso.",
   },
@@ -46,9 +51,9 @@ export function RepairsTab({ user }: Props) {
   const [description, setDescription] = useState("");
 
   const defaultAddr =
-    user.addresses.find((a) => a.id === user.defaultAddressId) ?? user.addresses[0] ?? null;
+    user.addresses.find((address) => address.id === user.defaultAddressId) ?? user.addresses[0] ?? null;
   const defaultAddrStr = defaultAddr
-    ? `${defaultAddr.street}${defaultAddr.number ? `, ${defaultAddr.number}` : ""} — ${defaultAddr.city}, ${defaultAddr.state}`
+    ? `${defaultAddr.street}${defaultAddr.number ? `, ${defaultAddr.number}` : ""} - ${defaultAddr.city}, ${defaultAddr.state}`
     : "";
   const [returnAddress, setReturnAddress] = useState(defaultAddrStr);
 
@@ -60,11 +65,11 @@ export function RepairsTab({ user }: Props) {
     listMyOrders()
       .then((orders) => {
         const delivered = orders
-          .filter((o) => o.currentStatus === "DELIVERED")
-          .flatMap((o) =>
-            o.items.map((item) => ({
-              id: `${o.id}__${item.id}`,
-              label: `${item.name} — Pedido #${o.orderNumber ?? o.id}`,
+          .filter((order) => order.currentStatus === "DELIVERED")
+          .flatMap((order) =>
+            order.items.map((item) => ({
+              id: `${order.id}__${item.id}`,
+              label: `${item.name} - Pedido #${order.orderNumber ?? order.id}`,
             }))
           );
         setDeliveredOrders(delivered);
@@ -73,8 +78,8 @@ export function RepairsTab({ user }: Props) {
       .catch(() => {});
   }, []);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSubmit = async (event: React.FormEvent) => {
+    event.preventDefault();
     if (!selectedOrder || !repairType || !description) return;
     setSubmitting(true);
     setSubmitError(null);
@@ -97,7 +102,6 @@ export function RepairsTab({ user }: Props) {
 
   return (
     <div>
-      {/* ── Banner ── */}
       <div className={styles.repairBanner}>
         <h2 className={styles.repairBannerTitle}>Compromisso com a durabilidade</h2>
         <p className={styles.repairBannerDesc}>
@@ -107,7 +111,6 @@ export function RepairsTab({ user }: Props) {
         </p>
       </div>
 
-      {/* ── Process Steps ── */}
       <div className={styles.stepsRow}>
         {STEPS.map(({ num, title, desc }) => (
           <div key={num} className={styles.step}>
@@ -118,7 +121,6 @@ export function RepairsTab({ user }: Props) {
         ))}
       </div>
 
-      {/* ── Repair Form ── */}
       <form onSubmit={handleSubmit}>
         <div className={styles.formGrid} style={{ maxWidth: 640 }}>
           <div className={styles.field} style={{ gridColumn: "1 / -1" }}>
@@ -127,7 +129,7 @@ export function RepairsTab({ user }: Props) {
               <select
                 className={styles.fieldSelect}
                 value={selectedOrder}
-                onChange={(e) => setSelectedOrder(e.target.value)}
+                onChange={(event) => setSelectedOrder(event.target.value)}
               >
                 {deliveredOrders.map(({ id, label }) => (
                   <option key={id} value={id}>
@@ -139,7 +141,7 @@ export function RepairsTab({ user }: Props) {
               <input
                 className={styles.fieldInput}
                 value={selectedOrder}
-                onChange={(e) => setSelectedOrder(e.target.value)}
+                onChange={(event) => setSelectedOrder(event.target.value)}
                 placeholder="Descreva a peça (ex: Genesis Blazer, tamanho M)"
               />
             )}
@@ -150,11 +152,11 @@ export function RepairsTab({ user }: Props) {
             <select
               className={styles.fieldSelect}
               value={repairType}
-              onChange={(e) => setRepairType(e.target.value)}
+              onChange={(event) => setRepairType(event.target.value)}
             >
-              {REPAIR_TYPES.map((t) => (
-                <option key={t} value={t}>
-                  {t}
+              {REPAIR_TYPES.map((type) => (
+                <option key={type} value={type}>
+                  {type}
                 </option>
               ))}
             </select>
@@ -165,8 +167,8 @@ export function RepairsTab({ user }: Props) {
             <textarea
               className={styles.fieldTextarea}
               value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              placeholder="Descreva detalhadamente o que precisa ser reparado…"
+              onChange={(event) => setDescription(event.target.value)}
+              placeholder="Descreva detalhadamente o que precisa ser reparado..."
               rows={4}
             />
           </div>
@@ -176,15 +178,13 @@ export function RepairsTab({ user }: Props) {
             <input
               className={styles.fieldInput}
               value={returnAddress}
-              onChange={(e) => setReturnAddress(e.target.value)}
+              onChange={(event) => setReturnAddress(event.target.value)}
               placeholder="Rua, número, cidade, estado"
             />
           </div>
         </div>
 
-        {submitError && (
-          <p style={{ color: "var(--error)", fontSize: 13, marginTop: 12 }}>{submitError}</p>
-        )}
+        {submitError ? <p style={{ color: "var(--error)", fontSize: 13, marginTop: 12 }}>{submitError}</p> : null}
 
         <div className={styles.formActions}>
           <button
@@ -192,11 +192,7 @@ export function RepairsTab({ user }: Props) {
             className={`${styles.btnPill} ${styles.btnPillFilled}`}
             disabled={submitting || !description || !selectedOrder}
           >
-            {submitted
-              ? "Solicitação enviada!"
-              : submitting
-              ? "Enviando…"
-              : "Solicitar reparo"}
+            {submitted ? "Solicitação enviada!" : submitting ? "Enviando..." : "Solicitar reparo"}
           </button>
         </div>
       </form>
