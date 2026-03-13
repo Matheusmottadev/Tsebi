@@ -12,6 +12,14 @@ import { createAuditPage } from "./audit.js";
 import { createWhatsAppPage } from "./whatsapp.js";
 
 const studioFlowKey = "tsebi-studio-entry-ok";
+const studioSessionState = {
+  idleTimeoutMs: 20 * 60 * 1000,
+  lastActivityAt: 0,
+  lastRefreshAt: 0,
+  timerId: null,
+  inFlight: false,
+  bound: false
+};
 
 function currentPath() {
   return `${window.location.pathname}${window.location.search}${window.location.hash}`;
@@ -75,12 +83,67 @@ function sendStudioLogoutBeacon() {
 }
 
 async function ensureAdminSession() {
-  const session = await api("/api/studio-auth/me", { suppressAuthRedirect: false });
+  const session = await api("/api/studio-auth/me", { suppressAuthRedirect: false, cache: "no-store" });
   if (!session?.authenticated) {
     throw new Error(String(session?.stage || "ADMIN_UNAUTHORIZED"));
   }
   setCsrfToken(String(session.csrfToken || ""));
+  studioSessionState.idleTimeoutMs = Math.max(60_000, Number(session.idleTimeoutMs || studioSessionState.idleTimeoutMs));
+  studioSessionState.lastActivityAt = Date.now();
+  studioSessionState.lastRefreshAt = Date.now();
   return session;
+}
+
+function markStudioActivity() {
+  studioSessionState.lastActivityAt = Date.now();
+}
+
+function keepAliveIntervalMs() {
+  return Math.min(5 * 60 * 1000, Math.max(60 * 1000, Math.floor(studioSessionState.idleTimeoutMs / 3)));
+}
+
+async function refreshStudioSession(options = {}) {
+  const force = Boolean(options.force);
+  if (studioSessionState.inFlight) return true;
+
+  const now = Date.now();
+  if (!force) {
+    if (document.visibilityState === "hidden") return true;
+    if (now - studioSessionState.lastActivityAt > studioSessionState.idleTimeoutMs) return true;
+    if (now - studioSessionState.lastRefreshAt < keepAliveIntervalMs()) return true;
+  }
+
+  studioSessionState.inFlight = true;
+  try {
+    await ensureAdminSession();
+    return true;
+  } finally {
+    studioSessionState.inFlight = false;
+  }
+}
+
+function startStudioSessionKeepAlive() {
+  if (!studioSessionState.bound) {
+    const activityHandler = () => markStudioActivity();
+    ["pointerdown", "keydown", "mousemove", "scroll", "focus"].forEach((eventName) => {
+      window.addEventListener(eventName, activityHandler, { passive: true });
+    });
+    document.addEventListener("visibilitychange", () => {
+      if (document.visibilityState === "visible") {
+        markStudioActivity();
+        refreshStudioSession({ force: true }).catch(() => {});
+      }
+    });
+    studioSessionState.bound = true;
+  }
+
+  if (studioSessionState.timerId) {
+    window.clearInterval(studioSessionState.timerId);
+  }
+
+  studioSessionState.timerId = window.setInterval(() => {
+    refreshStudioSession().catch(() => {});
+  }, 60 * 1000);
 }
 
 async function loadAdminProfile() {
@@ -188,10 +251,6 @@ function buildThemeDrawer({ currentTheme, currentAccent, onPick }) {
 async function main() {
   if (!ensureStudioEntryFlow()) return;
 
-  window.addEventListener("pagehide", () => {
-    sendStudioLogoutBeacon();
-  });
-
   const els = {
     globalSearch: document.getElementById("globalSearch"),
     refreshBtn: document.getElementById("refreshBtn"),
@@ -227,6 +286,7 @@ async function main() {
 
   try {
     const session = await ensureAdminSession();
+    startStudioSessionKeepAlive();
     els.adminAvatar.textContent = initials(session?.admin?.name || session?.admin?.email || "Admin");
     profile = await loadAdminProfile();
     applyTheme(profile?.theme || "system");

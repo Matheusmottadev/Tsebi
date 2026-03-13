@@ -74,7 +74,13 @@
     auditLogs: [],
     pendingOrderEdits: {},
     pendingProductEdits: {},
-    shippingLabelsByOrderId: {}
+    shippingLabelsByOrderId: {},
+    idleTimeoutMs: 20 * 60 * 1000,
+    lastActivityAt: 0,
+    lastKeepaliveAt: 0,
+    keepaliveTimerId: null,
+    keepaliveInFlight: false,
+    keepaliveBound: false
   };
 
   const orderStatuses = ["pending_payment", "processing", "paid", "failed", "canceled", "refunded"];
@@ -100,6 +106,72 @@
   function setHeadActionsVisible(visible) {
     if (!dom.adminHeadActions) return;
     dom.adminHeadActions.hidden = !visible;
+  }
+
+  function markStudioActivity() {
+    state.lastActivityAt = Date.now();
+  }
+
+  function keepaliveIntervalMs() {
+    return Math.min(5 * 60 * 1000, Math.max(60 * 1000, Math.floor(Number(state.idleTimeoutMs || 0) / 3 || 60 * 1000)));
+  }
+
+  async function refreshStudioSession(options = {}) {
+    const force = Boolean(options.force);
+    if (state.keepaliveInFlight) return true;
+
+    const now = Date.now();
+    if (!force) {
+      if (document.visibilityState === "hidden") return true;
+      if (now - state.lastActivityAt > state.idleTimeoutMs) return true;
+      if (now - state.lastKeepaliveAt < keepaliveIntervalMs()) return true;
+    }
+
+    state.keepaliveInFlight = true;
+    try {
+      const session = await api("/api/studio-auth/me", { suppressAuthRedirect: true, cache: "no-store" });
+      if (!session?.authenticated) {
+        redirectToStudioLogin(session?.stage || "ADMIN_UNAUTHORIZED");
+        return false;
+      }
+      state.csrfToken = String(session.csrfToken || "");
+      state.idleTimeoutMs = Math.max(60_000, Number(session.idleTimeoutMs || state.idleTimeoutMs));
+      state.lastActivityAt = now;
+      state.lastKeepaliveAt = now;
+      return true;
+    } catch (error) {
+      if (isStudioAuthError(error.code)) {
+        redirectToStudioLogin(error.code);
+        return false;
+      }
+      return true;
+    } finally {
+      state.keepaliveInFlight = false;
+    }
+  }
+
+  function startStudioSessionKeepAlive() {
+    if (!state.keepaliveBound) {
+      const activityHandler = () => markStudioActivity();
+      ["pointerdown", "keydown", "mousemove", "scroll", "focus"].forEach((eventName) => {
+        window.addEventListener(eventName, activityHandler, { passive: true });
+      });
+      document.addEventListener("visibilitychange", () => {
+        if (document.visibilityState === "visible") {
+          markStudioActivity();
+          refreshStudioSession({ force: true }).catch(() => {});
+        }
+      });
+      state.keepaliveBound = true;
+    }
+
+    if (state.keepaliveTimerId) {
+      window.clearInterval(state.keepaliveTimerId);
+    }
+
+    state.keepaliveTimerId = window.setInterval(() => {
+      refreshStudioSession().catch(() => {});
+    }, 60 * 1000);
   }
 
   if (!ensureStudioEntryFlow()) {
@@ -845,10 +917,14 @@
       }
 
       state.csrfToken = String(session.csrfToken || "");
+      state.idleTimeoutMs = Math.max(60_000, Number(session.idleTimeoutMs || state.idleTimeoutMs));
+      state.lastActivityAt = Date.now();
+      state.lastKeepaliveAt = Date.now();
       dom.adminIdentity.textContent = `Acesso admin liberado para ${session?.admin?.name || session?.admin?.email || "Administrador"}.`;
       dom.adminApp.hidden = false;
       dom.adminLocked.hidden = true;
       setHeadActionsVisible(true);
+      startStudioSessionKeepAlive();
       return true;
     } catch (error) {
       if (isStudioAuthError(error.code)) {
