@@ -30,11 +30,11 @@ const MONTH_NAMES = [
 ];
 const SERVICE_TYPES = [
   "Consultoria de estilo",
-  "Composicao de looks",
+  "Composição de looks",
   "Compra assistida",
-  "Cuidados com pecas",
+  "Cuidados com peças",
 ];
-const MODALITIES = ["WhatsApp", "Ligacao", "Videochamada"];
+const MODALITIES = ["WhatsApp", "Ligação", "Videochamada"];
 
 type Props = { user: PublicUser };
 
@@ -78,7 +78,7 @@ function normalizeModality(value: string): string {
   const normalized = String(value || "").trim().toLowerCase();
   if (normalized.includes("video")) return "Videochamada";
   if (normalized.includes("whats")) return "WhatsApp";
-  if (normalized.includes("liga")) return "Ligacao";
+  if (normalized.includes("liga")) return "Ligação";
   return MODALITIES[0] || "WhatsApp";
 }
 
