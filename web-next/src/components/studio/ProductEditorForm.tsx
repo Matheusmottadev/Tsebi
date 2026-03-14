@@ -67,7 +67,7 @@ function seedVariantStock(product: Product): Record<string, string> {
 
 function pickErrorMessage(error: unknown): string {
   if (error instanceof HttpError) {
-    if (error.status === 403) return "CSRF invalido. Recarregue a pagina e tente novamente.";
+    if (error.status === 403) return "CSRF inválido. Recarregue a página e tente novamente.";
     return error.message || "Falha ao salvar produto.";
   }
   if (error instanceof Error) return error.message || "Falha ao salvar produto.";

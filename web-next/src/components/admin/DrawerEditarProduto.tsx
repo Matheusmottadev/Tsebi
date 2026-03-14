@@ -371,7 +371,7 @@ export function DrawerEditarProduto({
 
     if (!String(sku || "").trim()) next.sku = "SKU obrigatorio.";
     if (!String(name || "").trim()) next.name = "Nome obrigatorio.";
-    if (parseMoneyToCents(price) <= 0) next.price = "Preco invalido.";
+    if (parseMoneyToCents(price) <= 0) next.price = "Preço inválido.";
 
     if (checkedSizes.length === 0) {
       next.sizes = "Selecione pelo menos um tamanho.";
@@ -520,7 +520,7 @@ export function DrawerEditarProduto({
 
     try {
       const identifier = String(product.dbId || product.id || product.sku || "").trim();
-      if (!identifier) throw new Error("Produto invalido.");
+      if (!identifier) throw new Error("Produto inválido.");
 
       const sizeLabels = checkedSizes;
       const normalizedColors = resolvedColors;
@@ -716,7 +716,7 @@ export function DrawerEditarProduto({
         <section className={styles.section}>
           <h4 className={styles.sectionTitle}>Status e Estoque</h4>
           <div className={styles.switchRow}>
-            <span className={styles.switchLabel}>Ativo / Inativo - quando inativo o produto nao aparece no site.</span>
+            <span className={styles.switchLabel}>Ativo / Inativo - quando inativo o produto não aparece no site.</span>
             <button
               type="button"
               className={`${styles.switchBtn} ${active ? styles.switchBtnOn : ""}`}

@@ -161,9 +161,9 @@ export function AppointmentsTab({ user }: Props) {
       })
       .catch((error) => {
         if (error instanceof HttpError) {
-          setHistoryError(error.message || "Nao foi possivel carregar seus agendamentos.");
+          setHistoryError(error.message || "Não foi possível carregar seus agendamentos.");
         } else {
-          setHistoryError("Nao foi possivel carregar seus agendamentos.");
+          setHistoryError("Não foi possível carregar seus agendamentos.");
         }
       })
       .finally(() => setHistoryLoading(false));
@@ -187,9 +187,9 @@ export function AppointmentsTab({ user }: Props) {
         setSlots([]);
         setSelectedSlotId("");
         if (error instanceof HttpError) {
-          setSlotsError(error.message || "Nao foi possivel carregar os horarios.");
+          setSlotsError(error.message || "Não foi possível carregar os horários.");
         } else {
-          setSlotsError("Nao foi possivel carregar os horarios.");
+          setSlotsError("Não foi possível carregar os horários.");
         }
       })
       .finally(() => setSlotsLoading(false));
@@ -275,9 +275,9 @@ export function AppointmentsTab({ user }: Props) {
       await refreshDaySlots();
     } catch (error) {
       if (error instanceof HttpError) {
-        setFlash(error.message || "Nao foi possivel confirmar o agendamento.");
+        setFlash(error.message || "Não foi possível confirmar o agendamento.");
       } else {
-        setFlash("Nao foi possivel confirmar o agendamento.");
+        setFlash("Não foi possível confirmar o agendamento.");
       }
     } finally {
       setSubmitting(false);
@@ -297,9 +297,9 @@ export function AppointmentsTab({ user }: Props) {
       await refreshDaySlots();
     } catch (error) {
       if (error instanceof HttpError) {
-        setFlash(error.message || "Nao foi possivel cancelar o agendamento.");
+        setFlash(error.message || "Não foi possível cancelar o agendamento.");
       } else {
-        setFlash("Nao foi possivel cancelar o agendamento.");
+        setFlash("Não foi possível cancelar o agendamento.");
       }
     } finally {
       setCancelingId("");
@@ -359,8 +359,8 @@ export function AppointmentsTab({ user }: Props) {
 
         {selectedDay ? (
           <div className={styles.slotsSection}>
-            <p className={styles.slotsTitle}>Horarios disponiveis</p>
-            {slotsLoading ? <p className={styles.loading}>Carregando horarios...</p> : null}
+            <p className={styles.slotsTitle}>Horários disponíveis</p>
+            {slotsLoading ? <p className={styles.loading}>Carregando horários...</p> : null}
             {slotsError ? <p className={styles.errorState}>{slotsError}</p> : null}
             {!slotsLoading && !slotsError ? (
               <>
@@ -378,7 +378,7 @@ export function AppointmentsTab({ user }: Props) {
                 </div>
                 {!slots.length ? (
                   <p className={styles.appointmentsHint}>
-                    Nenhum horario futuro liberado para esta data. Horarios que ja passaram nao aparecem aqui.
+                    Nenhum horário futuro liberado para esta data. Horários que já passaram não aparecem aqui.
                   </p>
                 ) : null}
                 {selectedSlot ? <p className={styles.appointmentsHint}>{selectedSlot.label || "Atendimento privado"}</p> : null}
@@ -396,7 +396,7 @@ export function AppointmentsTab({ user }: Props) {
           {!historyLoading && !historyError && !sortedAppointments.length ? (
             <div className={styles.emptyState}>
               <p className={styles.emptyTitle}>Nenhum atendimento agendado</p>
-              <p className={styles.emptyDesc}>Quando voce confirmar um horario, ele aparecera aqui e no admin.</p>
+              <p className={styles.emptyDesc}>Quando você confirmar um horário, ele aparecerá aqui e no admin.</p>
             </div>
           ) : null}
           {!historyLoading && !historyError && sortedAppointments.length ? (
@@ -515,7 +515,7 @@ export function AppointmentsTab({ user }: Props) {
             <span className={styles.summaryVal}>{formatSelectedDate()}</span>
           </div>
           <div className={styles.summaryRow}>
-            <span className={styles.summaryKey}>Horario</span>
+            <span className={styles.summaryKey}>Horário</span>
             <span className={styles.summaryVal}>{selectedSlot?.time || "-"}</span>
           </div>
           <div className={styles.summaryRow}>

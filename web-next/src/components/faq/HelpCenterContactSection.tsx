@@ -28,7 +28,7 @@ export function HelpCenterContactSection() {
         <div className={styles.grid}>
           <article className={styles.card} aria-label="Fale Conosco">
             <h3 className={styles.cardTitle}>Fale Conosco</h3>
-            <p className={styles.cardText}>Nosso atendimento por telefone esta pronto para ajudar em duvidas sobre compras e suporte.</p>
+            <p className={styles.cardText}>Nosso atendimento por telefone está pronto para ajudar em dúvidas sobre compras e suporte.</p>
             <ul className={styles.hours}>
               <li>Segunda a Sabado: 09h as 20h</li>
               <li>Domingo: Fechado</li>
@@ -55,7 +55,7 @@ export function HelpCenterContactSection() {
 
           <article className={styles.card} aria-label="Envie uma Mensagem">
             <h3 className={styles.cardTitle}>Envie uma Mensagem</h3>
-            <p className={styles.cardText}>Fale com nossa equipe via WhatsApp para suporte rapido durante o horario de atendimento.</p>
+            <p className={styles.cardText}>Fale com nossa equipe via WhatsApp para suporte rápido durante o horário de atendimento.</p>
             <ul className={styles.hours}>
               <li>Segunda a Sabado: 09h as 20h</li>
               <li>Domingo: Fechado</li>

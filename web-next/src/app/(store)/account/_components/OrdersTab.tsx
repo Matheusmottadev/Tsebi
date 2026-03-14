@@ -23,7 +23,7 @@ function getStatusMeta(order: Order): { label: string; cls: string } {
   const s = order.currentStatus ?? order.status;
   if (s === "DELIVERED") return { label: "Entregue", cls: styles.statusGreen };
   if (s === "IN_TRANSIT" || s === "OUT_FOR_DELIVERY" || s === "SHIPPED") {
-    return { label: "Em transito", cls: styles.statusYellow };
+    return { label: "Em trânsito", cls: styles.statusYellow };
   }
   if (order.status === "failed" || order.status === "canceled") {
     return { label: order.status === "failed" ? "Falhou" : "Cancelado", cls: styles.statusRed };
@@ -113,7 +113,7 @@ function OrderRow({ order }: { order: Order }) {
             {(order.trackingCode || order.carrier) && (
               <p className={styles.trackingInfo}>
                 {order.carrier && <span>Transportadora: {order.carrier} · </span>}
-                {order.trackingCode && <span>Codigo: {order.trackingCode}</span>}
+                {order.trackingCode && <span>Código: {order.trackingCode}</span>}
               </p>
             )}
 
@@ -146,7 +146,7 @@ function OrderRow({ order }: { order: Order }) {
             <div className={styles.orderActions}>
               {isDelivered && (
                 <button type="button" className={styles.btnPill}>
-                  Solicitar troca ou devolucao
+                  Solicitar troca ou devolução
                 </button>
               )}
               {isFailed && (
@@ -175,12 +175,12 @@ export function OrdersTab() {
   }, []);
 
   if (loading) return <div className={styles.loading}>Carregando pedidos...</div>;
-  if (error) return <div className={styles.errorState}>Nao foi possivel carregar os pedidos.</div>;
+  if (error) return <div className={styles.errorState}>Não foi possível carregar os pedidos.</div>;
   if (!orders.length) {
     return (
       <div className={styles.emptyState}>
         <p className={styles.emptyTitle}>Nenhum pedido ainda</p>
-        <p className={styles.emptyDesc}>Seus pedidos aparecerao aqui apos a primeira compra.</p>
+        <p className={styles.emptyDesc}>Seus pedidos aparecerão aqui após a primeira compra.</p>
       </div>
     );
   }

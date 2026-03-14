@@ -459,11 +459,11 @@ function firstRequiredFieldError(errors: CheckoutFieldErrors): string | null {
 function mapDiscountCodeErrorMessage(raw: string): string {
   const normalized = String(raw || "").trim().toUpperCase();
   if (!normalized) return "";
-  if (normalized.includes("INVALID_CODE")) return "Informe um codigo valido.";
-  if (normalized.includes("CODE_NOT_FOUND")) return "Codigo nao encontrado.";
-  if (normalized.includes("CODE_INACTIVE")) return "Codigo inativo.";
-  if (normalized.includes("CODE_NOT_AVAILABLE_NOW")) return "Codigo fora do periodo de validade.";
-  if (normalized.includes("CODE_NOT_APPLICABLE")) return "Codigo nao aplicavel para este carrinho.";
+  if (normalized.includes("INVALID_CODE")) return "Informe um código válido.";
+  if (normalized.includes("CODE_NOT_FOUND")) return "Código não encontrado.";
+  if (normalized.includes("CODE_INACTIVE")) return "Código inativo.";
+  if (normalized.includes("CODE_NOT_AVAILABLE_NOW")) return "Código fora do período de validade.";
+  if (normalized.includes("CODE_NOT_APPLICABLE")) return "Código não aplicável para este carrinho.";
   return "";
 }
 
@@ -1114,13 +1114,13 @@ export function CheckoutClient() {
     const code = normalizeDiscountCode(form.couponCode);
     if (!code) {
       clearAppliedCouponState({ clearFeedback: false });
-      setCouponFeedback("Informe um codigo valido.");
+      setCouponFeedback("Informe um código válido.");
       setCouponFeedbackTone("error");
       return;
     }
 
     setIsApplyingCoupon(true);
-    setCouponFeedback("Validando codigo...");
+    setCouponFeedback("Validando código...");
     setCouponFeedbackTone("");
 
     try {
@@ -1138,7 +1138,7 @@ export function CheckoutClient() {
       invalidatePreparedPayment();
     } catch (error: unknown) {
       clearAppliedCouponState({ clearFeedback: false });
-      setCouponFeedback(resolveCheckoutErrorMessage(error, "Nao foi possivel aplicar o codigo."));
+      setCouponFeedback(resolveCheckoutErrorMessage(error, "Não foi possível aplicar o código."));
       setCouponFeedbackTone("error");
       invalidatePreparedPayment();
     } finally {
@@ -1435,7 +1435,7 @@ export function CheckoutClient() {
       });
       return true;
     } catch (error: unknown) {
-      const message = resolveCheckoutErrorMessage(error, "Nao foi possivel iniciar pagamento.");
+      const message = resolveCheckoutErrorMessage(error, "Não foi possível iniciar pagamento.");
       setErrorMessage(message);
       return false;
     } finally {
@@ -1462,14 +1462,14 @@ export function CheckoutClient() {
         couponPreviewKeyRef.current = previewKey;
         setAppliedCouponCode(normalizeDiscountCode(String(result.code || code)));
         setDiscountCents(Math.max(0, Number(result.discountCents || 0)));
-        setCouponFeedback("Codigo aplicado com sucesso.");
+        setCouponFeedback("Código aplicado com sucesso.");
         setCouponFeedbackTone("success");
         invalidatePreparedPayment();
       })
       .catch((error: unknown) => {
         if (!isActive) return;
         clearAppliedCouponState({ clearFeedback: false });
-        setCouponFeedback(resolveCheckoutErrorMessage(error, "Nao foi possivel aplicar o codigo."));
+        setCouponFeedback(resolveCheckoutErrorMessage(error, "Não foi possível aplicar o código."));
         setCouponFeedbackTone("error");
         invalidatePreparedPayment();
       })
@@ -1543,11 +1543,11 @@ export function CheckoutClient() {
 
   const submitBoletoPayment = useCallback(async (): Promise<boolean> => {
     if (!intent?.clientSecret) {
-      setErrorMessage("Pagamento ainda nao foi preparado.");
+      setErrorMessage("Pagamento ainda não foi preparado.");
       return false;
     }
     if (!boletoPaymentReady) {
-      setErrorMessage("Preencha os dados obrigatorios antes de confirmar o boleto.");
+      setErrorMessage("Preencha os dados obrigatórios antes de confirmar o boleto.");
       return false;
     }
     if (!stripePromise) {
@@ -1586,7 +1586,7 @@ export function CheckoutClient() {
           "failed",
           intent.orderId,
           intent.customerEmail || checkoutEmail,
-          String(result.error.message || "Nao foi possivel gerar o boleto.").trim()
+          String(result.error.message || "Não foi possível gerar o boleto.").trim()
         )
       );
       return false;
@@ -1604,7 +1604,7 @@ export function CheckoutClient() {
         "failed",
         intent.orderId,
         intent.customerEmail || checkoutEmail,
-        status ? `Status inesperado: ${status}` : "Nao foi possivel gerar o boleto."
+        status ? `Status inesperado: ${status}` : "Não foi possível gerar o boleto."
       )
     );
     return false;
@@ -1645,7 +1645,7 @@ export function CheckoutClient() {
     if (!ok) return;
     if (selectedPaymentMethod === "boleto") {
       if (!boletoPaymentReady) {
-        setErrorMessage("Preencha os dados obrigatorios antes de revisar o pedido.");
+        setErrorMessage("Preencha os dados obrigatórios antes de revisar o pedido.");
         return;
       }
     } else if (!paymentElementState.ready || !paymentElementState.complete) {
@@ -1731,7 +1731,7 @@ export function CheckoutClient() {
     if (selectedPaymentMethod === "boleto") {
       return {
         line1: "Boleto bancario",
-        line2: "Pagamento a vista",
+        line2: "Pagamento à vista",
       };
     }
     return {
@@ -2215,7 +2215,7 @@ export function CheckoutClient() {
 
                     <p className={styles.installmentNote}>
                       {installmentPlan.rule
-                        ? `Para o total atual, voce pode pagar em ate ${installmentPlan.installments}x sem juros. `
+                        ? `Para o total atual, você pode pagar em até ${installmentPlan.installments}x sem juros. `
                         : "Parcelamento sem juros disponivel a partir de R$ 500. "}
                       O numero maximo de parcelas varia conforme o valor total do pedido.
                     </p>
@@ -2226,7 +2226,7 @@ export function CheckoutClient() {
                       <>
                         <p className={styles.paymentMethodInfoTitle}>Boleto bancario</p>
                         <p className={styles.paymentMethodInfoText}>
-                          Pagamento a vista. O boleto e gerado apos clicar em Revisar pedido, com vencimento de 1 dia util.
+                          Pagamento à vista. O boleto é gerado após clicar em Revisar pedido, com vencimento de 1 dia útil.
                         </p>
                       </>
                     ) : (
@@ -2338,8 +2338,8 @@ export function CheckoutClient() {
               </button>
 
               <p className={styles.termsText}>
-                Ao confirmar, voce concorda com os <a href="/aviso-legal">Termos e condicoes</a> e com a{" "}
-                <a href="/politica-privacidade">Politica de Privacidade</a>.
+                Ao confirmar, você concorda com os <a href="/aviso-legal">Termos e condições</a> e com a{" "}
+                <a href="/politica-privacidade">Política de Privacidade</a>.
               </p>
             </section>
           ) : null}
@@ -2405,7 +2405,7 @@ export function CheckoutClient() {
                   spellCheck={false}
                   data-form-type="other"
                   data-lpignore="true"
-                  placeholder="Insira seu codigo"
+                  placeholder="Insira seu código"
                   value={form.couponCode}
                   onChange={handleInputChange}
                 />

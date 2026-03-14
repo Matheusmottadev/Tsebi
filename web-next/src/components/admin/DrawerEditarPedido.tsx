@@ -132,9 +132,9 @@ function normalizeDigits(value: string): string {
 
 function getSaveErrorMessage(error: unknown): string {
   if (error instanceof HttpError) {
-    if (error.message === "ORDER_REFUNDED_LOCKED") return "Pedido reembolsado nao pode mudar de status.";
-    if (error.message === "INVALID_INPUT") return "Dados invalidos ao salvar. Revise os campos do pedido.";
-    if (error.message === "NOT_FOUND") return "Pedido nao encontrado.";
+    if (error.message === "ORDER_REFUNDED_LOCKED") return "Pedido reembolsado não pode mudar de status.";
+    if (error.message === "INVALID_INPUT") return "Dados inválidos ao salvar. Revise os campos do pedido.";
+    if (error.message === "NOT_FOUND") return "Pedido não encontrado.";
     return error.message || "Falha ao atualizar pedido.";
   }
   if (error instanceof Error && error.message) return error.message;
@@ -307,7 +307,7 @@ export function DrawerEditarPedido({ isOpen, order, onClose, onSaved }: DrawerEd
       setAddItemQty("1");
       setShowAddItem(false);
     } catch {
-      setError("Nao foi possivel adicionar o item informado.");
+      setError("Não foi possível adicionar o item informado.");
     }
   }
 

@@ -61,20 +61,20 @@ function resolveLoginFailure(error: unknown, fallback: string): { reason: Studio
       return { reason: "not_admin", message: "Este usuário não possui permissão de admin no Studio." };
     }
     if (stage === "mfa_required" || code === "INVALID_MFA_CODE") {
-      return { reason: "mfa_required", message: "Sua conta exige MFA. Complete a verificacao para continuar." };
+      return { reason: "mfa_required", message: "Sua conta exige MFA. Complete a verificação para continuar." };
     }
     if (code === "INVALID_CREDENTIALS") {
-      return { reason: "invalid_credentials", message: "Email ou senha invalidos." };
+      return { reason: "invalid_credentials", message: "Email ou senha inválidos." };
     }
     if (code === "ADMIN_SESSION_EXPIRED" || code === "ADMIN_UNAUTHORIZED") {
-      return { reason: "session_expired", message: "Sessao expirada. Faca login novamente." };
+      return { reason: "session_expired", message: "Sessão expirada. Faça login novamente." };
     }
     if (code === "CSRF_INVALID") {
-      return { reason: "csrf_missing", message: "Falha de seguranca da sessao. Recarregue a pagina e tente novamente." };
+      return { reason: "csrf_missing", message: "Falha de segurança da sessão. Recarregue a página e tente novamente." };
     }
 
     if (error.status === 401) {
-      return { reason: "invalid_credentials", message: "Email ou senha invalidos." };
+      return { reason: "invalid_credentials", message: "Email ou senha inválidos." };
     }
     if (error.status === 403) {
       return { reason: "not_admin", message: "Acesso negado para este usuário admin." };
@@ -133,7 +133,7 @@ export function StudioLoginFlow({ returnTo }: StudioLoginFlowProps) {
     setSetupToken("");
     setStage("mfa_setup");
     setStudioStatus("mfa_setup_required");
-    setNoticeMessage("Escaneie o QR no app autenticador e confirme o codigo de 6 digitos.");
+    setNoticeMessage("Escaneie o QR no app autenticador e confirme o código de 6 dígitos.");
     setFailureReason("");
     setErrorMessage("");
   }
@@ -162,7 +162,7 @@ export function StudioLoginFlow({ returnTo }: StudioLoginFlowProps) {
         if (me.stage === "mfa_required") {
           setStudioStatus("mfa_required");
           setStage("mfa_verify");
-          setNoticeMessage("Digite o codigo MFA ou um codigo de recuperacao.");
+          setNoticeMessage("Digite o código MFA ou um código de recuperação.");
           setFailureReason("");
           setErrorMessage("");
           return;
@@ -232,7 +232,7 @@ export function StudioLoginFlow({ returnTo }: StudioLoginFlowProps) {
       }
 
       setFailureReason("unknown");
-      setErrorMessage("Etapa de login invalida.");
+      setErrorMessage("Etapa de login inválida.");
     } catch (error) {
       const resolved = resolveLoginFailure(error, "Falha no login admin.");
       setFailureReason(resolved.reason);
@@ -248,7 +248,7 @@ export function StudioLoginFlow({ returnTo }: StudioLoginFlowProps) {
 
     const token = setupToken.replace(/\D/g, "").slice(0, 6);
     if (!token) {
-      setErrorMessage("Digite o codigo de 6 digitos para ativar MFA.");
+      setErrorMessage("Digite o código de 6 dígitos para ativar MFA.");
       return;
     }
 
@@ -262,7 +262,7 @@ export function StudioLoginFlow({ returnTo }: StudioLoginFlowProps) {
       if (codes.length > 0) {
         setRecoveryCodes(codes);
         setStage("mfa_recovery");
-        setNoticeMessage("MFA ativado. Guarde os codigos de recuperacao.");
+        setNoticeMessage("MFA ativado. Guarde os códigos de recuperação.");
         return;
       }
       navigateToStudio();
@@ -282,7 +282,7 @@ export function StudioLoginFlow({ returnTo }: StudioLoginFlowProps) {
     const token = verifyToken.replace(/\D/g, "").slice(0, 6);
     const recoveryCode = verifyRecoveryCode.trim();
     if (!token && !recoveryCode) {
-      setErrorMessage("Informe codigo MFA ou codigo de recuperacao.");
+      setErrorMessage("Informe código MFA ou código de recuperação.");
       return;
     }
 
@@ -373,7 +373,7 @@ export function StudioLoginFlow({ returnTo }: StudioLoginFlowProps) {
 
           <form className={styles.form} onSubmit={handleSetupVerifySubmit}>
             <label className={styles.field}>
-              <span>Codigo MFA</span>
+              <span>Código MFA</span>
               <input
                 type="text"
                 inputMode="numeric"
@@ -394,7 +394,7 @@ export function StudioLoginFlow({ returnTo }: StudioLoginFlowProps) {
       {stage === "mfa_verify" ? (
         <form className={styles.form} onSubmit={handleMfaVerifySubmit}>
           <label className={styles.field}>
-            <span>Codigo MFA (6 digitos)</span>
+            <span>Código MFA (6 dígitos)</span>
             <input
               type="text"
               inputMode="numeric"
@@ -406,7 +406,7 @@ export function StudioLoginFlow({ returnTo }: StudioLoginFlowProps) {
           </label>
 
           <label className={styles.field}>
-            <span>Ou codigo de recuperacao</span>
+            <span>Ou código de recuperação</span>
             <input
               type="text"
               autoComplete="one-time-code"
@@ -423,7 +423,7 @@ export function StudioLoginFlow({ returnTo }: StudioLoginFlowProps) {
 
       {stage === "mfa_recovery" ? (
         <div className={styles.recoveryBlock}>
-          <p>Guarde estes codigos em local seguro. Cada codigo funciona uma unica vez.</p>
+          <p>Guarde estes códigos em local seguro. Cada código funciona uma única vez.</p>
           <pre>{recoveryCodes.map((code, index) => `${index + 1}. ${code}`).join("\n")}</pre>
           <button type="button" className={styles.submit} onClick={navigateToStudio}>
             Continuar para Studio

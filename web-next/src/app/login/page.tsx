@@ -152,20 +152,20 @@ function randomToken(size = 24): string {
 
 function mapAuthError(errorCode: string): string {
   const value = String(errorCode || "").trim().toUpperCase();
-  if (!value) return "Nao foi possivel concluir a operacao.";
+  if (!value) return "Não foi possível concluir a operação.";
   if (value === "INVALID_INPUT") return "Preencha os campos corretamente.";
-  if (value === "INVALID_CREDENTIALS") return "Email, senha ou codigo invalidos.";
-  if (value === "INVALID_OR_EXPIRED_CODE") return "Codigo invalido ou expirado.";
-  if (value === "EMAIL_ALREADY_EXISTS") return "Este email ja possui uma conta.";
+  if (value === "INVALID_CREDENTIALS") return "Email, senha ou código inválidos.";
+  if (value === "INVALID_OR_EXPIRED_CODE") return "Código inválido ou expirado.";
+  if (value === "EMAIL_ALREADY_EXISTS") return "Este email já possui uma conta.";
   if (value === "EMAIL_NOT_VERIFIED") return "Verifique seu email para continuar.";
-  if (value === "AUTH_CODE_ISSUE_FAILED") return "Nao foi possivel gerar o codigo agora.";
-  if (value === "EMAIL_DELIVERY_FAILED") return "Nao foi possivel enviar o codigo. Tente novamente.";
+  if (value === "AUTH_CODE_ISSUE_FAILED") return "Não foi possível gerar o código agora.";
+  if (value === "EMAIL_DELIVERY_FAILED") return "Não foi possível enviar o código. Tente novamente.";
   if (value === "TOO_MANY_ATTEMPTS") return "Muitas tentativas. Aguarde alguns minutos.";
-  if (value === "PASSWORD_RESET_REQUIRED") return "Sua conta exige redefinicao de senha antes de continuar.";
-  if (value === "PASSKEY_NOT_CONFIGURED") return "Passkey indisponivel no momento (configuracao do dominio).";
+  if (value === "PASSWORD_RESET_REQUIRED") return "Sua conta exige redefinição de senha antes de continuar.";
+  if (value === "PASSKEY_NOT_CONFIGURED") return "Passkey indisponível no momento (configuração do domínio).";
   if (value === "PASSKEY_NOT_FOUND") return "Nenhuma passkey cadastrada para este e-mail.";
-  if (value === "PASSKEY_CHALLENGE_NOT_FOUND") return "Sessao de passkey expirada. Tente novamente.";
-  return "Nao foi possivel concluir a operacao.";
+  if (value === "PASSKEY_CHALLENGE_NOT_FOUND") return "Sessão de passkey expirada. Tente novamente.";
+  return "Não foi possível concluir a operação.";
 }
 
 function readHttpErrorCode(error: HttpError): string {
@@ -245,7 +245,7 @@ export default function LoginPage() {
   function redirectToForcedPasswordReset(targetEmail: string): void {
     const normalized = normalizeEmail(targetEmail);
     if (!isValidEmail(normalized)) {
-      setErrorMessage("Nao foi possivel iniciar a redefinicao de senha.");
+      setErrorMessage("Não foi possível iniciar a redefinição de senha.");
       return;
     }
 
@@ -338,12 +338,12 @@ export default function LoginPage() {
     try {
       const response = await loginWithGoogle({ idToken, nonce: expectedNonce });
       if (!response?.ok || !response?.user) {
-        setErrorMessage("Nao foi possivel concluir o login com Google.");
+        setErrorMessage("Não foi possível concluir o login com Google.");
         return;
       }
       finishLogin(storedReturnUrl || undefined);
     } catch {
-      setErrorMessage("Nao foi possivel concluir o login com Google.");
+      setErrorMessage("Não foi possível concluir o login com Google.");
     } finally {
       setIsGoogleSubmitting(false);
     }
@@ -384,7 +384,7 @@ export default function LoginPage() {
 
     const normalized = normalizeEmail(email);
     if (!isValidEmail(normalized)) {
-      setFieldErrors({ email: "Informe um e-mail valido." });
+      setFieldErrors({ email: "Informe um e-mail válido." });
       setIsSubmitting(false);
       return;
     }
@@ -406,7 +406,7 @@ export default function LoginPage() {
       } else if (error instanceof Error) {
         setErrorMessage(error.message);
       } else {
-        setErrorMessage("Nao foi possivel validar o e-mail.");
+        setErrorMessage("Não foi possível validar o e-mail.");
       }
     } finally {
       setIsSubmitting(false);
@@ -420,8 +420,8 @@ export default function LoginPage() {
 
     const normalized = normalizeEmail(activeEmail || email);
     if (!isValidEmail(normalized)) {
-      setFieldErrors({ email: "Informe um e-mail valido para continuar." });
-      setErrorMessage("Nao conseguimos validar o e-mail desta sessao. Tente novamente.");
+      setFieldErrors({ email: "Informe um e-mail válido para continuar." });
+      setErrorMessage("Não conseguimos validar o e-mail desta sessão. Tente novamente.");
       setIsSubmitting(false);
       return;
     }
@@ -449,25 +449,25 @@ export default function LoginPage() {
         setActiveEmail(normalized);
         setCode("");
         setCodeOrigin("password");
-        setHelperMessage("Codigo enviado para seu e-mail.");
+        setHelperMessage("Código enviado para seu e-mail.");
         goToStep("code");
         return;
       }
 
-      setErrorMessage("Nao foi possivel concluir o login agora.");
+      setErrorMessage("Não foi possível concluir o login agora.");
     } catch (error) {
       if (error instanceof HttpError) {
         const code = readHttpErrorCode(error);
         if (code === "INVALID_CREDENTIALS") {
           setFieldErrors({ password: "Senha incorreta." });
-          setErrorMessage("Email ou senha invalidos.");
+          setErrorMessage("Email ou senha inválidos.");
         } else {
           setErrorMessage(mapAuthError(code || "INVALID_CREDENTIALS"));
         }
       } else if (error instanceof Error) {
         setErrorMessage(error.message);
       } else {
-        setErrorMessage("Nao foi possivel entrar agora.");
+        setErrorMessage("Não foi possível entrar agora.");
       }
     } finally {
       setIsSubmitting(false);
@@ -480,7 +480,7 @@ export default function LoginPage() {
 
     const normalized = normalizeEmail(activeEmail || email);
     if (!isValidEmail(normalized)) {
-      setFieldErrors({ email: "Informe um e-mail valido." });
+      setFieldErrors({ email: "Informe um e-mail válido." });
       setIsSubmitting(false);
       goToStep("email");
       return;
@@ -505,7 +505,7 @@ export default function LoginPage() {
       } else if (error instanceof Error) {
         setErrorMessage(error.message);
       } else {
-        setErrorMessage("Nao foi possivel enviar o codigo.");
+        setErrorMessage("Não foi possível enviar o código.");
       }
     } finally {
       setIsSubmitting(false);
@@ -519,7 +519,7 @@ export default function LoginPage() {
 
     const normalized = normalizeEmail(activeEmail || email);
     if (!isValidEmail(normalized)) {
-      setFieldErrors({ email: "Informe um e-mail valido." });
+      setFieldErrors({ email: "Informe um e-mail válido." });
       setIsSubmitting(false);
       goToStep("email");
       return;
@@ -527,7 +527,7 @@ export default function LoginPage() {
 
     const normalizedCode = String(code || "").replace(/\D/g, "").slice(0, 6);
     if (normalizedCode.length !== 6) {
-      setFieldErrors({ code: "Digite o codigo de 6 digitos." });
+      setFieldErrors({ code: "Digite o código de 6 dígitos." });
       setIsSubmitting(false);
       return;
     }
@@ -557,7 +557,7 @@ export default function LoginPage() {
       } else if (error instanceof Error) {
         setErrorMessage(error.message);
       } else {
-        setErrorMessage("Nao foi possivel verificar o codigo.");
+        setErrorMessage("Não foi possível verificar o código.");
       }
     } finally {
       setIsSubmitting(false);
@@ -570,7 +570,7 @@ export default function LoginPage() {
 
     const normalized = normalizeEmail(activeEmail || email);
     if (!isValidEmail(normalized)) {
-      setFieldErrors({ email: "Informe um e-mail valido." });
+      setFieldErrors({ email: "Informe um e-mail válido." });
       setIsResending(false);
       goToStep("email");
       return;
@@ -583,14 +583,14 @@ export default function LoginPage() {
         redirectToForcedPasswordReset(normalized);
         return;
       }
-      setHelperMessage("Codigo reenviado para seu e-mail.");
+      setHelperMessage("Código reenviado para seu e-mail.");
     } catch (error) {
       if (error instanceof HttpError) {
         setErrorMessage(mapAuthError(error.message || "EMAIL_DELIVERY_FAILED"));
       } else if (error instanceof Error) {
         setErrorMessage(error.message);
       } else {
-        setErrorMessage("Nao foi possivel reenviar o codigo.");
+        setErrorMessage("Não foi possível reenviar o código.");
       }
     } finally {
       setIsResending(false);
@@ -607,7 +607,7 @@ export default function LoginPage() {
     const normalizedName = String(name || "").trim();
 
     if (normalizedName.length < 2) nextErrors.name = "Informe seu nome completo.";
-    if (!isValidEmail(normalizedEmailValue)) nextErrors.email = "Informe um e-mail valido.";
+    if (!isValidEmail(normalizedEmailValue)) nextErrors.email = "Informe um e-mail válido.";
     if (Object.keys(nextErrors).length > 0) {
       setFieldErrors(nextErrors);
       setIsSubmitting(false);
@@ -623,7 +623,7 @@ export default function LoginPage() {
       setActiveEmail(normalizedEmailValue);
       setCode("");
       setCodeOrigin("create");
-      setHelperMessage("Enviamos um codigo para concluir seu cadastro.");
+      setHelperMessage("Enviamos um código para concluir seu cadastro.");
       goToStep("code");
     } catch (error) {
       if (error instanceof HttpError) {
@@ -631,7 +631,7 @@ export default function LoginPage() {
         if (codeValue === "EMAIL_ALREADY_EXISTS") {
           setActiveEmail(normalizedEmailValue);
           setPassword("");
-          setHelperMessage("Este e-mail ja possui conta. Entre com sua senha.");
+          setHelperMessage("Este e-mail já possui conta. Entre com sua senha.");
           goToStep("password");
           return;
         }
@@ -639,7 +639,7 @@ export default function LoginPage() {
       } else if (error instanceof Error) {
         setErrorMessage(error.message);
       } else {
-        setErrorMessage("Nao foi possivel criar sua conta agora.");
+        setErrorMessage("Não foi possível criar sua conta agora.");
       }
     } finally {
       setIsSubmitting(false);
@@ -709,7 +709,7 @@ export default function LoginPage() {
 
       finishLogin();
     } catch {
-      setErrorMessage("Nao foi possivel concluir o login por Passkey.");
+      setErrorMessage("Não foi possível concluir o login por Passkey.");
     } finally {
       setIsPasskeySubmitting(false);
     }
@@ -772,7 +772,7 @@ export default function LoginPage() {
           </form>
 
           <p className={styles.footerLinkText}>
-            Ainda nao tem conta?{" "}
+            Ainda não tem conta?{" "}
             <button
               type="button"
               className={styles.inlineLinkButton}
@@ -839,7 +839,7 @@ export default function LoginPage() {
               onClick={() => void handleSendCodeFromPassword()}
               disabled={isSubmitting}
             >
-              Entrar com codigo por e-mail
+              Entrar com código por e-mail
             </button>
           </form>
 
@@ -862,12 +862,12 @@ export default function LoginPage() {
             &larr; Voltar
           </button>
           <h1 className={styles.title}>Verifique seu e-mail.</h1>
-          <p className={styles.subtitle}>Enviamos um codigo de acesso.</p>
+          <p className={styles.subtitle}>Enviamos um código de acesso.</p>
 
           <form className={styles.form} onSubmit={handleStepCodeSubmit}>
             <div className={styles.field}>
               <label className={styles.label} htmlFor="login-code">
-                CODIGO
+                CÓDIGO
               </label>
               <input
                 id="login-code"
@@ -888,7 +888,7 @@ export default function LoginPage() {
           </form>
 
           <button type="button" className={styles.secondaryLinkButton} onClick={() => void handleResendCode()} disabled={isResending}>
-            {isResending ? "Reenviando..." : "Reenviar codigo"}
+            {isResending ? "Reenviando..." : "Reenviar código"}
           </button>
         </div>
       );
@@ -957,7 +957,7 @@ export default function LoginPage() {
         </form>
 
         <p className={styles.footerLinkText}>
-          Ja tem conta?{" "}
+          Já tem conta?{" "}
           <button type="button" className={styles.inlineLinkButton} onClick={() => goToStep("email")}>
             Entrar
           </button>

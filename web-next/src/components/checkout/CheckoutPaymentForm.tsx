@@ -223,7 +223,7 @@ export function CheckoutPaymentForm({
     try {
       const cardNumberElement = isCardMode ? elements.getElement(CardNumberElement) : null;
       if (isCardMode && (!cardNumberElement || !String(clientSecret || "").trim())) {
-        setErrorMessage("Nao foi possivel preparar os campos do cartao. Atualize a pagina e tente novamente.");
+        setErrorMessage("Não foi possível preparar os campos do cartão. Atualize a página e tente novamente.");
         return false;
       }
 
@@ -301,7 +301,7 @@ export function CheckoutPaymentForm({
       router.push(buildConfirmationPath("failed", orderId, customerEmail, statusMessage));
       return false;
     } catch (error) {
-      const message = error instanceof Error ? error.message : "Nao foi possivel confirmar o pagamento.";
+      const message = error instanceof Error ? error.message : "Não foi possível confirmar o pagamento.";
       setErrorMessage(message);
       return false;
     } finally {
@@ -368,7 +368,7 @@ export function CheckoutPaymentForm({
                 type="text"
                 value={billingName}
                 onChange={(event) => setBillingName(String(event.target.value || "").slice(0, 64))}
-                placeholder="Como aparece no cartao"
+                placeholder="Como aparece no cartão"
                 autoComplete="cc-name"
               />
             </label>
@@ -403,7 +403,7 @@ export function CheckoutPaymentForm({
             }}
             onLoadError={() => {
               setPaymentElementReady(false);
-              setErrorMessage("Nao foi possivel carregar os metodos de pagamento. Atualize a pagina e tente novamente.");
+              setErrorMessage("Não foi possível carregar os métodos de pagamento. Atualize a página e tente novamente.");
             }}
             onChange={handlePaymentElementChange}
           />

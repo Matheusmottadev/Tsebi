@@ -25,9 +25,9 @@ function mapAuthError(errorCode: string): string {
   const value = String(errorCode || "").trim().toUpperCase();
   if (!value) return "Não foi possível concluir a operação.";
   if (value === "INVALID_INPUT") return "Preencha os campos corretamente.";
-  if (value === "INVALID_CREDENTIALS") return "Email, senha ou codigo invalidos.";
-  if (value === "INVALID_OR_EXPIRED_CODE") return "Codigo invalido ou expirado.";
-  if (value === "EMAIL_NOT_FOUND") return "Nao encontramos conta com este email.";
+  if (value === "INVALID_CREDENTIALS") return "Email, senha ou código inválidos.";
+  if (value === "INVALID_OR_EXPIRED_CODE") return "Código inválido ou expirado.";
+  if (value === "EMAIL_NOT_FOUND") return "Não encontramos conta com este email.";
   if (value === "EMAIL_NOT_VERIFIED") return "Verifique seu email para continuar.";
   if (value === "AUTH_CODE_ISSUE_FAILED") return "Não foi possível gerar o código agora.";
   if (value === "EMAIL_DELIVERY_FAILED") return "Não foi possível enviar o código. Tente novamente.";
@@ -38,10 +38,10 @@ function mapAuthError(errorCode: string): string {
 function resolveAuthStageMessage(stage: string): string {
   const normalized = String(stage || "").trim().toLowerCase();
   if (normalized === "account_verification_required" || normalized === "login_code_required") {
-    return "Sua conta exige confirmacao por codigo de email.";
+    return "Sua conta exige confirmação por código de email.";
   }
   if (normalized === "password_reset_required") {
-    return "Sua conta exige redefinicao de senha antes de continuar.";
+    return "Sua conta exige redefinição de senha antes de continuar.";
   }
   return "Não foi possível concluir o login agora.";
 }
@@ -102,7 +102,7 @@ export function LoginForm() {
   const loginNotice = useMemo(() => {
     const raw = String(searchParams.get("notice") || "").trim().toLowerCase();
     if (raw === "private-care") {
-      return "Cadastre-se ou fa�a login para agendar seu atendimento.";
+      return "Cadastre-se ou fa�a login para agendar seu atendimento.";
     }
     return "";
   }, [searchParams]);
@@ -307,7 +307,7 @@ export function LoginForm() {
       const normalizedCode = String(code || "").replace(/\D/g, "").slice(0, 6);
       if (normalizedCode.length !== 6) {
         setIsSubmitting(false);
-        setErrorMessage("Digite o codigo de 6 digitos.");
+        setErrorMessage("Digite o código de 6 dígitos.");
         return;
       }
 
@@ -335,7 +335,7 @@ export function LoginForm() {
       } else if (error instanceof Error) {
         setErrorMessage(error.message);
       } else {
-        setErrorMessage("Falha ao verificar codigo.");
+        setErrorMessage("Falha ao verificar código.");
       }
     } finally {
       setIsSubmitting(false);
@@ -385,7 +385,7 @@ export function LoginForm() {
     } catch (error) {
       if (error instanceof HttpError) {
         if (error.status === 401) {
-          setErrorMessage("Email, senha ou codigo invalidos.");
+          setErrorMessage("Email, senha ou código inválidos.");
         } else if (error.status === 429) {
           setErrorMessage("Muitas tentativas. Aguarde e tente novamente.");
         } else {
@@ -483,9 +483,9 @@ export function LoginForm() {
             Entrar com senha
           </button>
           <button id="sendCodeBtn" className="btn-primary auth-btn" type="submit" disabled={isSubmitting}>
-            {isSubmitting ? "Enviando..." : "Enviar codigo"}
+            {isSubmitting ? "Enviando..." : "Enviar código"}
           </button>
-          <div className="auth-micro">Enviaremos um codigo para seu e-mail.</div>
+          <div className="auth-micro">Enviaremos um código para seu e-mail.</div>
         </section>
 
         <section id="stateCode" className="auth-state" hidden={authState !== "code"}>
@@ -504,7 +504,7 @@ export function LoginForm() {
             </button>
           </div>
 
-          <label htmlFor="codeInput">Codigo</label>
+          <label htmlFor="codeInput">Código</label>
           <input
             id="codeInput"
             className="auth-input"
@@ -527,7 +527,7 @@ export function LoginForm() {
               onClick={resendCode}
               disabled={isResendingCode || resendRemaining > 0}
             >
-              {isResendingCode ? "Reenviando..." : resendRemaining > 0 ? `Reenviar codigo (${resendRemaining}s)` : "Reenviar codigo"}
+              {isResendingCode ? "Reenviando..." : resendRemaining > 0 ? `Reenviar código (${resendRemaining}s)` : "Reenviar código"}
             </button>
             <button
               id="showPasswordBtn"
@@ -586,7 +586,7 @@ export function LoginForm() {
               Esqueci minha senha
             </Link>
             <Link className="auth-link" href="/recuperar-senha-codigo">
-              Ja tenho codigo
+              Já tenho código
             </Link>
             <button
               id="backToCodeBtn"
@@ -598,7 +598,7 @@ export function LoginForm() {
                 setResendRemaining((current) => (current > 0 ? current : 30));
               }}
             >
-              Voltar para codigo por e-mail
+              Voltar para código por e-mail
             </button>
           </div>
         </section>

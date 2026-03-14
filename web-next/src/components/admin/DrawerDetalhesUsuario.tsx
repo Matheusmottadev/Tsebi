@@ -390,11 +390,11 @@ export function DrawerDetalhesUsuario({
       return;
     }
     if (cpfDigits && cpfDigits.length !== 11) {
-      setErrorMessage("CPF invalido.");
+      setErrorMessage("CPF inválido.");
       return;
     }
     if (phoneDigits && phoneDigits.length < 10) {
-      setErrorMessage("Telefone invalido.");
+      setErrorMessage("Telefone inválido.");
       return;
     }
 

@@ -215,9 +215,9 @@ function formatDeliveryDeadline(range: { minDays: number; maxDays: number } | nu
   const maxDays = Math.max(minDays, Math.round(Number(range.maxDays || minDays)));
   if (minDays === maxDays) {
     if (minDays === 1) return "1 dia util";
-    return `${minDays} dias uteis`;
+    return `${minDays} dias úteis`;
   }
-  return `de ${minDays} a ${maxDays} dias uteis`;
+  return `de ${minDays} a ${maxDays} dias úteis`;
 }
 
 function formatMoneyCentsBRL(cents: number): string {
@@ -786,7 +786,7 @@ export function ProductExperience({ product, recommendations, imageBaseUrl }: Pr
       const quotes = Array.isArray(response?.data?.quotes) ? response.data.quotes : [];
       if (quotes.length === 0) {
         setDeliverySummary(null);
-        setDeliveryError("Nao foi possivel calcular para este CEP.");
+        setDeliveryError("Não foi possível calcular para este CEP.");
         return;
       }
 
@@ -808,7 +808,7 @@ export function ProductExperience({ product, recommendations, imageBaseUrl }: Pr
       setDeliveryError("");
     } catch {
       setDeliverySummary(null);
-      setDeliveryError("Nao foi possivel calcular agora. Tente novamente.");
+      setDeliveryError("Não foi possível calcular agora. Tente novamente.");
     } finally {
       setIsDeliveryLoading(false);
     }
@@ -1101,7 +1101,7 @@ export function ProductExperience({ product, recommendations, imageBaseUrl }: Pr
           </p>
           <ul className={styles.drawerList}>
             <li>Prazo medio: 2 a 8 dias úteis, conforme CEP e disponibilidade.</li>
-            <li>Código de rastreio enviado por e-mail apos faturamento.</li>
+            <li>Código de rastreio enviado por e-mail após faturamento.</li>
             <li>Duas tentativas de entrega no endereço informado; depois disso o pedido retorna ao centro logístico.</li>
             <li>Em caso de avaria no recebimento, recuse a entrega e entre em contato imediatamente.</li>
           </ul>
@@ -1113,9 +1113,9 @@ export function ProductExperience({ product, recommendations, imageBaseUrl }: Pr
             Nossa Política segue o Código de Defesa do Consumidor (Lei 8.078/90) para compras online.
           </p>
           <ul className={styles.drawerList}>
-            <li>Troca e devolução em até 7 dias corridos apos recebimento.</li>
+            <li>Troca e devolução em até 7 dias corridos após recebimento.</li>
             <li>Produto deve retornar sem uso, com etiqueta e embalagem original.</li>
-            <li>Estorno aprovado e processado em até 10 dias úteis apos conferencia do item devolvido.</li>
+            <li>Estorno aprovado e processado em até 10 dias úteis após conferência do item devolvido.</li>
             <li>Itens personalizados podem ter regras específicas de arrependimento.</li>
           </ul>
           <p className={styles.drawerParagraph}>

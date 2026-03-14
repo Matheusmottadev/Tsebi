@@ -95,7 +95,7 @@ function formatDeliveryEstimate(days: number | null | undefined, estimate?: stri
   const numericDays = Number(days);
   if (Number.isFinite(numericDays) && numericDays > 0) {
     const roundedDays = Math.max(1, Math.floor(numericDays));
-    return roundedDays === 1 ? "1 dia util" : `${roundedDays} dias uteis`;
+    return roundedDays === 1 ? "1 dia útil" : `${roundedDays} dias úteis`;
   }
 
   const rawEstimate = String(estimate || "").trim();
@@ -103,7 +103,7 @@ function formatDeliveryEstimate(days: number | null | undefined, estimate?: stri
 
   const parsedDays = Number((rawEstimate.match(/(\d+)/)?.[1] || ""));
   if (Number.isFinite(parsedDays) && parsedDays > 0) {
-    return parsedDays === 1 ? "1 dia util" : `${parsedDays} dias uteis`;
+    return parsedDays === 1 ? "1 dia útil" : `${parsedDays} dias úteis`;
   }
 
   return rawEstimate;
@@ -500,7 +500,7 @@ export default function CheckoutConfirmationPage() {
               <img src="/images/logo-tsebi.png" alt="Tsebi" className={`${styles.statusLogo} ${styles.failedLogo}`} />
               <h1 className={styles.title}>Algo deu errado.</h1>
               <p className={styles.subtitle}>
-                Nao foi possivel processar seu pagamento. Verifique os dados do cartao e tente novamente.
+                Não foi possível processar seu pagamento. Verifique os dados do cartão e tente novamente.
               </p>
 
               <section className={styles.errorBox}>
@@ -549,7 +549,7 @@ export default function CheckoutConfirmationPage() {
           <p className={styles.subtitle}>
             Obrigada pela sua confianca.
             <br />
-            {resolvedEmail || "Em breve voce recebera os detalhes por email."}
+            {resolvedEmail || "Em breve você receberá os detalhes por email."}
           </p>
 
           <section className={styles.detailsBox}>
