@@ -10,6 +10,7 @@ import {
   Star,
   Tag,
   Users,
+  Wrench,
   type LucideIcon,
 } from "lucide-react";
 import type { AdminPageKey } from "./types";
@@ -20,6 +21,7 @@ type SidebarProps = {
   onChangePage: (page: AdminPageKey) => void;
   pendingOrders: number;
   openCare: number;
+  pendingRepairs: number;
 };
 
 type NavItem = {
@@ -34,7 +36,7 @@ type NavGroup = {
   items: NavItem[];
 };
 
-export function Sidebar({ activePage, onChangePage, pendingOrders, openCare }: SidebarProps) {
+export function Sidebar({ activePage, onChangePage, pendingOrders, openCare, pendingRepairs }: SidebarProps) {
   const groups: NavGroup[] = [
     {
       label: "Geral",
@@ -49,6 +51,7 @@ export function Sidebar({ activePage, onChangePage, pendingOrders, openCare }: S
       label: "Relacionamento",
       items: [
         { key: "atendimentos", label: "Atendimentos", icon: MessageCircle, badge: openCare },
+        { key: "reparos", label: "Reparos", icon: Wrench, badge: pendingRepairs },
         { key: "lista_vip", label: "Lista VIP", icon: Star },
         { key: "newsletter", label: "Newsletter", icon: Mail },
       ],

@@ -1,6 +1,6 @@
 import { del, get, HttpError, patch, post } from "@/lib/http";
 import type { HttpRequestOptions } from "@/lib/http";
-import type { AdminMeResponse, Coupon, Order, Product, PublicUser } from "@/types";
+import type { AdminMeResponse, Coupon, Order, Product, PublicUser, RepairRequest } from "@/types";
 import type { ProductAvailabilityStatus } from "@/types";
 
 /*
@@ -361,6 +361,31 @@ export interface UpdatePrivateCareAdminResponse {
 export interface DeletePrivateCareAdminResponse {
   ok: true;
   removed?: AdminPrivateCareRequest;
+}
+
+export interface ListRepairsAdminParams {
+  query?: string;
+  status?: string;
+  page?: number;
+  pageSize?: number;
+}
+
+export interface ListRepairsAdminResponse {
+  rows: RepairRequest[];
+  total: number;
+  page: number;
+  pageSize: number;
+}
+
+export interface UpdateRepairAdminPayload {
+  decision: "accept" | "reject";
+  rejectionReason?: string;
+  adminNote?: string;
+}
+
+export interface UpdateRepairAdminResponse {
+  ok: true;
+  repair: RepairRequest;
 }
 
 export interface AdminAppointmentBooking {
@@ -1141,6 +1166,41 @@ export async function deletePrivateCareAdmin(
   const token = await resolveCsrfToken(csrfToken, options);
   return del<DeletePrivateCareAdminResponse>(
     `/api/admin/private-care/${encodeURIComponent(String(id || "").trim())}`,
+    mergeOptionsWithHeaders(options, buildCsrfHeader(token))
+  );
+}
+
+/**
+ * GET /api/admin/repairs
+ * Auth: admin session required.
+ */
+export async function listRepairsAdmin(
+  params: ListRepairsAdminParams = {},
+  options?: HttpRequestOptions
+): Promise<ListRepairsAdminResponse> {
+  const query = buildQuery({
+    query: params.query,
+    status: params.status,
+    page: params.page,
+    pageSize: params.pageSize,
+  });
+  return get<ListRepairsAdminResponse>(`/api/admin/repairs${query}`, options);
+}
+
+/**
+ * PATCH /api/admin/repairs/:id
+ * Auth: admin session required + CSRF header.
+ */
+export async function updateRepairAdmin(
+  id: string,
+  payload: UpdateRepairAdminPayload,
+  csrfToken?: string,
+  options?: HttpRequestOptions
+): Promise<UpdateRepairAdminResponse> {
+  const token = await resolveCsrfToken(csrfToken, options);
+  return patch<UpdateRepairAdminResponse>(
+    `/api/admin/repairs/${encodeURIComponent(String(id || "").trim())}`,
+    payload,
     mergeOptionsWithHeaders(options, buildCsrfHeader(token))
   );
 }

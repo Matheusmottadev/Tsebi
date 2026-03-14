@@ -44,9 +44,23 @@ const {
   sendPasswordResetEmail,
   sendEmail
 } = require("./lib/email-service");
+const {
+  ensureRepairTables,
+  createRepairRequest,
+  listMyRepairRequests
+} = require("./lib/repairs-repository");
+const { sendRepairConfirmationEmail } = require("./lib/repair-email-service");
 
 const authRouter = express.Router();
 const myRouter = express.Router();
+
+let uploadR2Buffer: any = null;
+function getR2Upload() {
+  if (!uploadR2Buffer) {
+    uploadR2Buffer = require("./lib/cloudflare-r2-upload").uploadBuffer;
+  }
+  return uploadR2Buffer;
+}
 
 const REFUND_WINDOW_MS = 10 * 60 * 1000;
 let stripeClient: any = null;
@@ -57,6 +71,26 @@ function parseBooleanEnv(value: any, fallback: any = false) {
   if (["1", "true", "yes", "on"].includes(normalized)) return true;
   if (["0", "false", "no", "off"].includes(normalized)) return false;
   return fallback;
+}
+
+function detectImageKind(buffer: any) {
+  if (!Buffer.isBuffer(buffer) || buffer.length < 16) return "";
+  if (buffer[0] === 0xff && buffer[1] === 0xd8 && buffer[2] === 0xff) return "jpeg";
+  if (buffer[0] === 0x89 && buffer[1] === 0x50 && buffer[2] === 0x4e && buffer[3] === 0x47) return "png";
+  if (buffer[0] === 0x47 && buffer[1] === 0x49 && buffer[2] === 0x46) return "gif";
+  if (
+    buffer[0] === 0x52 &&
+    buffer[1] === 0x49 &&
+    buffer[2] === 0x46 &&
+    buffer[3] === 0x46 &&
+    buffer[8] === 0x57 &&
+    buffer[9] === 0x45 &&
+    buffer[10] === 0x42 &&
+    buffer[11] === 0x50
+  ) {
+    return "webp";
+  }
+  return "";
 }
 
 function isLoginEmailVerificationRequired() {
@@ -269,10 +303,21 @@ const privateCarePreferencesSchema = z.object({
 });
 
 const repairRequestSchema = z.object({
-  product: z.string().trim().min(2).max(180),
-  reason: z.string().trim().min(2).max(80),
-  description: z.string().trim().max(2000).optional().default(""),
-  photoName: z.string().trim().max(260).optional().default("")
+  orderId: z.string().trim().min(1).max(120),
+  orderItemId: z.string().trim().min(1).max(120),
+  repairType: z.string().trim().min(2).max(80),
+  description: z.string().trim().min(4).max(2000),
+  returnAddress: z.string().trim().min(8).max(300),
+  photos: z
+    .array(
+      z.object({
+        url: z.string().trim().url(),
+        fileName: z.string().trim().max(260).optional().default("")
+      })
+    )
+    .max(8)
+    .optional()
+    .default([])
 });
 
 let accountDataSchemaPromise: Promise<void> | null = null;
@@ -2056,20 +2101,124 @@ myRouter.post("/appointments/:id/cancel", requireAuth, async (req: any, res: any
 });
 
 myRouter.get("/repairs", requireAuth, async (req: any, res: any) => {
-  const row = await getAccountDataRow(req.session.userId);
-  if (!row) return res.status(404).json({ error: "USER_NOT_FOUND" });
-  return res.json({
-    history: normalizeRepairsHistory(row.account_repairs_history)
-  });
+  try {
+    const history = await listMyRepairRequests(String(req.session.userId || ""));
+    return res.json({ history });
+  } catch (error: any) {
+    return res.status(Number(error?.status || 500) || 500).json({ error: error?.message || "REPAIRS_LIST_FAILED" });
+  }
 });
+
+myRouter.post(
+  "/repairs/photos",
+  requireAuth,
+  express.raw({
+    type: ["image/jpeg", "image/png", "image/webp", "image/gif"],
+    limit: "8mb"
+  }),
+  async (req: any, res: any) => {
+    const contentType = String(req.headers["content-type"] || "").trim().toLowerCase();
+    if (!["image/jpeg", "image/png", "image/webp", "image/gif"].includes(contentType)) {
+      return res.status(415).json({ error: "UNSUPPORTED_IMAGE_TYPE" });
+    }
+
+    if (!Buffer.isBuffer(req.body) || req.body.length === 0) {
+      return res.status(400).json({ error: "IMAGE_REQUIRED" });
+    }
+
+    if (!detectImageKind(req.body)) {
+      return res.status(415).json({ error: "UNSUPPORTED_IMAGE_TYPE" });
+    }
+
+    try {
+      const userId = String(req.session.userId || "").trim();
+      const fileNameRaw = String(req.query.name || req.headers["x-file-name"] || "").trim();
+      const contentTypeExtension = contentType.split("/")[1] || "jpg";
+      const fileName =
+        fileNameRaw.replace(/[^\w.\- ]+/g, "").slice(0, 120) || `reparo.${contentTypeExtension}`;
+      const folder =
+        String(process.env.R2_REPAIRS_FOLDER || process.env.R2_FOLDER || "tsebi/repairs").trim() ||
+        "tsebi/repairs";
+      const publicId = `repair_${userId}_${Date.now()}_${crypto.randomUUID().slice(0, 8)}`;
+      const uploaded = await getR2Upload()(req.body, { folder, publicId });
+      const url = String(uploaded?.secure_url || uploaded?.url || "").trim();
+      if (!url) return res.status(500).json({ error: "IMAGE_UPLOAD_FAILED" });
+
+      return res.status(201).json({
+        ok: true,
+        photo: {
+          url,
+          fileName,
+          contentType
+        }
+      });
+    } catch (error: any) {
+      if (String(error?.code || "") === "R2_NOT_CONFIGURED") {
+        return res.status(500).json({ error: "R2_NOT_CONFIGURED" });
+      }
+      return res.status(500).json({ error: "IMAGE_UPLOAD_FAILED" });
+    }
+  }
+);
 
 myRouter.post("/repairs", requireAuth, async (req: any, res: any) => {
   const parsed = repairRequestSchema.safeParse(req.body || {});
   if (!parsed.success) return res.status(400).json({ error: "INVALID_INPUT" });
 
-  const row = await getAccountDataRow(req.session.userId);
-  if (!row) return res.status(404).json({ error: "USER_NOT_FOUND" });
+  try {
+    await ensureRepairTables();
 
+    const userId = String(req.session.userId || "").trim();
+    const user = await findUserById(userId);
+    if (!user) return res.status(404).json({ error: "USER_NOT_FOUND" });
+
+    const orders = await listOrdersByUserId(userId);
+    const targetOrder = orders.find((order: any) => String(order.id || "") === parsed.data.orderId) || null;
+    if (!targetOrder) return res.status(404).json({ error: "ORDER_NOT_FOUND" });
+
+    const isDelivered =
+      String(targetOrder.currentStatus || "").trim().toUpperCase() === "DELIVERED" ||
+      Boolean(targetOrder.deliveredAt);
+    if (!isDelivered) return res.status(409).json({ error: "ORDER_NOT_DELIVERED" });
+
+    const targetItem =
+      (Array.isArray(targetOrder.items) ? targetOrder.items : []).find(
+        (item: any) => String(item.id || "") === parsed.data.orderItemId
+      ) || null;
+    if (!targetItem) return res.status(404).json({ error: "ORDER_ITEM_NOT_FOUND" });
+
+    const orderRefRaw = String(targetOrder.orderNumber || targetOrder.id || "").trim();
+    const orderRef = orderRefRaw.startsWith("#") ? orderRefRaw : `#${orderRefRaw}`;
+    const repair = await createRepairRequest({
+      userId,
+      userName: String(user.name || "").trim(),
+      userEmail: String(user.email || "").trim(),
+      orderId: String(targetOrder.id || ""),
+      orderRef,
+      orderItemId: String(targetItem.id || ""),
+      pieceName: String(targetItem.name || "").trim(),
+      pieceImageUrl: String(targetItem.imageUrl || "").trim(),
+      repairType: parsed.data.repairType,
+      description: parsed.data.description,
+      returnAddress: parsed.data.returnAddress,
+      photos: parsed.data.photos,
+    });
+
+    await sendRepairConfirmationEmail({
+      clientName: repair.userName || String(user.name || "").trim(),
+      clientEmail: repair.userEmail || String(user.email || "").trim(),
+      pieceName: repair.pieceName,
+      orderRef: repair.orderRef,
+      repairDescription: repair.description,
+    });
+
+    const history = await listMyRepairRequests(userId);
+    return res.status(201).json({ repair, history });
+  } catch (error: any) {
+    return res.status(Number(error?.status || 500) || 500).json({ error: error?.message || "REPAIR_CREATE_FAILED" });
+  }
+
+  const row: any = { account_repairs_history: [] };
   const now = new Date().toISOString();
   const entry = {
     id: `rp-${crypto.randomUUID()}`,

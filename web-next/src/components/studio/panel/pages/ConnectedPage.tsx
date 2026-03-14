@@ -6,6 +6,7 @@ import { DrawerEditarCupom } from "@/components/admin/DrawerEditarCupom";
 import { DrawerEditarPedido } from "@/components/admin/DrawerEditarPedido";
 import { DrawerEditarProduto } from "@/components/admin/DrawerEditarProduto";
 import { DrawerNovoAtendimento } from "@/components/admin/DrawerNovoAtendimento";
+import { RepairRequestsManager } from "@/components/admin/RepairRequestsManager";
 import { Toast } from "@/components/admin/Toast";
 import { SearchBar, type FilterConfig, type SortOption } from "@/components/studio/panel/SearchBar";
 import { PrivateCareManager } from "@/components/studio/PrivateCareManager";
@@ -22,7 +23,7 @@ import {
   type AdminUserRow,
   type AdminVipRow,
 } from "@/services/admin";
-import type { Coupon, Order, Product } from "@/types";
+import type { Coupon, Order, Product, RepairRequest } from "@/types";
 import type { AdminPageKey, GlobalSearchTarget } from "../types";
 import styles from "./ConnectedPage.module.css";
 
@@ -31,6 +32,7 @@ export interface ConnectedPanelData {
   products: Product[];
   users: AdminUserRow[];
   appointmentSlots: AdminAppointmentSlot[];
+  repairs: RepairRequest[];
   vip: AdminVipRow[];
   newsletter: AdminNewsletterRow[];
   coupons: Coupon[];
@@ -340,6 +342,7 @@ export function ConnectedPage({
   const [productsRows, setProductsRows] = useState<Product[]>(data.products || []);
   const [usersRows, setUsersRows] = useState<AdminUserRow[]>(data.users || []);
   const [appointmentSlotRows, setAppointmentSlotRows] = useState<AdminAppointmentSlot[]>(data.appointmentSlots || []);
+  const [repairRows, setRepairRows] = useState<RepairRequest[]>(data.repairs || []);
   const [vipRows, setVipRows] = useState<AdminVipRow[]>(data.vip || []);
   const [newsletterRows, setNewsletterRows] = useState<AdminNewsletterRow[]>(data.newsletter || []);
   const [couponsRows, setCouponsRows] = useState<Coupon[]>(data.coupons || []);
@@ -426,6 +429,10 @@ export function ConnectedPage({
   useEffect(() => {
     setAppointmentSlotRows(data.appointmentSlots || []);
   }, [data.appointmentSlots]);
+
+  useEffect(() => {
+    setRepairRows(data.repairs || []);
+  }, [data.repairs]);
 
   useEffect(() => {
     setVipRows(data.vip || []);
@@ -1541,6 +1548,17 @@ export function ConnectedPage({
 
       {page === "atendimentos" ? (
         <PrivateCareManager rows={data.appointmentSlots} csrfToken={csrfToken} />
+      ) : null}
+
+      {page === "reparos" ? (
+        <RepairRequestsManager
+          rows={repairRows}
+          loading={loading}
+          errorMessage={errorMessage}
+          csrfToken={csrfToken}
+          onRowsChange={setRepairRows}
+          onRequestRefresh={onRequestRefresh}
+        />
       ) : null}
 
       {page === "lista_vip" ? (

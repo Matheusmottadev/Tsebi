@@ -4,6 +4,7 @@
   | "produtos"
   | "usuarios"
   | "atendimentos"
+  | "reparos"
   | "lista_vip"
   | "newsletter"
   | "cupons"

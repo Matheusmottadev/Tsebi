@@ -54,6 +54,7 @@ const { ensureAdminProfile, updateAdminProfile } = require("./lib/admin-profile-
 const { listAdminLoginEvents } = require("./lib/admin-login-events-repository");
 const { readJson, writeJson } = require("./lib/json-store");
 const { sendEmail, sendPasswordResetEmail } = require("./lib/email-service");
+const { sendRepairAcceptedEmail, sendRepairRejectedEmail } = require("./lib/repair-email-service");
 const { issueAuthEmailCode } = require("./lib/auth-email-code-repository");
 const {
   listAccessCodes,
@@ -69,6 +70,11 @@ const {
   cancelAdminAppointment,
   rescheduleAdminAppointment,
 } = require("./lib/appointments-repository");
+const {
+  ensureRepairTables,
+  listAdminRepairRequests,
+  reviewRepairRequest,
+} = require("./lib/repairs-repository");
 const { query, withTransaction } = require("./lib/db");
 // Lazy load R2 upload module to avoid build-time errors
 let uploadR2Buffer: any = null;
@@ -345,6 +351,12 @@ const privateCarePatchSchema = z.object({
   decision: z.enum(["accept", "decline"]).optional(),
   adminNote: z.string().trim().max(2000).optional(),
   availableSlots: z.array(z.string().trim().min(1).max(120)).max(12).optional()
+});
+
+const repairPatchSchema = z.object({
+  decision: z.enum(["accept", "reject"]),
+  rejectionReason: z.string().trim().max(2000).optional().default(""),
+  adminNote: z.string().trim().max(2000).optional().default(""),
 });
 
 const appointmentSlotCreateSchema = z.object({
@@ -2876,6 +2888,80 @@ adminRouter.delete("/private-care/:id", sensitiveAdminRateLimit, async (req: any
     });
   } catch {
     return res.status(500).json({ error: "ADMIN_PRIVATE_CARE_DELETE_FAILED" });
+  }
+});
+
+adminRouter.get("/repairs", async (req: any, res: any) => {
+  const queryText = String(req.query.query || "").trim();
+  const status = String(req.query.status || "").trim();
+  const page = Math.max(1, Number(req.query.page || 1) || 1);
+  const pageSize = Math.max(1, Math.min(200, Number(req.query.pageSize || 50) || 50));
+
+  try {
+    await ensureRepairTables();
+    const response = await listAdminRepairRequests({
+      query: queryText,
+      status,
+      page,
+      pageSize,
+    });
+    return res.json(response);
+  } catch (error: any) {
+    return res.status(Number(error?.status || 500) || 500).json({ error: error?.message || "ADMIN_REPAIRS_LIST_FAILED" });
+  }
+});
+
+adminRouter.patch("/repairs/:id", async (req: any, res: any) => {
+  const repairId = String(req.params.id || "").trim();
+  if (!repairId) return res.status(400).json({ error: "INVALID_ID" });
+
+  const parsed = repairPatchSchema.safeParse(req.body || {});
+  if (!parsed.success) return res.status(400).json({ error: "INVALID_INPUT" });
+
+  try {
+    await ensureRepairTables();
+    const result = await reviewRepairRequest(repairId, {
+      decision: parsed.data.decision === "reject" ? "rejected" : "accepted",
+      rejectionReason: parsed.data.rejectionReason,
+      adminNote: parsed.data.adminNote,
+      reviewedByAdminId: String(req.adminProfile?.id || "").trim() || null,
+    });
+
+    await recordAuditLog(req, {
+      action: "save",
+      entityType: "repair_request",
+      entityId: repairId,
+      summary: `Reparo ${parsed.data.decision === "reject" ? "recusado" : "aceito"}: ${result.repair.orderRef}`,
+      before: result.before,
+      after: result.repair,
+      reversePayload: null,
+      reversible: false,
+    });
+
+    if (result.repair.userEmail) {
+      if (result.repair.status === "accepted") {
+        await sendRepairAcceptedEmail({
+          clientName: result.repair.userName,
+          clientEmail: result.repair.userEmail,
+          pieceName: result.repair.pieceName,
+          orderRef: result.repair.orderRef,
+          repairDescription: result.repair.description,
+        });
+      } else {
+        await sendRepairRejectedEmail({
+          clientName: result.repair.userName,
+          clientEmail: result.repair.userEmail,
+          pieceName: result.repair.pieceName,
+          orderRef: result.repair.orderRef,
+          repairDescription: result.repair.description,
+          rejectionReason: result.repair.rejectionReason,
+        });
+      }
+    }
+
+    return res.json({ ok: true, repair: result.repair });
+  } catch (error: any) {
+    return res.status(Number(error?.status || 500) || 500).json({ error: error?.message || "ADMIN_REPAIR_UPDATE_FAILED" });
   }
 });
 

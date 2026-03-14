@@ -11,6 +11,7 @@ import {
   listNewsletterAdmin,
   listOrdersAdmin,
   listProductsAdmin,
+  listRepairsAdmin,
   listUsersAdmin,
   listVipAdmin,
   studioAuthMe,
@@ -38,6 +39,7 @@ const EMPTY_CONNECTED_DATA: ConnectedPanelData = {
   products: [],
   users: [],
   appointmentSlots: [],
+  repairs: [],
   vip: [],
   newsletter: [],
   coupons: [],
@@ -274,6 +276,7 @@ const TOPBAR_BUTTONS: Record<AdminPageKey, { label: string }> = {
   produtos: { label: "+ Novo Produto" },
   usuarios: { label: "+ Novo Usuário" },
   atendimentos: { label: "+ Novo Horário" },
+  reparos: { label: "Atualizar" },
   lista_vip: { label: "+ Novo Cadastro" },
   newsletter: { label: "Editar" },
   cupons: { label: "+ Novo Cupom" },
@@ -364,6 +367,7 @@ export function StudioAdminPanel() {
         listProductsAdmin({ page: 1, pageSize: 200 }, { cache: "no-store" }),
         listUsersAdmin({ page: 1, pageSize: 200 }, { cache: "no-store" }),
         listAppointmentSlotsAdmin({ includePast: true }, { cache: "no-store" }),
+        listRepairsAdmin({ page: 1, pageSize: 200 }, { cache: "no-store" }),
         listVipAdmin({ page: 1, pageSize: 200 }, { cache: "no-store" }),
         listNewsletterAdmin({ page: 1, pageSize: 200 }, { cache: "no-store" }),
         listCouponsAdmin({ page: 1, pageSize: 200 }, { cache: "no-store" }),
@@ -377,6 +381,7 @@ export function StudioAdminPanel() {
         products: [],
         users: [],
         appointmentSlots: [],
+        repairs: [],
         vip: [],
         newsletter: [],
         coupons: [],
@@ -429,28 +434,35 @@ export function StudioAdminPanel() {
         failures.push("Atendimentos indisponíveis");
       }
 
-      const vipResult = results[5];
+      const repairsResult = results[5];
+      if (repairsResult.status === "fulfilled") {
+        next.repairs = Array.isArray(repairsResult.value.rows) ? repairsResult.value.rows : [];
+      } else {
+        failures.push("Reparos indisponíveis");
+      }
+
+      const vipResult = results[6];
       if (vipResult.status === "fulfilled") {
         next.vip = Array.isArray(vipResult.value.rows) ? vipResult.value.rows : [];
       } else {
         failures.push("Lista VIP indisponível");
       }
 
-      const newsletterResult = results[6];
+      const newsletterResult = results[7];
       if (newsletterResult.status === "fulfilled") {
         next.newsletter = Array.isArray(newsletterResult.value.rows) ? newsletterResult.value.rows : [];
       } else {
         failures.push("Newsletter indisponível");
       }
 
-      const couponsResult = results[7];
+      const couponsResult = results[8];
       if (couponsResult.status === "fulfilled") {
         next.coupons = Array.isArray(couponsResult.value.rows) ? couponsResult.value.rows : [];
       } else {
         failures.push("Cupons indisponíveis");
       }
 
-      const auditResult = results[8];
+      const auditResult = results[9];
       if (auditResult.status === "fulfilled") {
         next.audit = Array.isArray(auditResult.value.logs) ? auditResult.value.logs : [];
       } else {
@@ -485,6 +497,12 @@ export function StudioAdminPanel() {
     if (openCount > 0) return openCount;
     return connectedData.appointmentSlots.length;
   }, [connectedData.appointmentSlots]);
+
+  const pendingRepairs = useMemo(() => {
+    const pendingCount = connectedData.repairs.filter((row) => String(row.status || "") === "pending").length;
+    if (pendingCount > 0) return pendingCount;
+    return connectedData.repairs.length;
+  }, [connectedData.repairs]);
 
   const kpis = useMemo(() => buildDashboardKpis(connectedData), [connectedData]);
   const recentOrders = useMemo(() => buildRecentOrders(connectedData), [connectedData]);
@@ -571,6 +589,10 @@ export function StudioAdminPanel() {
       router.push("/admin/login");
       return;
     }
+    if (activePage === "reparos") {
+      setRefreshIndex((current) => current + 1);
+      return;
+    }
     openDrawer(activePage);
   };
 
@@ -604,7 +626,13 @@ export function StudioAdminPanel() {
         overflowX: "hidden",
       }}
     >
-      <Sidebar activePage={activePage} onChangePage={setActivePage} pendingOrders={pendingOrders} openCare={openCare} />
+      <Sidebar
+        activePage={activePage}
+        onChangePage={setActivePage}
+        pendingOrders={pendingOrders}
+        openCare={openCare}
+        pendingRepairs={pendingRepairs}
+      />
 
       <main
         className={styles.main}

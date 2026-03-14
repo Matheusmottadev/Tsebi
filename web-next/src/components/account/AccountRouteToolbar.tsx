@@ -3,13 +3,13 @@
 import { useEffect, useState } from "react";
 
 const SECTIONS = [
-  { key: "overview", label: "Visao Geral" },
+  { key: "overview", label: "Visão Geral" },
   { key: "profile", label: "Meu Perfil" },
   { key: "orders", label: "Meus Pedidos" },
   { key: "private-care", label: "Atendimentos Privados" },
-  { key: "recommendations", label: "Recomendacoes" },
+  { key: "recommendations", label: "Recomendações" },
   { key: "wishlist", label: "Lista de Desejos" },
-  { key: "repairs", label: "Servico de Reparos" },
+  { key: "repairs", label: "Serviços de Reparos" },
 ] as const;
 
 function normalizeSection(value: string) {
@@ -35,7 +35,7 @@ export function AccountRouteToolbar() {
   }, []);
 
   return (
-    <nav className="account-route-toolbar" aria-label="Navegacao da conta">
+    <nav className="account-route-toolbar" aria-label="Navegação da conta">
       {SECTIONS.map((section) => (
         <a
           key={section.key}

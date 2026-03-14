@@ -5,5 +5,6 @@ export * from "./coupon";
 export * from "./order";
 export * from "./payment";
 export * from "./product";
+export * from "./repair";
 export * from "./session";
 export * from "./user";
