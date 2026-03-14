@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { listMyOrders } from "@/services/orders";
-import { createRepairRequest, listMyRepairs, uploadRepairPhoto } from "@/services/repairs";
+import { createRepairRequest, listMyRepairs, resolveUploadErrorMessage, uploadRepairPhoto } from "@/services/repairs";
 import type { PublicUser, RepairPhoto, RepairRequest } from "@/types";
 import styles from "../account.module.css";
 
@@ -133,7 +133,7 @@ export function RepairsTab({ user }: Props) {
     try {
       const uploaded = await Promise.all(files.map((file) => uploadRepairPhoto(file)));
       setPhotos((current) => [...current, ...uploaded].slice(0, 8));
-    } catch {
+    } catch (error) {
       setSubmitError("Não foi possível enviar as fotos agora. Tente novamente.");
     } finally {
       setUploading(false);
