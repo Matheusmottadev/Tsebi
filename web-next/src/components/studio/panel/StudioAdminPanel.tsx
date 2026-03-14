@@ -286,6 +286,7 @@ export function StudioAdminPanel() {
   const [isLoading, setIsLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState("");
   const [connectedData, setConnectedData] = useState<ConnectedPanelData>(EMPTY_CONNECTED_DATA);
+  const [csrfToken, setCsrfToken] = useState("");
   const [refreshIndex, setRefreshIndex] = useState(0);
   const [activeDrawer, setActiveDrawer] = useState<string | null>(null);
   const [toastMessage, setToastMessage] = useState("");
@@ -387,6 +388,8 @@ export function StudioAdminPanel() {
       if (authResult.status === "fulfilled") {
         if (!authResult.value.authenticated) {
           failures.push("Sessão admin não autenticada. Faça login em /admin/login.");
+        } else {
+          setCsrfToken(String(authResult.value.csrfToken || ""));
         }
       } else if (authResult.reason instanceof HttpError) {
         if (authResult.reason.status === 401 || authResult.reason.status === 403) {
@@ -644,6 +647,7 @@ export function StudioAdminPanel() {
               data={connectedData}
               loading={isLoading}
               errorMessage={errorMessage}
+              csrfToken={csrfToken}
               onRequestRefresh={() => setRefreshIndex((current) => current + 1)}
               onOpenCreateAppointment={activePage === "atendimentos" ? () => openDrawer("atendimentos") : undefined}
               globalSearchTarget={globalSearchTarget}

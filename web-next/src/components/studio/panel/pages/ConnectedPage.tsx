@@ -8,6 +8,7 @@ import { DrawerEditarProduto } from "@/components/admin/DrawerEditarProduto";
 import { DrawerNovoAtendimento } from "@/components/admin/DrawerNovoAtendimento";
 import { Toast } from "@/components/admin/Toast";
 import { SearchBar, type FilterConfig, type SortOption } from "@/components/studio/panel/SearchBar";
+import { PrivateCareManager } from "@/components/studio/PrivateCareManager";
 import {
   deleteAppointmentSlotAdmin,
   deleteCouponAdmin,
@@ -41,6 +42,7 @@ type ConnectedPageProps = {
   data: ConnectedPanelData;
   loading: boolean;
   errorMessage: string;
+  csrfToken?: string;
   onRequestRefresh?: () => void;
   onOpenCreateAppointment?: () => void;
   globalSearchTarget?: GlobalSearchTarget | null;
@@ -328,6 +330,7 @@ export function ConnectedPage({
   data,
   loading,
   errorMessage,
+  csrfToken = "",
   onRequestRefresh,
   onOpenCreateAppointment,
   globalSearchTarget,
@@ -1537,118 +1540,7 @@ export function ConnectedPage({
       ) : null}
 
       {page === "atendimentos" ? (
-        <>
-          <SearchBar
-            placeholder="Buscar por titulo, cliente, e-mail ou local"
-            value={careSearch}
-            onChange={setCareSearch}
-            filters={careFilterConfigs}
-            sortOptions={careSortOptions}
-            resultsCount={filteredAppointmentSlots.length}
-            onClear={resetCareSearch}
-          />
-          <div className={styles.helperCard}>
-            <div>
-              <p className={styles.helperTitle}>Controle de horarios do cliente</p>
-              <p className={styles.helperText}>
-                Crie os dias e horarios no botao <strong>+ Novo Atendimento</strong>. O horario so aparece em
-                <strong> Minha Conta &gt; Atendimentos Privados</strong> quando estiver com
-                <strong> Disponivel</strong> ativo e <strong>Bloqueado</strong> desligado.
-              </p>
-            </div>
-            {onOpenCreateAppointment ? (
-              <button type="button" className={styles.btnEdit} onClick={onOpenCreateAppointment}>
-                + Novo Atendimento
-              </button>
-            ) : null}
-          </div>
-          {filteredAppointmentSlots.length ? (
-            <div className={styles.tableWrap}>
-              <table className={styles.table}>
-                <thead>
-                  <tr>
-                    <th>Horario</th>
-                    <th>Clientes</th>
-                    <th>Status</th>
-                    <th>Vagas</th>
-                    <th>Modalidade</th>
-                    <th></th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredAppointmentSlots.slice(0, 200).map((slot) => (
-                    <tr key={slot.id}>
-                      <td>
-                        <strong>{slot.label || "Horario privado"}</strong>
-                        <br />
-                        {formatDateTime(slot.startsAt)}
-                      </td>
-                      <td>{getAppointmentClients(slot)}</td>
-                      <td>{formatAppointmentSlotStatus(slot.status)}</td>
-                      <td>
-                        {slot.bookedCount}/{slot.capacity}
-                      </td>
-                      <td>{[slot.modality, slot.location].filter(Boolean).join(" - ") || "-"}</td>
-                      <td className={styles.actionCell}>
-                        <button className={styles.btnEdit} onClick={() => openAppointmentDrawer(slot)}>
-                          <PencilLine size={12} /> Editar
-                        </button>
-                        <button
-                          className={styles.btnEdit}
-                          onClick={() =>
-                            handleAppointmentStatusToggle(slot, {
-                              isBlocked: !slot.isBlocked,
-                              isAvailable: slot.isBlocked ? true : slot.isAvailable,
-                            })
-                          }
-                        >
-                          {slot.isBlocked ? "Desbloquear" : "Bloquear"}
-                        </button>
-                        <button
-                          className={styles.btnEdit}
-                          onClick={() =>
-                            handleAppointmentStatusToggle(slot, {
-                              isAvailable: !slot.isAvailable,
-                              isBlocked: false,
-                            })
-                          }
-                        >
-                          {slot.isAvailable ? "Indisponivel" : "Disponivel"}
-                        </button>
-                        <button
-                          className={styles.btnDelete}
-                          onClick={() =>
-                            openDeleteConfirm({
-                              kind: "appointment_slot",
-                              id: String(slot.id || ""),
-                              label: String(slot.label || formatDateTime(slot.startsAt)),
-                            })
-                          }
-                        >
-                          <Trash2 size={12} /> Excluir
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          ) : (
-            <div className={styles.emptyStateCard}>
-              <p className={styles.emptyStateTitle}>Nenhum horario cadastrado.</p>
-              <p className={styles.emptyStateText}>
-                Para liberar horarios para o cliente, clique em <strong>+ Novo Atendimento</strong>, escolha a
-                data e hora, salve com <strong>Disponivel</strong> marcado e deixe <strong>Bloqueado</strong>{" "}
-                desligado.
-              </p>
-              {onOpenCreateAppointment ? (
-                <button type="button" className={styles.btnEdit} onClick={onOpenCreateAppointment}>
-                  Criar horario
-                </button>
-              ) : null}
-            </div>
-          )}
-        </>
+        <PrivateCareManager rows={data.appointmentSlots} csrfToken={csrfToken} />
       ) : null}
 
       {page === "lista_vip" ? (
