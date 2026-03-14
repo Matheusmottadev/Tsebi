@@ -21,6 +21,7 @@ export interface OrderItem {
   qty: number;
   unitAmount: number;
   currency: string;
+  imageUrl?: string | null;
   variantColor?: string | null;
   variantSize?: string | null;
   variantKey?: string | null;

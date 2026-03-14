@@ -177,7 +177,16 @@ function OrderRow({ order }: { order: Order }) {
             <div className={styles.orderItems}>
               {order.items.map((item, idx) => (
                 <div key={`${item.id}-${idx}`} className={styles.orderItem}>
-                  <div className={styles.orderItemImgPlaceholder} />
+                  {item.imageUrl ? (
+                    <img
+                      src={item.imageUrl}
+                      alt={item.name}
+                      className={styles.orderItemImg}
+                      loading="lazy"
+                    />
+                  ) : (
+                    <div className={styles.orderItemImgPlaceholder} />
+                  )}
                   <div className={styles.orderItemInfo}>
                     <p className={styles.orderItemMeta}>
                       {[item.qty > 1 ? `Qtd: ${item.qty}` : null, item.variantSize, item.variantColor]

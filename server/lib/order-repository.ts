@@ -63,6 +63,7 @@ export type OrderItem = {
   qty: number;
   unitAmount: number;
   currency: string;
+  imageUrl?: string | null;
   variantColor: string | null;
   variantSize: string | null;
   variantKey: string | null;
@@ -165,6 +166,7 @@ type OrderItemRow = JsonRecord & {
   qty?: number;
   price_cents?: number;
   currency?: string;
+  image_url?: string | null;
   variant_color?: string | null;
   variant_size?: string | null;
   variant_key?: string | null;
@@ -304,6 +306,7 @@ function mapOrderItemRow(row: OrderItemRow): OrderItem {
     qty: Number(row.qty || 0),
     unitAmount: Number(row.price_cents || 0),
     currency: String(row.currency || "brl"),
+    imageUrl: row.image_url ? String(row.image_url) : null,
     variantColor: row.variant_color || null,
     variantSize: row.variant_size || null,
     variantKey: row.variant_key || null
@@ -315,10 +318,22 @@ async function listItemsByOrderIds(orderIds: string[]): Promise<Map<string, Orde
 
   const result = await query<OrderItemRow>(
     `
-    SELECT order_id, product_sku, product_id, name, qty, price_cents, currency, variant_color, variant_size, variant_key
-    FROM order_items
-    WHERE order_id = ANY($1::uuid[])
-    ORDER BY id ASC
+    SELECT
+      oi.order_id,
+      oi.product_sku,
+      oi.product_id,
+      oi.name,
+      oi.qty,
+      oi.price_cents,
+      oi.currency,
+      p.image_url,
+      oi.variant_color,
+      oi.variant_size,
+      oi.variant_key
+    FROM order_items oi
+    LEFT JOIN products p ON p.id = oi.product_id
+    WHERE oi.order_id = ANY($1::uuid[])
+    ORDER BY oi.id ASC
     `,
     [orderIds]
   );
@@ -426,7 +441,21 @@ async function createOrder(payload: CreateOrderPayload): Promise<Order | null> {
     }
 
     const itemResult = await client.query<OrderItemRow>(
-      `SELECT order_id, product_sku, product_id, name, qty, price_cents, currency, variant_color, variant_size, variant_key FROM order_items WHERE order_id = $1`,
+      `SELECT
+         oi.order_id,
+         oi.product_sku,
+         oi.product_id,
+         oi.name,
+         oi.qty,
+         oi.price_cents,
+         oi.currency,
+         p.image_url,
+         oi.variant_color,
+         oi.variant_size,
+         oi.variant_key
+       FROM order_items oi
+       LEFT JOIN products p ON p.id = oi.product_id
+       WHERE oi.order_id = $1`,
       [orderRow.id]
     );
 
@@ -519,7 +548,21 @@ async function updateOrder(orderId: string, patch: Partial<OrderPatch>): Promise
   if (!row) return null;
 
   const itemResult = await query<OrderItemRow>(
-    `SELECT order_id, product_sku, product_id, name, qty, price_cents, currency, variant_color, variant_size, variant_key FROM order_items WHERE order_id = $1`,
+    `SELECT
+       oi.order_id,
+       oi.product_sku,
+       oi.product_id,
+       oi.name,
+       oi.qty,
+       oi.price_cents,
+       oi.currency,
+       p.image_url,
+       oi.variant_color,
+       oi.variant_size,
+       oi.variant_key
+     FROM order_items oi
+     LEFT JOIN products p ON p.id = oi.product_id
+     WHERE oi.order_id = $1`,
     [row.id]
   );
 
@@ -535,7 +578,21 @@ async function findOrderById(orderId: string): Promise<Order | null> {
   if (!row) return null;
 
   const itemResult = await query<OrderItemRow>(
-    `SELECT order_id, product_sku, product_id, name, qty, price_cents, currency, variant_color, variant_size, variant_key FROM order_items WHERE order_id = $1`,
+    `SELECT
+       oi.order_id,
+       oi.product_sku,
+       oi.product_id,
+       oi.name,
+       oi.qty,
+       oi.price_cents,
+       oi.currency,
+       p.image_url,
+       oi.variant_color,
+       oi.variant_size,
+       oi.variant_key
+     FROM order_items oi
+     LEFT JOIN products p ON p.id = oi.product_id
+     WHERE oi.order_id = $1`,
     [row.id]
   );
 
@@ -566,7 +623,21 @@ async function findOrderByPaymentIntentId(paymentIntentId: string): Promise<Orde
   if (!row) return null;
 
   const itemResult = await query<OrderItemRow>(
-    `SELECT order_id, product_sku, product_id, name, qty, price_cents, currency, variant_color, variant_size, variant_key FROM order_items WHERE order_id = $1`,
+    `SELECT
+       oi.order_id,
+       oi.product_sku,
+       oi.product_id,
+       oi.name,
+       oi.qty,
+       oi.price_cents,
+       oi.currency,
+       p.image_url,
+       oi.variant_color,
+       oi.variant_size,
+       oi.variant_key
+     FROM order_items oi
+     LEFT JOIN products p ON p.id = oi.product_id
+     WHERE oi.order_id = $1`,
     [row.id]
   );
 
