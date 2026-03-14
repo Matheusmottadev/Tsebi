@@ -1585,6 +1585,7 @@ app.post(
 
 app.use(
   express.json({
+    limit: "20mb",
     verify: (req: any, _res: any, buf: Buffer) => {
       try {
         if (String(req.originalUrl || "").startsWith("/api/whatsapp/webhook")) {
