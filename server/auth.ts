@@ -93,6 +93,10 @@ function detectImageKind(buffer: any) {
   return "";
 }
 
+function buildInlineImageDataUrl(buffer: Buffer, contentType: string) {
+  return `data:${contentType};base64,${buffer.toString("base64")}`;
+}
+
 function isLoginEmailVerificationRequired() {
   return parseBooleanEnv(process.env.AUTH_LOGIN_EMAIL_CODE_REQUIRED, false);
 }
@@ -2153,9 +2157,24 @@ myRouter.post(
         }
       });
     } catch (error: any) {
-      if (String(error?.code || "") === "R2_NOT_CONFIGURED") {
-        return res.status(500).json({ error: "R2_NOT_CONFIGURED" });
+      const fallbackUrl = buildInlineImageDataUrl(req.body, contentType);
+      if (fallbackUrl) {
+        const fileNameRaw = String(req.query.name || req.headers["x-file-name"] || "").trim();
+        const contentTypeExtension = contentType.split("/")[1] || "jpg";
+        const fileName =
+          fileNameRaw.replace(/[^\w.\- ]+/g, "").slice(0, 120) || `reparo.${contentTypeExtension}`;
+
+        return res.status(201).json({
+          ok: true,
+          photo: {
+            url: fallbackUrl,
+            fileName,
+            contentType
+          },
+          storage: "inline"
+        });
       }
+
       return res.status(500).json({ error: "IMAGE_UPLOAD_FAILED" });
     }
   }
