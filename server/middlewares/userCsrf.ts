@@ -2,7 +2,6 @@ import type { NextFunction, Request, Response } from "express";
 const nodeCrypto = require("node:crypto");
 
 const isProduction = process.env.NODE_ENV === "production";
-const appBaseOrigin = "";
 
 function sanitizeCookieName(value: unknown, fallback = "tsebi.csrf"): string {
   const raw = String(value || "").trim();
@@ -11,6 +10,16 @@ function sanitizeCookieName(value: unknown, fallback = "tsebi.csrf"): string {
 }
 
 const userCsrfCookieName = sanitizeCookieName(process.env.USER_CSRF_COOKIE_NAME, "tsebi.csrf");
+
+function normalizeOrigin(value: unknown): string {
+  const raw = String(value || "").trim();
+  if (!raw) return "";
+  try {
+    return new URL(raw).origin;
+  } catch {
+    return "";
+  }
+}
 
 function isLocalOrIpHost(hostname: string): boolean {
   const value = String(hostname || "").trim().toLowerCase();
@@ -30,6 +39,73 @@ function resolveCookieDomain(): string | undefined {
 }
 
 const cookieDomain = resolveCookieDomain();
+
+function readForwardedHost(req: Request): string {
+  const raw = String(req.get("x-forwarded-host") || "").trim();
+  if (!raw) return "";
+  return raw.split(",")[0]?.trim() || "";
+}
+
+function readForwardedProto(req: Request): string {
+  const raw = String(req.get("x-forwarded-proto") || "").trim().toLowerCase();
+  if (!raw) return "";
+  return raw.split(",")[0]?.trim() || "";
+}
+
+function buildOriginFromHost(host: string, protocol: string): string {
+  const safeHost = String(host || "").trim();
+  const safeProtocol = String(protocol || "").trim().toLowerCase();
+  if (!safeHost || !safeProtocol) return "";
+  try {
+    return new URL(`${safeProtocol}://${safeHost}`).origin;
+  } catch {
+    return "";
+  }
+}
+
+function collectAllowedOrigins(req: Request): Set<string> {
+  const allowedOrigins = new Set<string>();
+
+  [
+    process.env.APP_BASE_URL,
+    process.env.PUBLIC_APP_URL,
+    process.env.SITE_URL,
+    process.env.PUBLIC_SITE_URL,
+    process.env.CORS_ORIGIN,
+  ]
+    .flatMap((value) => String(value || "").split(","))
+    .map((value) => normalizeOrigin(value))
+    .filter(Boolean)
+    .forEach((origin) => allowedOrigins.add(origin));
+
+  const requestHost = String(req.get("host") || "").trim();
+  const forwardedHost = readForwardedHost(req);
+  const forwardedProto = readForwardedProto(req) || (isProduction ? "https" : String(req.protocol || "http"));
+  const requestProto = String(req.protocol || "").trim().toLowerCase() || (isProduction ? "https" : "http");
+
+  [buildOriginFromHost(requestHost, requestProto), buildOriginFromHost(requestHost, forwardedProto)]
+    .filter(Boolean)
+    .forEach((origin) => allowedOrigins.add(origin));
+
+  [buildOriginFromHost(forwardedHost, forwardedProto), buildOriginFromHost(forwardedHost, requestProto)]
+    .filter(Boolean)
+    .forEach((origin) => allowedOrigins.add(origin));
+
+  if (cookieDomain) {
+    const baseDomain = cookieDomain.replace(/^\./, "");
+    const schemes = new Set<string>([isProduction ? "https" : "http", "https"]);
+    schemes.forEach((scheme) => {
+      const direct = buildOriginFromHost(baseDomain, scheme);
+      if (direct) allowedOrigins.add(direct);
+      if (!baseDomain.startsWith("www.") && !isLocalOrIpHost(baseDomain)) {
+        const withWww = buildOriginFromHost(`www.${baseDomain}`, scheme);
+        if (withWww) allowedOrigins.add(withWww);
+      }
+    });
+  }
+
+  return allowedOrigins;
+}
 
 function parseCookieHeader(cookieHeader: string): Record<string, string> {
   const source = String(cookieHeader || "");
@@ -92,13 +168,7 @@ function isAllowedSameOriginMutation(req: Request): boolean {
 
   if (!requestOrigin && !referer) return true;
 
-  const allowedOrigins = new Set<string>();
-  if (appBaseOrigin) allowedOrigins.add(appBaseOrigin);
-  const host = String(req.get("host") || "").trim();
-  if (host) {
-    const scheme = isProduction ? "https" : String(req.protocol || "http");
-    allowedOrigins.add(`${scheme}://${host}`);
-  }
+  const allowedOrigins = collectAllowedOrigins(req);
 
   const validate = (value: string): boolean => {
     if (!value) return true;
