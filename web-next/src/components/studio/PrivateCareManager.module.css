@@ -1,572 +1,504 @@
 .wrap {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 16px;
 }
 
 .flashOk,
 .flashError {
   margin: 0;
-  padding: 10px 14px;
-  font-size: 13px;
-  border-radius: 4px;
-  font-family: sans-serif;
+  padding: 12px 16px;
+  border: 1px solid;
+  font-family: var(--font-jost), sans-serif;
+  font-size: 12px;
+  font-weight: 300;
 }
 
 .flashOk {
-  background: rgba(74, 124, 89, 0.15);
-  border: 1px solid rgba(74, 124, 89, 0.4);
-  color: #7ec897;
+  background: #eef8f1;
+  border-color: #b8d8c0;
+  color: #2f6b43;
 }
 
 .flashError {
-  background: rgba(192, 57, 43, 0.12);
-  border: 1px solid rgba(192, 57, 43, 0.35);
-  color: #e07070;
+  background: #fdf0ef;
+  border-color: #e5b7b2;
+  color: #9b3b36;
 }
 
-/* ── CALENDAR LAYOUT ─────────────────────────────── */
 .calLayout {
   display: grid;
-  grid-template-columns: 340px 1fr;
-  gap: 0;
-  border: 1px solid var(--studio-border);
-  background: var(--studio-surface-soft);
-  min-height: 540px;
+  gap: 16px;
 }
 
-/* LEFT — calendar */
-.calPanel {
-  padding: 24px 22px 20px;
-  border-right: 1px solid var(--studio-border);
+.calendarCard,
+.panelCard {
+  border: 1px solid var(--studio-border);
+  background: #fff;
+}
+
+.calendarCard {
+  padding: 24px 28px;
+}
+
+.calendarHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 24px;
+  margin-bottom: 18px;
 }
 
 .monthNav {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  margin-bottom: 20px;
+  gap: 14px;
 }
 
 .navBtn {
-  background: transparent;
+  width: 34px;
+  height: 34px;
   border: 1px solid var(--studio-border);
-  width: 28px;
-  height: 28px;
-  border-radius: 50%;
+  background: #fff;
+  color: var(--studio-text);
   cursor: pointer;
-  font-size: 16px;
-  color: var(--studio-muted);
-  display: flex;
+  font-size: 18px;
+  line-height: 1;
+  display: inline-flex;
   align-items: center;
   justify-content: center;
-  transition: all 0.12s;
-  line-height: 1;
+  transition: background 0.16s ease, border-color 0.16s ease;
 }
 
 .navBtn:hover {
-  background: var(--studio-border);
-  color: var(--studio-text);
+  background: #f5f5f5;
+  border-color: var(--studio-border-strong);
 }
 
 .monthLabel {
-  font-size: 15px;
+  font-family: var(--font-cormorant), "Cormorant Garamond", serif;
+  font-size: 34px;
   font-weight: 400;
-  letter-spacing: 0.04em;
   color: var(--studio-text);
-  font-family: "Cormorant Garamond", "Georgia", serif;
+}
+
+.selectedMeta {
+  display: grid;
+  justify-items: end;
+  gap: 6px;
+}
+
+.sectionLabel {
+  display: block;
+  font-family: var(--font-jost), sans-serif;
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--studio-muted);
+}
+
+.selectedDateValue,
+.sectionTitle,
+.modalTitle {
+  font-family: var(--font-cormorant), "Cormorant Garamond", serif;
+  font-size: 32px;
+  font-weight: 400;
+  color: var(--studio-text);
 }
 
 .dayLabels {
   display: grid;
-  grid-template-columns: repeat(7, 1fr);
-  gap: 2px;
-  margin-bottom: 6px;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 8px;
+  margin-bottom: 10px;
 }
 
-.dayLbl {
+.dayLabel {
+  padding: 4px 0;
   text-align: center;
-  font-size: 9px;
-  letter-spacing: 0.1em;
+  font-family: var(--font-jost), sans-serif;
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
   color: var(--studio-muted);
-  font-family: sans-serif;
-  font-weight: 600;
-  padding: 2px 0;
 }
 
 .calGrid {
   display: grid;
-  grid-template-columns: repeat(7, 1fr);
-  gap: 3px;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.daySpacer {
+  min-height: 78px;
 }
 
 .dayCell {
-  aspect-ratio: 1;
-  background: none;
-  border: none;
+  min-height: 78px;
+  border: 1px solid transparent;
+  background: #fafafa;
+  color: var(--studio-text);
   cursor: pointer;
-  border-radius: 50%;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  font-size: 12px;
-  color: var(--studio-text);
-  font-family: "Cormorant Garamond", "Georgia", serif;
-  transition: background 0.12s;
-  position: relative;
-  gap: 1px;
-  padding: 0;
+  gap: 8px;
+  transition: border-color 0.16s ease, background 0.16s ease;
 }
 
-.dayCell:hover:not(.dayCellSelected) {
-  background: var(--studio-border);
+.dayCell:hover {
+  border-color: var(--studio-border-strong);
+  background: #f5f5f5;
+}
+
+.dayCellToday {
+  border-color: var(--studio-border-strong);
 }
 
 .dayCellSelected {
-  background: var(--studio-text) !important;
-  color: #111 !important;
+  border-color: #111;
+  background: #111;
+  color: #fff;
 }
 
-.dayCellToday:not(.dayCellSelected) {
-  border: 1.5px solid var(--studio-muted);
+.dayNumber {
+  font-family: var(--font-cormorant), "Cormorant Garamond", serif;
+  font-size: 28px;
+  line-height: 1;
 }
 
-.dots {
-  display: flex;
-  gap: 2px;
-  position: absolute;
-  bottom: 2px;
+.dayIndicators {
+  min-height: 8px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
 }
 
 .dot {
-  width: 3px;
-  height: 3px;
-  border-radius: 50%;
+  width: 7px;
+  height: 7px;
+  border-radius: 999px;
   display: inline-block;
 }
 
-.dotAppt {
-  background: var(--studio-text);
-}
-
-.dayCellSelected .dotAppt {
+.dotAppointment {
   background: #111;
 }
 
-.dotSlot {
-  background: var(--studio-muted);
+.dotFree {
+  background: #b58c4e;
 }
 
-.dayCellSelected .dotSlot {
-  background: rgba(17, 17, 17, 0.5);
+.dayCellSelected .dotAppointment {
+  background: #fff;
+}
+
+.dayCellSelected .dotFree {
+  background: #f2d6a2;
 }
 
 .legend {
   display: flex;
-  gap: 14px;
-  margin-top: 14px;
-  padding-top: 12px;
+  flex-wrap: wrap;
+  gap: 18px;
+  margin-top: 18px;
+  padding-top: 14px;
   border-top: 1px solid var(--studio-border);
 }
 
-.legItem {
-  display: flex;
+.legendItem {
+  display: inline-flex;
   align-items: center;
-  gap: 5px;
-  font-size: 10px;
+  gap: 8px;
+  font-family: var(--font-jost), sans-serif;
+  font-size: 11px;
+  font-weight: 300;
   color: var(--studio-muted);
-  font-family: sans-serif;
-  letter-spacing: 0.03em;
 }
 
-/* RIGHT — detail panel */
-.detailPanel {
-  padding: 24px 28px;
+.panelCard {
+  padding: 22px 28px 24px;
 }
 
-.dateHdr {
+.sectionHeader {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
-  margin-bottom: 20px;
-  padding-bottom: 16px;
-  border-bottom: 1px solid var(--studio-border);
+  gap: 16px;
+  margin-bottom: 18px;
 }
 
-.dateMetaLbl {
-  font-size: 9px;
-  letter-spacing: 0.13em;
-  color: var(--studio-muted);
-  font-family: sans-serif;
-  font-weight: 600;
-  margin-bottom: 4px;
+.sectionTitle {
+  margin: 8px 0 0;
+  font-size: 30px;
 }
 
-.dateMetaVal {
-  font-size: 18px;
-  font-weight: 400;
-  letter-spacing: 0.02em;
-  color: var(--studio-text);
-  font-family: "Cormorant Garamond", "Georgia", serif;
-}
-
-.editBtn {
-  background: transparent;
+.manageBtn {
   border: 1px solid var(--studio-border-strong);
-  padding: 7px 16px;
-  font-size: 10px;
-  letter-spacing: 0.09em;
-  cursor: pointer;
-  font-family: sans-serif;
-  font-weight: 600;
+  background: #fff;
   color: var(--studio-text);
-  transition: all 0.12s;
-  white-space: nowrap;
+  padding: 10px 16px;
+  cursor: pointer;
+  font-family: var(--font-jost), sans-serif;
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  transition: background 0.16s ease, color 0.16s ease;
 }
 
-.editBtn:hover {
-  background: var(--studio-text);
-  color: #111;
+.manageBtn:hover {
+  background: #111;
+  color: #fff;
 }
 
-.secLbl {
-  display: block;
-  font-size: 9px;
-  letter-spacing: 0.13em;
-  color: var(--studio-muted);
-  font-family: sans-serif;
-  font-weight: 600;
-  margin-bottom: 8px;
+.slotSummary {
+  min-height: 80px;
 }
 
 .slotChips {
   display: flex;
   flex-wrap: wrap;
-  gap: 6px;
+  gap: 10px;
 }
 
 .chip {
   border: 1px solid var(--studio-border);
-  padding: 4px 12px;
-  font-size: 13px;
-  font-family: "Cormorant Garamond", "Georgia", serif;
-  color: var(--studio-muted);
-  letter-spacing: 0.04em;
-}
-
-.noSlotsBox {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  background: rgba(255, 255, 255, 0.02);
-  border: 1px dashed var(--studio-border-strong);
-  padding: 14px 18px;
-  margin-bottom: 20px;
-  gap: 12px;
-}
-
-.noSlotsTxt {
-  font-size: 12px;
-  color: var(--studio-muted);
-  font-family: sans-serif;
-}
-
-.addSlotsBtn {
-  background: none;
-  border: 1px solid var(--studio-border-strong);
-  padding: 5px 12px;
-  font-size: 10px;
-  letter-spacing: 0.08em;
-  cursor: pointer;
-  font-family: sans-serif;
-  font-weight: 600;
+  background: #fafafa;
   color: var(--studio-text);
-  white-space: nowrap;
+  padding: 10px 14px;
+  font-family: var(--font-cormorant), "Cormorant Garamond", serif;
+  font-size: 20px;
+  line-height: 1;
 }
 
-.apptsLbl {
-  font-size: 9px;
-  letter-spacing: 0.13em;
-  color: var(--studio-muted);
-  font-family: sans-serif;
-  font-weight: 600;
-  margin: 0 0 10px;
-}
-
-.noAppts {
-  font-size: 13px;
-  color: var(--studio-muted);
-  font-family: sans-serif;
+.emptyMessage,
+.noAppointments {
   margin: 0;
+  padding: 18px 20px;
+  border: 1px dashed var(--studio-border-strong);
+  background: #fbfbfb;
+  color: var(--studio-muted);
+  font-family: var(--font-jost), sans-serif;
+  font-size: 12px;
+  font-weight: 300;
+  line-height: 1.7;
 }
 
-.apptList {
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
+.appointmentList {
+  display: grid;
+  gap: 10px;
 }
 
-.apptRow {
+.appointmentCard {
   border: 1px solid var(--studio-border);
-  overflow: hidden;
+  background: #fff;
 }
 
-.apptHdr {
+.appointmentHeader {
   width: 100%;
-  background: transparent;
-  border: none;
-  padding: 12px 14px;
+  border: 0;
+  background: #fff;
+  color: var(--studio-text);
   cursor: pointer;
+  padding: 16px 18px;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  transition: background 0.1s;
-  color: var(--studio-text);
+  gap: 18px;
 }
 
-.apptHdr:hover {
-  background: rgba(255, 255, 255, 0.03);
+.appointmentHeader:hover {
+  background: #fafafa;
 }
 
-.apptLeft {
+.appointmentHeaderMain,
+.appointmentHeaderMeta {
   display: flex;
   align-items: center;
   gap: 14px;
 }
 
-.apptTime {
-  font-size: 14px;
-  font-family: "Cormorant Garamond", "Georgia", serif;
-  font-weight: 600;
-  letter-spacing: 0.05em;
-  color: var(--studio-text);
-  min-width: 42px;
+.appointmentTime {
+  min-width: 58px;
+  font-family: var(--font-cormorant), "Cormorant Garamond", serif;
+  font-size: 26px;
+  line-height: 1;
 }
 
-.apptName {
-  font-size: 14px;
-  font-family: "Cormorant Garamond", "Georgia", serif;
-  color: var(--studio-text);
+.appointmentName {
+  font-family: var(--font-cormorant), "Cormorant Garamond", serif;
+  font-size: 24px;
+  line-height: 1.1;
 }
 
-.apptRight {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.apptTypeTag {
+.appointmentTag {
+  font-family: var(--font-jost), sans-serif;
   font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
   color: var(--studio-muted);
-  font-family: sans-serif;
-  letter-spacing: 0.03em;
 }
 
 .chevron {
   font-size: 12px;
   color: var(--studio-muted);
-  transition: transform 0.18s;
-  display: inline-block;
-  line-height: 1;
+  transition: transform 0.16s ease;
 }
 
 .chevronOpen {
   transform: rotate(180deg);
 }
 
-.apptDetails {
-  padding: 0 14px 14px;
+.appointmentDetails {
   border-top: 1px solid var(--studio-border);
+  padding: 18px;
+  display: grid;
+  gap: 16px;
 }
 
 .detailGrid {
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 10px 18px;
-  padding: 12px 0 10px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px 22px;
 }
 
-.dLbl {
-  font-size: 9px;
-  letter-spacing: 0.1em;
-  color: var(--studio-muted);
-  font-family: sans-serif;
-  font-weight: 600;
+.detailBlock {
+  grid-column: 1 / -1;
+}
+
+.detailLabel {
   display: block;
-  margin-bottom: 3px;
+  margin-bottom: 6px;
+  font-family: var(--font-jost), sans-serif;
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.12em;
   text-transform: uppercase;
-}
-
-.dVal {
-  font-size: 13px;
-  color: var(--studio-text);
-  font-family: "Cormorant Garamond", "Georgia", serif;
-  letter-spacing: 0.01em;
-  display: block;
-}
-
-.apptActions {
-  display: flex;
-  gap: 8px;
-  align-items: center;
-  flex-wrap: wrap;
-  margin-top: 4px;
-}
-
-.cancelApptBtn {
-  background: none;
-  border: 1px solid var(--studio-border);
-  padding: 6px 12px;
-  font-size: 10px;
-  letter-spacing: 0.07em;
-  cursor: pointer;
-  font-family: sans-serif;
   color: var(--studio-muted);
-  transition: all 0.12s;
 }
 
-.cancelApptBtn:hover:not(:disabled) {
-  border-color: #c0392b;
-  color: #e07070;
-}
-
-.cancelApptBtn:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-.rescheduleBtn {
-  background: none;
-  border: 1px solid var(--studio-border-strong);
-  padding: 6px 12px;
-  font-size: 10px;
-  letter-spacing: 0.07em;
-  cursor: pointer;
-  font-family: sans-serif;
+.detailValue {
+  display: block;
   color: var(--studio-text);
-  transition: all 0.12s;
+  font-family: var(--font-cormorant), "Cormorant Garamond", serif;
+  font-size: 22px;
+  line-height: 1.3;
 }
 
-.rescheduleBtn:hover:not(:disabled) {
-  background: var(--studio-text);
-  color: #111;
+.appointmentActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
 }
 
-.rescheduleBtn:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
+.cancelButton,
+.rescheduleButton,
+.confirmYes,
+.confirmNo,
+.modalSecondaryButton,
+.modalPrimaryButton,
+.bulkButton {
+  padding: 10px 14px;
+  border: 1px solid var(--studio-border);
+  background: #fff;
+  cursor: pointer;
+  font-family: var(--font-jost), sans-serif;
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  transition: background 0.16s ease, color 0.16s ease, border-color 0.16s ease;
+}
+
+.cancelButton:hover,
+.confirmNo:hover,
+.modalSecondaryButton:hover,
+.bulkButton:hover {
+  background: #f5f5f5;
+}
+
+.rescheduleButton,
+.confirmYes,
+.modalPrimaryButton {
+  border-color: #111;
+}
+
+.rescheduleButton:hover,
+.confirmYes:hover,
+.modalPrimaryButton:hover {
+  background: #111;
+  color: #fff;
 }
 
 .confirmBox {
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid var(--studio-border);
-  padding: 10px 12px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 14px;
+  border: 1px dashed var(--studio-border-strong);
+  background: #fafafa;
 }
 
-.confTxt {
-  font-size: 11px;
+.confirmText {
+  flex: 1 1 100%;
+  font-family: var(--font-jost), sans-serif;
+  font-size: 12px;
+  font-weight: 300;
   color: var(--studio-muted);
-  font-family: sans-serif;
-  display: block;
-  margin-bottom: 8px;
-  line-height: 1.5;
+  line-height: 1.6;
 }
 
-.confYes {
-  background: var(--studio-text);
-  color: #111;
-  border: none;
-  padding: 6px 12px;
-  font-size: 10px;
-  letter-spacing: 0.07em;
-  cursor: pointer;
-  font-family: sans-serif;
-  margin-right: 6px;
-  transition: opacity 0.12s;
-}
-
-.confYes:hover:not(:disabled) {
-  opacity: 0.8;
-}
-
-.confYes:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-.confNo {
-  background: none;
-  border: 1px solid var(--studio-border);
-  padding: 6px 10px;
-  font-size: 10px;
-  letter-spacing: 0.07em;
-  cursor: pointer;
-  font-family: sans-serif;
-  color: var(--studio-muted);
-}
-
-.confNo:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-/* ── EDIT HOURS MODAL ─────────────────────────── */
 .modalOverlay {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.65);
-  z-index: 200;
+  z-index: 1600;
   display: flex;
   align-items: center;
   justify-content: center;
+  padding: 24px;
+  background: rgba(17, 17, 17, 0.34);
+  backdrop-filter: blur(2px);
 }
 
 .modal {
-  background: #111;
-  width: min(480px, 92vw);
-  max-height: 90vh;
-  overflow-y: auto;
+  width: min(760px, calc(100vw - 48px));
+  max-height: calc(100vh - 48px);
+  overflow: auto;
   border: 1px solid var(--studio-border);
-  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.5);
+  background: #fff;
+  box-shadow: 0 28px 80px rgba(0, 0, 0, 0.18);
 }
 
-.modalHdr {
+.modalHeader {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
-  padding: 22px 28px 16px;
+  gap: 18px;
+  padding: 24px 28px 18px;
   border-bottom: 1px solid var(--studio-border);
 }
 
-.modalMetaLbl {
-  font-size: 9px;
-  letter-spacing: 0.13em;
+.modalTitle {
+  margin: 8px 0 0;
+  font-size: 30px;
+}
+
+.closeButton {
+  border: 0;
+  background: transparent;
   color: var(--studio-muted);
-  font-family: sans-serif;
-  font-weight: 600;
-  margin-bottom: 4px;
-}
-
-.modalDateVal {
-  font-size: 18px;
-  font-family: "Cormorant Garamond", "Georgia", serif;
-  color: var(--studio-text);
-  font-weight: 400;
-}
-
-.closeBtn {
-  background: none;
-  border: none;
-  font-size: 15px;
   cursor: pointer;
-  color: var(--studio-muted);
-  padding: 2px;
+  font-size: 18px;
   line-height: 1;
-  transition: color 0.1s;
 }
 
-.closeBtn:hover {
+.closeButton:hover {
   color: var(--studio-text);
 }
 
@@ -574,208 +506,222 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 16px 28px;
+  gap: 18px;
+  padding: 18px 28px;
   border-bottom: 1px solid var(--studio-border);
-  gap: 16px;
 }
 
 .toggleTitle {
-  font-size: 14px;
+  display: block;
+  margin-bottom: 6px;
+  font-family: var(--font-cormorant), "Cormorant Garamond", serif;
+  font-size: 24px;
+  font-weight: 400;
   color: var(--studio-text);
-  font-family: "Cormorant Garamond", "Georgia", serif;
-  margin-bottom: 3px;
 }
 
-.toggleSub {
-  font-size: 11px;
+.toggleSubtitle {
+  margin: 0;
+  font-family: var(--font-jost), sans-serif;
+  font-size: 12px;
+  font-weight: 300;
   color: var(--studio-muted);
-  font-family: sans-serif;
-  line-height: 1.4;
+  line-height: 1.6;
 }
 
-.sw {
-  width: 40px;
-  height: 22px;
-  border-radius: 11px;
-  border: none;
-  cursor: pointer;
-  position: relative;
-  flex-shrink: 0;
-  transition: background 0.2s;
+.switch {
+  width: 52px;
+  height: 30px;
+  border: 1px solid var(--studio-border-strong);
+  background: #f4f4f4;
   padding: 0;
+  position: relative;
+  cursor: pointer;
+  border-radius: 999px;
+  flex: 0 0 auto;
 }
 
-.swKnob {
+.switchActive {
+  background: #111;
+  border-color: #111;
+}
+
+.switchKnob {
   position: absolute;
-  top: 2px;
-  width: 18px;
-  height: 18px;
-  border-radius: 50%;
+  top: 3px;
+  left: 3px;
+  width: 22px;
+  height: 22px;
+  border-radius: 999px;
   background: #fff;
-  transition: transform 0.2s;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.4);
+  transition: transform 0.16s ease;
+}
+
+.switchActive .switchKnob {
+  transform: translateX(22px);
 }
 
 .hoursSection {
-  padding: 20px 28px;
+  padding: 22px 28px 24px;
 }
 
-.hoursHdr {
+.hoursHeader {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 12px;
-}
-
-.hoursLbl {
-  font-size: 9px;
-  letter-spacing: 0.13em;
-  color: var(--studio-muted);
-  font-family: sans-serif;
-  font-weight: 600;
+  gap: 16px;
+  margin-bottom: 16px;
 }
 
 .bulkActions {
   display: flex;
-  gap: 6px;
-}
-
-.bulkBtn {
-  background: none;
-  border: 1px solid var(--studio-border);
-  padding: 3px 10px;
-  font-size: 9px;
-  letter-spacing: 0.07em;
-  cursor: pointer;
-  font-family: sans-serif;
-  color: var(--studio-muted);
-  transition: all 0.12s;
-}
-
-.bulkBtn:hover:not(:disabled) {
-  border-color: var(--studio-muted);
-  color: var(--studio-text);
-}
-
-.bulkBtn:disabled {
-  opacity: 0.3;
-  cursor: not-allowed;
+  gap: 8px;
 }
 
 .hoursGrid {
   display: grid;
-  grid-template-columns: repeat(7, 1fr);
-  gap: 8px;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
 }
 
-.hrBtn {
-  aspect-ratio: 1;
-  border-radius: 50%;
-  border: 1.5px solid var(--studio-border);
-  background: transparent;
-  cursor: pointer;
-  font-size: 12px;
-  font-family: "Cormorant Garamond", "Georgia", serif;
-  color: var(--studio-muted);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: all 0.15s;
-  width: 100%;
-  padding: 0;
-}
-
-.hrBtn:hover:not(.hrBtnActive):not(:disabled) {
-  background: var(--studio-border);
-  border-color: var(--studio-border-strong);
+.hourButton {
+  min-height: 48px;
+  border: 1px solid var(--studio-border);
+  background: #fafafa;
   color: var(--studio-text);
+  cursor: pointer;
+  font-family: var(--font-cormorant), "Cormorant Garamond", serif;
+  font-size: 22px;
+  transition: background 0.16s ease, border-color 0.16s ease, color 0.16s ease;
 }
 
-.hrBtnActive {
-  background: var(--studio-text);
-  border-color: var(--studio-text);
-  color: #111;
-  font-weight: 600;
+.hourButton:hover:not(:disabled) {
+  border-color: var(--studio-border-strong);
+  background: #f2f2f2;
 }
 
-.hrBtn:disabled {
-  opacity: 0.25;
+.hourButtonActive {
+  background: #111;
+  border-color: #111;
+  color: #fff;
+}
+
+.hourButton:disabled {
+  opacity: 0.34;
   cursor: not-allowed;
 }
 
 .disabledNotice {
-  font-size: 11px;
+  margin: 14px 0 0;
+  font-family: var(--font-jost), sans-serif;
+  font-size: 12px;
+  font-weight: 300;
+  line-height: 1.6;
   color: var(--studio-muted);
-  font-family: sans-serif;
-  margin-top: 12px;
-  text-align: center;
-  padding: 10px;
-  background: rgba(255, 255, 255, 0.02);
-  border: 1px dashed var(--studio-border);
 }
 
-.modalFtr {
+.modalFooter {
   display: flex;
-  gap: 8px;
   align-items: center;
-  justify-content: flex-end;
-  padding: 16px 28px 22px;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 18px 28px 24px;
   border-top: 1px solid var(--studio-border);
 }
 
-.savedMsg {
-  font-size: 11px;
-  color: #7ec897;
-  font-family: sans-serif;
-  margin-right: auto;
-  letter-spacing: 0.03em;
+.savedMessage {
+  font-family: var(--font-jost), sans-serif;
+  font-size: 12px;
+  font-weight: 300;
+  color: #2f6b43;
 }
 
-.cancelModalBtn {
-  background: none;
-  border: 1px solid var(--studio-border);
-  padding: 8px 18px;
-  font-size: 10px;
-  letter-spacing: 0.09em;
-  cursor: pointer;
-  font-family: sans-serif;
-  color: var(--studio-muted);
+.modalFooterActions {
+  display: flex;
+  gap: 10px;
 }
 
-.cancelModalBtn:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
+@media (max-width: 900px) {
+  .calendarHeader,
+  .sectionHeader,
+  .toggleRow,
+  .hoursHeader,
+  .modalFooter {
+    flex-direction: column;
+    align-items: flex-start;
+  }
 
-.saveBtn {
-  background: var(--studio-text);
-  color: #111;
-  border: none;
-  padding: 8px 22px;
-  font-size: 10px;
-  letter-spacing: 0.11em;
-  cursor: pointer;
-  font-family: sans-serif;
-  font-weight: 600;
-  transition: opacity 0.12s;
-}
+  .selectedMeta {
+    justify-items: start;
+  }
 
-.saveBtn:hover:not(:disabled) {
-  opacity: 0.85;
-}
+  .daySpacer,
+  .dayCell {
+    min-height: 64px;
+  }
 
-.saveBtn:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
+  .dayNumber {
+    font-size: 24px;
+  }
 
-@media (max-width: 880px) {
-  .calLayout {
+  .detailGrid {
     grid-template-columns: 1fr;
   }
 
-  .calPanel {
-    border-right: none;
-    border-bottom: 1px solid var(--studio-border);
+  .hoursGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 640px) {
+  .calendarCard,
+  .panelCard,
+  .modalHeader,
+  .toggleRow,
+  .hoursSection,
+  .modalFooter {
+    padding-left: 18px;
+    padding-right: 18px;
+  }
+
+  .monthLabel,
+  .selectedDateValue,
+  .sectionTitle,
+  .modalTitle {
+    font-size: 26px;
+  }
+
+  .calGrid,
+  .dayLabels {
+    gap: 6px;
+  }
+
+  .daySpacer,
+  .dayCell {
+    min-height: 52px;
+  }
+
+  .dayNumber {
+    font-size: 20px;
+  }
+
+  .appointmentHeader {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .appointmentHeaderMain,
+  .appointmentHeaderMeta,
+  .modalFooterActions {
+    width: 100%;
+  }
+
+  .appointmentHeaderMeta {
+    justify-content: space-between;
+  }
+
+  .modal {
+    width: min(100vw - 24px, 760px);
+    max-height: calc(100vh - 24px);
   }
 }

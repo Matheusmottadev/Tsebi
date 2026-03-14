@@ -125,8 +125,8 @@ export function DrawerNovoAtendimento({
       isOpen={isOpen}
       onClose={onClose}
       onSave={handleSave}
-      title={isEditing ? "Editar Atendimento" : "Novo Atendimento"}
-      subtitle="Configure horarios disponiveis para agendamento."
+      title={isEditing ? "Editar Horário" : "Novo Horário"}
+      subtitle="Crie um slot individual com data, faixa de horário e detalhes do atendimento."
       saveLabel={submitting ? "Salvando..." : isEditing ? "Salvar" : "Criar horario"}
       disableSave={disableSave || submitting}
       stickyFooter

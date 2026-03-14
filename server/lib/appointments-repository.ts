@@ -293,9 +293,8 @@ async function listAppointmentSlotsForDate(date: string) {
     `
     SELECT *
     FROM appointment_slots
-    WHERE starts_at >= $1::date
-      AND starts_at < ($1::date + INTERVAL '1 day')
-      AND starts_at >= NOW()
+    WHERE (starts_at AT TIME ZONE 'America/Sao_Paulo') >= $1::date
+      AND (starts_at AT TIME ZONE 'America/Sao_Paulo') < ($1::date + INTERVAL '1 day')
     ORDER BY starts_at ASC
     `,
     [safeDate]
@@ -305,7 +304,14 @@ async function listAppointmentSlotsForDate(date: string) {
 
   return slotsResult.rows
     .map((row) => mapSlotRow(row, appointmentsBySlotId.get(String(row.id || "")) || []))
-    .filter((slot) => slot.isAvailable && !slot.isBlocked && slot.remainingCount > 0);
+    .filter(
+      (slot) =>
+        slot.isAvailable &&
+        !slot.isBlocked &&
+        slot.remainingCount > 0 &&
+        Boolean(slot.startsAt) &&
+        new Date(String(slot.startsAt)).getTime() > Date.now()
+    );
 }
 
 async function listMyAppointments(userId: string) {
@@ -483,7 +489,8 @@ async function listAdminAppointmentSlots(input: {
 
   if (safeDate) {
     params.push(safeDate);
-    where += ` AND starts_at >= $${params.length}::date AND starts_at < ($${params.length}::date + INTERVAL '1 day')`;
+    where += ` AND (starts_at AT TIME ZONE 'America/Sao_Paulo') >= $${params.length}::date`;
+    where += ` AND (starts_at AT TIME ZONE 'America/Sao_Paulo') < ($${params.length}::date + INTERVAL '1 day')`;
   } else if (!includePast) {
     where += ` AND starts_at >= NOW() - INTERVAL '1 day'`;
   }

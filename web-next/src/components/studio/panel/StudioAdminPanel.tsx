@@ -273,7 +273,7 @@ const TOPBAR_BUTTONS: Record<AdminPageKey, { label: string }> = {
   pedidos: { label: "+ Novo Pedido" },
   produtos: { label: "+ Novo Produto" },
   usuarios: { label: "+ Novo Usuário" },
-  atendimentos: { label: "+ Novo Atendimento" },
+  atendimentos: { label: "+ Novo Horário" },
   lista_vip: { label: "+ Novo Cadastro" },
   newsletter: { label: "Editar" },
   cupons: { label: "+ Novo Cupom" },
