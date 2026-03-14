@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { HttpError } from "@/lib/http";
 import {
+  cancelMyAppointment,
   createAppointment,
   listAvailableAppointmentSlots,
   listMyAppointments,
@@ -65,6 +66,14 @@ function statusLabel(value: AppointmentBooking["status"]): string {
   return "Agendado";
 }
 
+function isCancelableAppointment(appointment: AppointmentBooking): boolean {
+  if (appointment.status !== "scheduled") return false;
+  if (!appointment.startsAt) return true;
+  const startsAtMs = new Date(appointment.startsAt).getTime();
+  if (Number.isNaN(startsAtMs)) return true;
+  return startsAtMs > Date.now();
+}
+
 export function AppointmentsTab({ user }: Props) {
   const today = new Date();
   const [year, setYear] = useState(today.getFullYear());
@@ -81,6 +90,8 @@ export function AppointmentsTab({ user }: Props) {
   const [modality, setModality] = useState(MODALITIES[0] || "");
   const [notes, setNotes] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [cancelingId, setCancelingId] = useState("");
+  const [confirmCancelId, setConfirmCancelId] = useState("");
   const [flash, setFlash] = useState("");
 
   const totalDays = daysInMonth(year, month);
@@ -223,6 +234,28 @@ export function AppointmentsTab({ user }: Props) {
     }
   }
 
+  async function handleCancelAppointment(appointment: AppointmentBooking) {
+    if (!appointment.id || cancelingId) return;
+    setCancelingId(appointment.id);
+    setFlash("");
+
+    try {
+      const canceled = await cancelMyAppointment(appointment.id);
+      setAppointments((current) => current.map((item) => (item.id === canceled.id ? canceled : item)));
+      setConfirmCancelId("");
+      setFlash("Agendamento cancelado.");
+      await refreshDaySlots();
+    } catch (error) {
+      if (error instanceof HttpError) {
+        setFlash(error.message || "Nao foi possivel cancelar o agendamento.");
+      } else {
+        setFlash("Nao foi possivel cancelar o agendamento.");
+      }
+    } finally {
+      setCancelingId("");
+    }
+  }
+
   return (
     <div className={styles.appointmentsGrid}>
       <div>
@@ -345,6 +378,44 @@ export function AppointmentsTab({ user }: Props) {
                     {appointment.location ? ` - ${appointment.location}` : ""}
                   </p>
                   {appointment.notes ? <p className={styles.appointmentHistoryMeta}>{appointment.notes}</p> : null}
+                  {isCancelableAppointment(appointment) ? (
+                    <div className={styles.appointmentActionStack}>
+                      {confirmCancelId === appointment.id ? (
+                        <div className={styles.appointmentConfirmBox}>
+                          <p className={styles.appointmentConfirmText}>Cancelar este agendamento?</p>
+                          <div className={styles.appointmentConfirmActions}>
+                            <button
+                              type="button"
+                              className={styles.appointmentSecondaryButton}
+                              onClick={() => setConfirmCancelId("")}
+                              disabled={cancelingId === appointment.id}
+                            >
+                              Voltar
+                            </button>
+                            <button
+                              type="button"
+                              className={styles.appointmentDangerButton}
+                              onClick={() => handleCancelAppointment(appointment)}
+                              disabled={cancelingId === appointment.id}
+                            >
+                              {cancelingId === appointment.id ? "Cancelando..." : "Confirmar cancelamento"}
+                            </button>
+                          </div>
+                        </div>
+                      ) : (
+                        <button
+                          type="button"
+                          className={styles.appointmentSecondaryButton}
+                          onClick={() => {
+                            setConfirmCancelId(appointment.id);
+                            setFlash("");
+                          }}
+                        >
+                          Cancelar agendamento
+                        </button>
+                      )}
+                    </div>
+                  ) : null}
                 </article>
               ))}
             </div>

@@ -1,20 +1,23 @@
 .overlay {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.65);
-  z-index: 300;
+  padding: 24px;
+  background: rgba(17, 17, 17, 0.34);
+  backdrop-filter: blur(2px);
+  z-index: 1700;
   display: flex;
   align-items: center;
   justify-content: center;
 }
 
 .modal {
-  background: #111;
+  position: relative;
+  background: #fff;
   width: min(520px, 94vw);
   max-height: 90vh;
   overflow-y: auto;
   border: 1px solid var(--studio-border);
-  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.55);
+  box-shadow: 0 28px 80px rgba(0, 0, 0, 0.18);
 }
 
 .hdr {
@@ -101,7 +104,7 @@
 }
 
 .navBtn {
-  background: transparent;
+  background: #fff;
   border: 1px solid var(--studio-border);
   width: 26px;
   height: 26px;
@@ -117,7 +120,7 @@
 }
 
 .navBtn:hover {
-  background: var(--studio-border);
+  background: #f5f5f5;
   color: var(--studio-text);
 }
 
@@ -155,10 +158,10 @@
 
 .dayCell {
   aspect-ratio: 1;
-  background: none;
-  border: none;
+  background: #fafafa;
+  border: 1px solid transparent;
   cursor: pointer;
-  border-radius: 50%;
+  border-radius: 999px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -170,16 +173,18 @@
 }
 
 .dayCell:hover:not(:disabled) {
-  background: var(--studio-border);
+  background: #f5f5f5;
+  border-color: var(--studio-border-strong);
 }
 
 .dayCell:disabled {
-  color: var(--studio-border-strong);
+  color: #b1aca5;
   cursor: not-allowed;
+  background: #f7f7f7;
 }
 
 .dayCellPast {
-  color: var(--studio-border-strong);
+  color: #b1aca5;
 }
 
 .dayCellToday:not(:disabled) {
@@ -226,14 +231,14 @@
 }
 
 .slotBtn:hover:not(.slotBtnActive) {
-  background: rgba(255, 255, 255, 0.04);
+  background: #f5f5f5;
   border-color: var(--studio-border-strong);
 }
 
 .slotBtnActive {
   background: var(--studio-text);
   border-color: var(--studio-text);
-  color: #111;
+  color: #fff;
 }
 
 .slotCapInfo {
@@ -244,7 +249,7 @@
 }
 
 .slotBtnActive .slotCapInfo {
-  color: rgba(17, 17, 17, 0.6);
+  color: rgba(255, 255, 255, 0.72);
 }
 
 .backBtn {
@@ -317,7 +322,7 @@
   gap: 6px 18px;
   margin-bottom: 18px;
   padding: 14px 16px;
-  background: rgba(255, 255, 255, 0.02);
+  background: #fbfbfb;
   border: 1px solid var(--studio-border);
 }
 
@@ -363,7 +368,7 @@
 
 .confirmBtn {
   background: var(--studio-text);
-  color: #111;
+  color: #fff;
   border: none;
   padding: 9px 22px;
   font-size: 10px;
@@ -381,4 +386,15 @@
 .confirmBtn:disabled {
   opacity: 0.5;
   cursor: not-allowed;
+}
+
+@media (max-width: 640px) {
+  .overlay {
+    padding: 12px;
+  }
+
+  .modal {
+    width: min(100vw - 24px, 520px);
+    max-height: calc(100vh - 24px);
+  }
 }

@@ -65,6 +65,10 @@ interface CreateAppointmentResponse {
   appointment: AppointmentBooking;
 }
 
+interface CancelAppointmentResponse {
+  appointment: AppointmentBooking;
+}
+
 function readCookieByName(name: string): string {
   if (typeof document === "undefined") return "";
   const source = String(document.cookie || "");
@@ -105,5 +109,21 @@ export async function createAppointment(payload: CreateAppointmentPayload, optio
       ...(csrfToken ? { "x-csrf-token": csrfToken } : {}),
     },
   });
+  return response.appointment;
+}
+
+export async function cancelMyAppointment(appointmentId: string, options?: HttpRequestOptions): Promise<AppointmentBooking> {
+  const csrfToken = readCookieByName(userCsrfCookieName);
+  const response = await post<CancelAppointmentResponse>(
+    `/api/my/appointments/${encodeURIComponent(String(appointmentId || "").trim())}/cancel`,
+    {},
+    {
+      ...options,
+      headers: {
+        ...(options?.headers || {}),
+        ...(csrfToken ? { "x-csrf-token": csrfToken } : {}),
+      },
+    }
+  );
   return response.appointment;
 }

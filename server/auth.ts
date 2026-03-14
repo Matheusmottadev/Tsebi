@@ -34,14 +34,15 @@ const { unprotectJsonFromStorage } = require("./lib/data-protection") as {
 };
 const { listOrdersByUserId, updateOrder } = require("./lib/order-repository");
 const { commitStock } = require("./lib/inventory-repository");
-const { listMyAppointments } = require("./lib/appointments-repository");
+const { listMyAppointments, cancelUserAppointment } = require("./lib/appointments-repository");
 const { requireAuth } = require("./middlewares/requireAuth");
 const { userCsrfCookieName } = require("./middlewares/userCsrf");
 const { issueAuthEmailCode, consumeAuthEmailCode } = require("./lib/auth-email-code-repository");
 const {
   sendAccountVerificationEmail,
   sendLoginVerificationEmail,
-  sendPasswordResetEmail
+  sendPasswordResetEmail,
+  sendEmail
 } = require("./lib/email-service");
 
 const authRouter = express.Router();
@@ -2012,6 +2013,45 @@ myRouter.get("/appointments", requireAuth, async (req: any, res: any) => {
     return res.json({ appointments });
   } catch (error: any) {
     return res.status(Number(error?.status || 500) || 500).json({ error: error?.message || "APPOINTMENTS_LIST_FAILED" });
+  }
+});
+
+myRouter.post("/appointments/:id/cancel", requireAuth, async (req: any, res: any) => {
+  const appointmentId = String(req.params.id || "").trim();
+  if (!appointmentId) return res.status(400).json({ error: "INVALID_ID" });
+
+  try {
+    const appointment = await cancelUserAppointment(String(req.session.userId || ""), appointmentId);
+    const appName = String(process.env.APP_NAME || "Tsebi").trim() || "Tsebi";
+
+    if (appointment.userEmail) {
+      sendEmail({
+        to: appointment.userEmail,
+        subject: `${appName} — Agendamento cancelado`,
+        html: `
+          <div style="font-family:'Cormorant Garamond','Georgia',serif;max-width:480px;margin:0 auto;padding:40px 20px;color:#1a1a1a;">
+            <p style="font-size:11px;letter-spacing:.15em;color:#aaa;font-family:sans-serif;font-weight:600;margin-bottom:24px;">TSEBI</p>
+            <h2 style="font-size:22px;font-weight:400;margin-bottom:16px;">Agendamento cancelado</h2>
+            <p style="font-size:15px;line-height:1.6;color:#444;margin-bottom:20px;">
+              Olá, ${appointment.userName || "cliente"}. Recebemos sua solicitação de cancelamento.
+            </p>
+            <p style="font-size:14px;color:#444;line-height:1.6;margin:0 0 8px;"><strong>Data:</strong> ${appointment.date} às ${appointment.time}</p>
+            <p style="font-size:14px;color:#444;line-height:1.6;margin:0 0 8px;"><strong>Tipo:</strong> ${appointment.label || appointment.serviceType || "Atendimento privado"}</p>
+            <p style="font-size:14px;color:#888;line-height:1.6;margin-top:20px;">
+              Se quiser remarcar, você pode escolher um novo horário na sua conta.
+            </p>
+            <div style="margin-top:32px;padding-top:20px;border-top:1px solid #eee;">
+              <p style="font-size:11px;color:#bbb;font-family:sans-serif;">${appName} · Atendimento Privado</p>
+            </div>
+          </div>
+        `,
+        text: `Seu agendamento para ${appointment.date} às ${appointment.time} foi cancelado com sucesso.`,
+      }).catch(() => {});
+    }
+
+    return res.json({ ok: true, appointment });
+  } catch (error: any) {
+    return res.status(Number(error?.status || 500) || 500).json({ error: error?.message || "APPOINTMENT_CANCEL_FAILED" });
   }
 });
 

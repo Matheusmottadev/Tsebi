@@ -748,6 +748,93 @@ async function cancelAdminAppointment(appointmentId: string) {
   });
 }
 
+async function cancelUserAppointment(userId: string, appointmentId: string) {
+  await ensureAppointmentTables();
+  const safeUserId = normalizeText(userId);
+  const safeId = normalizeText(appointmentId);
+  if (!safeUserId || !safeId) throw createAppointmentError("INVALID_ID", 400, "ID invalido.");
+
+  return withTransaction(async (client) => {
+    const checkResult = await client.query<AppointmentRow>(
+      `
+      SELECT
+        a.id,
+        a.slot_id,
+        a.user_id,
+        a.status,
+        a.service_type,
+        a.modality,
+        a.notes,
+        a.admin_note,
+        a.created_at,
+        a.updated_at,
+        u.name AS user_name,
+        u.email AS user_email,
+        s.starts_at AS slot_starts_at,
+        s.ends_at AS slot_ends_at,
+        s.label AS slot_label,
+        s.location AS slot_location
+      FROM appointments a
+      JOIN users u ON u.id = a.user_id
+      JOIN appointment_slots s ON s.id = a.slot_id
+      WHERE a.id = $1::uuid AND a.user_id = $2::uuid
+      LIMIT 1
+      FOR UPDATE
+      `,
+      [safeId, safeUserId]
+    );
+    const existing = checkResult.rows[0];
+    if (!existing) throw createAppointmentError("APPOINTMENT_NOT_FOUND", 404, "Agendamento nao encontrado.");
+
+    const status = normalizeAppointmentStatus(existing.status);
+    if (status === "canceled") {
+      throw createAppointmentError("ALREADY_CANCELED", 409, "Agendamento ja cancelado.");
+    }
+    if (status === "completed") {
+      throw createAppointmentError("APPOINTMENT_COMPLETED", 409, "Agendamento ja concluido.");
+    }
+
+    const startsAtMs = existing.slot_starts_at ? new Date(String(existing.slot_starts_at)).getTime() : NaN;
+    if (Number.isFinite(startsAtMs) && startsAtMs <= Date.now()) {
+      throw createAppointmentError("SLOT_IN_PAST", 409, "Nao e possivel cancelar um horario que ja passou.");
+    }
+
+    await client.query(
+      `UPDATE appointments SET status = 'canceled', updated_at = NOW() WHERE id = $1::uuid`,
+      [safeId]
+    );
+
+    const joined = await client.query<AppointmentRow>(
+      `
+      SELECT
+        a.id,
+        a.slot_id,
+        a.user_id,
+        a.status,
+        a.service_type,
+        a.modality,
+        a.notes,
+        a.admin_note,
+        a.created_at,
+        a.updated_at,
+        u.name AS user_name,
+        u.email AS user_email,
+        s.starts_at AS slot_starts_at,
+        s.ends_at AS slot_ends_at,
+        s.label AS slot_label,
+        s.location AS slot_location
+      FROM appointments a
+      JOIN users u ON u.id = a.user_id
+      JOIN appointment_slots s ON s.id = a.slot_id
+      WHERE a.id = $1::uuid
+      LIMIT 1
+      `,
+      [safeId]
+    );
+    return mapAppointmentRow(joined.rows[0] || existing);
+  });
+}
+
 async function rescheduleAdminAppointment(appointmentId: string, newSlotId: string) {
   await ensureAppointmentTables();
   const safeId = normalizeText(appointmentId);
@@ -831,5 +918,6 @@ module.exports = {
   updateAdminAppointmentSlot,
   deleteAdminAppointmentSlot,
   cancelAdminAppointment,
+  cancelUserAppointment,
   rescheduleAdminAppointment,
 };
