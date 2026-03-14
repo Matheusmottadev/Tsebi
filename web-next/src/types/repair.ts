@@ -29,6 +29,12 @@ export interface RepairRequest {
   status: RepairStatus;
   rejectionReason: string;
   adminNote: string;
+  decisionOutcome: "accepted" | "rejected" | null;
+  decisionReason: string;
+  decisionAt: string | null;
+  decisionByAdminId: string | null;
+  decisionByAdminName: string;
+  decisionByAdminEmail: string;
   reviewedAt: string | null;
   reviewedByAdminId: string | null;
   createdAt: string | null;

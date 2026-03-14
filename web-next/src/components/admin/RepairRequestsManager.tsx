@@ -15,6 +15,16 @@ type Props = {
   onRequestRefresh?: () => void;
 };
 
+type FlowStatus = Exclude<RepairRequest["status"], "pending" | "rejected">;
+
+const REPAIR_FLOW_OPTIONS: Array<{ value: FlowStatus; label: string }> = [
+  { value: "awaiting_shipment", label: "Aguardando envio da peça" },
+  { value: "item_received", label: "Peça recebida" },
+  { value: "in_repair", label: "Em reparo" },
+  { value: "completed", label: "Finalizado" },
+  { value: "returned", label: "Devolvido" },
+];
+
 function formatDateTime(value: string | null): string {
   if (!value) return "-";
   const date = new Date(value);
@@ -23,7 +33,11 @@ function formatDateTime(value: string | null): string {
 }
 
 function formatStatus(value: RepairRequest["status"]): string {
-  if (value === "accepted") return "Aceito";
+  if (value === "awaiting_shipment") return "Aguardando envio";
+  if (value === "item_received") return "Peça recebida";
+  if (value === "in_repair") return "Em reparo";
+  if (value === "completed") return "Finalizado";
+  if (value === "returned") return "Devolvido";
   if (value === "rejected") return "Recusado";
   return "Pendente";
 }
@@ -55,9 +69,12 @@ export function RepairRequestsManager({
   const [selectedRepair, setSelectedRepair] = useState<RepairRequest | null>(null);
   const [rejectReason, setRejectReason] = useState("");
   const [adminNote, setAdminNote] = useState("");
+  const [flowStatus, setFlowStatus] = useState<FlowStatus>("awaiting_shipment");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [inlineError, setInlineError] = useState("");
-  const decisionLocked = selectedRepair ? selectedRepair.status !== "pending" : false;
+
+  const isPendingDecision = selectedRepair?.status === "pending";
+  const isClosedDecision = selectedRepair?.status === "rejected" || selectedRepair?.status === "returned";
 
   const filteredRows = useMemo(() => {
     const query = normalizeText(search);
@@ -95,7 +112,11 @@ export function RepairRequestsManager({
       options: [
         { label: "Status: Todos", value: "todos" },
         { label: "Pendentes", value: "pending" },
-        { label: "Aceitos", value: "accepted" },
+        { label: "Aguardando envio", value: "awaiting_shipment" },
+        { label: "Peça recebida", value: "item_received" },
+        { label: "Em reparo", value: "in_repair" },
+        { label: "Finalizados", value: "completed" },
+        { label: "Devolvidos", value: "returned" },
         { label: "Recusados", value: "rejected" },
       ],
     },
@@ -123,6 +144,7 @@ export function RepairRequestsManager({
     setSelectedRepair(repair);
     setRejectReason(repair.rejectionReason || "");
     setAdminNote(repair.adminNote || "");
+    setFlowStatus(repair.status === "pending" || repair.status === "rejected" ? "awaiting_shipment" : repair.status);
     setInlineError("");
   }
 
@@ -131,6 +153,7 @@ export function RepairRequestsManager({
     setSelectedRepair(null);
     setRejectReason("");
     setAdminNote("");
+    setFlowStatus("awaiting_shipment");
     setInlineError("");
   }
 
@@ -156,6 +179,39 @@ export function RepairRequestsManager({
 
       onRowsChange(rows.map((row) => (row.id === response.repair.id ? response.repair : row)));
       setSelectedRepair(response.repair);
+      if (response.repair.status !== "pending" && response.repair.status !== "rejected") {
+        setFlowStatus(response.repair.status);
+      }
+      onRequestRefresh?.();
+    } catch (error) {
+      setInlineError(pickErrorMessage(error));
+    } finally {
+      setIsSubmitting(false);
+    }
+  }
+
+  async function submitFlowStatus() {
+    if (!selectedRepair || selectedRepair.status === "pending" || selectedRepair.status === "rejected" || selectedRepair.status === "returned") {
+      return;
+    }
+
+    setIsSubmitting(true);
+    setInlineError("");
+    try {
+      const response = await updateRepairAdmin(
+        selectedRepair.id,
+        {
+          status: flowStatus,
+          adminNote,
+        },
+        csrfToken
+      );
+
+      onRowsChange(rows.map((row) => (row.id === response.repair.id ? response.repair : row)));
+      setSelectedRepair(response.repair);
+      if (response.repair.status !== "pending" && response.repair.status !== "rejected") {
+        setFlowStatus(response.repair.status);
+      }
       onRequestRefresh?.();
     } catch (error) {
       setInlineError(pickErrorMessage(error));
@@ -292,20 +348,40 @@ export function RepairRequestsManager({
                   onChange={(event) => setAdminNote(event.target.value)}
                   placeholder="Observações internas sobre a análise."
                   rows={3}
-                  disabled={decisionLocked || isSubmitting}
+                  disabled={isClosedDecision || isSubmitting}
                 />
               </div>
 
               <div className={styles.field}>
-                <label className={styles.infoLabel}>Motivo da recusa</label>
-                <textarea
-                  className={styles.textarea}
-                  value={rejectReason}
-                  onChange={(event) => setRejectReason(event.target.value)}
-                  placeholder="Preencha apenas se a solicitação for recusada."
-                  rows={4}
-                  disabled={decisionLocked || isSubmitting}
-                />
+                {isPendingDecision ? (
+                  <>
+                    <label className={styles.infoLabel}>Motivo da recusa</label>
+                    <textarea
+                      className={styles.textarea}
+                      value={rejectReason}
+                      onChange={(event) => setRejectReason(event.target.value)}
+                      placeholder="Preencha apenas se a solicitação for recusada."
+                      rows={4}
+                      disabled={isClosedDecision || isSubmitting}
+                    />
+                  </>
+                ) : (
+                  <>
+                    <label className={styles.infoLabel}>Etapa do processo</label>
+                    <select
+                      className={styles.select}
+                      value={flowStatus}
+                      onChange={(event) => setFlowStatus(event.target.value as FlowStatus)}
+                      disabled={isClosedDecision || isSubmitting}
+                    >
+                      {REPAIR_FLOW_OPTIONS.map((option) => (
+                        <option key={option.value} value={option.value}>
+                          {option.label}
+                        </option>
+                      ))}
+                    </select>
+                  </>
+                )}
               </div>
             </div>
 
@@ -317,29 +393,42 @@ export function RepairRequestsManager({
             ) : null}
 
             {inlineError ? <p className={styles.errorText}>{inlineError}</p> : null}
-            {decisionLocked ? (
+            {isClosedDecision ? (
               <p className={styles.warning}>
-                Esta solicitaÃ§Ã£o jÃ¡ foi {selectedRepair.status === "accepted" ? "aceita" : "recusada"} e nÃ£o pode ser decidida novamente.
+                Esta solicitação já foi {selectedRepair.status === "returned" ? "finalizada e devolvida" : "recusada"} e não pode ser alterada novamente.
               </p>
             ) : null}
 
             <div className={styles.actions}>
-              <button
-                type="button"
-                className={styles.acceptBtn}
-                onClick={() => submitDecision("accept")}
-                disabled={isSubmitting || decisionLocked}
-              >
-                {isSubmitting ? "Salvando..." : "Aceitar solicitação"}
-              </button>
-              <button
-                type="button"
-                className={styles.rejectBtn}
-                onClick={() => submitDecision("reject")}
-                disabled={isSubmitting || decisionLocked}
-              >
-                {isSubmitting ? "Salvando..." : "Recusar solicitação"}
-              </button>
+              {isPendingDecision ? (
+                <>
+                  <button
+                    type="button"
+                    className={styles.acceptBtn}
+                    onClick={() => submitDecision("accept")}
+                    disabled={isSubmitting || isClosedDecision}
+                  >
+                    {isSubmitting ? "Salvando..." : "Aceitar solicitação"}
+                  </button>
+                  <button
+                    type="button"
+                    className={styles.rejectBtn}
+                    onClick={() => submitDecision("reject")}
+                    disabled={isSubmitting || isClosedDecision}
+                  >
+                    {isSubmitting ? "Salvando..." : "Recusar solicitação"}
+                  </button>
+                </>
+              ) : (
+                <button
+                  type="button"
+                  className={styles.acceptBtn}
+                  onClick={submitFlowStatus}
+                  disabled={isSubmitting || isClosedDecision || flowStatus === selectedRepair.status}
+                >
+                  {isSubmitting ? "Salvando..." : "Atualizar etapa"}
+                </button>
+              )}
             </div>
           </div>
         </>

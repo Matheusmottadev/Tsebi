@@ -5,6 +5,7 @@ import { listMyOrders } from "@/services/orders";
 import {
   createRepairRequest,
   listMyRepairs,
+  prepareRepairPhotoForUpload,
   resolveRepairRequestErrorMessage,
   resolveUploadErrorMessage,
   uploadRepairPhoto,
@@ -62,7 +63,11 @@ function formatDateTime(value: string | null): string {
 }
 
 function formatRepairStatus(status: RepairRequest["status"]): string {
-  if (status === "accepted") return "Aceito";
+  if (status === "awaiting_shipment") return "Aguardando envio";
+  if (status === "item_received") return "Peça recebida";
+  if (status === "in_repair") return "Em reparo";
+  if (status === "completed") return "Finalizado";
+  if (status === "returned") return "Devolvido";
   if (status === "rejected") return "Recusado";
   return "Em análise";
 }
@@ -148,6 +153,9 @@ export function RepairsTab({ user }: Props) {
   );
   const trimmedDescription = description.trim();
   const trimmedReturnAddress = returnAddress.trim();
+  const descriptionTooShort = trimmedDescription.length > 0 && trimmedDescription.length < 4;
+  const returnAddressTooShort = trimmedReturnAddress.length > 0 && trimmedReturnAddress.length < 8;
+  const maxPhotosReached = photos.length >= 8;
   const submitDisabled =
     submitting ||
     !selectedItem ||
@@ -156,13 +164,15 @@ export function RepairsTab({ user }: Props) {
     trimmedReturnAddress.length < 8;
 
   async function handlePhotoSelection(event: React.ChangeEvent<HTMLInputElement>) {
-    const files = Array.from(event.target.files || []).slice(0, 5);
+    const remainingSlots = Math.max(0, 8 - photos.length);
+    const files = Array.from(event.target.files || []).slice(0, Math.min(5, remainingSlots));
     if (!files.length) return;
 
     setUploading(true);
     setSubmitError(null);
     try {
-      const uploaded = await Promise.all(files.map((file) => uploadRepairPhoto(file)));
+      const optimizedFiles = await Promise.all(files.map((file) => prepareRepairPhotoForUpload(file)));
+      const uploaded = await Promise.all(optimizedFiles.map((file) => uploadRepairPhoto(file)));
       setPhotos((current) => [...current, ...uploaded].slice(0, 8));
     } catch (error) {
       setSubmitError(resolveUploadErrorMessage(error));
@@ -215,8 +225,8 @@ export function RepairsTab({ user }: Props) {
       <div className={styles.repairBanner}>
         <h2 className={styles.repairBannerTitle}>Compromisso com a durabilidade</h2>
         <p className={styles.repairBannerDesc}>
-          Todas as peças Tsebi têm garantia de reparos por 1 ano a partir da data de compra.
-          Nossa equipe de ateliê cuida de cada detalhe com o mesmo rigor de quando a peça foi criada.
+          Todas as peças Tsebi têm garantia de reparos por 1 ano a partir da data de compra. Nossa equipe de ateliê
+          cuida de cada detalhe com o mesmo rigor de quando a peça foi criada.
         </p>
       </div>
 
@@ -241,9 +251,7 @@ export function RepairsTab({ user }: Props) {
                 onChange={(event) => setSelectedItemKey(event.target.value)}
                 disabled={!deliveredItems.length}
               >
-                {deliveredItems.length === 0 ? (
-                  <option value="">Nenhuma peça entregue disponível</option>
-                ) : null}
+                {deliveredItems.length === 0 ? <option value="">Nenhuma peça entregue disponível</option> : null}
                 {deliveredItems.map((item) => (
                   <option key={item.key} value={item.key}>
                     {item.itemName} - Pedido {item.orderRef}
@@ -278,6 +286,9 @@ export function RepairsTab({ user }: Props) {
                 minLength={4}
                 required
               />
+              <p className={`${styles.fieldHint} ${descriptionTooShort ? styles.fieldHintError : ""}`}>
+                Mínimo de 4 caracteres. {trimmedDescription.length}/2000
+              </p>
             </div>
 
             <div className={styles.field} style={{ gridColumn: "1 / -1" }}>
@@ -290,6 +301,9 @@ export function RepairsTab({ user }: Props) {
                 minLength={8}
                 required
               />
+              <p className={`${styles.fieldHint} ${returnAddressTooShort ? styles.fieldHintError : ""}`}>
+                Informe um endereço completo para devolução. Mínimo de 8 caracteres.
+              </p>
             </div>
 
             <div className={styles.field} style={{ gridColumn: "1 / -1" }}>
@@ -299,9 +313,9 @@ export function RepairsTab({ user }: Props) {
                   type="button"
                   className={styles.repairUploadBtn}
                   onClick={() => fileInputRef.current?.click()}
-                  disabled={uploading}
+                  disabled={uploading || maxPhotosReached}
                 >
-                  {uploading ? "Enviando..." : "Adicionar fotos"}
+                  {uploading ? "Enviando..." : maxPhotosReached ? "Limite atingido" : "Adicionar fotos"}
                 </button>
               </div>
               <input
@@ -329,6 +343,10 @@ export function RepairsTab({ user }: Props) {
                   Envie fotos para ajudar nossa equipe a analisar o reparo antes do retorno.
                 </p>
               )}
+              <p className={styles.fieldHint}>
+                Aceitamos JPG, PNG, WEBP ou GIF, com até 8 MB por imagem e no máximo 8 fotos. As imagens são
+                otimizadas automaticamente antes do envio.
+              </p>
             </div>
           </div>
 

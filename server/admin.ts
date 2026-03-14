@@ -73,7 +73,7 @@ const {
 const {
   ensureRepairTables,
   listAdminRepairRequests,
-  reviewRepairRequest,
+  updateRepairRequestStatus,
 } = require("./lib/repairs-repository");
 const { query, withTransaction } = require("./lib/db");
 // Lazy load R2 upload module to avoid build-time errors
@@ -354,9 +354,14 @@ const privateCarePatchSchema = z.object({
 });
 
 const repairPatchSchema = z.object({
-  decision: z.enum(["accept", "reject"]),
+  decision: z.enum(["accept", "reject"]).optional(),
+  status: z.enum(["awaiting_shipment", "item_received", "in_repair", "completed", "returned"]).optional(),
   rejectionReason: z.string().trim().max(2000).optional().default(""),
   adminNote: z.string().trim().max(2000).optional().default(""),
+}).refine((value: any) => Boolean(value.decision || value.status), {
+  message: "INVALID_INPUT",
+}).refine((value: any) => !(value.decision && value.status), {
+  message: "INVALID_INPUT",
 });
 
 const appointmentSlotCreateSchema = z.object({
@@ -2922,18 +2927,28 @@ adminRouter.patch("/repairs/:id", async (req: any, res: any) => {
 
   try {
     await ensureRepairTables();
-    const result = await reviewRepairRequest(repairId, {
-      decision: parsed.data.decision === "reject" ? "rejected" : "accepted",
+    const nextStatus =
+      parsed.data.decision === "reject"
+        ? "rejected"
+        : parsed.data.decision === "accept"
+          ? "awaiting_shipment"
+          : parsed.data.status;
+
+    const result = await updateRepairRequestStatus(repairId, {
+      action: parsed.data.decision ? "decision" : "progress",
+      status: nextStatus,
       rejectionReason: parsed.data.rejectionReason,
       adminNote: parsed.data.adminNote,
       reviewedByAdminId: String(req.adminProfile?.id || "").trim() || null,
+      actorAdminName: String(req.adminUser?.name || req.adminProfile?.name || "").trim(),
+      actorAdminEmail: normalizeEmail(req.adminUser?.email || ""),
     });
 
     await recordAuditLog(req, {
       action: "save",
       entityType: "repair_request",
       entityId: repairId,
-      summary: `Reparo ${parsed.data.decision === "reject" ? "recusado" : "aceito"}: ${result.repair.orderRef}`,
+      summary: `Reparo atualizado para ${result.repair.status}: ${result.repair.orderRef}`,
       before: result.before,
       after: result.repair,
       reversePayload: null,
@@ -2941,7 +2956,7 @@ adminRouter.patch("/repairs/:id", async (req: any, res: any) => {
     });
 
     if (result.repair.userEmail) {
-      if (result.repair.status === "accepted") {
+      if (result.before.status === "pending" && result.repair.status === "awaiting_shipment") {
         await sendRepairAcceptedEmail({
           clientName: result.repair.userName,
           clientEmail: result.repair.userEmail,
@@ -2949,7 +2964,7 @@ adminRouter.patch("/repairs/:id", async (req: any, res: any) => {
           orderRef: result.repair.orderRef,
           repairDescription: result.repair.description,
         });
-      } else {
+      } else if (result.repair.status === "rejected") {
         await sendRepairRejectedEmail({
           clientName: result.repair.userName,
           clientEmail: result.repair.userEmail,

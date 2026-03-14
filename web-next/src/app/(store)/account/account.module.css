@@ -356,6 +356,17 @@
   min-height: 80px;
 }
 
+.fieldHint {
+  margin: 6px 0 0;
+  font-size: 11px;
+  line-height: 1.5;
+  color: var(--grey-dark);
+}
+
+.fieldHintError {
+  color: var(--error);
+}
+
 .formDivider {
   border: none;
   border-top: 1px solid var(--border);
@@ -1444,6 +1455,31 @@
 .repairStatus_accepted {
   background: #edf6ef;
   color: #42684a;
+}
+
+.repairStatus_awaiting_shipment {
+  background: #edf6ef;
+  color: #42684a;
+}
+
+.repairStatus_item_received {
+  background: #e9f2f8;
+  color: #355c76;
+}
+
+.repairStatus_in_repair {
+  background: #f7efe1;
+  color: #8a5b24;
+}
+
+.repairStatus_completed {
+  background: #f0ebfa;
+  color: #6241a8;
+}
+
+.repairStatus_returned {
+  background: #ececec;
+  color: #4d4d4d;
 }
 
 .repairStatus_rejected {

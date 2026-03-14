@@ -78,6 +78,31 @@
   color: #3c6d45;
 }
 
+.status_awaiting_shipment {
+  background: #edf6ef;
+  color: #3c6d45;
+}
+
+.status_item_received {
+  background: #e9f2f8;
+  color: #355c76;
+}
+
+.status_in_repair {
+  background: #f7efe1;
+  color: #8a5b24;
+}
+
+.status_completed {
+  background: #f0ebfa;
+  color: #6241a8;
+}
+
+.status_returned {
+  background: #ececec;
+  color: #4d4d4d;
+}
+
 .status_rejected {
   background: #fbebeb;
   color: #b03030;
@@ -227,6 +252,15 @@
   font-size: 14px;
   color: #1a1a1a;
   resize: vertical;
+}
+
+.select {
+  min-height: 52px;
+  border: 1px solid #d8d4cd;
+  background: #fff;
+  padding: 0 16px;
+  font-size: 14px;
+  color: #1a1a1a;
 }
 
 .reasonBox {

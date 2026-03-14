@@ -35,11 +35,29 @@ type RepairRequestRow = JsonRecord & {
   status?: string;
   rejection_reason?: string;
   admin_note?: string;
+  decision_outcome?: string;
+  decision_reason?: string;
+  decision_at?: string;
+  decision_by_admin_id?: string;
+  decision_by_admin_name?: string;
+  decision_by_admin_email?: string;
   reviewed_at?: string;
   reviewed_by_admin_id?: string;
   created_at?: string;
   updated_at?: string;
 };
+
+type NormalizedRepairStatus =
+  | "pending"
+  | "awaiting_shipment"
+  | "item_received"
+  | "in_repair"
+  | "completed"
+  | "returned"
+  | "rejected";
+
+type UpdateRepairAction = "decision" | "progress";
+type RepairDecisionOutcome = "accepted" | "rejected" | null;
 
 function createRepairError(code: string, status = 400, message = code) {
   const error = new Error(message) as Error & { code?: string; status?: number };
@@ -57,9 +75,7 @@ function normalizeDate(value: unknown): string | null {
   return raw || null;
 }
 
-function normalizeRepairStatus(
-  value: unknown
-): "pending" | "awaiting_shipment" | "item_received" | "in_repair" | "completed" | "returned" | "rejected" {
+function normalizeRepairStatus(value: unknown): NormalizedRepairStatus {
   const raw = normalizeText(value).toLowerCase();
   if (["awaiting_shipment", "aguardando_envio", "aguardando envio", "accepted", "aceito", "aprovado"].includes(raw)) {
     return "awaiting_shipment";
@@ -72,6 +88,13 @@ function normalizeRepairStatus(
   if (["returned", "devolvido"].includes(raw)) return "returned";
   if (["rejected", "rejeitado", "recusado"].includes(raw)) return "rejected";
   return "pending";
+}
+
+function normalizeRepairDecisionOutcome(value: unknown): RepairDecisionOutcome {
+  const raw = normalizeText(value).toLowerCase();
+  if (raw === "accepted") return "accepted";
+  if (raw === "rejected") return "rejected";
+  return null;
 }
 
 function normalizePhotoRow(entry: unknown): { url: string; fileName: string } | null {
@@ -111,6 +134,12 @@ function mapRepairRow(row: RepairRequestRow) {
     status: normalizeRepairStatus(row.status),
     rejectionReason: normalizeText(row.rejection_reason),
     adminNote: normalizeText(row.admin_note),
+    decisionOutcome: normalizeRepairDecisionOutcome(row.decision_outcome),
+    decisionReason: normalizeText(row.decision_reason),
+    decisionAt: normalizeDate(row.decision_at),
+    decisionByAdminId: normalizeText(row.decision_by_admin_id) || null,
+    decisionByAdminName: normalizeText(row.decision_by_admin_name),
+    decisionByAdminEmail: normalizeText(row.decision_by_admin_email),
     reviewedAt: normalizeDate(row.reviewed_at),
     reviewedByAdminId: normalizeText(row.reviewed_by_admin_id) || null,
     createdAt: normalizeDate(row.created_at),
@@ -140,11 +169,26 @@ async function ensureRepairTables(): Promise<void> {
           status TEXT NOT NULL DEFAULT 'pending',
           rejection_reason TEXT NOT NULL DEFAULT '',
           admin_note TEXT NOT NULL DEFAULT '',
+          decision_outcome TEXT NOT NULL DEFAULT '',
+          decision_reason TEXT NOT NULL DEFAULT '',
+          decision_at TIMESTAMPTZ NULL,
+          decision_by_admin_id UUID NULL REFERENCES admins(id) ON DELETE SET NULL,
+          decision_by_admin_name TEXT NOT NULL DEFAULT '',
+          decision_by_admin_email TEXT NOT NULL DEFAULT '',
           reviewed_at TIMESTAMPTZ NULL,
           reviewed_by_admin_id UUID NULL REFERENCES admins(id) ON DELETE SET NULL,
           created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
           updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
         );
+      `);
+      await query(`
+        ALTER TABLE repair_requests
+          ADD COLUMN IF NOT EXISTS decision_outcome TEXT NOT NULL DEFAULT '',
+          ADD COLUMN IF NOT EXISTS decision_reason TEXT NOT NULL DEFAULT '',
+          ADD COLUMN IF NOT EXISTS decision_at TIMESTAMPTZ NULL,
+          ADD COLUMN IF NOT EXISTS decision_by_admin_id UUID NULL REFERENCES admins(id) ON DELETE SET NULL,
+          ADD COLUMN IF NOT EXISTS decision_by_admin_name TEXT NOT NULL DEFAULT '',
+          ADD COLUMN IF NOT EXISTS decision_by_admin_email TEXT NOT NULL DEFAULT '';
       `);
       await query(`
         CREATE INDEX IF NOT EXISTS repair_requests_user_id_idx
@@ -197,7 +241,7 @@ async function createRepairRequest(input: {
   const photos = normalizePhotoList(input.photos || []);
 
   if (!userId || !userEmail || !pieceName || !repairType || !description) {
-    throw createRepairError("INVALID_INPUT", 400, "Dados inválidos para solicitação de reparo.");
+    throw createRepairError("INVALID_INPUT", 400, "Dados invalidos para solicitacao de reparo.");
   }
 
   const result = await query<RepairRequestRow>(
@@ -252,7 +296,7 @@ async function createRepairRequest(input: {
   );
 
   const row = result.rows[0];
-  if (!row) throw createRepairError("REPAIR_CREATE_FAILED", 500, "Falha ao criar solicitação de reparo.");
+  if (!row) throw createRepairError("REPAIR_CREATE_FAILED", 500, "Falha ao criar solicitacao de reparo.");
   return mapRepairRow(row);
 }
 
@@ -344,25 +388,34 @@ async function getRepairRequestById(repairId: string) {
   return row ? mapRepairRow(row) : null;
 }
 
-async function reviewRepairRequest(
+async function updateRepairRequestStatus(
   repairId: string,
   input: {
-    decision: "accepted" | "rejected";
+    action: UpdateRepairAction;
+    status: "awaiting_shipment" | "item_received" | "in_repair" | "completed" | "returned" | "rejected";
     rejectionReason?: string;
     adminNote?: string;
     reviewedByAdminId?: string | null;
+    actorAdminName?: string;
+    actorAdminEmail?: string;
   }
 ) {
   await ensureRepairTables();
   const safeRepairId = normalizeText(repairId);
-  if (!safeRepairId) throw createRepairError("INVALID_ID", 400, "Solicitação inválida.");
+  if (!safeRepairId) throw createRepairError("INVALID_ID", 400, "Solicitacao invalida.");
 
-  const decision = input.decision === "rejected" ? "rejected" : "accepted";
+  const action: UpdateRepairAction = input.action === "decision" ? "decision" : "progress";
+  const nextStatus = normalizeRepairStatus(input.status);
   const rejectionReason = normalizeText(input.rejectionReason);
   const adminNote = normalizeText(input.adminNote);
   const reviewedByAdminId = normalizeText(input.reviewedByAdminId) || null;
+  const actorAdminName = normalizeText(input.actorAdminName);
+  const actorAdminEmail = normalizeText(input.actorAdminEmail).toLowerCase();
 
-  if (decision === "rejected" && !rejectionReason) {
+  if (nextStatus === "pending") {
+    throw createRepairError("INVALID_STATUS", 400, "Status de reparo invalido.");
+  }
+  if (nextStatus === "rejected" && !rejectionReason) {
     throw createRepairError("REJECTION_REASON_REQUIRED", 400, "Informe o motivo da recusa.");
   }
 
@@ -378,7 +431,53 @@ async function reviewRepairRequest(
       [safeRepairId]
     );
     const current = currentResult.rows[0] || null;
-    if (!current) throw createRepairError("REPAIR_NOT_FOUND", 404, "Solicitação não encontrada.");
+    if (!current) throw createRepairError("REPAIR_NOT_FOUND", 404, "Solicitacao nao encontrada.");
+
+    const currentMapped = mapRepairRow(current);
+    if (currentMapped.status === "rejected" || currentMapped.status === "returned") {
+      throw createRepairError("REPAIR_STATUS_LOCKED", 409, "Solicitacao ja encerrada.");
+    }
+
+    if (action === "decision" && currentMapped.status !== "pending") {
+      throw createRepairError("REPAIR_DECISION_LOCKED", 409, "A decisao inicial do reparo ja foi tomada.");
+    }
+    if (action === "progress" && currentMapped.status === "pending") {
+      throw createRepairError("REPAIR_DECISION_REQUIRED", 409, "Aceite ou recuse a solicitacao antes de avancar etapas.");
+    }
+
+    const allowedTransitions: Record<NormalizedRepairStatus, NormalizedRepairStatus[]> = {
+      pending: ["awaiting_shipment", "rejected"],
+      awaiting_shipment: ["item_received", "rejected"],
+      item_received: ["in_repair", "completed", "rejected"],
+      in_repair: ["completed", "rejected"],
+      completed: ["returned"],
+      returned: [],
+      rejected: [],
+    };
+
+    const nextAllowed = allowedTransitions[currentMapped.status] || [];
+    if (action === "decision" && !["awaiting_shipment", "rejected"].includes(nextStatus)) {
+      throw createRepairError("REPAIR_DECISION_INVALID", 400, "A decisao inicial so pode aceitar ou recusar a solicitacao.");
+    }
+    if (action === "progress" && ["awaiting_shipment", "rejected"].includes(nextStatus) && currentMapped.status !== nextStatus) {
+      throw createRepairError("REPAIR_PROGRESS_INVALID", 409, "A decisao inicial nao pode ser alterada apos o aceite.");
+    }
+    if (!nextAllowed.includes(nextStatus) && currentMapped.status !== nextStatus) {
+      throw createRepairError("REPAIR_INVALID_TRANSITION", 409, "Transicao de status invalida.");
+    }
+
+    const nextDecisionOutcome: RepairDecisionOutcome =
+      action === "decision" ? (nextStatus === "rejected" ? "rejected" : "accepted") : currentMapped.decisionOutcome;
+    const nextDecisionReason =
+      action === "decision"
+        ? nextStatus === "rejected"
+          ? rejectionReason
+          : adminNote
+        : currentMapped.decisionReason;
+    const nextDecisionAt = action === "decision" ? "NOW()" : "decision_at";
+    const nextDecisionByAdminId = action === "decision" ? reviewedByAdminId : currentMapped.decisionByAdminId;
+    const nextDecisionByAdminName = action === "decision" ? actorAdminName : currentMapped.decisionByAdminName;
+    const nextDecisionByAdminEmail = action === "decision" ? actorAdminEmail : currentMapped.decisionByAdminEmail;
 
     const updatedResult = await client.query<RepairRequestRow>(
       `
@@ -386,26 +485,37 @@ async function reviewRepairRequest(
       SET status = $2,
           rejection_reason = $3,
           admin_note = $4,
+          decision_outcome = $5,
+          decision_reason = $6,
+          decision_at = ${nextDecisionAt},
+          decision_by_admin_id = $7::uuid,
+          decision_by_admin_name = $8,
+          decision_by_admin_email = $9,
           reviewed_at = NOW(),
-          reviewed_by_admin_id = $5::uuid,
+          reviewed_by_admin_id = $10::uuid,
           updated_at = NOW()
       WHERE id = $1::uuid
       RETURNING *
       `,
       [
         safeRepairId,
-        decision,
-        decision === "rejected" ? rejectionReason : "",
+        nextStatus,
+        nextStatus === "rejected" ? rejectionReason : currentMapped.rejectionReason,
         adminNote,
+        nextDecisionOutcome || "",
+        nextDecisionReason,
+        nextDecisionByAdminId,
+        nextDecisionByAdminName,
+        nextDecisionByAdminEmail,
         reviewedByAdminId,
       ]
     );
 
     const row = updatedResult.rows[0] || null;
-    if (!row) throw createRepairError("REPAIR_REVIEW_FAILED", 500, "Falha ao atualizar solicitação.");
+    if (!row) throw createRepairError("REPAIR_REVIEW_FAILED", 500, "Falha ao atualizar solicitacao.");
 
     return {
-      before: mapRepairRow(current),
+      before: currentMapped,
       repair: mapRepairRow(row),
     };
   });
@@ -417,5 +527,5 @@ module.exports = {
   listMyRepairRequests,
   listAdminRepairRequests,
   getRepairRequestById,
-  reviewRepairRequest,
+  updateRepairRequestStatus,
 };

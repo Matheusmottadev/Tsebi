@@ -379,7 +379,8 @@ export interface ListRepairsAdminResponse {
 }
 
 export interface UpdateRepairAdminPayload {
-  decision: "accept" | "reject";
+  decision?: "accept" | "reject";
+  status?: "awaiting_shipment" | "item_received" | "in_repair" | "completed" | "returned";
   rejectionReason?: string;
   adminNote?: string;
 }
