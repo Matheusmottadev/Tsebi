@@ -42,6 +42,12 @@ function formatStatus(value: RepairRequest["status"]): string {
   return "Pendente";
 }
 
+function formatDecisionOutcome(value: RepairRequest["decisionOutcome"]): string {
+  if (value === "accepted") return "Aceita";
+  if (value === "rejected") return "Recusada";
+  return "Pendente";
+}
+
 function normalizeText(value: unknown): string {
   return String(value || "")
     .normalize("NFD")
@@ -389,6 +395,32 @@ export function RepairRequestsManager({
               <div className={styles.reasonBox}>
                 <p className={styles.infoLabel}>Motivo enviado ao cliente</p>
                 <p className={styles.infoText}>{selectedRepair.rejectionReason}</p>
+              </div>
+            ) : null}
+
+            {selectedRepair.decisionOutcome ? (
+              <div className={styles.auditBox}>
+                <p className={styles.infoLabel}>Auditoria da decisao</p>
+                <div className={styles.auditGrid}>
+                  <div>
+                    <p className={styles.infoLabel}>Resultado</p>
+                    <p className={styles.infoText}>{formatDecisionOutcome(selectedRepair.decisionOutcome)}</p>
+                  </div>
+                  <div>
+                    <p className={styles.infoLabel}>Quando</p>
+                    <p className={styles.infoText}>{formatDateTime(selectedRepair.decisionAt)}</p>
+                  </div>
+                  <div>
+                    <p className={styles.infoLabel}>Quem decidiu</p>
+                    <p className={styles.infoText}>
+                      {selectedRepair.decisionByAdminName || selectedRepair.decisionByAdminEmail || selectedRepair.decisionByAdminId || "-"}
+                    </p>
+                  </div>
+                  <div>
+                    <p className={styles.infoLabel}>Motivo na decisao</p>
+                    <p className={styles.infoText}>{selectedRepair.decisionReason || "-"}</p>
+                  </div>
+                </div>
               </div>
             ) : null}
 
