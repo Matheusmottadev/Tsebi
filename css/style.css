@@ -745,7 +745,7 @@ body.legal-header-image-default .home-header:not(.is-scrolled):not(:hover):not(:
 }
 
 .header-menu-subpanel-gallery {
-  margin-top: 34px;
+  margin-top: 24px;
   width: calc(100% - 28px);
   margin-left: 14px;
   margin-right: 14px;
@@ -766,8 +766,9 @@ body.legal-header-image-default .home-header:not(.is-scrolled):not(:hover):not(:
 .header-menu-subpanel-gallery img {
   width: 100%;
   display: block;
-  aspect-ratio: 4 / 5;
+  height: clamp(108px, 14vw, 152px);
   object-fit: cover;
+  object-position: center 32%;
 }
 
 .header-menu-subpanel-gallery-meta {
@@ -775,18 +776,18 @@ body.legal-header-image-default .home-header:not(.is-scrolled):not(:hover):not(:
   left: 0;
   right: 0;
   bottom: 0;
-  padding: 14px 14px 12px;
-  background: linear-gradient(to top, rgba(0, 0, 0, 0.52), rgba(0, 0, 0, 0.16) 55%, rgba(0, 0, 0, 0));
+  padding: 10px 12px 9px;
+  background: linear-gradient(to top, rgba(0, 0, 0, 0.52), rgba(0, 0, 0, 0.18) 52%, rgba(0, 0, 0, 0));
   pointer-events: none;
 }
 
 .header-menu-subpanel-gallery-name {
   margin: 0;
   font-family: "Montserrat", Arial, sans-serif;
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 500;
-  line-height: 1.32;
-  color: #111;
+  line-height: 1.2;
+  color: #fff;
 }
 
 .header-menu-subpanel-single-image {

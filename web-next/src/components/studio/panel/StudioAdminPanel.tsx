@@ -14,6 +14,7 @@ import {
   listRepairsAdmin,
   listUsersAdmin,
   listVipAdmin,
+  studioAuthLogout,
   studioAuthMe,
   type AdminOrderSummary,
 } from "@/services/admin";
@@ -584,9 +585,16 @@ export function StudioAdminPanel() {
   const topbarActionLabel = topbarConfig.label;
   const hasGlobalSearchResults = globalSearchGroups.some((group) => group.items.length > 0);
 
-  const handleTopbarButton = () => {
+  const handleTopbarButton = async () => {
     if (activePage === "inicio") {
-      router.push("/admin/login");
+      try {
+        await studioAuthLogout();
+      } catch {
+        showToast("Nao foi possivel encerrar a sessao.");
+      } finally {
+        router.replace("/admin/login");
+        router.refresh();
+      }
       return;
     }
     if (activePage === "reparos") {
