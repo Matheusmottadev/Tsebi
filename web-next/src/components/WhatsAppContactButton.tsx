@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import { usePathname } from "next/navigation";
+import { useEffect, useState } from "react";
 import styles from "./WhatsAppContactButton.module.css";
 
 const WHATSAPP_URL =
@@ -13,12 +14,43 @@ export function WhatsAppContactButton() {
   const isStudioRoute = pathname === "/studio" || pathname.startsWith("/studio/");
   const isAdminRoute = pathname === "/admin" || pathname.startsWith("/admin/");
   const isPasswordRecoveryRoute = normalizedPath.startsWith("/recuperar-senha");
+  const isHomeRoute = normalizedPath === "/";
+  const shouldHideButton = isStudioRoute || isAdminRoute || isPasswordRecoveryRoute;
+  const [isVisible, setIsVisible] = useState(!isHomeRoute);
 
-  if (isStudioRoute || isAdminRoute || isPasswordRecoveryRoute) return null;
+  useEffect(() => {
+    if (shouldHideButton) return;
+
+    if (!isHomeRoute) {
+      setIsVisible(true);
+      return;
+    }
+
+    const mediaQuery = window.matchMedia("(max-width: 768px)");
+
+    function syncVisibility() {
+      if (!mediaQuery.matches) {
+        setIsVisible(true);
+        return;
+      }
+      setIsVisible(window.scrollY > 24);
+    }
+
+    syncVisibility();
+    mediaQuery.addEventListener("change", syncVisibility);
+    window.addEventListener("scroll", syncVisibility, { passive: true });
+
+    return () => {
+      mediaQuery.removeEventListener("change", syncVisibility);
+      window.removeEventListener("scroll", syncVisibility);
+    };
+  }, [isHomeRoute, shouldHideButton]);
+
+  if (shouldHideButton) return null;
 
   return (
     <a
-      className={styles.launcher}
+      className={`${styles.launcher} ${isVisible ? styles.launcherVisible : styles.launcherHidden}`}
       href={WHATSAPP_URL}
       target="_blank"
       rel="noopener noreferrer"
