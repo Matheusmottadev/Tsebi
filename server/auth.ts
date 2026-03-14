@@ -315,7 +315,14 @@ const repairRequestSchema = z.object({
   photos: z
     .array(
       z.object({
-        url: z.string().trim().url(),
+        url: z
+          .string()
+          .trim()
+          .min(1)
+          .refine(
+            (value: string) => /^https?:\/\//i.test(value) || /^data:image\//i.test(value),
+            "INVALID_PHOTO_URL"
+          ),
         fileName: z.string().trim().max(260).optional().default("")
       })
     )
@@ -2221,13 +2228,17 @@ myRouter.post("/repairs", requireAuth, async (req: any, res: any) => {
       photos: parsed.data.photos,
     });
 
-    await sendRepairConfirmationEmail({
-      clientName: repair.userName || String(user.name || "").trim(),
-      clientEmail: repair.userEmail || String(user.email || "").trim(),
-      pieceName: repair.pieceName,
-      orderRef: repair.orderRef,
-      repairDescription: repair.description,
-    });
+    try {
+      await sendRepairConfirmationEmail({
+        clientName: repair.userName || String(user.name || "").trim(),
+        clientEmail: repair.userEmail || String(user.email || "").trim(),
+        pieceName: repair.pieceName,
+        orderRef: repair.orderRef,
+        repairDescription: repair.description,
+      });
+    } catch (emailError) {
+      console.error("[repairs] confirmation email failed", emailError);
+    }
 
     const history = await listMyRepairRequests(userId);
     return res.status(201).json({ repair, history });
