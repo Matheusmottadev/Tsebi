@@ -158,6 +158,15 @@
   border-color: var(--studio-border-strong);
 }
 
+.dayCellPast {
+  opacity: 0.42;
+}
+
+.dayCellPast:hover {
+  background: #fafafa;
+  border-color: transparent;
+}
+
 .dayCellSelected {
   border-color: #111;
   background: #111;

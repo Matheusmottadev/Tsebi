@@ -380,12 +380,15 @@ export function PrivateCareManager({ rows, csrfToken }: Props) {
               const hasFreeSlots = daySlots.some((slot) => slot.isAvailable && !slot.isBlocked);
               const isSelected = dateKey === selectedDate;
               const isToday = dateKey === today;
+              const isPast = dateKey < today;
 
               return (
                 <button
                   key={dateKey}
                   type="button"
                   className={`${styles.dayCell} ${isSelected ? styles.dayCellSelected : ""} ${
+                    !isSelected && isPast ? styles.dayCellPast : ""
+                  } ${
                     !isSelected && isToday ? styles.dayCellToday : ""
                   }`}
                   onClick={() => setSelectedDate(dateKey)}

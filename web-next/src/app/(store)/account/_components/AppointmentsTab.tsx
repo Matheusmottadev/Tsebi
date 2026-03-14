@@ -34,7 +34,7 @@ const SERVICE_TYPES = [
   "Compra assistida",
   "Cuidados com pecas",
 ];
-const MODALITIES = ["Presencial - Sao Paulo", "Videochamada"];
+const MODALITIES = ["WhatsApp", "Ligacao"];
 
 type Props = { user: PublicUser };
 
@@ -193,12 +193,6 @@ export function AppointmentsTab({ user }: Props) {
     if (!selectedDay) return "-";
     return `${selectedDay} de ${MONTH_NAMES[month]}, ${year}`;
   };
-
-  const defaultAddr =
-    user.addresses.find((address) => address.id === user.defaultAddressId) ?? user.addresses[0] ?? null;
-  const addressStr = defaultAddr
-    ? `${defaultAddr.street}${defaultAddr.number ? `, ${defaultAddr.number}` : ""} - ${defaultAddr.city}`
-    : "";
 
   async function refreshDaySlots() {
     if (!selectedDateKey) return;
@@ -477,12 +471,6 @@ export function AppointmentsTab({ user }: Props) {
             <div className={styles.summaryRow}>
               <span className={styles.summaryKey}>Local</span>
               <span className={styles.summaryVal}>{selectedSlot.location}</span>
-            </div>
-          ) : null}
-          {addressStr && modality.startsWith("Presencial") ? (
-            <div className={styles.summaryRow}>
-              <span className={styles.summaryKey}>Endereco</span>
-              <span className={styles.summaryVal}>{addressStr}</span>
             </div>
           ) : null}
         </div>
