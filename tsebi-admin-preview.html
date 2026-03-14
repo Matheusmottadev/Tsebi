@@ -1,0 +1,522 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>TSEBI — Admin · Atendimentos</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'Cormorant Garamond','Georgia',serif;background:#f4f4f2;display:flex;min-height:100vh;overflow-x:hidden;}
+
+/* ── SIDEBAR ─────────────────────────────────────────────── */
+.sidebar{width:210px;min-height:100vh;background:#0e0e0e;display:flex;flex-direction:column;flex-shrink:0;position:fixed;top:0;left:0;bottom:0;z-index:20;}
+.sidebar-brand{padding:28px 24px 20px;border-bottom:1px solid #222;}
+.sidebar-brand .brand-title{font-size:16px;letter-spacing:.18em;color:#fff;font-weight:400;}
+.sidebar-brand .brand-sub{font-size:9px;letter-spacing:.16em;color:#555;margin-top:3px;font-family:sans-serif;font-weight:500;}
+.sidebar-section{padding:20px 0 8px;border-bottom:1px solid #1a1a1a;}
+.sidebar-section-label{font-size:8px;letter-spacing:.18em;color:#444;font-family:sans-serif;font-weight:600;padding:0 24px 8px;text-transform:uppercase;}
+.sidebar-item{display:flex;align-items:center;gap:10px;padding:9px 24px;cursor:pointer;transition:background .12s;text-decoration:none;color:#777;font-size:13px;font-family:sans-serif;letter-spacing:.02em;font-weight:400;position:relative;}
+.sidebar-item:hover{background:#181818;color:#ccc;}
+.sidebar-item.active{background:#1c1c1c;color:#fff;}
+.sidebar-item .icon{width:14px;height:14px;opacity:.6;flex-shrink:0;}
+.sidebar-item.active .icon{opacity:1;}
+.badge{background:#333;color:#aaa;font-size:9px;padding:1px 7px;border-radius:10px;font-family:sans-serif;margin-left:auto;}
+.sidebar-item.active .badge{background:#2a2a2a;color:#888;}
+.sidebar-bottom{margin-top:auto;padding:20px 24px;border-top:1px solid #1a1a1a;display:flex;align-items:center;gap:10px;}
+.avatar{width:30px;height:30px;border-radius:50%;background:#2a2a2a;display:flex;align-items:center;justify-content:center;font-size:11px;color:#888;font-family:sans-serif;letter-spacing:.05em;flex-shrink:0;}
+.sidebar-user-name{font-size:13px;color:#aaa;font-family:sans-serif;}
+.sidebar-user-role{font-size:10px;color:#444;font-family:sans-serif;letter-spacing:.03em;}
+
+/* ── MAIN ─────────────────────────────────────────────────── */
+.main{margin-left:210px;flex:1;min-height:100vh;background:#fff;display:flex;flex-direction:column;}
+
+/* topbar */
+.topbar{padding:26px 40px 18px;border-bottom:1px solid #ebebeb;display:flex;align-items:flex-start;justify-content:space-between;background:#fff;position:sticky;top:0;z-index:10;}
+.topbar-left .page-title{font-size:26px;font-weight:400;letter-spacing:.02em;color:#1a1a1a;}
+.topbar-left .page-sub{font-size:11px;color:#bbb;font-family:sans-serif;margin-top:3px;letter-spacing:.03em;font-weight:400;}
+.topbar-right{display:flex;align-items:center;gap:12px;}
+.icon-btn{width:34px;height:34px;border:1px solid #e8e8e8;background:#fff;border-radius:50%;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:15px;color:#888;position:relative;}
+.notif-dot{width:7px;height:7px;background:#1a1a1a;border-radius:50%;position:absolute;top:4px;right:4px;border:1.5px solid #fff;}
+.new-btn{background:#1a1a1a;color:#fff;border:none;padding:9px 20px;font-size:10px;letter-spacing:.12em;cursor:pointer;font-family:sans-serif;font-weight:600;white-space:nowrap;}
+.new-btn:hover{background:#333;}
+
+/* content */
+.content{padding:32px 40px;flex:1;}
+
+/* ── CALENDAR LAYOUT ───────────────────────────────────────── */
+.cal-layout{display:grid;grid-template-columns:380px 1fr;gap:0;border:1px solid #e8e8e8;background:#fff;}
+
+/* LEFT — calendar */
+.cal-panel{padding:28px 28px 24px;border-right:1px solid #ebebeb;}
+.month-nav{display:flex;align-items:center;justify-content:space-between;margin-bottom:22px;}
+.nav-btn{background:#fff;border:1px solid #e0e0e0;width:30px;height:30px;border-radius:50%;cursor:pointer;font-size:15px;color:#666;display:flex;align-items:center;justify-content:center;transition:all .12s;}
+.nav-btn:hover{background:#f5f5f5;border-color:#ccc;}
+.month-label{font-size:17px;font-weight:400;letter-spacing:.05em;color:#1a1a1a;}
+.day-labels{display:grid;grid-template-columns:repeat(7,1fr);gap:2px;margin-bottom:8px;}
+.day-lbl{text-align:center;font-size:9px;letter-spacing:.12em;color:#bbb;font-family:sans-serif;font-weight:600;padding:3px 0;}
+.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;}
+.day-cell{aspect-ratio:1;background:none;border:none;cursor:pointer;border-radius:50%;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:13px;color:#1a1a1a;font-family:'Cormorant Garamond',serif;transition:background .12s;position:relative;gap:1px;}
+.day-cell:hover:not(.selected){background:#f5f5f5;}
+.day-cell.selected{background:#1a1a1a;color:#fff;}
+.day-cell.today:not(.selected){border:1.5px solid #1a1a1a;}
+.day-cell.other-month{color:#ddd;pointer-events:none;}
+.dots{display:flex;gap:2px;position:absolute;bottom:3px;}
+.dot-a{width:4px;height:4px;border-radius:50%;background:#1a1a1a;display:inline-block;}
+.day-cell.selected .dot-a{background:#fff;}
+.dot-s{width:4px;height:4px;border-radius:50%;background:#bbb;display:inline-block;}
+.legend{display:flex;gap:16px;margin-top:16px;padding-top:14px;border-top:1px solid #f0f0f0;}
+.leg-item{display:flex;align-items:center;gap:5px;font-size:10px;color:#aaa;font-family:sans-serif;letter-spacing:.04em;}
+
+/* RIGHT — detail */
+.detail-panel{padding:28px 32px;}
+.date-hdr{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:22px;padding-bottom:18px;border-bottom:1px solid #f0f0f0;}
+.date-meta-lbl{font-size:9px;letter-spacing:.14em;color:#bbb;font-family:sans-serif;font-weight:600;margin-bottom:5px;}
+.date-meta-val{font-size:20px;font-weight:400;letter-spacing:.02em;color:#1a1a1a;}
+.edit-btn{background:#fff;border:1px solid #1a1a1a;padding:8px 18px;font-size:10px;letter-spacing:.1em;cursor:pointer;font-family:sans-serif;font-weight:600;color:#1a1a1a;transition:all .12s;white-space:nowrap;}
+.edit-btn:hover{background:#1a1a1a;color:#fff;}
+
+/* slots */
+.sec-lbl{font-size:9px;letter-spacing:.14em;color:#bbb;font-family:sans-serif;font-weight:600;display:block;margin-bottom:8px;}
+.slot-chips{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:22px;}
+.chip{border:1px solid #e0e0e0;padding:4px 12px;font-size:12px;font-family:'Cormorant Garamond',serif;color:#777;letter-spacing:.04em;}
+
+/* appointments */
+.appts-lbl{font-size:9px;letter-spacing:.14em;color:#bbb;font-family:sans-serif;font-weight:600;margin:0 0 10px;}
+.appt-list{display:flex;flex-direction:column;gap:3px;}
+.appt-row{border:1px solid #ebebeb;overflow:hidden;}
+.appt-hdr{width:100%;background:#fff;border:none;padding:13px 16px;cursor:pointer;display:flex;align-items:center;justify-content:space-between;transition:background .1s;}
+.appt-hdr:hover{background:#fafafa;}
+.appt-left{display:flex;align-items:center;gap:14px;}
+.appt-time{font-size:14px;font-family:'Cormorant Garamond',serif;font-weight:600;letter-spacing:.05em;color:#1a1a1a;min-width:42px;}
+.appt-name{font-size:14px;font-family:'Cormorant Garamond',serif;color:#1a1a1a;}
+.appt-right{display:flex;align-items:center;gap:10px;}
+.appt-type-tag{font-size:10px;color:#bbb;font-family:sans-serif;letter-spacing:.03em;}
+.chevron{font-size:12px;color:#aaa;transition:transform .18s;display:inline-block;line-height:1;}
+.appt-details{padding:0 16px 16px;border-top:1px solid #f5f5f5;display:none;}
+.appt-details.open{display:block;}
+.detail-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px 20px;padding:14px 0 12px;}
+.d-lbl{font-size:9px;letter-spacing:.12em;color:#bbb;font-family:sans-serif;font-weight:600;display:block;margin-bottom:3px;text-transform:uppercase;}
+.d-val{font-size:13px;color:#1a1a1a;font-family:'Cormorant Garamond',serif;letter-spacing:.01em;}
+.cancel-btn{background:none;border:1px solid #e0e0e0;padding:7px 14px;font-size:10px;letter-spacing:.08em;cursor:pointer;font-family:sans-serif;color:#aaa;margin-top:2px;transition:all .12s;}
+.cancel-btn:hover{border-color:#c0392b;color:#c0392b;}
+.confirm-box{background:#fafafa;border:1px solid #ebebeb;padding:12px 14px;margin-top:6px;display:none;}
+.confirm-box.open{display:block;}
+.conf-txt{font-size:11px;color:#666;font-family:sans-serif;display:block;margin-bottom:8px;line-height:1.5;}
+.conf-yes{background:#1a1a1a;color:#fff;border:none;padding:7px 14px;font-size:10px;letter-spacing:.08em;cursor:pointer;font-family:sans-serif;margin-right:6px;}
+.conf-no{background:none;border:1px solid #e0e0e0;padding:7px 12px;font-size:10px;letter-spacing:.08em;cursor:pointer;font-family:sans-serif;color:#aaa;}
+.cancelled-tag{font-size:10px;color:#aaa;font-family:sans-serif;font-style:italic;margin-top:6px;display:none;}
+.cancelled-tag.show{display:block;}
+.no-appts{font-size:13px;color:#ccc;font-family:sans-serif;}
+.no-slots-box{background:#fafafa;border:1px dashed #e8e8e8;padding:16px 20px;display:flex;align-items:center;justify-content:space-between;margin-bottom:22px;gap:12px;}
+.no-slots-txt{font-size:12px;color:#bbb;font-family:sans-serif;}
+.add-slots-btn{background:none;border:1px solid #1a1a1a;padding:6px 14px;font-size:10px;letter-spacing:.09em;cursor:pointer;font-family:sans-serif;font-weight:600;color:#1a1a1a;white-space:nowrap;}
+
+/* ── MODAL ─────────────────────────────────────────────────── */
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:100;align-items:center;justify-content:center;}
+.modal-overlay.open{display:flex;}
+.modal{background:#fff;width:min(500px,92vw);max-height:90vh;overflow-y:auto;box-shadow:0 32px 90px rgba(0,0,0,.2);}
+.modal-hdr{display:flex;align-items:flex-start;justify-content:space-between;padding:24px 30px 18px;border-bottom:1px solid #ebebeb;}
+.modal-meta-lbl{font-size:9px;letter-spacing:.14em;color:#bbb;font-family:sans-serif;font-weight:600;margin-bottom:5px;}
+.modal-date-val{font-size:20px;font-family:'Cormorant Garamond',serif;color:#1a1a1a;font-weight:400;}
+.close-btn{background:none;border:none;font-size:16px;cursor:pointer;color:#bbb;padding:2px;line-height:1;transition:color .1s;}
+.close-btn:hover{color:#1a1a1a;}
+.toggle-row{display:flex;align-items:center;justify-content:space-between;padding:18px 30px;border-bottom:1px solid #f0f0f0;gap:20px;}
+.toggle-title{font-size:14px;color:#1a1a1a;font-family:'Cormorant Garamond',serif;margin-bottom:3px;font-weight:400;}
+.toggle-sub{font-size:11px;color:#bbb;font-family:sans-serif;line-height:1.4;font-weight:400;}
+.sw{width:44px;height:24px;border-radius:12px;border:none;cursor:pointer;position:relative;flex-shrink:0;transition:background .2s;padding:0;}
+.knob{position:absolute;top:2px;width:20px;height:20px;border-radius:50%;background:#fff;transition:transform .2s;box-shadow:0 1px 4px rgba(0,0,0,.2);}
+.hours-section{padding:22px 30px;}
+.hours-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;}
+.hours-lbl{font-size:9px;letter-spacing:.14em;color:#bbb;font-family:sans-serif;font-weight:600;}
+.bulk-actions{display:flex;gap:6px;}
+.bulk-btn{background:none;border:1px solid #e0e0e0;padding:4px 12px;font-size:9px;letter-spacing:.08em;cursor:pointer;font-family:sans-serif;color:#aaa;transition:all .12s;}
+.bulk-btn:hover{border-color:#aaa;color:#555;}
+.hours-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:9px;}
+.hr-btn{aspect-ratio:1;border-radius:50%;border:1.5px solid #e0e0e0;background:#fff;cursor:pointer;font-size:12px;font-family:'Cormorant Garamond',serif;color:#888;display:flex;align-items:center;justify-content:center;transition:all .15s;width:100%;padding:0;font-weight:400;}
+.hr-btn:hover:not(.active):not(:disabled){background:#f5f5f5;border-color:#bbb;}
+.hr-btn.active{background:#1a1a1a;border-color:#1a1a1a;color:#fff;font-weight:600;}
+.hr-btn:disabled{opacity:.25;cursor:not-allowed;}
+.disabled-notice{font-size:11px;color:#bbb;font-family:sans-serif;margin-top:14px;text-align:center;padding:12px;background:#fafafa;border:1px dashed #e8e8e8;display:none;}
+.disabled-notice.show{display:block;}
+.modal-ftr{display:flex;gap:8px;align-items:center;justify-content:flex-end;padding:18px 30px 24px;border-top:1px solid #f0f0f0;}
+.saved-msg{font-size:11px;color:#4a7c59;font-family:sans-serif;margin-right:auto;display:none;letter-spacing:.03em;}
+.saved-msg.show{display:block;}
+.cancel-modal-btn{background:none;border:1px solid #e0e0e0;padding:9px 20px;font-size:10px;letter-spacing:.1em;cursor:pointer;font-family:sans-serif;color:#aaa;}
+.save-btn{background:#1a1a1a;color:#fff;border:none;padding:9px 26px;font-size:10px;letter-spacing:.12em;cursor:pointer;font-family:sans-serif;font-weight:600;transition:opacity .12s;}
+.save-btn:hover{opacity:.85;}
+</style>
+</head>
+<body>
+
+<!-- ════════════════════════════════════════════
+     SIDEBAR
+════════════════════════════════════════════ -->
+<aside class="sidebar">
+  <div class="sidebar-brand">
+    <div class="brand-title">TSEBI</div>
+    <div class="brand-sub">PAINEL ADMINISTRATIVO</div>
+  </div>
+
+  <div class="sidebar-section">
+    <div class="sidebar-section-label">Geral</div>
+    <a class="sidebar-item" href="#">
+      <svg class="icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="1" y="1" width="6" height="6" rx="1"/><rect x="9" y="1" width="6" height="6" rx="1"/><rect x="1" y="9" width="6" height="6" rx="1"/><rect x="9" y="9" width="6" height="6" rx="1"/></svg>
+      Início
+    </a>
+    <a class="sidebar-item" href="#">
+      <svg class="icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 3h12M2 8h12M2 13h8"/></svg>
+      Pedidos
+      <span class="badge">5</span>
+    </a>
+    <a class="sidebar-item" href="#">
+      <svg class="icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="2" width="12" height="12" rx="1"/><path d="M5 6h6M5 9h4"/></svg>
+      Produtos
+    </a>
+    <a class="sidebar-item" href="#">
+      <svg class="icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="5" r="3"/><path d="M2 14c0-3.3 2.7-6 6-6s6 2.7 6 6"/></svg>
+      Usuários
+    </a>
+  </div>
+
+  <div class="sidebar-section">
+    <div class="sidebar-section-label">Relacionamento</div>
+    <a class="sidebar-item active" href="#">
+      <svg class="icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="2" width="12" height="12" rx="1"/><path d="M5 2v3M11 2v3M2 7h12"/></svg>
+      Atendimentos
+      <span class="badge">0</span>
+    </a>
+    <a class="sidebar-item" href="#">
+      <svg class="icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 14l2-4 8-8 2 2-8 8-4 2z"/></svg>
+      Lista VIP
+    </a>
+    <a class="sidebar-item" href="#">
+      <svg class="icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 3h12v9a1 1 0 01-1 1H3a1 1 0 01-1-1V3zM5 3V1M11 3V1"/></svg>
+      Newsletter
+    </a>
+  </div>
+
+  <div class="sidebar-section">
+    <div class="sidebar-section-label">Comercial</div>
+    <a class="sidebar-item" href="#">
+      <svg class="icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 5h12l-1 7H3L2 5zM5 5l1-3h4l1 3"/></svg>
+      Cupons
+    </a>
+    <a class="sidebar-item" href="#">
+      <svg class="icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="8" r="6"/><path d="M8 5v3l2 2"/></svg>
+      Auditoria
+    </a>
+  </div>
+
+  <div class="sidebar-bottom">
+    <div class="avatar">AD</div>
+    <div>
+      <div class="sidebar-user-name">Admin</div>
+      <div class="sidebar-user-role">Tsebi Brasil</div>
+    </div>
+  </div>
+</aside>
+
+<!-- ════════════════════════════════════════════
+     MAIN
+════════════════════════════════════════════ -->
+<main class="main">
+
+  <!-- Topbar -->
+  <div class="topbar">
+    <div class="topbar-left">
+      <div class="page-title">Atendimentos</div>
+      <div class="page-sub">sexta-feira, 13 de março de 2026</div>
+    </div>
+    <div class="topbar-right">
+      <button class="icon-btn" title="Buscar">
+        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 16 16"><circle cx="6.5" cy="6.5" r="4.5"/><path d="M10 10l3.5 3.5"/></svg>
+      </button>
+      <button class="icon-btn" title="Notificações" style="position:relative;">
+        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 16 16"><path d="M8 2a5 5 0 00-5 5v3l-1 1v1h12v-1l-1-1V7a5 5 0 00-5-5zM6 13a2 2 0 004 0"/></svg>
+        <span class="notif-dot"></span>
+      </button>
+      <button class="new-btn" onclick="openModal()">+ NOVO ATENDIMENTO</button>
+    </div>
+  </div>
+
+  <!-- Content -->
+  <div class="content">
+    <div style="margin-bottom:10px;font-size:10px;letter-spacing:.13em;color:#bbb;font-family:sans-serif;font-weight:600;">CONTROLE DE HORÁRIOS DO CLIENTE</div>
+    <div style="font-size:12px;color:#ccc;font-family:sans-serif;margin-bottom:18px;">Crie os dias e horários no botão + Novo Atendimento. O horário só aparece em Minha Conta > Atendimentos Privados quando estiver com Disponível ativo e Bloqueado desligado.</div>
+
+    <div class="cal-layout">
+
+      <!-- ── LEFT: Calendário ── -->
+      <div class="cal-panel">
+        <div class="month-nav">
+          <button class="nav-btn" onclick="changeMonth(-1)">&#8249;</button>
+          <span class="month-label" id="monthLabel">Março 2026</span>
+          <button class="nav-btn" onclick="changeMonth(1)">&#8250;</button>
+        </div>
+        <div class="day-labels">
+          <span class="day-lbl">DOM</span><span class="day-lbl">SEG</span><span class="day-lbl">TER</span>
+          <span class="day-lbl">QUA</span><span class="day-lbl">QUI</span><span class="day-lbl">SEX</span><span class="day-lbl">SAB</span>
+        </div>
+        <div class="cal-grid" id="calGrid"></div>
+        <div class="legend">
+          <span class="leg-item"><span class="dot-a"></span> agendamento</span>
+          <span class="leg-item"><span class="dot-s"></span> horário livre</span>
+        </div>
+      </div>
+
+      <!-- ── RIGHT: Detalhe do dia ── -->
+      <div class="detail-panel">
+        <div class="date-hdr">
+          <div>
+            <div class="date-meta-lbl">DATA SELECIONADA</div>
+            <div class="date-meta-val" id="dateVal">13 de Março, 2026</div>
+          </div>
+          <button class="edit-btn" onclick="openModal()">Editar horários</button>
+        </div>
+
+        <div id="slotArea"></div>
+
+        <div class="appts-lbl" id="apptsLabel">AGENDAMENTOS</div>
+        <div class="appt-list" id="apptList"></div>
+      </div>
+    </div>
+  </div>
+</main>
+
+<!-- ════════════════════════════════════════════
+     MODAL — Editar Horários
+════════════════════════════════════════════ -->
+<div class="modal-overlay" id="modalOverlay">
+  <div class="modal">
+    <div class="modal-hdr">
+      <div>
+        <div class="modal-meta-lbl">EDITAR HORÁRIOS</div>
+        <div class="modal-date-val" id="modalDateVal">13 de Março, 2026</div>
+      </div>
+      <button class="close-btn" onclick="closeModal()">✕</button>
+    </div>
+
+    <div class="toggle-row">
+      <div>
+        <div class="toggle-title">Desativar dia inteiro</div>
+        <div class="toggle-sub">Bloqueia todos os horários deste dia para novos agendamentos</div>
+      </div>
+      <button class="sw" id="daySw" onclick="toggleDay()" style="background:#e0e0e0;">
+        <span class="knob" id="swKnob" style="transform:translateX(2px);"></span>
+      </button>
+    </div>
+
+    <div class="hours-section">
+      <div class="hours-hdr">
+        <span class="hours-lbl" id="hoursCountLbl">HORÁRIOS DISPONÍVEIS</span>
+        <div class="bulk-actions">
+          <button class="bulk-btn" onclick="selectAll()">Todos</button>
+          <button class="bulk-btn" onclick="clearAll()">Limpar</button>
+        </div>
+      </div>
+      <div class="hours-grid" id="hoursGrid"></div>
+      <div class="disabled-notice" id="disabledNotice">Dia desativado — nenhum horário será exibido ao cliente.</div>
+    </div>
+
+    <div class="modal-ftr">
+      <span class="saved-msg" id="savedMsg">✓ Horários salvos com sucesso</span>
+      <button class="cancel-modal-btn" onclick="closeModal()">Cancelar</button>
+      <button class="save-btn" onclick="saveHours()">Salvar horários</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const MONTHS = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+const ALL_HOURS = ['09','10','11','12','13','14','15','16','17','18','19','20','21','22'];
+
+const state = {
+  year: 2026, month: 2,
+  selected: '2026-03-13',
+  slots: {
+    '2026-03-13': ['09','10','14','15'],
+    '2026-03-18': ['09','11','13'],
+    '2026-03-20': ['10','11','12','14'],
+    '2026-03-25': ['09','10','11'],
+  },
+  appointments: [
+    {id:'1',date:'2026-03-13',time:'10',name:'Mariana Costa',email:'mariana@email.com',service:'Consultoria de estilo',modality:'Presencial — São Paulo',notes:'Prefiro looks clássicos e neutros.',cancelled:false},
+    {id:'2',date:'2026-03-13',time:'14',name:'Julia Ferreira',email:'julia@email.com',service:'Composição de looks',modality:'Videochamada',notes:'',cancelled:false},
+    {id:'3',date:'2026-03-18',time:'11',name:'Ana Beatriz Lima',email:'ana@email.com',service:'Compra assistida',modality:'Presencial — São Paulo',notes:'Evento no dia 20, precisa de look completo.',cancelled:false},
+  ],
+  disabledDays: new Set(),
+  modalHours: new Set(),
+  dayDisabled: false,
+};
+
+function toStr(y,m,d){ return `${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`; }
+function fmtDate(ds){
+  const [y,m,d] = ds.split('-');
+  return `${parseInt(d)} de ${MONTHS[parseInt(m)-1]}, ${y}`;
+}
+
+function renderCalendar(){
+  const g = document.getElementById('calGrid');
+  g.innerHTML = '';
+  const first = new Date(state.year, state.month, 1).getDay();
+  const days  = new Date(state.year, state.month+1, 0).getDate();
+  const todayStr = toStr(new Date().getFullYear(), new Date().getMonth(), new Date().getDate());
+  const apptDates = new Set(state.appointments.filter(a=>!a.cancelled).map(a=>a.date));
+
+  for(let i=0;i<first;i++){
+    const e=document.createElement('div'); e.style.aspectRatio='1'; g.appendChild(e);
+  }
+  for(let d=1;d<=days;d++){
+    const ds = toStr(state.year, state.month, d);
+    const btn = document.createElement('button');
+    let cls = 'day-cell';
+    if(ds===state.selected) cls+=' selected';
+    else if(ds===todayStr)   cls+=' today';
+    btn.className = cls;
+    btn.innerHTML = `<span>${d}</span>`;
+    const hasA = apptDates.has(ds);
+    const hasS = state.slots[ds] && state.slots[ds].length>0 && !state.disabledDays.has(ds);
+    if(hasA||hasS){
+      const dots = document.createElement('div'); dots.className='dots';
+      if(hasA){ const dot=document.createElement('span'); dot.className='dot-a'; dots.appendChild(dot); }
+      if(hasS){ const dot=document.createElement('span'); dot.className='dot-s'; dots.appendChild(dot); }
+      btn.appendChild(dots);
+    }
+    btn.onclick = ()=>{ state.selected=ds; renderCalendar(); renderDetail(); };
+    g.appendChild(btn);
+  }
+  document.getElementById('monthLabel').textContent = `${MONTHS[state.month]} ${state.year}`;
+}
+
+function renderDetail(){
+  document.getElementById('dateVal').textContent = fmtDate(state.selected);
+  document.getElementById('modalDateVal').textContent = fmtDate(state.selected);
+
+  // slot chips
+  const sa = document.getElementById('slotArea');
+  const slots = !state.disabledDays.has(state.selected) ? (state.slots[state.selected]||[]) : [];
+  if(slots.length>0){
+    sa.innerHTML = `<span class="sec-lbl">HORÁRIOS DISPONÍVEIS</span><div class="slot-chips">${slots.map(h=>`<span class="chip">${h}:00</span>`).join('')}</div>`;
+  } else {
+    const msg = state.disabledDays.has(state.selected)
+      ? 'Dia desativado — nenhum horário disponível para clientes.'
+      : 'Nenhum horário cadastrado para este dia.';
+    sa.innerHTML = `<div class="no-slots-box"><span class="no-slots-txt">${msg}</span><button class="add-slots-btn" onclick="openModal()">+ Adicionar horários</button></div>`;
+  }
+
+  // appointments
+  const appts = state.appointments.filter(a=>a.date===state.selected&&!a.cancelled).sort((a,b)=>parseInt(a.time)-parseInt(b.time));
+  document.getElementById('apptsLabel').textContent = `AGENDAMENTOS${appts.length>0?' ('+appts.length+')':''}`;
+  const list = document.getElementById('apptList');
+  if(appts.length===0){ list.innerHTML=`<p class="no-appts">Nenhum agendamento para este dia.</p>`; return; }
+  list.innerHTML = appts.map(a=>`
+    <div class="appt-row" id="row-${a.id}">
+      <button class="appt-hdr" onclick="toggleRow('${a.id}')">
+        <div class="appt-left">
+          <span class="appt-time">${a.time}:00</span>
+          <span class="appt-name">${a.name}</span>
+        </div>
+        <div class="appt-right">
+          <span class="appt-type-tag">${a.service}</span>
+          <span class="chevron" id="chv-${a.id}">▾</span>
+        </div>
+      </button>
+      <div class="appt-details" id="det-${a.id}">
+        <div class="detail-grid">
+          <div><span class="d-lbl">Tipo de Atendimento</span><span class="d-val">${a.service}</span></div>
+          <div><span class="d-lbl">Modalidade</span><span class="d-val">${a.modality}</span></div>
+          <div><span class="d-lbl">Email</span><span class="d-val" style="font-size:12px;">${a.email}</span></div>
+          ${a.notes?`<div style="grid-column:1/-1"><span class="d-lbl">Observações</span><span class="d-val">${a.notes}</span></div>`:''}
+        </div>
+        <button class="cancel-btn" id="cbtn-${a.id}" onclick="showConfirm('${a.id}')">Cancelar agendamento</button>
+        <div class="confirm-box" id="conf-${a.id}">
+          <span class="conf-txt">Tem certeza? O cliente será notificado por e-mail (via Resend).</span>
+          <button class="conf-yes" onclick="doCancel('${a.id}')">Confirmar cancelamento</button>
+          <button class="conf-no" onclick="hideConfirm('${a.id}')">Voltar</button>
+        </div>
+        <div class="cancelled-tag" id="ctag-${a.id}">✓ Agendamento cancelado — e-mail enviado ao cliente.</div>
+      </div>
+    </div>
+  `).join('');
+}
+
+function toggleRow(id){
+  const det = document.getElementById('det-'+id);
+  const chv = document.getElementById('chv-'+id);
+  const open = det.classList.toggle('open');
+  chv.style.transform = open?'rotate(180deg)':'rotate(0)';
+}
+function showConfirm(id){ document.getElementById('conf-'+id).classList.add('open'); document.getElementById('cbtn-'+id).style.display='none'; }
+function hideConfirm(id){ document.getElementById('conf-'+id).classList.remove('open'); document.getElementById('cbtn-'+id).style.display=''; }
+function doCancel(id){
+  const a = state.appointments.find(x=>x.id===id);
+  if(!a) return;
+  document.getElementById('conf-'+id).classList.remove('open');
+  const tag = document.getElementById('ctag-'+id);
+  if(tag){ tag.classList.add('show'); }
+  setTimeout(()=>{ a.cancelled=true; renderCalendar(); renderDetail(); }, 900);
+}
+
+function changeMonth(d){
+  state.month+=d;
+  if(state.month<0){ state.month=11; state.year--; }
+  if(state.month>11){ state.month=0; state.year++; }
+  renderCalendar();
+}
+
+// ── Modal ──────────────────────────────────────────
+function openModal(){
+  const existing = state.slots[state.selected]||[];
+  state.modalHours = new Set(existing);
+  state.dayDisabled = state.disabledDays.has(state.selected);
+  renderModalHours();
+  updateSwitch();
+  document.getElementById('savedMsg').classList.remove('show');
+  document.getElementById('modalOverlay').classList.add('open');
+}
+function closeModal(){ document.getElementById('modalOverlay').classList.remove('open'); }
+
+function renderModalHours(){
+  const g = document.getElementById('hoursGrid');
+  g.innerHTML = ALL_HOURS.map(h=>`
+    <button class="hr-btn${state.modalHours.has(h)&&!state.dayDisabled?' active':''}"
+      id="hbtn-${h}" onclick="toggleHr('${h}')" ${state.dayDisabled?'disabled':''}>
+      ${h}
+    </button>
+  `).join('');
+  const c = state.dayDisabled?0:state.modalHours.size;
+  document.getElementById('hoursCountLbl').textContent = `HORÁRIOS DISPONÍVEIS${c>0?' — '+c+' selecionado'+(c>1?'s':''):''}`;
+  document.getElementById('disabledNotice').classList.toggle('show', state.dayDisabled);
+}
+function toggleHr(h){
+  if(state.dayDisabled) return;
+  if(state.modalHours.has(h)) state.modalHours.delete(h); else state.modalHours.add(h);
+  renderModalHours();
+}
+function selectAll(){ if(!state.dayDisabled){ state.modalHours=new Set(ALL_HOURS); renderModalHours(); } }
+function clearAll(){ state.modalHours=new Set(); renderModalHours(); }
+function toggleDay(){
+  state.dayDisabled=!state.dayDisabled;
+  if(state.dayDisabled) state.modalHours=new Set();
+  updateSwitch(); renderModalHours();
+}
+function updateSwitch(){
+  document.getElementById('daySw').style.background = state.dayDisabled?'#1a1a1a':'#e0e0e0';
+  document.getElementById('swKnob').style.transform  = state.dayDisabled?'translateX(20px)':'translateX(2px)';
+}
+function saveHours(){
+  if(state.dayDisabled) state.disabledDays.add(state.selected);
+  else state.disabledDays.delete(state.selected);
+  state.slots[state.selected] = Array.from(state.modalHours).sort();
+  const badge = document.getElementById('savedMsg');
+  badge.classList.add('show');
+  renderCalendar(); renderDetail();
+  setTimeout(()=>{ badge.classList.remove('show'); closeModal(); }, 1200);
+}
+
+renderCalendar();
+renderDetail();
+</script>
+</body>
+</html>

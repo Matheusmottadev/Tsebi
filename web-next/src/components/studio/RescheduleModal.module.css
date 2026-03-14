@@ -1,0 +1,384 @@
+.overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.65);
+  z-index: 300;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.modal {
+  background: #111;
+  width: min(520px, 94vw);
+  max-height: 90vh;
+  overflow-y: auto;
+  border: 1px solid var(--studio-border);
+  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.55);
+}
+
+.hdr {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  padding: 22px 28px 16px;
+  border-bottom: 1px solid var(--studio-border);
+}
+
+.metaLbl {
+  font-size: 9px;
+  letter-spacing: 0.13em;
+  color: var(--studio-muted);
+  font-family: sans-serif;
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+
+.metaVal {
+  font-size: 18px;
+  font-family: "Cormorant Garamond", "Georgia", serif;
+  color: var(--studio-text);
+  font-weight: 400;
+}
+
+.closeBtn {
+  background: none;
+  border: none;
+  font-size: 15px;
+  cursor: pointer;
+  color: var(--studio-muted);
+  padding: 2px;
+  line-height: 1;
+  transition: color 0.1s;
+}
+
+.closeBtn:hover {
+  color: var(--studio-text);
+}
+
+/* Steps */
+.steps {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 12px 28px;
+  border-bottom: 1px solid var(--studio-border);
+  font-family: sans-serif;
+  font-size: 11px;
+}
+
+.stepActive {
+  color: var(--studio-text);
+  font-weight: 600;
+  letter-spacing: 0.03em;
+}
+
+.stepDone {
+  color: #7ec897;
+  letter-spacing: 0.03em;
+}
+
+.stepPending {
+  color: var(--studio-muted);
+  letter-spacing: 0.03em;
+}
+
+.stepSep {
+  color: var(--studio-border-strong);
+}
+
+/* Body */
+.body {
+  padding: 22px 28px 28px;
+}
+
+/* Calendar (in step 1) */
+.monthNav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+
+.navBtn {
+  background: transparent;
+  border: 1px solid var(--studio-border);
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  cursor: pointer;
+  font-size: 15px;
+  color: var(--studio-muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.12s;
+  line-height: 1;
+}
+
+.navBtn:hover {
+  background: var(--studio-border);
+  color: var(--studio-text);
+}
+
+.monthLabel {
+  font-size: 14px;
+  font-weight: 400;
+  letter-spacing: 0.04em;
+  color: var(--studio-text);
+  font-family: "Cormorant Garamond", "Georgia", serif;
+}
+
+.dayLabels {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 2px;
+  margin-bottom: 4px;
+}
+
+.dayLbl {
+  text-align: center;
+  font-size: 9px;
+  letter-spacing: 0.1em;
+  color: var(--studio-muted);
+  font-family: sans-serif;
+  font-weight: 600;
+  padding: 2px 0;
+}
+
+.calGrid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 3px;
+  margin-bottom: 16px;
+}
+
+.dayCell {
+  aspect-ratio: 1;
+  background: none;
+  border: none;
+  cursor: pointer;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  color: var(--studio-text);
+  font-family: "Cormorant Garamond", "Georgia", serif;
+  transition: background 0.12s;
+  padding: 0;
+}
+
+.dayCell:hover:not(:disabled) {
+  background: var(--studio-border);
+}
+
+.dayCell:disabled {
+  color: var(--studio-border-strong);
+  cursor: not-allowed;
+}
+
+.dayCellPast {
+  color: var(--studio-border-strong);
+}
+
+.dayCellToday:not(:disabled) {
+  border: 1.5px solid var(--studio-muted);
+}
+
+/* Step 2 — time slots */
+.timeDateLabel {
+  font-size: 16px;
+  font-family: "Cormorant Garamond", "Georgia", serif;
+  color: var(--studio-text);
+  margin-bottom: 14px;
+}
+
+.loading,
+.noSlots {
+  font-size: 13px;
+  color: var(--studio-muted);
+  font-family: sans-serif;
+  margin: 0 0 16px;
+}
+
+.slotList {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 16px;
+}
+
+.slotBtn {
+  width: 100%;
+  background: transparent;
+  border: 1px solid var(--studio-border);
+  padding: 10px 14px;
+  font-size: 14px;
+  font-family: "Cormorant Garamond", "Georgia", serif;
+  color: var(--studio-text);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transition: all 0.12s;
+  text-align: left;
+}
+
+.slotBtn:hover:not(.slotBtnActive) {
+  background: rgba(255, 255, 255, 0.04);
+  border-color: var(--studio-border-strong);
+}
+
+.slotBtnActive {
+  background: var(--studio-text);
+  border-color: var(--studio-text);
+  color: #111;
+}
+
+.slotCapInfo {
+  font-size: 10px;
+  color: var(--studio-muted);
+  font-family: sans-serif;
+  margin-left: auto;
+}
+
+.slotBtnActive .slotCapInfo {
+  color: rgba(17, 17, 17, 0.6);
+}
+
+.backBtn {
+  background: none;
+  border: none;
+  font-size: 11px;
+  color: var(--studio-muted);
+  cursor: pointer;
+  font-family: sans-serif;
+  letter-spacing: 0.06em;
+  padding: 0;
+  transition: color 0.1s;
+}
+
+.backBtn:hover:not(:disabled) {
+  color: var(--studio-text);
+}
+
+.backBtn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* Step 3 — confirm */
+.deParaCard {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 20px;
+  border: 1px solid var(--studio-border);
+  padding: 16px;
+}
+
+.deParaItem {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.deParaLbl {
+  font-size: 9px;
+  letter-spacing: 0.12em;
+  color: var(--studio-muted);
+  font-family: sans-serif;
+  font-weight: 600;
+}
+
+.deParaVal {
+  font-size: 15px;
+  font-family: "Cormorant Garamond", "Georgia", serif;
+  color: var(--studio-text);
+}
+
+.deParaSub {
+  font-size: 11px;
+  color: var(--studio-muted);
+  font-family: sans-serif;
+}
+
+.deParaArrow {
+  font-size: 16px;
+  color: var(--studio-muted);
+  flex-shrink: 0;
+}
+
+.clientInfo {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px 18px;
+  margin-bottom: 18px;
+  padding: 14px 16px;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid var(--studio-border);
+}
+
+.dLbl {
+  font-size: 9px;
+  letter-spacing: 0.1em;
+  color: var(--studio-muted);
+  font-family: sans-serif;
+  font-weight: 600;
+  display: block;
+  margin-bottom: 2px;
+  text-transform: uppercase;
+}
+
+.dVal {
+  font-size: 13px;
+  color: var(--studio-text);
+  font-family: "Cormorant Garamond", "Georgia", serif;
+  display: block;
+}
+
+.noticeText {
+  font-size: 12px;
+  color: var(--studio-muted);
+  font-family: sans-serif;
+  margin-bottom: 16px;
+  line-height: 1.5;
+}
+
+.errorText {
+  font-size: 12px;
+  color: #e07070;
+  font-family: sans-serif;
+  margin-bottom: 12px;
+}
+
+.confirmActions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  justify-content: flex-end;
+}
+
+.confirmBtn {
+  background: var(--studio-text);
+  color: #111;
+  border: none;
+  padding: 9px 22px;
+  font-size: 10px;
+  letter-spacing: 0.11em;
+  cursor: pointer;
+  font-family: sans-serif;
+  font-weight: 600;
+  transition: opacity 0.12s;
+}
+
+.confirmBtn:hover:not(:disabled) {
+  opacity: 0.85;
+}
+
+.confirmBtn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}

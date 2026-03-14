@@ -706,6 +706,114 @@ async function deleteAdminAppointmentSlot(slotId: string) {
   });
 }
 
+async function cancelAdminAppointment(appointmentId: string) {
+  await ensureAppointmentTables();
+  const safeId = normalizeText(appointmentId);
+  if (!safeId) throw createAppointmentError("INVALID_ID", 400, "ID invalido.");
+
+  return withTransaction(async (client) => {
+    const checkResult = await client.query<AppointmentRow>(
+      `SELECT id, status FROM appointments WHERE id = $1::uuid LIMIT 1 FOR UPDATE`,
+      [safeId]
+    );
+    const existing = checkResult.rows[0];
+    if (!existing) throw createAppointmentError("APPOINTMENT_NOT_FOUND", 404, "Agendamento nao encontrado.");
+    if (normalizeAppointmentStatus(existing.status) === "canceled") {
+      throw createAppointmentError("ALREADY_CANCELED", 409, "Agendamento ja cancelado.");
+    }
+
+    await client.query(
+      `UPDATE appointments SET status = 'canceled', updated_at = NOW() WHERE id = $1::uuid`,
+      [safeId]
+    );
+
+    const joined = await client.query<AppointmentRow>(
+      `SELECT a.id, a.slot_id, a.user_id, a.status, a.service_type, a.modality, a.notes, a.admin_note, a.created_at, a.updated_at,
+              u.name AS user_name, u.email AS user_email,
+              s.starts_at AS slot_starts_at, s.ends_at AS slot_ends_at, s.label AS slot_label, s.location AS slot_location
+       FROM appointments a
+       JOIN users u ON u.id = a.user_id
+       JOIN appointment_slots s ON s.id = a.slot_id
+       WHERE a.id = $1::uuid LIMIT 1`,
+      [safeId]
+    );
+    return mapAppointmentRow(joined.rows[0] || existing);
+  });
+}
+
+async function rescheduleAdminAppointment(appointmentId: string, newSlotId: string) {
+  await ensureAppointmentTables();
+  const safeId = normalizeText(appointmentId);
+  const safeNewSlotId = normalizeText(newSlotId);
+  if (!safeId || !safeNewSlotId) throw createAppointmentError("INVALID_INPUT", 400, "Dados invalidos.");
+
+  return withTransaction(async (client) => {
+    const apptResult = await client.query<AppointmentRow>(
+      `SELECT a.id, a.slot_id, a.user_id, a.status, a.service_type, a.modality, a.notes, a.admin_note, a.created_at, a.updated_at,
+              u.name AS user_name, u.email AS user_email,
+              s.starts_at AS slot_starts_at, s.ends_at AS slot_ends_at, s.label AS slot_label, s.location AS slot_location
+       FROM appointments a
+       JOIN users u ON u.id = a.user_id
+       JOIN appointment_slots s ON s.id = a.slot_id
+       WHERE a.id = $1::uuid LIMIT 1 FOR UPDATE`,
+      [safeId]
+    );
+    const apptRow = apptResult.rows[0];
+    if (!apptRow) throw createAppointmentError("APPOINTMENT_NOT_FOUND", 404, "Agendamento nao encontrado.");
+    if (normalizeAppointmentStatus(apptRow.status) === "canceled") {
+      throw createAppointmentError("APPOINTMENT_CANCELED", 409, "Agendamento cancelado.");
+    }
+
+    const oldSlotInfo = {
+      startsAt: normalizeText(apptRow.slot_starts_at),
+      label: normalizeText(apptRow.slot_label),
+      location: normalizeText(apptRow.slot_location),
+    };
+
+    const newSlotResult = await client.query<AppointmentSlotRow>(
+      `SELECT * FROM appointment_slots WHERE id = $1::uuid LIMIT 1 FOR UPDATE`,
+      [safeNewSlotId]
+    );
+    const newSlotRow = newSlotResult.rows[0];
+    if (!newSlotRow) throw createAppointmentError("SLOT_NOT_FOUND", 404, "Novo horario nao encontrado.");
+
+    const newSlot = mapSlotRow(newSlotRow, []);
+    if (newSlot.isBlocked || !newSlot.isAvailable) {
+      throw createAppointmentError("SLOT_UNAVAILABLE", 409, "Novo horario indisponivel.");
+    }
+
+    const countResult = await client.query<{ booked_count: string } & JsonRecord>(
+      `SELECT COUNT(*)::text AS booked_count FROM appointments
+       WHERE slot_id = $1::uuid AND status <> 'canceled' AND id <> $2::uuid`,
+      [safeNewSlotId, safeId]
+    );
+    const bookedCount = Math.max(0, Number(countResult.rows[0]?.booked_count || 0));
+    if (bookedCount >= newSlot.capacity) {
+      throw createAppointmentError("SLOT_FULL", 409, "Novo horario sem vagas.");
+    }
+
+    await client.query(
+      `UPDATE appointments SET slot_id = $2::uuid, status = 'scheduled', updated_at = NOW() WHERE id = $1::uuid`,
+      [safeId, safeNewSlotId]
+    );
+
+    const updatedResult = await client.query<AppointmentRow>(
+      `SELECT a.id, a.slot_id, a.user_id, a.status, a.service_type, a.modality, a.notes, a.admin_note, a.created_at, a.updated_at,
+              u.name AS user_name, u.email AS user_email,
+              s.starts_at AS slot_starts_at, s.ends_at AS slot_ends_at, s.label AS slot_label, s.location AS slot_location
+       FROM appointments a
+       JOIN users u ON u.id = a.user_id
+       JOIN appointment_slots s ON s.id = a.slot_id
+       WHERE a.id = $1::uuid LIMIT 1`,
+      [safeId]
+    );
+    return {
+      appointment: mapAppointmentRow(updatedResult.rows[0] || apptRow),
+      oldSlot: oldSlotInfo,
+    };
+  });
+}
+
 module.exports = {
   ensureAppointmentTables,
   listAppointmentSlotsForDate,
@@ -715,4 +823,6 @@ module.exports = {
   createAdminAppointmentSlot,
   updateAdminAppointmentSlot,
   deleteAdminAppointmentSlot,
+  cancelAdminAppointment,
+  rescheduleAdminAppointment,
 };

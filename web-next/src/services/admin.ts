@@ -444,6 +444,16 @@ export interface DeleteAppointmentSlotAdminResponse {
   removed: AdminAppointmentSlot;
 }
 
+export interface AdminAppointmentCancelResponse {
+  ok: true;
+  appointment: AdminAppointmentBooking;
+}
+
+export interface AdminAppointmentRescheduleResponse {
+  ok: true;
+  appointment: AdminAppointmentBooking;
+}
+
 export interface AdminAuditLog {
   id: string;
   action: string;
@@ -1198,6 +1208,41 @@ export async function deleteAppointmentSlotAdmin(
   const token = await resolveCsrfToken(csrfToken, options);
   return del<DeleteAppointmentSlotAdminResponse>(
     `/api/admin/appointment-slots/${encodeURIComponent(String(id || "").trim())}`,
+    mergeOptionsWithHeaders(options, buildCsrfHeader(token))
+  );
+}
+
+/**
+ * POST /api/admin/appointments/:id/cancel
+ * Auth: admin session required + CSRF header.
+ */
+export async function cancelAppointmentAdmin(
+  appointmentId: string,
+  csrfToken?: string,
+  options?: HttpRequestOptions
+): Promise<AdminAppointmentCancelResponse> {
+  const token = await resolveCsrfToken(csrfToken, options);
+  return post<AdminAppointmentCancelResponse>(
+    `/api/admin/appointments/${encodeURIComponent(String(appointmentId || "").trim())}/cancel`,
+    {},
+    mergeOptionsWithHeaders(options, buildCsrfHeader(token))
+  );
+}
+
+/**
+ * POST /api/admin/appointments/:id/reschedule
+ * Auth: admin session required + CSRF header.
+ */
+export async function rescheduleAppointmentAdmin(
+  appointmentId: string,
+  newSlotId: string,
+  csrfToken?: string,
+  options?: HttpRequestOptions
+): Promise<AdminAppointmentRescheduleResponse> {
+  const token = await resolveCsrfToken(csrfToken, options);
+  return post<AdminAppointmentRescheduleResponse>(
+    `/api/admin/appointments/${encodeURIComponent(String(appointmentId || "").trim())}/reschedule`,
+    { newSlotId },
     mergeOptionsWithHeaders(options, buildCsrfHeader(token))
   );
 }

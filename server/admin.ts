@@ -65,7 +65,9 @@ const {
   listAdminAppointmentSlots,
   createAdminAppointmentSlot,
   updateAdminAppointmentSlot,
-  deleteAdminAppointmentSlot
+  deleteAdminAppointmentSlot,
+  cancelAdminAppointment,
+  rescheduleAdminAppointment,
 } = require("./lib/appointments-repository");
 const { query, withTransaction } = require("./lib/db");
 // Lazy load R2 upload module to avoid build-time errors
@@ -2532,6 +2534,120 @@ adminRouter.delete("/appointment-slots/:id", sensitiveAdminRateLimit, async (req
     return res.json({ ok: true, removed });
   } catch (error: any) {
     return res.status(Number(error?.status || 500) || 500).json({ error: error?.message || "ADMIN_APPOINTMENT_SLOT_DELETE_FAILED" });
+  }
+});
+
+adminRouter.post("/appointments/:id/cancel", async (req: any, res: any) => {
+  const appointmentId = String(req.params.id || "").trim();
+  if (!appointmentId) return res.status(400).json({ error: "INVALID_ID" });
+
+  try {
+    const appointment = await cancelAdminAppointment(appointmentId);
+
+    await recordAuditLog(req, {
+      action: "cancel",
+      entityType: "appointment",
+      entityId: appointmentId,
+      summary: `Agendamento cancelado: ${appointment.userEmail} em ${appointment.date} ${appointment.time}`,
+      before: null,
+      after: appointment,
+      reversible: false,
+    });
+
+    const appName = String(process.env.APP_NAME || "Tsebi").trim() || "Tsebi";
+    if (appointment.userEmail) {
+      sendEmail({
+        to: appointment.userEmail,
+        subject: `${appName} — Agendamento cancelado`,
+        html: `
+          <div style="font-family:'Cormorant Garamond','Georgia',serif;max-width:480px;margin:0 auto;padding:40px 20px;color:#1a1a1a;">
+            <p style="font-size:11px;letter-spacing:.15em;color:#aaa;font-family:sans-serif;font-weight:600;margin-bottom:24px;">TSEBI</p>
+            <h2 style="font-size:22px;font-weight:400;margin-bottom:16px;">Agendamento cancelado</h2>
+            <p style="font-size:15px;line-height:1.6;color:#444;margin-bottom:20px;">
+              Olá, ${appointment.userName || "cliente"}. Seu agendamento marcado para
+              <strong>${appointment.date} às ${appointment.time}</strong> foi cancelado pela nossa equipe.
+            </p>
+            <p style="font-size:14px;color:#888;line-height:1.6;">
+              Entre em contato conosco para remarcar ou esclarecer dúvidas.
+            </p>
+            <div style="margin-top:32px;padding-top:20px;border-top:1px solid #eee;">
+              <p style="font-size:11px;color:#bbb;font-family:sans-serif;">${appName} · Atendimento Privado</p>
+            </div>
+          </div>
+        `,
+        text: `Seu agendamento para ${appointment.date} às ${appointment.time} foi cancelado. Entre em contato para remarcar.`,
+      }).catch(() => {});
+    }
+
+    return res.json({ ok: true, appointment });
+  } catch (error: any) {
+    return res.status(Number(error?.status || 500) || 500).json({ error: error?.message || "ADMIN_APPOINTMENT_CANCEL_FAILED" });
+  }
+});
+
+adminRouter.post("/appointments/:id/reschedule", async (req: any, res: any) => {
+  const appointmentId = String(req.params.id || "").trim();
+  if (!appointmentId) return res.status(400).json({ error: "INVALID_ID" });
+  const newSlotId = String(req.body?.newSlotId || "").trim();
+  if (!newSlotId) return res.status(400).json({ error: "INVALID_INPUT" });
+
+  try {
+    const { appointment, oldSlot } = await rescheduleAdminAppointment(appointmentId, newSlotId);
+
+    await recordAuditLog(req, {
+      action: "reschedule",
+      entityType: "appointment",
+      entityId: appointmentId,
+      summary: `Agendamento remarcado: ${appointment.userEmail} de ${oldSlot.startsAt} para ${appointment.startsAt}`,
+      before: { slotStartsAt: oldSlot.startsAt },
+      after: appointment,
+      reversible: false,
+    });
+
+    const appName = String(process.env.APP_NAME || "Tsebi").trim() || "Tsebi";
+    if (appointment.userEmail) {
+      const oldDateStr = oldSlot.startsAt
+        ? new Intl.DateTimeFormat("pt-BR", { dateStyle: "long", timeStyle: "short", timeZone: "America/Sao_Paulo" }).format(new Date(oldSlot.startsAt))
+        : "horário anterior";
+      const newDateStr = appointment.startsAt
+        ? new Intl.DateTimeFormat("pt-BR", { dateStyle: "long", timeStyle: "short", timeZone: "America/Sao_Paulo" }).format(new Date(appointment.startsAt))
+        : `${appointment.date} às ${appointment.time}`;
+
+      sendEmail({
+        to: appointment.userEmail,
+        subject: `${appName} — Agendamento remarcado`,
+        html: `
+          <div style="font-family:'Cormorant Garamond','Georgia',serif;max-width:480px;margin:0 auto;padding:40px 20px;color:#1a1a1a;">
+            <p style="font-size:11px;letter-spacing:.15em;color:#aaa;font-family:sans-serif;font-weight:600;margin-bottom:24px;">TSEBI</p>
+            <h2 style="font-size:22px;font-weight:400;margin-bottom:16px;">Agendamento remarcado</h2>
+            <p style="font-size:15px;line-height:1.6;color:#444;margin-bottom:20px;">
+              Olá, ${appointment.userName || "cliente"}. Seu agendamento foi remarcado pela nossa equipe.
+            </p>
+            <table style="width:100%;border-collapse:collapse;margin-bottom:24px;">
+              <tr>
+                <td style="padding:12px 16px;background:#f8f8f8;border:1px solid #eee;font-size:11px;letter-spacing:.1em;color:#aaa;font-family:sans-serif;font-weight:600;vertical-align:top;">DE</td>
+                <td style="padding:12px 16px;background:#f8f8f8;border:1px solid #eee;font-size:15px;color:#888;text-decoration:line-through;">${oldDateStr}</td>
+              </tr>
+              <tr>
+                <td style="padding:12px 16px;background:#fff;border:1px solid #eee;font-size:11px;letter-spacing:.1em;color:#aaa;font-family:sans-serif;font-weight:600;vertical-align:top;">PARA</td>
+                <td style="padding:12px 16px;background:#fff;border:1px solid #eee;font-size:15px;color:#1a1a1a;font-weight:500;">${newDateStr}</td>
+              </tr>
+            </table>
+            <p style="font-size:14px;color:#888;line-height:1.6;">
+              Em caso de dúvidas, entre em contato com nossa equipe.
+            </p>
+            <div style="margin-top:32px;padding-top:20px;border-top:1px solid #eee;">
+              <p style="font-size:11px;color:#bbb;font-family:sans-serif;">${appName} · Atendimento Privado</p>
+            </div>
+          </div>
+        `,
+        text: `Seu agendamento foi remarcado de ${oldDateStr} para ${newDateStr}.`,
+      }).catch(() => {});
+    }
+
+    return res.json({ ok: true, appointment });
+  } catch (error: any) {
+    return res.status(Number(error?.status || 500) || 500).json({ error: error?.message || "ADMIN_APPOINTMENT_RESCHEDULE_FAILED" });
   }
 });
 
