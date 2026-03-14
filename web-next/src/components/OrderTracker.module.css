@@ -1,0 +1,139 @@
+.wrap {
+  position: relative;
+  margin-bottom: 24px;
+}
+
+/* ── STEPS ROW ─────────────────────────────────── */
+.steps {
+  display: flex;
+  justify-content: space-between;
+  position: relative;
+  z-index: 1;
+  padding-bottom: 22px; /* room for labels */
+}
+
+.step {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 7px;
+  flex-shrink: 0;
+}
+
+/* ── DOTS ──────────────────────────────────────── */
+.dot {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  position: relative;
+  flex-shrink: 0;
+}
+
+.dotFuture  { background: #ddd; }
+.dotDone    { background: #1a1a1a; }
+
+/* Active (current step) — dark + ripple */
+.dotActive  { background: #1a1a1a; }
+.dotActive::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #1a1a1a;
+  opacity: 0.35;
+  transform: translate(-50%, -50%);
+  animation: ripple 1.5s cubic-bezier(.4,0,.2,1) infinite;
+}
+
+/* Error — red, no ripple */
+.dotError   { background: #b03030; }
+
+/* Error active — red + red ripple */
+.dotErrorActive { background: #b03030; }
+.dotErrorActive::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #b03030;
+  opacity: 0.35;
+  transform: translate(-50%, -50%);
+  animation: ripple 1.5s cubic-bezier(.4,0,.2,1) infinite;
+}
+
+@keyframes ripple {
+  0%   { transform: translate(-50%, -50%) scale(1);   opacity: 0.35; }
+  100% { transform: translate(-50%, -50%) scale(2.6); opacity: 0; }
+}
+
+/* ── LABELS ────────────────────────────────────── */
+.label {
+  font-family: sans-serif;
+  font-size: 9px;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+  text-align: center;
+  white-space: nowrap;
+  line-height: 1;
+  min-height: 11px;
+}
+
+.labelDone   { color: #1a1a1a; }
+.labelFuture { color: #bbb; }
+.labelError  { color: #b03030; }
+
+/* ── LINES (absolutely positioned via JS) ──────── */
+.line {
+  position: absolute;
+  height: 1.5px;
+  overflow: hidden;
+}
+
+.lineDone   { background: #1a1a1a; }
+.lineFuture { background: #e0e0e0; }
+.lineCancel { background: #b03030; }
+
+/* Active segment: gray base, animated loader on top */
+.lineActive { background: #e0e0e0; }
+
+.lineLoader {
+  position: absolute;
+  top: 0;
+  height: 100%;
+  background: #1a1a1a;
+  animation: ld 1.5s cubic-bezier(.4,0,.2,1) infinite;
+}
+
+@keyframes ld {
+  0%   { width: 0;    left: 0;    }
+  65%  { width: 100%; left: 0;    }
+  66%  { width: 0;    left: 100%; }
+  100% { width: 0;    left: 100%; }
+}
+
+/* ── STATUS MESSAGE ────────────────────────────── */
+.message {
+  margin: 6px 0 0;
+  font-family: "Cormorant Garamond", Georgia, serif;
+  font-size: 14px;
+  font-style: italic;
+  font-weight: 300;
+  color: #aaa;
+  text-align: center;
+}
+
+.messageError {
+  margin: 6px 0 0;
+  font-family: "Cormorant Garamond", Georgia, serif;
+  font-size: 14px;
+  font-style: italic;
+  font-weight: 300;
+  color: #b03030;
+  text-align: center;
+}

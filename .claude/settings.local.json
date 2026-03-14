@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(find 'c:/Users/mathe/OneDrive/Área de Trabalho/Curso de JS/tsebi' -name *order*tracker* -type f)",
+      "Bash(find 'c:/Users/mathe/OneDrive/Área de Trabalho/Curso de JS/tsebi' -type f -name *.html)",
+      "Bash(xargs grep:*)",
+      "Bash(find 'c:/Users/mathe/OneDrive/Área de Trabalho/Curso de JS/tsebi/web-next/src' -type f \\\\\\(-name *.tsx -o -name *.ts \\\\\\))"
+    ]
+  }
+}

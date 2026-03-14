@@ -1,30 +1,22 @@
 "use client";
 
-import { Fragment, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { listMyOrders } from "@/services/orders";
 import { useCartStore } from "@/lib/cart/cartStore";
 import type { Order } from "@/types";
+import { OrderTracker, type OrderStatus } from "@/components/OrderTracker";
 import styles from "../account.module.css";
 
-const TRACKING_STEPS = ["Pedido Recebido", "Pedido Confirmado", "Pedido Enviado", "Em rota de entrega", "Entregue"];
-
-function getTrackingStep(status: string): number {
-  switch (status) {
-    case "ORDER_PLACED":
-      return 0;
-    case "PROCESSING":
-      return 1;
-    case "SHIPPED":
-      return 2;
-    case "IN_TRANSIT":
-    case "OUT_FOR_DELIVERY":
-      return 3;
-    case "DELIVERED":
-      return 4;
-    default:
-      return 0;
-  }
+function toOrderStatus(order: Order): OrderStatus {
+  if (order.status === "canceled") return "cancelado";
+  if (order.status === "failed")   return "falhou";
+  const s = String(order.currentStatus || order.status || "").toUpperCase();
+  if (s === "DELIVERED")                          return "entregue";
+  if (s === "IN_TRANSIT" || s === "OUT_FOR_DELIVERY") return "saiu_para_entregar";
+  if (s === "SHIPPED")                            return "enviado";
+  if (s === "PROCESSING")                         return "confirmado";
+  return "recebido";
 }
 
 function getStatusMeta(order: Order): { label: string; cls: string } {
@@ -55,55 +47,6 @@ function formatDate(val: string | null): string {
   return new Intl.DateTimeFormat("pt-BR").format(new Date(val));
 }
 
-function TrackingBar({ order }: { order: Order }) {
-  const currentStep = getTrackingStep(order.currentStatus ?? "");
-  const isFailed = order.status === "failed";
-  const isCanceled = order.status === "canceled";
-
-  const steps = isCanceled
-    ? [...TRACKING_STEPS, "Cancelado"]
-    : TRACKING_STEPS;
-
-  return (
-    <div className={styles.trackingBar}>
-      {steps.map((label, i) => {
-        const isCanceledStep = isCanceled && i === steps.length - 1;
-        const isFailedStep = isFailed && i === 0;
-        const isDone = !isCanceledStep && !isFailedStep && i < currentStep;
-        const isCurrent = !isCanceledStep && !isFailedStep && i === currentStep;
-
-        const dotClass = [
-          styles.trackingDot,
-          isFailedStep || isCanceledStep ? styles.trackingDotFailed : "",
-          isDone ? styles.trackingDotDone : "",
-          isCurrent ? styles.trackingDotCurrent : "",
-        ].filter(Boolean).join(" ");
-
-        const labelClass = [
-          styles.trackingLabel,
-          isFailedStep || isCanceledStep ? styles.trackingLabelFailed : "",
-          isDone || isCurrent ? styles.trackingLabelDone : "",
-        ].filter(Boolean).join(" ");
-
-        const displayLabel = isFailedStep ? "Falhou" : label;
-
-        return (
-          <Fragment key={i}>
-            {i > 0 && (
-              <div className={`${styles.trackLine} ${isDone || isCurrent ? styles.trackLineDone : ""}`} />
-            )}
-            <div className={styles.trackingStep}>
-              <div className={dotClass}>
-                {isDone ? "✓" : ""}
-              </div>
-              <span className={labelClass}>{displayLabel}</span>
-            </div>
-          </Fragment>
-        );
-      })}
-    </div>
-  );
-}
 
 function OrderRow({ order }: { order: Order }) {
   const [open, setOpen] = useState(false);
@@ -165,7 +108,7 @@ function OrderRow({ order }: { order: Order }) {
 
         {open && (
           <div className={styles.orderExpanded}>
-            <TrackingBar order={order} />
+            <OrderTracker status={toOrderStatus(order)} />
 
             {(order.trackingCode || order.carrier) && (
               <p className={styles.trackingInfo}>
