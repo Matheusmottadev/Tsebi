@@ -2,7 +2,13 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { listMyOrders } from "@/services/orders";
-import { createRepairRequest, listMyRepairs, resolveUploadErrorMessage, uploadRepairPhoto } from "@/services/repairs";
+import {
+  createRepairRequest,
+  listMyRepairs,
+  resolveRepairRequestErrorMessage,
+  resolveUploadErrorMessage,
+  uploadRepairPhoto,
+} from "@/services/repairs";
 import type { PublicUser, RepairPhoto, RepairRequest } from "@/types";
 import styles from "../account.module.css";
 
@@ -161,7 +167,7 @@ export function RepairsTab({ user }: Props) {
       setPhotos([]);
       setSubmitted(true);
       window.setTimeout(() => setSubmitted(false), 5000);
-    } catch {
+    } catch (error) {
       setSubmitError("Não foi possível enviar a solicitação. Tente novamente.");
     } finally {
       setSubmitting(false);

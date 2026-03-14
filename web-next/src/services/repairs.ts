@@ -69,6 +69,22 @@ function resolveUploadErrorMessage(error: unknown): string {
   return "Não foi possível enviar as fotos agora. Tente novamente.";
 }
 
+function resolveRepairRequestErrorMessage(error: unknown): string {
+  if (!(error instanceof HttpError)) return "Não foi possível enviar a solicitação. Tente novamente.";
+  const code =
+    error.payload && typeof error.payload === "object" && "error" in error.payload
+      ? String((error.payload as { error?: unknown }).error || "").trim().toUpperCase()
+      : "";
+
+  if (code === "EMAIL_PROVIDER_NOT_CONFIGURED") {
+    return "A solicitação foi bloqueada pelo envio de e-mail no ambiente atual.";
+  }
+  if (code === "INVALID_INPUT") return "Revise os dados da solicitação e tente novamente.";
+  if (code === "ORDER_NOT_DELIVERED") return "Só é possível solicitar reparo para pedidos já entregues.";
+  if (code === "ORDER_NOT_FOUND" || code === "ORDER_ITEM_NOT_FOUND") return "Não foi possível localizar a peça selecionada.";
+  return "Não foi possível enviar a solicitação. Tente novamente.";
+}
+
 export async function listMyRepairs(): Promise<RepairRequest[]> {
   const response = await get<ListMyRepairsResponse>("/api/my/repairs", { cache: "no-store" });
   return Array.isArray(response.history) ? response.history : [];
@@ -119,4 +135,4 @@ export async function uploadRepairPhoto(file: File): Promise<RepairPhoto> {
   };
 }
 
-export { resolveUploadErrorMessage };
+export { resolveRepairRequestErrorMessage, resolveUploadErrorMessage };
