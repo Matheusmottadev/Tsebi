@@ -196,14 +196,6 @@ const HOMEPAGE_CATEGORIES = [
     label: "Masculino",
   },
   {
-    href: "/products?q=Carteiras+Masculinas",
-    image: "/images/product/atelier-bag-1.jpg",
-    secondaryImage: "/images/product/atelier-bag-2.jpg",
-    fallbackImage: "/images/product/atelier-bag-1.jpg",
-    alt: "Categoria Carteiras Masculinas",
-    label: "Carteiras Masculinas",
-  },
-  {
     href: "/products?q=Vestidos",
     image: "/images/product/noir-dress-1.jpg",
     secondaryImage: "/images/product/noir-dress-2.jpg",
@@ -218,14 +210,6 @@ const HOMEPAGE_CATEGORIES = [
     fallbackImage: "/images/product/essence-trousers-1.jpg",
     alt: "Categoria Calças",
     label: "Calças",
-  },
-  {
-    href: "/products?q=Carteiras+Femininas",
-    image: "/images/product/atelier-heels-1.jpg",
-    secondaryImage: "/images/product/atelier-heels-2.jpg",
-    fallbackImage: "/images/product/atelier-heels-1.jpg",
-    alt: "Categoria Carteiras Femininas",
-    label: "Carteiras Femininas",
   },
   {
     href: "/products?q=Jaquetas",
