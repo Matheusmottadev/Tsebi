@@ -185,6 +185,7 @@ export function RepairsTab({ user }: Props) {
       setSubmitError(validationError);
       return;
     }
+    if (!selectedItem) return;
 
     setSubmitting(true);
     setSubmitError(null);

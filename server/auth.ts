@@ -2187,7 +2187,15 @@ myRouter.post(
 
 myRouter.post("/repairs", requireAuth, async (req: any, res: any) => {
   const parsed = repairRequestSchema.safeParse(req.body || {});
-  if (!parsed.success) return res.status(400).json({ error: "INVALID_INPUT" });
+  if (!parsed.success) {
+    return res.status(400).json({
+      error: "INVALID_INPUT",
+      details: parsed.error.issues.map((issue: any) => ({
+        path: Array.isArray(issue.path) ? issue.path.join(".") : "",
+        message: String(issue.message || "INVALID_INPUT"),
+      })),
+    });
+  }
 
   try {
     await ensureRepairTables();
