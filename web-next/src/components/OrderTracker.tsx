@@ -94,9 +94,9 @@ export function OrderTracker({ status }: OrderTrackerProps) {
       const aR = a.getBoundingClientRect();
       const bR = b.getBoundingClientRect();
       const centerY = (aR.top + aR.bottom) / 2 - cRect.top;
-      const left    = aR.right - cRect.left + 10;
-      const width   = bR.left  - aR.right   - 20;
-      next.push({ left, width: Math.max(0, width), top: centerY - 0.75 });
+      const left    = aR.right - cRect.left + 8;
+      const width   = bR.left  - aR.right   - 16;
+      next.push({ left, width: Math.max(0, width), top: centerY - 1 });
     }
 
     setLines(next);
