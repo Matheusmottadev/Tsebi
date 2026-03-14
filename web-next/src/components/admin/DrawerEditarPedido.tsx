@@ -394,7 +394,7 @@ export function DrawerEditarPedido({ isOpen, order, onClose, onSaved }: DrawerEd
           <h4 className={styles.sectionTitle}>Resumo do pedido</h4>
           <div className={styles.headerMeta}>
             <div>
-              <p className={styles.orderCode}>{buildOrderCode(String(order?.id || ""))}</p>
+              <p className={styles.orderCode}>{buildOrderCode(String(order?.orderNumber || order?.id || ""))}</p>
               <p className={styles.orderDate}>{order?.createdAt ? new Date(order.createdAt).toLocaleString("pt-BR") : "-"}</p>
             </div>
             <span className={styles.badge}>{status}</span>

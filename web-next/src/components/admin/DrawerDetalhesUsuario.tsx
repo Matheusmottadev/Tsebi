@@ -191,6 +191,7 @@ function toStatusBadge(value: string): { label: "Pago" | "Pendente" | "Cancelado
 
 function mapFallbackOrderToUserOrder(row: {
   id: string;
+  orderNumber?: string;
   createdAt: string | null;
   status: string;
   currency: string;
@@ -201,6 +202,7 @@ function mapFallbackOrderToUserOrder(row: {
   const productName = String(row.shippingSelectedService || row.shippingSelectedCarrierName || "Pedido sem item").trim();
   return {
     id: String(row.id || ""),
+    orderNumber: String(row.orderNumber || ""),
     createdAt: row.createdAt || null,
     status: String(row.status || ""),
     currency: String(row.currency || "brl"),
@@ -616,12 +618,11 @@ export function DrawerDetalhesUsuario({
             <div className={styles.orderList}>
               {orders.map((order) => {
                 const status = toStatusBadge(order.status);
-                const fullId = String(order.id || "");
-                const shortId = fullId.length > 14 ? `${fullId.slice(0, 10)}...` : fullId || "-";
+                const orderLabel = String(order.orderNumber || order.id || "").trim() || "-";
                 return (
                   <article key={order.id} className={styles.orderCard}>
                     <div className={styles.orderTop}>
-                      <code>{shortId}</code>
+                      <code>{orderLabel}</code>
                       <span className={`${styles.statusBadge} ${styles[`status${status.tone}`]}`}>{status.label}</span>
                     </div>
                     <p>

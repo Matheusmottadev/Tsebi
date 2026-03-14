@@ -72,7 +72,7 @@ export default async function StudioOrdersPage({ searchParams }: StudioOrdersPag
           <tbody>
             {result.orders.map((order) => (
               <tr key={order.id}>
-                <td>{order.id}</td>
+                <td>{order.orderNumber || order.id}</td>
                 <td>
                   <div className={styles.customerCell}>
                     <span>{order.userName || "-"}</span>

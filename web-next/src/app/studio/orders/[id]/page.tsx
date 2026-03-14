@@ -47,13 +47,17 @@ export default async function StudioOrderDetailPage({ params }: StudioOrderDetai
   return (
     <StudioShell
       admin={session.admin}
-      title={`Order ${order.id}`}
+      title={`Order ${order.orderNumber || order.id}`}
       subtitle="Dados de pagamento e entrega consolidados no backend."
     >
       <div className={styles.grid}>
         <section className={styles.card}>
           <h3>Resumo</h3>
           <dl>
+            <div>
+              <dt>Pedido</dt>
+              <dd>{order.orderNumber || order.id}</dd>
+            </div>
             <div>
               <dt>Status</dt>
               <dd>{order.status}</dd>

@@ -1390,6 +1390,7 @@ adminRouter.get("/users/:id/orders", async (req: any, res: any) => {
     return res.json({
       orders: orders.map((order: any) => ({
         id: String(order.id || ""),
+        orderNumber: String(order.orderNumber || ""),
         createdAt: order.createdAt || null,
         status: String(order.status || ""),
         currency: String(order.currency || "brl"),
@@ -1750,7 +1751,7 @@ adminRouter.get("/orders", async (req: any, res: any) => {
       const matchesStatus = status ? String(order.status || "").toLowerCase() === status : true;
       if (!matchesStatus) return false;
       if (!queryText) return true;
-      const payload = `${order.id} ${order.userEmail || ""} ${order.userName || ""}`.toLowerCase();
+      const payload = `${order.orderNumber || ""} ${order.id} ${order.userEmail || ""} ${order.userName || ""}`.toLowerCase();
       return payload.includes(queryText);
     });
     const paged = paginateArray(filtered, limit, offset);
@@ -1800,6 +1801,7 @@ adminRouter.get("/orders", async (req: any, res: any) => {
 
       return {
         id: order.id,
+        orderNumber: String(order.orderNumber || ""),
         createdAt: order.createdAt || null,
         updatedAt: order.updatedAt || null,
         status: order.status,

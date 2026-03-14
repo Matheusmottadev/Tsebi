@@ -44,6 +44,7 @@ export interface AdminOrderShipmentSummary {
 
 export interface AdminOrderSummary {
   id: string;
+  orderNumber: string;
   createdAt: string | null;
   updatedAt: string | null;
   status: string;
@@ -664,6 +665,7 @@ export interface AdminUserUpdatePayload {
 
 export interface AdminUserOrderRow {
   id: string;
+  orderNumber: string;
   createdAt: string | null;
   status: string;
   currency: string;

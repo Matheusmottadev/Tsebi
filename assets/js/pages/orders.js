@@ -23,6 +23,12 @@ function formatMoneyFromCents(cents, currency = "BRL") {
   return amount.toLocaleString("pt-BR", { style: "currency", currency: String(currency || "BRL").toUpperCase() });
 }
 
+function formatOrderReference(order) {
+  const publicNumber = String(order?.orderNumber || "").trim();
+  if (publicNumber) return publicNumber;
+  return String(order?.id || "").trim() || "—";
+}
+
 const TRACKING_STATUS_OPTIONS = [
   { value: "ORDER_PLACED", label: "Pedido Recebido" },
   { value: "PROCESSING", label: "Pedido Confirmado" },
@@ -162,7 +168,15 @@ export function createOrdersPage({ mount, drawer, getStatusFilter }) {
     const table = renderTable({
       columns: [
         { label: "Data", render: (o) => `<div>${escapeHtml(formatDate(o.createdAt))}</div>` },
-        { label: "ID", render: (o) => `<div style="font-family:ui-monospace,Consolas,monospace;font-size:12px;">${escapeHtml(o.id)}</div>` },
+        {
+          label: "Pedido",
+          render: (o) => `
+            <div>
+              <div style="font-family:ui-monospace,Consolas,monospace;font-size:12px;">${escapeHtml(formatOrderReference(o))}</div>
+              <div style="color:var(--muted);font-size:11px;">${escapeHtml(o.id || "—")}</div>
+            </div>
+          `
+        },
         {
           label: "Cliente",
           render: (o) =>
@@ -391,7 +405,7 @@ export function createOrdersPage({ mount, drawer, getStatusFilter }) {
       });
       const ok = await confirmDiff({
         title: "Confirmar alterações",
-        message: `Pedido ${orderId}`,
+        message: `Pedido ${formatOrderReference(order)}`,
         diffs,
         tone: "ok"
       });
@@ -433,7 +447,7 @@ export function createOrdersPage({ mount, drawer, getStatusFilter }) {
         if (action === "delete") {
           const ok = await confirmDiff({
             title: "Excluir pedido",
-            message: `Pedido ${orderId}`,
+            message: `Pedido ${formatOrderReference(order)}`,
             diffs: [{ field: "Ação", before: "Manter", after: "Excluir permanentemente" }],
             tone: "danger"
           });
@@ -450,7 +464,7 @@ export function createOrdersPage({ mount, drawer, getStatusFilter }) {
     });
 
     drawer.open({
-      titleText: `Pedido • ${order.id}`,
+      titleText: `Pedido • ${formatOrderReference(order)}`,
       content: root
     });
   }
