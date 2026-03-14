@@ -172,7 +172,7 @@ export function DrawerNovoAtendimento({
               type="text"
               value={formState.modality}
               onChange={(event) => setFormState((current) => ({ ...current, modality: event.target.value }))}
-              placeholder="WhatsApp / Ligacao"
+              placeholder="WhatsApp / Ligacao / Videochamada"
             />
           </div>
           <div className={form.field}>

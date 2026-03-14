@@ -34,7 +34,7 @@ const SERVICE_TYPES = [
   "Compra assistida",
   "Cuidados com pecas",
 ];
-const MODALITIES = ["WhatsApp", "Ligacao"];
+const MODALITIES = ["WhatsApp", "Ligacao", "Videochamada"];
 
 type Props = { user: PublicUser };
 
@@ -74,6 +74,46 @@ function isCancelableAppointment(appointment: AppointmentBooking): boolean {
   return startsAtMs > Date.now();
 }
 
+function normalizeModality(value: string): string {
+  const normalized = String(value || "").trim().toLowerCase();
+  if (normalized.includes("video")) return "Videochamada";
+  if (normalized.includes("whats")) return "WhatsApp";
+  if (normalized.includes("liga")) return "Ligacao";
+  return MODALITIES[0] || "WhatsApp";
+}
+
+function getContactFieldMeta(modality: string) {
+  if (modality === "Videochamada") {
+    return {
+      label: "Email Teams",
+      placeholder: "seuemail@empresa.com",
+      summaryKey: "Email Teams",
+    };
+  }
+
+  return {
+    label: "Numero do cliente",
+    placeholder: "(11) 99999-9999",
+    summaryKey: "Numero",
+  };
+}
+
+function isValidTeamsEmail(value: string): boolean {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(value || "").trim());
+}
+
+function isValidPhoneNumber(value: string): boolean {
+  return String(value || "").replace(/\D/g, "").length >= 10;
+}
+
+function buildAppointmentNotes(modality: string, contactValue: string, notes: string): string {
+  const meta = getContactFieldMeta(modality);
+  const lines = [`${meta.summaryKey}: ${String(contactValue || "").trim()}`];
+  const trimmedNotes = String(notes || "").trim();
+  if (trimmedNotes) lines.push(`Observacoes: ${trimmedNotes}`);
+  return lines.join("\n");
+}
+
 export function AppointmentsTab({ user }: Props) {
   const today = new Date();
   const [year, setYear] = useState(today.getFullYear());
@@ -88,6 +128,7 @@ export function AppointmentsTab({ user }: Props) {
   const [historyError, setHistoryError] = useState("");
   const [serviceType, setServiceType] = useState(SERVICE_TYPES[0] || "");
   const [modality, setModality] = useState(MODALITIES[0] || "");
+  const [contactValue, setContactValue] = useState(() => String(user.phone || "").trim());
   const [notes, setNotes] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [cancelingId, setCancelingId] = useState("");
@@ -98,6 +139,9 @@ export function AppointmentsTab({ user }: Props) {
   const offset = firstDayOfWeek(year, month);
   const selectedDateKey = selectedDay ? buildDateKey(year, month, selectedDay) : "";
   const selectedSlot = slots.find((slot) => slot.id === selectedSlotId) || null;
+  const contactFieldMeta = getContactFieldMeta(modality);
+  const contactValueIsValid =
+    modality === "Videochamada" ? isValidTeamsEmail(contactValue) : isValidPhoneNumber(contactValue);
 
   const sortedAppointments = useMemo(
     () =>
@@ -153,8 +197,20 @@ export function AppointmentsTab({ user }: Props) {
 
   useEffect(() => {
     if (!selectedSlot?.modality) return;
-    setModality(selectedSlot.modality);
+    setModality(normalizeModality(selectedSlot.modality));
   }, [selectedSlot?.id, selectedSlot?.modality]);
+
+  useEffect(() => {
+    setContactValue((current) => {
+      const trimmed = String(current || "").trim();
+      if (modality === "Videochamada") {
+        if (!trimmed || isValidPhoneNumber(trimmed)) return String(user.email || "").trim();
+        return trimmed;
+      }
+      if (!trimmed || trimmed.includes("@")) return String(user.phone || "").trim();
+      return trimmed;
+    });
+  }, [modality, user.email, user.phone]);
 
   const prevMonth = () => {
     if (month === 0) {
@@ -202,7 +258,7 @@ export function AppointmentsTab({ user }: Props) {
   }
 
   async function handleConfirm() {
-    if (!selectedSlotId) return;
+    if (!selectedSlotId || !contactValueIsValid) return;
     setSubmitting(true);
     setFlash("");
 
@@ -211,7 +267,7 @@ export function AppointmentsTab({ user }: Props) {
         slotId: selectedSlotId,
         serviceType,
         modality,
-        notes,
+        notes: buildAppointmentNotes(modality, contactValue, notes),
       });
       setAppointments((current) => [appointment, ...current.filter((item) => item.id !== appointment.id)]);
       setNotes("");
@@ -322,15 +378,10 @@ export function AppointmentsTab({ user }: Props) {
                 </div>
                 {!slots.length ? (
                   <p className={styles.appointmentsHint}>
-                    Nenhum horário futuro liberado para esta data. Horários que já passaram não aparecem aqui.
+                    Nenhum horario futuro liberado para esta data. Horarios que ja passaram nao aparecem aqui.
                   </p>
                 ) : null}
-                {selectedSlot ? (
-                  <p className={styles.appointmentsHint}>
-                    {selectedSlot.label || "Atendimento privado"}
-                    {selectedSlot.location ? ` - ${selectedSlot.location}` : ""}
-                  </p>
-                ) : null}
+                {selectedSlot ? <p className={styles.appointmentsHint}>{selectedSlot.label || "Atendimento privado"}</p> : null}
               </>
             ) : null}
           </div>
@@ -367,10 +418,7 @@ export function AppointmentsTab({ user }: Props) {
                     </span>
                   </div>
                   <p className={styles.appointmentHistoryMeta}>{formatDateTime(appointment.startsAt)}</p>
-                  <p className={styles.appointmentHistoryMeta}>
-                    {appointment.modality || "-"}
-                    {appointment.location ? ` - ${appointment.location}` : ""}
-                  </p>
+                  <p className={styles.appointmentHistoryMeta}>{appointment.modality || "-"}</p>
                   {appointment.notes ? <p className={styles.appointmentHistoryMeta}>{appointment.notes}</p> : null}
                   {isCancelableAppointment(appointment) ? (
                     <div className={styles.appointmentActionStack}>
@@ -441,6 +489,17 @@ export function AppointmentsTab({ user }: Props) {
         </div>
 
         <div className={styles.field}>
+          <label className={styles.fieldLabel}>{contactFieldMeta.label}</label>
+          <input
+            className={styles.fieldInput}
+            type={modality === "Videochamada" ? "email" : "tel"}
+            value={contactValue}
+            onChange={(event) => setContactValue(event.target.value)}
+            placeholder={contactFieldMeta.placeholder}
+          />
+        </div>
+
+        <div className={styles.field}>
           <label className={styles.fieldLabel}>Observacoes</label>
           <textarea
             className={styles.fieldTextarea}
@@ -467,17 +526,20 @@ export function AppointmentsTab({ user }: Props) {
             <span className={styles.summaryKey}>Modalidade</span>
             <span className={styles.summaryVal}>{modality}</span>
           </div>
-          {selectedSlot?.location ? (
-            <div className={styles.summaryRow}>
-              <span className={styles.summaryKey}>Local</span>
-              <span className={styles.summaryVal}>{selectedSlot.location}</span>
-            </div>
-          ) : null}
+          <div className={styles.summaryRow}>
+            <span className={styles.summaryKey}>{contactFieldMeta.summaryKey}</span>
+            <span className={styles.summaryVal}>{contactValue || "-"}</span>
+          </div>
         </div>
 
         {flash ? <p className={flash === "Agendamento confirmado." ? styles.loading : styles.errorState}>{flash}</p> : null}
 
-        <button type="button" className={styles.btnSquare} onClick={handleConfirm} disabled={!selectedSlotId || submitting}>
+        <button
+          type="button"
+          className={styles.btnSquare}
+          onClick={handleConfirm}
+          disabled={!selectedSlotId || submitting || !contactValueIsValid}
+        >
           {submitting ? "Confirmando..." : "Confirmar agendamento"}
         </button>
       </div>
