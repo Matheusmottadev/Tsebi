@@ -1205,6 +1205,10 @@ body.legal-header-image-default .home-header:not(.is-scrolled):not(:hover):not(:
   transition: opacity .18s ease, font-weight .18s ease;
 }
 
+.header-menu-utility--mobile-only {
+  display: none;
+}
+
 .header-menu-utilities:has(> .header-menu-utility:hover) > .header-menu-utility {
   opacity: .42;
   font-weight: 400;
@@ -2525,6 +2529,10 @@ body.no-scroll .top-bar{
 
   .header-right{
     gap: 6px;
+  }
+
+  .header-menu-utility--mobile-only {
+    display: inline-flex;
   }
 
   .header-right .quick-action{

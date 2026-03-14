@@ -64,7 +64,7 @@ function resolveUploadErrorMessage(error: unknown): string {
 
   if (code === "UNSUPPORTED_IMAGE_TYPE") return "Formato de imagem não suportado. Use JPG, PNG, WEBP ou GIF.";
   if (code === "IMAGE_REQUIRED") return "Selecione uma imagem válida para enviar.";
-  if (code === "entity.too.large" || error.status === 413) return "A imagem é muito grande. Use arquivos de até 8 MB.";
+  if (code === "ENTITY.TOO.LARGE" || error.status === 413) return "A imagem é muito grande. Use arquivos de até 8 MB.";
   if (code === "R2_NOT_CONFIGURED") return "O envio de fotos ainda não está disponível neste ambiente.";
   return "Não foi possível enviar as fotos agora. Tente novamente.";
 }
@@ -75,6 +75,24 @@ function resolveRepairRequestErrorMessage(error: unknown): string {
     error.payload && typeof error.payload === "object" && "error" in error.payload
       ? String((error.payload as { error?: unknown }).error || "").trim().toUpperCase()
       : "";
+  const details =
+    error.payload && typeof error.payload === "object" && "details" in error.payload
+      ? (error.payload as { details?: unknown }).details
+      : null;
+
+  if (Array.isArray(details)) {
+    const hasDescriptionIssue = details.some((item) => {
+      if (!item || typeof item !== "object") return false;
+      return String((item as { path?: unknown }).path || "").trim() === "description";
+    });
+    if (hasDescriptionIssue) return "Descreva o problema com pelo menos 4 caracteres.";
+
+    const hasReturnAddressIssue = details.some((item) => {
+      if (!item || typeof item !== "object") return false;
+      return String((item as { path?: unknown }).path || "").trim() === "returnAddress";
+    });
+    if (hasReturnAddressIssue) return "Informe um endereço de devolução mais completo.";
+  }
 
   if (code === "EMAIL_PROVIDER_NOT_CONFIGURED") {
     return "A solicitação foi bloqueada pelo envio de e-mail no ambiente atual.";

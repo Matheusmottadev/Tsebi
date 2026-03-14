@@ -718,6 +718,7 @@ export function SiteHeader() {
 
       <aside className={`header-contact-panel ${isContactPanelOpen ? "is-open" : ""}`} aria-hidden={!isContactPanelOpen}>
         <div className="header-contact-panel-inner">
+          <div className="header-contact-panel-handle" aria-hidden="true" />
           <div className="header-contact-panel-head">
             <h2>Fale Conosco</h2>
             <button
@@ -872,6 +873,24 @@ export function SiteHeader() {
                   <path d="M5 4h4l2 5-3 2a12 12 0 0 0 5 5l2-3 5 2v4c0 1-1 2-2 2C10 21 3 14 3 6c0-1 1-2 2-2z"></path>
                 </svg>
                 <span>Marque um atendimento privativo</span>
+              </a>
+              <a
+                className="header-menu-utility header-menu-utility--mobile-only"
+                href="#"
+                aria-label="Fale Conosco"
+                onClick={(event) => {
+                  event.preventDefault();
+                  setIsMenuOpen(false);
+                  setIsMenuNavPanelOpen(false);
+                  setActiveMenuNavPanel(null);
+                  setIsSearchOpen(false);
+                  setIsContactPanelOpen(true);
+                }}
+              >
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M19 14a3 3 0 0 1-3 3H9l-4 3v-3a3 3 0 0 1-3-3V8a3 3 0 0 1 3-3h11a3 3 0 0 1 3 3z"></path>
+                </svg>
+                <span>Fale Conosco</span>
               </a>
             </div>
           </div>

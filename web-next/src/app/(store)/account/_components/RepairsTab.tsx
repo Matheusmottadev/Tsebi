@@ -67,6 +67,23 @@ function formatRepairStatus(status: RepairRequest["status"]): string {
   return "Em análise";
 }
 
+function validateRepairForm(params: {
+  selectedItem: DeliveredItemOption | null;
+  repairType: string;
+  description: string;
+  returnAddress: string;
+}): string | null {
+  if (!params.selectedItem) return "Selecione uma peça entregue para solicitar o reparo.";
+  if (String(params.repairType || "").trim().length < 2) return "Selecione o tipo de reparo.";
+  if (String(params.description || "").trim().length < 4) {
+    return "Descreva o problema com pelo menos 4 caracteres.";
+  }
+  if (String(params.returnAddress || "").trim().length < 8) {
+    return "Informe um endereço de devolução mais completo.";
+  }
+  return null;
+}
+
 export function RepairsTab({ user }: Props) {
   const [deliveredItems, setDeliveredItems] = useState<DeliveredItemOption[]>([]);
   const [history, setHistory] = useState<RepairRequest[]>([]);
@@ -129,6 +146,14 @@ export function RepairsTab({ user }: Props) {
     () => deliveredItems.find((item) => item.key === selectedItemKey) || null,
     [deliveredItems, selectedItemKey]
   );
+  const trimmedDescription = description.trim();
+  const trimmedReturnAddress = returnAddress.trim();
+  const submitDisabled =
+    submitting ||
+    !selectedItem ||
+    String(repairType || "").trim().length < 2 ||
+    trimmedDescription.length < 4 ||
+    trimmedReturnAddress.length < 8;
 
   async function handlePhotoSelection(event: React.ChangeEvent<HTMLInputElement>) {
     const files = Array.from(event.target.files || []).slice(0, 5);
@@ -140,7 +165,7 @@ export function RepairsTab({ user }: Props) {
       const uploaded = await Promise.all(files.map((file) => uploadRepairPhoto(file)));
       setPhotos((current) => [...current, ...uploaded].slice(0, 8));
     } catch (error) {
-      setSubmitError("Não foi possível enviar as fotos agora. Tente novamente.");
+      setSubmitError(resolveUploadErrorMessage(error));
     } finally {
       setUploading(false);
       if (event.target) event.target.value = "";
@@ -149,7 +174,17 @@ export function RepairsTab({ user }: Props) {
 
   async function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
-    if (!selectedItem || !repairType || !description || !returnAddress) return;
+
+    const validationError = validateRepairForm({
+      selectedItem,
+      repairType,
+      description,
+      returnAddress,
+    });
+    if (validationError) {
+      setSubmitError(validationError);
+      return;
+    }
 
     setSubmitting(true);
     setSubmitError(null);
@@ -157,9 +192,9 @@ export function RepairsTab({ user }: Props) {
       const response = await createRepairRequest({
         orderId: selectedItem.orderId,
         orderItemId: selectedItem.itemId,
-        repairType,
-        description,
-        returnAddress,
+        repairType: repairType.trim(),
+        description: trimmedDescription,
+        returnAddress: trimmedReturnAddress,
         photos,
       });
       setHistory(response.history);
@@ -168,7 +203,7 @@ export function RepairsTab({ user }: Props) {
       setSubmitted(true);
       window.setTimeout(() => setSubmitted(false), 5000);
     } catch (error) {
-      setSubmitError("Não foi possível enviar a solicitação. Tente novamente.");
+      setSubmitError(resolveRepairRequestErrorMessage(error));
     } finally {
       setSubmitting(false);
     }
@@ -239,6 +274,8 @@ export function RepairsTab({ user }: Props) {
                 onChange={(event) => setDescription(event.target.value)}
                 placeholder="Descreva detalhadamente o que precisa ser reparado..."
                 rows={5}
+                minLength={4}
+                required
               />
             </div>
 
@@ -249,6 +286,8 @@ export function RepairsTab({ user }: Props) {
                 value={returnAddress}
                 onChange={(event) => setReturnAddress(event.target.value)}
                 placeholder="Rua, número, cidade, estado"
+                minLength={8}
+                required
               />
             </div>
 
@@ -276,7 +315,11 @@ export function RepairsTab({ user }: Props) {
                 <div className={styles.repairPhotosGrid}>
                   {photos.map((photo) => (
                     <div key={`${photo.url}-${photo.fileName}`} className={styles.repairPhotoCard}>
-                      <img src={photo.url} alt={photo.fileName || "Foto do reparo"} className={styles.repairPhotoImage} />
+                      <img
+                        src={photo.url}
+                        alt={photo.fileName || "Foto do reparo"}
+                        className={styles.repairPhotoImage}
+                      />
                     </div>
                   ))}
                 </div>
@@ -291,11 +334,7 @@ export function RepairsTab({ user }: Props) {
           {submitError ? <p className={styles.repairError}>{submitError}</p> : null}
 
           <div className={styles.formActions}>
-            <button
-              type="submit"
-              className={`${styles.btnPill} ${styles.btnPillFilled}`}
-              disabled={submitting || !selectedItem || !description || !returnAddress}
-            >
+            <button type="submit" className={`${styles.btnPill} ${styles.btnPillFilled}`} disabled={submitDisabled}>
               {submitted ? "Solicitação enviada!" : submitting ? "Enviando..." : "Solicitar reparo"}
             </button>
           </div>
