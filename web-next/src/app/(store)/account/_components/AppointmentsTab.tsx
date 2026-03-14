@@ -294,7 +294,9 @@ export function AppointmentsTab({ user }: Props) {
                   ))}
                 </div>
                 {!slots.length ? (
-                  <p className={styles.appointmentsHint}>Nenhum horario liberado para esta data.</p>
+                  <p className={styles.appointmentsHint}>
+                    Nenhum horário futuro liberado para esta data. Horários que já passaram não aparecem aqui.
+                  </p>
                 ) : null}
                 {selectedSlot ? (
                   <p className={styles.appointmentsHint}>

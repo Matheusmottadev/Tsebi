@@ -34,6 +34,16 @@ function todayKey(): string {
   return new Intl.DateTimeFormat("sv-SE", { timeZone: "America/Sao_Paulo" }).format(new Date());
 }
 
+function currentHourInSaoPaulo(): number {
+  const parts = new Intl.DateTimeFormat("en-GB", {
+    hour: "2-digit",
+    hour12: false,
+    timeZone: "America/Sao_Paulo",
+  }).formatToParts(new Date());
+  const hour = parts.find((part) => part.type === "hour")?.value || "0";
+  return Number(hour);
+}
+
 function slotDateKey(slot: AdminAppointmentSlot): string {
   if (!slot.startsAt) return "";
   const date = new Date(slot.startsAt);
@@ -67,6 +77,7 @@ export function PrivateCareManager({ rows, csrfToken }: Props) {
   const [flash, setFlash] = useState<{ tone: "ok" | "error"; text: string } | null>(null);
 
   const today = todayKey();
+  const currentHour = currentHourInSaoPaulo();
   const [calYear, setCalYear] = useState(() => Number(today.slice(0, 4)));
   const [calMonth, setCalMonth] = useState(() => Number(today.slice(5, 7)) - 1);
   const [selectedDate, setSelectedDate] = useState(today);
@@ -119,6 +130,17 @@ export function PrivateCareManager({ rows, csrfToken }: Props) {
     return slotsForSelected.length > 0 && slotsForSelected.every((slot) => slot.isBlocked || !slot.isAvailable);
   }, [slotsForSelected]);
 
+  const selectedDateIsToday = selectedDate === today;
+
+  const futureAvailableSlotsForSelected = useMemo(() => {
+    if (!selectedDateIsToday) return availableSlotsForSelected;
+    return availableSlotsForSelected.filter((slot) => Number(slotHour(slot)) > currentHour);
+  }, [availableSlotsForSelected, currentHour, selectedDateIsToday]);
+
+  const selectedDateHasOnlyPastSlots = useMemo(() => {
+    return selectedDateIsToday && availableSlotsForSelected.length > 0 && futureAvailableSlotsForSelected.length === 0;
+  }, [availableSlotsForSelected.length, futureAvailableSlotsForSelected.length, selectedDateIsToday]);
+
   function showFlash(tone: "ok" | "error", text: string) {
     setFlash({ tone, text });
     window.setTimeout(() => setFlash(null), 4000);
@@ -168,6 +190,7 @@ export function PrivateCareManager({ rows, csrfToken }: Props) {
       const mutations: Promise<void>[] = [];
 
       for (const hour of ALL_HOURS) {
+        if (selectedDateIsToday && Number(hour) <= currentHour) continue;
         const existingSlot = slotsForSelected.find((slot) => slotHour(slot) === hour) || null;
         const shouldBeAvailable = !dayDisabled && modalHours.has(hour);
 
@@ -414,6 +437,11 @@ export function PrivateCareManager({ rows, csrfToken }: Props) {
                 Nenhum horário disponível para clientes nesta data.
               </div>
             )}
+            {selectedDateHasOnlyPastSlots ? (
+              <p className={styles.helperWarning}>
+                Esses horários já passaram em São Paulo e não aparecem mais para o cliente na conta.
+              </p>
+            ) : null}
           </div>
         </section>
 
@@ -618,12 +646,16 @@ export function PrivateCareManager({ rows, csrfToken }: Props) {
               </div>
 
               <div className={styles.hoursGrid}>
-                {ALL_HOURS.map((hour) => (
+                {ALL_HOURS.map((hour) => {
+                  const isPastHour = selectedDateIsToday && Number(hour) <= currentHour;
+                  return (
                   <button
                     key={hour}
                     type="button"
-                    className={`${styles.hourButton} ${!dayDisabled && modalHours.has(hour) ? styles.hourButtonActive : ""}`}
-                    disabled={dayDisabled}
+                    className={`${styles.hourButton} ${!dayDisabled && modalHours.has(hour) ? styles.hourButtonActive : ""} ${
+                      isPastHour ? styles.hourButtonPast : ""
+                    }`}
+                    disabled={dayDisabled || isPastHour}
                     onClick={() =>
                       setModalHours((current) => {
                         const next = new Set(current);
@@ -635,11 +667,17 @@ export function PrivateCareManager({ rows, csrfToken }: Props) {
                   >
                     {hour}:00
                   </button>
-                ))}
+                  );
+                })}
               </div>
 
               {dayDisabled ? (
                 <p className={styles.disabledNotice}>Este dia ficará oculto para o cliente até ser reativado.</p>
+              ) : null}
+              {selectedDateIsToday ? (
+                <p className={styles.disabledNotice}>
+                  Horários que já passaram hoje em São Paulo ficam bloqueados aqui e não aparecem mais na conta do cliente.
+                </p>
               ) : null}
             </div>
 

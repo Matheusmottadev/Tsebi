@@ -288,6 +288,15 @@
   line-height: 1.7;
 }
 
+.helperWarning {
+  margin: 12px 0 0;
+  font-family: var(--font-jost), sans-serif;
+  font-size: 12px;
+  font-weight: 300;
+  color: #8a6430;
+  line-height: 1.6;
+}
+
 .appointmentList {
   display: grid;
   gap: 10px;
@@ -609,6 +618,12 @@
 .hourButton:disabled {
   opacity: 0.34;
   cursor: not-allowed;
+}
+
+.hourButtonPast {
+  border-style: dashed;
+  background: #f7f7f7;
+  color: #b1aca5;
 }
 
 .disabledNotice {
