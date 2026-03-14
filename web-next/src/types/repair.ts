@@ -3,7 +3,14 @@ export interface RepairPhoto {
   fileName: string;
 }
 
-export type RepairStatus = "pending" | "accepted" | "rejected";
+export type RepairStatus =
+  | "pending"
+  | "awaiting_shipment"
+  | "item_received"
+  | "in_repair"
+  | "completed"
+  | "returned"
+  | "rejected";
 
 export interface RepairRequest {
   id: string;

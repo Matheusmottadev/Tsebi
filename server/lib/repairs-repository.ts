@@ -57,9 +57,19 @@ function normalizeDate(value: unknown): string | null {
   return raw || null;
 }
 
-function normalizeRepairStatus(value: unknown): "pending" | "accepted" | "rejected" {
+function normalizeRepairStatus(
+  value: unknown
+): "pending" | "awaiting_shipment" | "item_received" | "in_repair" | "completed" | "returned" | "rejected" {
   const raw = normalizeText(value).toLowerCase();
-  if (["accepted", "aceito", "aprovado"].includes(raw)) return "accepted";
+  if (["awaiting_shipment", "aguardando_envio", "aguardando envio", "accepted", "aceito", "aprovado"].includes(raw)) {
+    return "awaiting_shipment";
+  }
+  if (["item_received", "peca_recebida", "peça recebida", "peca recebida", "recebido"].includes(raw)) {
+    return "item_received";
+  }
+  if (["in_repair", "em_reparo", "em reparo"].includes(raw)) return "in_repair";
+  if (["completed", "finalizado", "concluido", "concluído"].includes(raw)) return "completed";
+  if (["returned", "devolvido"].includes(raw)) return "returned";
   if (["rejected", "rejeitado", "recusado"].includes(raw)) return "rejected";
   return "pending";
 }

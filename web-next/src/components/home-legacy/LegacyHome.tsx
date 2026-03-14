@@ -1672,24 +1672,24 @@ export function LegacyHome({ products }: LegacyHomeProps) {
         </div>
       </section>
 
-      <section className="t-section" aria-label="Categorias">
+      <section className="t-section homepage-categories-section" aria-label="Categorias">
         <div className="t-container">
-          <header style={{ textAlign: "center", marginBottom: "var(--t-space-6)" }}>
+          <header className="homepage-categories-header" style={{ textAlign: "center", marginBottom: "var(--t-space-6)" }}>
             <h2 className="t-h2">Explore as Categorias</h2>
             <p className="t-subtitle" style={{ marginTop: "var(--t-space-2)" }}>
               Seleção por estilo e essenciais
             </p>
           </header>
 
-          <div className="t-grid t-grid--4 t-grid--mobile-carousel">
+          <div className="t-grid t-grid--4 t-grid--mobile-carousel homepage-categories-grid">
             {HOMEPAGE_CATEGORIES.map((item) => (
               <a
                 key={`${item.href}-${item.label}`}
-                className="t-card-link"
+                className="t-card-link homepage-categories-card"
                 href={item.href}
                 onClick={() => trackRecommendationCategoryVisit(item.label, 7000)}
               >
-                <div className="t-media t-media--cat">
+                <div className="t-media t-media--cat homepage-categories-media">
                   <Image
                     src={item.image}
                     alt={item.alt}
@@ -1703,7 +1703,7 @@ export function LegacyHome({ products }: LegacyHomeProps) {
                     }}
                   />
                 </div>
-                <span className="t-card-label">{item.label}</span>
+                <span className="t-card-label homepage-categories-label">{item.label}</span>
               </a>
             ))}
           </div>

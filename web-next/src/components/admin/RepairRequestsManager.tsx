@@ -57,6 +57,7 @@ export function RepairRequestsManager({
   const [adminNote, setAdminNote] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [inlineError, setInlineError] = useState("");
+  const decisionLocked = selectedRepair ? selectedRepair.status !== "pending" : false;
 
   const filteredRows = useMemo(() => {
     const query = normalizeText(search);
@@ -291,6 +292,7 @@ export function RepairRequestsManager({
                   onChange={(event) => setAdminNote(event.target.value)}
                   placeholder="Observações internas sobre a análise."
                   rows={3}
+                  disabled={decisionLocked || isSubmitting}
                 />
               </div>
 
@@ -302,6 +304,7 @@ export function RepairRequestsManager({
                   onChange={(event) => setRejectReason(event.target.value)}
                   placeholder="Preencha apenas se a solicitação for recusada."
                   rows={4}
+                  disabled={decisionLocked || isSubmitting}
                 />
               </div>
             </div>
@@ -314,13 +317,18 @@ export function RepairRequestsManager({
             ) : null}
 
             {inlineError ? <p className={styles.errorText}>{inlineError}</p> : null}
+            {decisionLocked ? (
+              <p className={styles.warning}>
+                Esta solicitaÃ§Ã£o jÃ¡ foi {selectedRepair.status === "accepted" ? "aceita" : "recusada"} e nÃ£o pode ser decidida novamente.
+              </p>
+            ) : null}
 
             <div className={styles.actions}>
               <button
                 type="button"
                 className={styles.acceptBtn}
                 onClick={() => submitDecision("accept")}
-                disabled={isSubmitting}
+                disabled={isSubmitting || decisionLocked}
               >
                 {isSubmitting ? "Salvando..." : "Aceitar solicitação"}
               </button>
@@ -328,7 +336,7 @@ export function RepairRequestsManager({
                 type="button"
                 className={styles.rejectBtn}
                 onClick={() => submitDecision("reject")}
-                disabled={isSubmitting}
+                disabled={isSubmitting || decisionLocked}
               >
                 {isSubmitting ? "Salvando..." : "Recusar solicitação"}
               </button>
