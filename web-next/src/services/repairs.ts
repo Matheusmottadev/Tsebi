@@ -42,6 +42,33 @@ export interface UploadRepairPhotoResponse {
   };
 }
 
+function resolveUploadContentType(file: File): string {
+  const rawType = String(file.type || "").trim().toLowerCase();
+  if (["image/jpeg", "image/png", "image/webp", "image/gif"].includes(rawType)) return rawType;
+  if (rawType === "image/jpg" || rawType === "image/pjpeg") return "image/jpeg";
+
+  const lowerName = String(file.name || "").trim().toLowerCase();
+  if (lowerName.endsWith(".jpg") || lowerName.endsWith(".jpeg") || lowerName.endsWith(".jfif")) return "image/jpeg";
+  if (lowerName.endsWith(".png")) return "image/png";
+  if (lowerName.endsWith(".webp")) return "image/webp";
+  if (lowerName.endsWith(".gif")) return "image/gif";
+  return "application/octet-stream";
+}
+
+function resolveUploadErrorMessage(error: unknown): string {
+  if (!(error instanceof HttpError)) return "Não foi possível enviar as fotos agora. Tente novamente.";
+  const code =
+    error.payload && typeof error.payload === "object" && "error" in error.payload
+      ? String((error.payload as { error?: unknown }).error || "").trim().toUpperCase()
+      : "";
+
+  if (code === "UNSUPPORTED_IMAGE_TYPE") return "Formato de imagem não suportado. Use JPG, PNG, WEBP ou GIF.";
+  if (code === "IMAGE_REQUIRED") return "Selecione uma imagem válida para enviar.";
+  if (code === "entity.too.large" || error.status === 413) return "A imagem é muito grande. Use arquivos de até 8 MB.";
+  if (code === "R2_NOT_CONFIGURED") return "O envio de fotos ainda não está disponível neste ambiente.";
+  return "Não foi possível enviar as fotos agora. Tente novamente.";
+}
+
 export async function listMyRepairs(): Promise<RepairRequest[]> {
   const response = await get<ListMyRepairsResponse>("/api/my/repairs", { cache: "no-store" });
   return Array.isArray(response.history) ? response.history : [];
@@ -55,13 +82,14 @@ export async function createRepairRequest(
 
 export async function uploadRepairPhoto(file: File): Promise<RepairPhoto> {
   const token = readCookieByName(userCsrfCookieName);
+  const contentType = resolveUploadContentType(file);
   const response = await fetch(
     `/api/my/repairs/photos?name=${encodeURIComponent(String(file.name || "reparo"))}`,
     {
       method: "POST",
       credentials: "include",
       headers: {
-        "Content-Type": file.type || "application/octet-stream",
+        "Content-Type": contentType,
         ...(token ? { "x-csrf-token": token } : {}),
       },
       body: file,
@@ -90,3 +118,5 @@ export async function uploadRepairPhoto(file: File): Promise<RepairPhoto> {
     fileName: String(successPayload?.photo?.fileName || file.name || "").trim(),
   };
 }
+
+export { resolveUploadErrorMessage };

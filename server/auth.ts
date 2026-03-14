@@ -2117,22 +2117,20 @@ myRouter.post(
   "/repairs/photos",
   requireAuth,
   express.raw({
-    type: ["image/jpeg", "image/png", "image/webp", "image/gif"],
+    type: () => true,
     limit: "8mb"
   }),
   async (req: any, res: any) => {
-    const contentType = String(req.headers["content-type"] || "").trim().toLowerCase();
-    if (!["image/jpeg", "image/png", "image/webp", "image/gif"].includes(contentType)) {
-      return res.status(415).json({ error: "UNSUPPORTED_IMAGE_TYPE" });
-    }
-
     if (!Buffer.isBuffer(req.body) || req.body.length === 0) {
       return res.status(400).json({ error: "IMAGE_REQUIRED" });
     }
 
-    if (!detectImageKind(req.body)) {
+    const detectedKind = detectImageKind(req.body);
+    if (!detectedKind) {
       return res.status(415).json({ error: "UNSUPPORTED_IMAGE_TYPE" });
     }
+
+    const contentType = `image/${detectedKind === "jpeg" ? "jpeg" : detectedKind}`;
 
     try {
       const userId = String(req.session.userId || "").trim();

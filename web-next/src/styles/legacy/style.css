@@ -878,36 +878,62 @@ body.legal-header-image-default .home-header:not(.is-scrolled):not(:hover):not(:
 }
 
 .header-menu-subpanel-curation-card {
-  background: #fff;
-  border: 1px solid rgba(17, 17, 17, 0.12);
+  position: relative;
+  background: transparent;
+  border: 0;
   overflow: hidden;
+}
+
+.header-menu-subpanel-curation-card::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: clamp(187px, 23.4vw, 247px);
+  background: linear-gradient(to top, rgba(0, 0, 0, 0.54), rgba(0, 0, 0, 0.08) 45%, rgba(0, 0, 0, 0));
+  pointer-events: none;
 }
 
 .header-menu-subpanel-curation-card img {
   width: 100%;
   display: block;
-  height: clamp(110px, 14vw, 150px);
+  height: clamp(187px, 23.4vw, 247px);
   object-fit: cover;
   object-position: center 28%;
 }
 
 .header-menu-subpanel-curation-card-body {
-  padding: 9px;
+  padding: 10px 8px 8px;
+  border: 1px solid rgba(17, 17, 17, 0.14);
+  border-top: 0;
+  background: #fff;
 }
 
 .header-menu-subpanel-curation-card-name {
-  margin: 0 0 3px;
+  position: absolute;
+  left: 9px;
+  right: 9px;
+  top: calc(clamp(187px, 23.4vw, 247px) - 46px);
+  z-index: 1;
+  margin: 0;
   font-family: "Montserrat", Arial, sans-serif;
   font-size: 12px;
-  color: #111;
+  color: #fff;
+  text-shadow: 0 1px 10px rgba(0, 0, 0, 0.45);
 }
 
 .header-menu-subpanel-curation-card-price {
-  margin: 0 0 8px;
+  position: absolute;
+  left: 9px;
+  top: calc(clamp(187px, 23.4vw, 247px) - 24px);
+  z-index: 1;
+  margin: 0;
   font-family: "Montserrat", Arial, sans-serif;
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 600;
-  color: #111;
+  color: #fff;
+  text-shadow: 0 1px 10px rgba(0, 0, 0, 0.45);
 }
 
 .header-menu-subpanel-curation-card-link {
@@ -917,6 +943,7 @@ body.legal-header-image-default .home-header:not(.is-scrolled):not(:hover):not(:
   min-height: 24px;
   padding: 0 8px;
   border: 1px solid #111;
+  background: #fff;
   text-decoration: none;
   font-family: "Montserrat", Arial, sans-serif;
   font-size: 9px;
@@ -930,10 +957,11 @@ body.legal-header-image-default .home-header:not(.is-scrolled):not(:hover):not(:
   display: flex;
   align-items: center;
   gap: 6px;
+  justify-content: space-between;
 }
 
 .header-menu-subpanel-curation-card-actions .header-menu-subpanel-curation-card-link {
-  flex: 0 0 auto;
+  flex: 1 1 auto;
 }
 
 .header-menu-subpanel-curation-card-add {
@@ -945,8 +973,8 @@ body.legal-header-image-default .home-header:not(.is-scrolled):not(:hover):not(:
   min-width: 42px;
   padding: 0 6px;
   border: 1px solid #111;
-  background: #111;
-  color: #fff;
+  background: #fff;
+  color: #111;
   font-family: "Montserrat", Arial, sans-serif;
   font-size: 11px;
   letter-spacing: 0;
