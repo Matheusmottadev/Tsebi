@@ -1,10 +1,11 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 const express = require("express");
-const bcrypt = require("bcrypt");
 const rateLimit = require("express-rate-limit");
 const { z } = require("zod");
 const { normalizeEmail, findUserByEmail, createUser } = require("./user-repository");
+const { hashPassword } = require("./lib/password-hash");
+const { applyCustomerSessionLifetime } = require("./lib/session-lifetime");
 const { upsertVipSubscriber, listVipSubscribers, setVipAccountCreated, deleteVipSubscriberById } = require("./lib/vip-repository");
 const { getVipDatabaseUrl } = require("./lib/vip-db");
 const vipRouter = express.Router();
@@ -59,6 +60,17 @@ const vipAdminUpsertSchema = z.object({
     cep: optionalDigits(8),
     accountCreated: z.boolean().optional().default(false)
 });
+async function persistSession(req) {
+    if (!req?.session || typeof req.session.save !== "function")
+        return false;
+    return new Promise((resolve) => {
+        req.session.save((error) => {
+            if (error)
+                return resolve(false);
+            return resolve(true);
+        });
+    });
+}
 function parseBirthDate(value) {
     const date = new Date(`${value}T00:00:00.000Z`);
     if (Number.isNaN(date.getTime()))
@@ -137,7 +149,7 @@ vipRouter.post("/register", vipRegisterRateLimit, async (req, res) => {
             const created = await createUser({
                 name: payload.name,
                 email,
-                passwordHash: await bcrypt.hash(rawPassword, 12),
+                passwordHash: await hashPassword(rawPassword),
                 birthDate: payload.birthDate,
                 cpf: payload.cpf,
                 cep: payload.cep
@@ -145,6 +157,10 @@ vipRouter.post("/register", vipRegisterRateLimit, async (req, res) => {
             if (created.ok && created.user) {
                 accountCreated = true;
                 req.session.userId = created.user.id;
+                applyCustomerSessionLifetime(req);
+                if (!(await persistSession(req))) {
+                    return res.status(500).json({ error: "SESSION_SAVE_FAILED" });
+                }
                 subscriber = await setVipAccountCreated(email);
             }
             else if (created.error === "EMAIL_ALREADY_EXISTS") {

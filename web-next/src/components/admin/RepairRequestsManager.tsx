@@ -25,11 +25,21 @@ const REPAIR_FLOW_OPTIONS: Array<{ value: FlowStatus; label: string }> = [
   { value: "returned", label: "Devolvido" },
 ];
 
+const SLA_BUSINESS_DAYS_LIMIT = 7;
+
 function formatDateTime(value: string | null): string {
   if (!value) return "-";
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return "-";
   return new Intl.DateTimeFormat("pt-BR", { dateStyle: "short", timeStyle: "short" }).format(date);
+}
+
+function toDateTimeLocalValue(value: string | null): string {
+  if (!value) return "";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "";
+  const offsetMs = date.getTimezoneOffset() * 60 * 1000;
+  return new Date(date.getTime() - offsetMs).toISOString().slice(0, 16);
 }
 
 function formatStatus(value: RepairRequest["status"]): string {
@@ -46,6 +56,40 @@ function formatDecisionOutcome(value: RepairRequest["decisionOutcome"]): string 
   if (value === "accepted") return "Aceita";
   if (value === "rejected") return "Recusada";
   return "Pendente";
+}
+
+function isRepairActiveForSla(status: RepairRequest["status"]): boolean {
+  return status !== "rejected" && status !== "returned";
+}
+
+function startOfDay(date: Date): Date {
+  return new Date(date.getFullYear(), date.getMonth(), date.getDate());
+}
+
+function getBusinessDaysSince(value: string | null, now = new Date()): number {
+  if (!value) return 0;
+  const start = new Date(value);
+  if (Number.isNaN(start.getTime())) return 0;
+
+  const current = startOfDay(now);
+  const cursor = startOfDay(start);
+  let count = 0;
+
+  while (cursor < current) {
+    cursor.setDate(cursor.getDate() + 1);
+    const day = cursor.getDay();
+    if (day !== 0 && day !== 6) count += 1;
+  }
+
+  return count;
+}
+
+function getRepairSlaBusinessDays(repair: RepairRequest): number {
+  return getBusinessDaysSince(repair.updatedAt || repair.reviewedAt || repair.createdAt);
+}
+
+function isRepairSlaLate(repair: RepairRequest): boolean {
+  return isRepairActiveForSla(repair.status) && getRepairSlaBusinessDays(repair) > SLA_BUSINESS_DAYS_LIMIT;
 }
 
 function normalizeText(value: unknown): string {
@@ -70,22 +114,53 @@ export function RepairRequestsManager({
   onRequestRefresh,
 }: Props) {
   const [search, setSearch] = useState("");
+  const [clientFilter, setClientFilter] = useState("");
+  const [pieceFilter, setPieceFilter] = useState("");
+  const [dateFilter, setDateFilter] = useState("todos");
   const [statusFilter, setStatusFilter] = useState("todos");
   const [sort, setSort] = useState("mais_recente");
   const [selectedRepair, setSelectedRepair] = useState<RepairRequest | null>(null);
   const [rejectReason, setRejectReason] = useState("");
   const [adminNote, setAdminNote] = useState("");
   const [flowStatus, setFlowStatus] = useState<FlowStatus>("awaiting_shipment");
+  const [trackingCode, setTrackingCode] = useState("");
+  const [pieceReceivedAt, setPieceReceivedAt] = useState("");
+  const [returnPostedAt, setReturnPostedAt] = useState("");
+  const [returnedDeliveredAt, setReturnedDeliveredAt] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [inlineError, setInlineError] = useState("");
 
   const isPendingDecision = selectedRepair?.status === "pending";
   const isClosedDecision = selectedRepair?.status === "rejected" || selectedRepair?.status === "returned";
+  const selectedRepairSlaBusinessDays = selectedRepair ? getRepairSlaBusinessDays(selectedRepair) : 0;
+  const selectedRepairSlaLate = selectedRepair ? isRepairSlaLate(selectedRepair) : false;
 
   const filteredRows = useMemo(() => {
     const query = normalizeText(search);
+    const clientQuery = normalizeText(clientFilter);
+    const pieceQuery = normalizeText(pieceFilter);
+    const now = new Date();
     const next = [...rows].filter((row) => {
       if (statusFilter !== "todos" && row.status !== statusFilter) return false;
+      if (dateFilter !== "todos") {
+        const createdAt = row.createdAt ? new Date(row.createdAt) : null;
+        if (!createdAt || Number.isNaN(createdAt.getTime())) return false;
+        const ageMs = now.getTime() - createdAt.getTime();
+        if (dateFilter === "hoje" && startOfDay(createdAt).getTime() !== startOfDay(now).getTime()) return false;
+        if (dateFilter === "7_dias" && ageMs > 7 * 24 * 60 * 60 * 1000) return false;
+        if (dateFilter === "30_dias" && ageMs > 30 * 24 * 60 * 60 * 1000) return false;
+        if (dateFilter === "mes_atual") {
+          if (createdAt.getMonth() !== now.getMonth() || createdAt.getFullYear() !== now.getFullYear()) return false;
+        }
+      }
+      if (clientQuery) {
+        const clientHaystack = [row.userName, row.userEmail].map((item) => normalizeText(item)).join(" ");
+        if (!clientHaystack.includes(clientQuery)) return false;
+      }
+      if (pieceQuery) {
+        const pieceHaystack = [row.pieceName, row.repairType].map((item) => normalizeText(item)).join(" ");
+        if (!pieceHaystack.includes(pieceQuery)) return false;
+      }
       if (!query) return true;
       const haystack = [
         row.userName,
@@ -95,6 +170,7 @@ export function RepairRequestsManager({
         row.repairType,
         row.description,
         row.returnAddress,
+        row.trackingCode,
       ]
         .map((item) => normalizeText(item))
         .join(" ");
@@ -108,7 +184,9 @@ export function RepairRequestsManager({
       return rightTime - leftTime;
     });
     return next;
-  }, [rows, search, statusFilter, sort]);
+  }, [rows, search, clientFilter, pieceFilter, dateFilter, statusFilter, sort]);
+
+  const slaLateCount = useMemo(() => filteredRows.filter((row) => isRepairSlaLate(row)).length, [filteredRows]);
 
   const filterConfigs: FilterConfig[] = [
     {
@@ -124,6 +202,18 @@ export function RepairRequestsManager({
         { label: "Finalizados", value: "completed" },
         { label: "Devolvidos", value: "returned" },
         { label: "Recusados", value: "rejected" },
+      ],
+    },
+    {
+      key: "data",
+      value: dateFilter,
+      onChange: setDateFilter,
+      options: [
+        { label: "Data: Todas", value: "todos" },
+        { label: "Hoje", value: "hoje" },
+        { label: "Últimos 7 dias", value: "7_dias" },
+        { label: "Últimos 30 dias", value: "30_dias" },
+        { label: "Mês atual", value: "mes_atual" },
       ],
     },
   ];
@@ -142,6 +232,9 @@ export function RepairRequestsManager({
 
   function resetSearch() {
     setSearch("");
+    setClientFilter("");
+    setPieceFilter("");
+    setDateFilter("todos");
     setStatusFilter("todos");
     setSort("mais_recente");
   }
@@ -151,6 +244,10 @@ export function RepairRequestsManager({
     setRejectReason(repair.rejectionReason || "");
     setAdminNote(repair.adminNote || "");
     setFlowStatus(repair.status === "pending" || repair.status === "rejected" ? "awaiting_shipment" : repair.status);
+    setTrackingCode(repair.trackingCode || "");
+    setPieceReceivedAt(toDateTimeLocalValue(repair.pieceReceivedAt));
+    setReturnPostedAt(toDateTimeLocalValue(repair.returnPostedAt));
+    setReturnedDeliveredAt(toDateTimeLocalValue(repair.returnedDeliveredAt));
     setInlineError("");
   }
 
@@ -160,6 +257,10 @@ export function RepairRequestsManager({
     setRejectReason("");
     setAdminNote("");
     setFlowStatus("awaiting_shipment");
+    setTrackingCode("");
+    setPieceReceivedAt("");
+    setReturnPostedAt("");
+    setReturnedDeliveredAt("");
     setInlineError("");
   }
 
@@ -179,6 +280,10 @@ export function RepairRequestsManager({
           decision,
           rejectionReason: rejectReason,
           adminNote,
+          trackingCode,
+          pieceReceivedAt: pieceReceivedAt || null,
+          returnPostedAt: returnPostedAt || null,
+          returnedDeliveredAt: returnedDeliveredAt || null,
         },
         csrfToken
       );
@@ -209,6 +314,10 @@ export function RepairRequestsManager({
         {
           status: flowStatus,
           adminNote,
+          trackingCode,
+          pieceReceivedAt: pieceReceivedAt || null,
+          returnPostedAt: returnPostedAt || null,
+          returnedDeliveredAt: returnedDeliveredAt || null,
         },
         csrfToken
       );
@@ -238,6 +347,35 @@ export function RepairRequestsManager({
         onClear={resetSearch}
       />
 
+      <div className={styles.filterRow}>
+        <div className={styles.filterField}>
+          <label className={styles.filterLabel}>Cliente</label>
+          <input
+            className={styles.filterInput}
+            type="text"
+            value={clientFilter}
+            onChange={(event) => setClientFilter(event.target.value)}
+            placeholder="Nome ou e-mail"
+          />
+        </div>
+        <div className={styles.filterField}>
+          <label className={styles.filterLabel}>Peça</label>
+          <input
+            className={styles.filterInput}
+            type="text"
+            value={pieceFilter}
+            onChange={(event) => setPieceFilter(event.target.value)}
+            placeholder="Nome da peça ou reparo"
+          />
+        </div>
+      </div>
+
+      {slaLateCount > 0 ? (
+        <p className={styles.slaBanner}>
+          {slaLateCount} {slaLateCount === 1 ? "reparo está parado" : "reparos estão parados"} há mais de{" "}
+          {SLA_BUSINESS_DAYS_LIMIT} dias úteis e precisam de atenção.
+        </p>
+      ) : null}
       {errorMessage ? <p className={styles.warning}>{errorMessage}</p> : null}
       {loading ? <p className={styles.loading}>Carregando reparos...</p> : null}
 
@@ -256,14 +394,21 @@ export function RepairRequestsManager({
               </tr>
             </thead>
             <tbody>
-              {filteredRows.map((repair) => (
-                <tr key={repair.id}>
+              {filteredRows.map((repair) => {
+                const slaLate = isRepairSlaLate(repair);
+                const slaBusinessDays = getRepairSlaBusinessDays(repair);
+
+                return (
+                <tr key={repair.id} className={slaLate ? styles.rowSlaLate : undefined}>
                   <td>{repair.orderRef || "-"}</td>
                   <td>{repair.userName || repair.userEmail || "-"}</td>
                   <td>{repair.pieceName || "-"}</td>
                   <td>{repair.repairType || "-"}</td>
                   <td>
                     <span className={`${styles.statusBadge} ${styles[`status_${repair.status}`]}`}>{formatStatus(repair.status)}</span>
+                    {slaLate ? (
+                      <p className={styles.slaInline}>Parado há {slaBusinessDays} dias úteis</p>
+                    ) : null}
                   </td>
                   <td>{formatDateTime(repair.createdAt)}</td>
                   <td className={styles.actionCell}>
@@ -272,7 +417,8 @@ export function RepairRequestsManager({
                     </button>
                   </td>
                 </tr>
-              ))}
+                );
+              })}
             </tbody>
           </table>
         </div>
@@ -324,6 +470,15 @@ export function RepairRequestsManager({
               </div>
             </div>
 
+            {selectedRepairSlaLate ? (
+              <div className={styles.slaWarningBox}>
+                <p className={styles.infoLabel}>SLA</p>
+                <p className={styles.infoText}>
+                  Esta solicitação está sem atualização há {selectedRepairSlaBusinessDays} dias úteis.
+                </p>
+              </div>
+            ) : null}
+
             <div className={styles.photosSection}>
               <p className={styles.infoLabel}>Fotos enviadas</p>
               {selectedRepair.photos.length > 0 ? (
@@ -343,6 +498,28 @@ export function RepairRequestsManager({
               ) : (
                 <p className={styles.infoText}>Nenhuma foto enviada.</p>
               )}
+            </div>
+
+            <div className={styles.logisticsSection}>
+              <p className={styles.infoLabel}>Logistica</p>
+              <div className={styles.auditGrid}>
+                <div>
+                  <p className={styles.infoLabel}>Codigo de rastreio</p>
+                  <p className={styles.infoText}>{selectedRepair.trackingCode || "-"}</p>
+                </div>
+                <div>
+                  <p className={styles.infoLabel}>Peca recebida no atelie</p>
+                  <p className={styles.infoText}>{formatDateTime(selectedRepair.pieceReceivedAt)}</p>
+                </div>
+                <div>
+                  <p className={styles.infoLabel}>Postagem de devolucao</p>
+                  <p className={styles.infoText}>{formatDateTime(selectedRepair.returnPostedAt)}</p>
+                </div>
+                <div>
+                  <p className={styles.infoLabel}>Entrega ao cliente</p>
+                  <p className={styles.infoText}>{formatDateTime(selectedRepair.returnedDeliveredAt)}</p>
+                </div>
+              </div>
             </div>
 
             <div className={styles.decisionSection}>
@@ -388,6 +565,49 @@ export function RepairRequestsManager({
                     </select>
                   </>
                 )}
+              </div>
+            </div>
+
+            <div className={styles.decisionSection}>
+              <div className={styles.field}>
+                <label className={styles.infoLabel}>Codigo de rastreio</label>
+                <input
+                  className={styles.input}
+                  value={trackingCode}
+                  onChange={(event) => setTrackingCode(event.target.value)}
+                  placeholder="Ex.: BR123456789"
+                  disabled={isClosedDecision || isSubmitting}
+                />
+              </div>
+              <div className={styles.field}>
+                <label className={styles.infoLabel}>Peca recebida no atelie</label>
+                <input
+                  className={styles.input}
+                  type="datetime-local"
+                  value={pieceReceivedAt}
+                  onChange={(event) => setPieceReceivedAt(event.target.value)}
+                  disabled={isClosedDecision || isSubmitting}
+                />
+              </div>
+              <div className={styles.field}>
+                <label className={styles.infoLabel}>Postagem de devolucao</label>
+                <input
+                  className={styles.input}
+                  type="datetime-local"
+                  value={returnPostedAt}
+                  onChange={(event) => setReturnPostedAt(event.target.value)}
+                  disabled={isClosedDecision || isSubmitting}
+                />
+              </div>
+              <div className={styles.field}>
+                <label className={styles.infoLabel}>Entrega ao cliente</label>
+                <input
+                  className={styles.input}
+                  type="datetime-local"
+                  value={returnedDeliveredAt}
+                  onChange={(event) => setReturnedDeliveredAt(event.target.value)}
+                  disabled={isClosedDecision || isSubmitting}
+                />
               </div>
             </div>
 

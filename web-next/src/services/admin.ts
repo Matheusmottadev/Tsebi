@@ -383,6 +383,10 @@ export interface UpdateRepairAdminPayload {
   status?: "awaiting_shipment" | "item_received" | "in_repair" | "completed" | "returned";
   rejectionReason?: string;
   adminNote?: string;
+  trackingCode?: string;
+  pieceReceivedAt?: string | null;
+  returnPostedAt?: string | null;
+  returnedDeliveredAt?: string | null;
 }
 
 export interface UpdateRepairAdminResponse {

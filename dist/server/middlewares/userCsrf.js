@@ -2,8 +2,15 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 const nodeCrypto = require("node:crypto");
 const isProduction = process.env.NODE_ENV === "production";
-const appBaseOrigin = (() => {
-    const raw = String(process.env.APP_BASE_URL || "").trim();
+function sanitizeCookieName(value, fallback = "tsebi.csrf") {
+    const raw = String(value || "").trim();
+    if (/^[!#$%&'*+\-.^_`|~0-9A-Za-z]+$/.test(raw))
+        return raw;
+    return fallback;
+}
+const userCsrfCookieName = sanitizeCookieName(process.env.USER_CSRF_COOKIE_NAME, "tsebi.csrf");
+function normalizeOrigin(value) {
+    const raw = String(value || "").trim();
     if (!raw)
         return "";
     try {
@@ -12,14 +19,89 @@ const appBaseOrigin = (() => {
     catch {
         return "";
     }
-})();
-function sanitizeCookieName(value, fallback = "tsebi.csrf") {
-    const raw = String(value || "").trim();
-    if (/^[!#$%&'*+\-.^_`|~0-9A-Za-z]+$/.test(raw))
-        return raw;
-    return fallback;
 }
-const userCsrfCookieName = sanitizeCookieName(process.env.USER_CSRF_COOKIE_NAME, "tsebi.csrf");
+function isLocalOrIpHost(hostname) {
+    const value = String(hostname || "").trim().toLowerCase();
+    if (!value)
+        return true;
+    if (value === "localhost")
+        return true;
+    if (/^\d{1,3}(\.\d{1,3}){3}$/.test(value))
+        return true;
+    return false;
+}
+function resolveCookieDomain() {
+    const explicit = String(process.env.USER_CSRF_COOKIE_DOMAIN || process.env.SESSION_COOKIE_DOMAIN || "").trim().toLowerCase();
+    if (explicit && !isLocalOrIpHost(explicit)) {
+        const normalized = explicit.replace(/^\./, "").replace(/^www\./, "");
+        return normalized ? `.${normalized}` : undefined;
+    }
+    return undefined;
+}
+const cookieDomain = resolveCookieDomain();
+function readForwardedHost(req) {
+    const raw = String(req.get("x-forwarded-host") || "").trim();
+    if (!raw)
+        return "";
+    return raw.split(",")[0]?.trim() || "";
+}
+function readForwardedProto(req) {
+    const raw = String(req.get("x-forwarded-proto") || "").trim().toLowerCase();
+    if (!raw)
+        return "";
+    return raw.split(",")[0]?.trim() || "";
+}
+function buildOriginFromHost(host, protocol) {
+    const safeHost = String(host || "").trim();
+    const safeProtocol = String(protocol || "").trim().toLowerCase();
+    if (!safeHost || !safeProtocol)
+        return "";
+    try {
+        return new URL(`${safeProtocol}://${safeHost}`).origin;
+    }
+    catch {
+        return "";
+    }
+}
+function collectAllowedOrigins(req) {
+    const allowedOrigins = new Set();
+    [
+        process.env.APP_BASE_URL,
+        process.env.PUBLIC_APP_URL,
+        process.env.SITE_URL,
+        process.env.PUBLIC_SITE_URL,
+        process.env.CORS_ORIGIN,
+    ]
+        .flatMap((value) => String(value || "").split(","))
+        .map((value) => normalizeOrigin(value))
+        .filter(Boolean)
+        .forEach((origin) => allowedOrigins.add(origin));
+    const requestHost = String(req.get("host") || "").trim();
+    const forwardedHost = readForwardedHost(req);
+    const forwardedProto = readForwardedProto(req) || (isProduction ? "https" : String(req.protocol || "http"));
+    const requestProto = String(req.protocol || "").trim().toLowerCase() || (isProduction ? "https" : "http");
+    [buildOriginFromHost(requestHost, requestProto), buildOriginFromHost(requestHost, forwardedProto)]
+        .filter(Boolean)
+        .forEach((origin) => allowedOrigins.add(origin));
+    [buildOriginFromHost(forwardedHost, forwardedProto), buildOriginFromHost(forwardedHost, requestProto)]
+        .filter(Boolean)
+        .forEach((origin) => allowedOrigins.add(origin));
+    if (cookieDomain) {
+        const baseDomain = cookieDomain.replace(/^\./, "");
+        const schemes = new Set([isProduction ? "https" : "http", "https"]);
+        schemes.forEach((scheme) => {
+            const direct = buildOriginFromHost(baseDomain, scheme);
+            if (direct)
+                allowedOrigins.add(direct);
+            if (!baseDomain.startsWith("www.") && !isLocalOrIpHost(baseDomain)) {
+                const withWww = buildOriginFromHost(`www.${baseDomain}`, scheme);
+                if (withWww)
+                    allowedOrigins.add(withWww);
+            }
+        });
+    }
+    return allowedOrigins;
+}
 function parseCookieHeader(cookieHeader) {
     const source = String(cookieHeader || "");
     const out = {};
@@ -47,6 +129,7 @@ function setUserCsrfCookie(res, token) {
         sameSite: "strict",
         secure: isProduction,
         path: "/",
+        ...(cookieDomain ? { domain: cookieDomain } : {}),
     });
 }
 function clearUserCsrfCookie(res) {
@@ -55,6 +138,7 @@ function clearUserCsrfCookie(res) {
         sameSite: "strict",
         secure: isProduction,
         path: "/",
+        ...(cookieDomain ? { domain: cookieDomain } : {}),
     });
 }
 function ensureSessionCsrfToken(req) {
@@ -76,14 +160,7 @@ function isAllowedSameOriginMutation(req) {
     const referer = String(req.get("referer") || "").trim();
     if (!requestOrigin && !referer)
         return true;
-    const allowedOrigins = new Set();
-    if (appBaseOrigin)
-        allowedOrigins.add(appBaseOrigin);
-    const host = String(req.get("host") || "").trim();
-    if (host) {
-        const scheme = isProduction ? "https" : String(req.protocol || "http");
-        allowedOrigins.add(`${scheme}://${host}`);
-    }
+    const allowedOrigins = collectAllowedOrigins(req);
     const validate = (value) => {
         if (!value)
             return true;
@@ -105,8 +182,11 @@ function isPublicAuthMutationPath(req) {
     if (!path)
         return false;
     const allowlist = new Set([
+        "/logout",
         "/register",
+        "/register-lite",
         "/login",
+        "/check-email",
         "/google",
         "/activate",
         "/email/start",

@@ -1,21 +1,16 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 const express = require("express");
-const bcrypt = require("bcrypt");
 const rateLimit = require("express-rate-limit");
 const { z } = require("zod");
-const { normalizeEmail, publicUser, findUserByEmail, findUserById, setAdminMfaCredentials, replaceAdminRecoveryCodes, consumeAdminRecoveryCode, disableAdminMfa } = require("./user-repository");
+const { hashPassword, verifyPassword } = require("./lib/password-hash");
+const { applyAdminSessionLifetime } = require("./lib/session-lifetime");
+const { adminLoginLimiter } = require("./middlewares/rateLimiter");
+const { normalizeEmail, publicUser, findUserByEmail, findUserById, updateUser, setAdminMfaCredentials, replaceAdminRecoveryCodes, consumeAdminRecoveryCode, disableAdminMfa } = require("./user-repository");
 const { ensureAdminProfile } = require("./lib/admin-profile-repository");
 const { insertAdminLoginEvent } = require("./lib/admin-login-events-repository");
 const { csrfCookieName, getAdminIdleTimeoutMs, parseCookieHeader, readAdminEmailSet, encryptMfaSecret, decryptMfaSecret, generateTotpSecret, buildTotpSetup, verifyTotpToken, normalizeRecoveryCode, generateRecoveryCodes, hashRecoveryCodes, generateCsrfToken, setAdminCsrfCookie, clearAdminCsrfCookie } = require("./lib/admin-security");
 const studioAuthRouter = express.Router();
-const loginRateLimit = rateLimit({
-    windowMs: 15 * 60 * 1000,
-    max: 10,
-    standardHeaders: true,
-    legacyHeaders: false,
-    message: { error: "TOO_MANY_ATTEMPTS" }
-});
 const mfaRateLimit = rateLimit({
     windowMs: 15 * 60 * 1000,
     max: 30,
@@ -48,6 +43,31 @@ function readAdminAuth(req) {
     if (!auth.userId)
         return null;
     return auth;
+}
+async function persistSession(req) {
+    if (!req?.session || typeof req.session.save !== "function")
+        return false;
+    return new Promise((resolve) => {
+        req.session.save((error) => {
+            if (error)
+                return resolve(false);
+            return resolve(true);
+        });
+    });
+}
+async function verifyAndUpgradePassword(user, rawPassword) {
+    const check = await verifyPassword(rawPassword, String(user?.passwordHash || "").trim());
+    if (!check.ok)
+        return { ok: false, user };
+    if (!check.needsRehash || !user?.id)
+        return { ok: true, user };
+    try {
+        const updated = await updateUser(String(user.id), { passwordHash: await hashPassword(rawPassword) });
+        return { ok: true, user: updated || user };
+    }
+    catch {
+        return { ok: true, user };
+    }
 }
 async function getSessionAdminUser(req, res) {
     const auth = readAdminAuth(req);
@@ -89,6 +109,7 @@ function grantVerifiedStudioSession(req, res, user, currentAuth) {
         lastActiveAt: now,
         csrfToken
     };
+    applyAdminSessionLifetime(req);
     setAdminCsrfCookie(res, csrfToken);
     return req.session.adminAuth;
 }
@@ -114,6 +135,7 @@ studioAuthRouter.get("/me", async (req, res) => {
             mfaVerified: false,
             csrfToken: null
         };
+        applyAdminSessionLifetime(req);
         clearAdminCsrfCookie(res);
         return res.json({
             authenticated: false,
@@ -144,6 +166,7 @@ studioAuthRouter.get("/me", async (req, res) => {
         lastActiveAt: now,
         csrfToken
     };
+    applyAdminSessionLifetime(req);
     setAdminCsrfCookie(res, csrfToken);
     return res.json({
         authenticated: true,
@@ -153,7 +176,7 @@ studioAuthRouter.get("/me", async (req, res) => {
         idleTimeoutMs: timeoutMs
     });
 });
-studioAuthRouter.post("/login", loginRateLimit, async (req, res) => {
+studioAuthRouter.post("/login", adminLoginLimiter, async (req, res) => {
     let failStage = "unknown";
     try {
         failStage = "validate_input";
@@ -176,7 +199,7 @@ studioAuthRouter.post("/login", loginRateLimit, async (req, res) => {
         }
         failStage = "load_user";
         const email = normalizeEmail(parsed.data.email);
-        const user = await findUserByEmail(email);
+        let user = await findUserByEmail(email);
         if (!user) {
             insertAdminLoginEvent({
                 adminId: null,
@@ -200,11 +223,8 @@ studioAuthRouter.post("/login", loginRateLimit, async (req, res) => {
             return res.status(401).json({ error: "INVALID_CREDENTIALS" });
         }
         failStage = "compare_password";
-        let matches = false;
-        try {
-            matches = await bcrypt.compare(parsed.data.password, storedHash);
-        }
-        catch {
+        const passwordCheck = await verifyAndUpgradePassword(user, parsed.data.password);
+        if (!passwordCheck.ok) {
             insertAdminLoginEvent({
                 adminId: null,
                 userId: user.id || null,
@@ -214,16 +234,7 @@ studioAuthRouter.post("/login", loginRateLimit, async (req, res) => {
             }).catch(() => { });
             return res.status(401).json({ error: "INVALID_CREDENTIALS" });
         }
-        if (!matches) {
-            insertAdminLoginEvent({
-                adminId: null,
-                userId: user.id || null,
-                success: false,
-                ip: req.ip || "",
-                userAgent: String(req.headers["user-agent"] || "")
-            }).catch(() => { });
-            return res.status(401).json({ error: "INVALID_CREDENTIALS" });
-        }
+        user = passwordCheck.user;
         failStage = "check_admin_allowlist";
         if (!adminEmails.has(email)) {
             clearAdminAuthSession(req, res);
@@ -248,7 +259,11 @@ studioAuthRouter.post("/login", loginRateLimit, async (req, res) => {
             lastActiveAt: 0,
             csrfToken: null
         };
+        applyAdminSessionLifetime(req);
         clearAdminCsrfCookie(res);
+        if (!(await persistSession(req))) {
+            return res.status(500).json({ error: "SESSION_SAVE_FAILED" });
+        }
         return res.json({
             ok: true,
             stage: user.adminMfaEnabled ? "mfa_required" : "mfa_setup_required",
@@ -291,7 +306,11 @@ studioAuthRouter.post("/mfa/setup/init", mfaRateLimit, async (req, res) => {
             mfaVerified: false,
             csrfToken: null
         };
+        applyAdminSessionLifetime(req);
         clearAdminCsrfCookie(res);
+        if (!(await persistSession(req))) {
+            return res.status(500).json({ error: "SESSION_SAVE_FAILED" });
+        }
         return res.json({
             stage: "mfa_setup_required",
             secret: secretBase32,
@@ -337,6 +356,9 @@ studioAuthRouter.post("/mfa/verify", mfaRateLimit, async (req, res) => {
                 recoveryCodeHashes: recoveryHashes
             });
             grantVerifiedStudioSession(req, res, persisted || state.user, state.auth);
+            if (!(await persistSession(req))) {
+                return res.status(500).json({ error: "SESSION_SAVE_FAILED" });
+            }
             return res.json({
                 ok: true,
                 stage: "authenticated",
@@ -369,6 +391,9 @@ studioAuthRouter.post("/mfa/verify", mfaRateLimit, async (req, res) => {
             return res.status(401).json({ error: "INVALID_MFA_CODE" });
         }
         grantVerifiedStudioSession(req, res, state.user, state.auth);
+        if (!(await persistSession(req))) {
+            return res.status(500).json({ error: "SESSION_SAVE_FAILED" });
+        }
         ensureAdminProfile({
             userId: state.user.id,
             email: state.user.email,
@@ -405,20 +430,20 @@ studioAuthRouter.post("/mfa/recovery/regenerate", mfaRateLimit, async (req, res)
     if (!state.user || !state.auth || !state.auth.mfaVerified) {
         return res.status(401).json({ error: "ADMIN_UNAUTHORIZED" });
     }
-    const passOk = await bcrypt.compare(parsed.data.password, state.user.passwordHash);
-    if (!passOk)
+    const passwordCheck = await verifyAndUpgradePassword(state.user, parsed.data.password);
+    if (!passwordCheck.ok)
         return res.status(401).json({ error: "INVALID_CREDENTIALS" });
     try {
-        const secretEnc = String(state.user.adminMfaSecretEnc || "").trim();
+        const secretEnc = String(passwordCheck.user.adminMfaSecretEnc || "").trim();
         if (!secretEnc)
             return res.status(500).json({ error: "ADMIN_MFA_STATE_INVALID" });
         const secret = decryptMfaSecret(secretEnc);
-        const tokenOk = verifyTotpToken(secret, state.user.email, parsed.data.token);
+        const tokenOk = verifyTotpToken(secret, passwordCheck.user.email, parsed.data.token);
         if (!tokenOk)
             return res.status(401).json({ error: "INVALID_MFA_CODE" });
         const recoveryCodes = generateRecoveryCodes(8);
         const recoveryHashes = await hashRecoveryCodes(recoveryCodes);
-        await replaceAdminRecoveryCodes(state.user.id, recoveryHashes);
+        await replaceAdminRecoveryCodes(passwordCheck.user.id, recoveryHashes);
         return res.json({ ok: true, recoveryCodes });
     }
     catch (error) {
@@ -437,28 +462,32 @@ studioAuthRouter.post("/mfa/disable", mfaRateLimit, async (req, res) => {
     if (!state.user || !state.auth || !state.auth.mfaVerified) {
         return res.status(401).json({ error: "ADMIN_UNAUTHORIZED" });
     }
-    const passOk = await bcrypt.compare(parsed.data.password, state.user.passwordHash);
-    if (!passOk)
+    const passwordCheck = await verifyAndUpgradePassword(state.user, parsed.data.password);
+    if (!passwordCheck.ok)
         return res.status(401).json({ error: "INVALID_CREDENTIALS" });
     try {
-        const secretEnc = String(state.user.adminMfaSecretEnc || "").trim();
+        const secretEnc = String(passwordCheck.user.adminMfaSecretEnc || "").trim();
         if (!secretEnc)
             return res.status(500).json({ error: "ADMIN_MFA_STATE_INVALID" });
         const secret = decryptMfaSecret(secretEnc);
-        const tokenOk = verifyTotpToken(secret, state.user.email, parsed.data.token);
+        const tokenOk = verifyTotpToken(secret, passwordCheck.user.email, parsed.data.token);
         if (!tokenOk)
             return res.status(401).json({ error: "INVALID_MFA_CODE" });
-        await disableAdminMfa(state.user.id);
+        await disableAdminMfa(passwordCheck.user.id);
         req.session.adminAuth = {
             ...state.auth,
-            userId: state.user.id,
-            email: normalizeEmail(state.user.email),
+            userId: passwordCheck.user.id,
+            email: normalizeEmail(passwordCheck.user.email),
             mfaVerified: false,
             pendingMfaSecretEnc: null,
             lastActiveAt: 0,
             csrfToken: null
         };
+        applyAdminSessionLifetime(req);
         clearAdminCsrfCookie(res);
+        if (!(await persistSession(req))) {
+            return res.status(500).json({ error: "SESSION_SAVE_FAILED" });
+        }
         return res.json({ ok: true, stage: "mfa_setup_required" });
     }
     catch (error) {

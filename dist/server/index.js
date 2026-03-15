@@ -9,19 +9,19 @@ const cors = require("cors");
 const helmet = require("helmet");
 const compression = require("compression");
 const dotenv = require("dotenv");
-const bcrypt = require("bcrypt");
 const Stripe = require("stripe");
 const rateLimit = require("express-rate-limit");
 const { z } = require("zod");
 const { createSessionMiddleware } = require("./session");
 const { attachUserCsrfToken, requireUserCsrfForMutations } = require("./middlewares/userCsrf");
+const { hashPassword } = require("./lib/password-hash");
 const { authRouter, myRouter } = require("./auth");
 const { studioAuthRouter } = require("./studio-auth");
 const { vipRouter } = require("./vip");
 const { adminRouter } = require("./admin");
 const { readJson, writeJson } = require("./lib/json-store");
 const { findUserById, upsertCheckoutGuestUser, setGuestTempPasswordIfMissing, normalizeEmail } = require("./user-repository");
-const { sendGuestCheckoutAccountCreatedEmail } = require("./lib/email-service");
+const { sendGuestCheckoutAccountCreatedEmail, sendEmail } = require("./lib/email-service");
 const { createOrder, updateOrder, findOrderById, listOrdersByUserId } = require("./lib/order-repository");
 const { notifyOrderConfirmed, notifyPaymentApproved } = require("./lib/order-notification-service");
 const { listProducts, getProductByIdentifier, searchStorefrontProducts, searchStorefrontSuggestions } = require("./lib/product-repository");
@@ -30,6 +30,7 @@ const { evaluateAccessCode } = require("./lib/access-code-repository");
 const { withTransaction } = require("./lib/db");
 const { logProductSearchEvent } = require("./lib/search-telemetry-repository");
 const { logBehaviorEvent, mergeAnonymousIdentity, getRecommendationsForActor, priceBucketFromCents } = require("./lib/behavior-analytics-repository");
+const { listAppointmentSlotsForDate, createAppointment } = require("./lib/appointments-repository");
 const { shippingRouter } = require("../src/routes/shipping.routes");
 const { adminShippingRouter } = require("../src/routes/admin.shipping.routes");
 const { adminWhatsAppRouter } = require("../src/routes/admin.whatsapp.routes");
@@ -277,6 +278,12 @@ const behaviorEventSchema = z.object({
 const identifySchema = z.object({
     anon_id: z.string().trim().min(6).max(160),
     user_id: z.string().trim().min(6).max(120)
+});
+const appointmentCreateSchema = z.object({
+    slotId: z.string().trim().uuid(),
+    serviceType: z.string().trim().min(2).max(120),
+    modality: z.string().trim().max(120).optional().default(""),
+    notes: z.string().trim().max(2000).optional().default("")
 });
 const metaCapiEventSchema = z.object({
     event_name: z.string().trim().min(1).max(80),
@@ -1404,6 +1411,7 @@ async (req, res) => {
     }
 });
 exports.app.use(express.json({
+    limit: "20mb",
     verify: (req, _res, buf) => {
         try {
             if (String(req.originalUrl || "").startsWith("/api/whatsapp/webhook")) {
@@ -1826,6 +1834,90 @@ exports.app.get("/api/recommendations", async (req, res) => {
         return res.status(500).json({ error: "RECOMMENDATIONS_FAILED" });
     }
 });
+exports.app.get("/api/appointments/slots", async (req, res) => {
+    try {
+        const date = String(req.query.date || "").trim();
+        const slots = await listAppointmentSlotsForDate(date);
+        return res.json({ slots });
+    }
+    catch (error) {
+        return res.status(Number(error?.status || 500) || 500).json({ error: error?.message || "APPOINTMENT_SLOTS_FAILED" });
+    }
+});
+exports.app.post("/api/appointments", requireUserCsrfForMutations, async (req, res) => {
+    const sessionUserId = String(req.session?.userId || "").trim();
+    if (!sessionUserId)
+        return res.status(401).json({ error: "UNAUTHORIZED" });
+    const parsed = appointmentCreateSchema.safeParse(req.body || {});
+    if (!parsed.success)
+        return res.status(400).json({ error: "INVALID_INPUT" });
+    try {
+        const appointment = await createAppointment({
+            slotId: parsed.data.slotId,
+            userId: sessionUserId,
+            serviceType: parsed.data.serviceType,
+            modality: parsed.data.modality,
+            notes: parsed.data.notes,
+        });
+        const appName = String(process.env.APP_NAME || "Tsebi").trim() || "Tsebi";
+        if (appointment.userEmail) {
+            const scheduledAt = appointment.startsAt
+                ? new Intl.DateTimeFormat("pt-BR", {
+                    dateStyle: "long",
+                    timeStyle: "short",
+                    timeZone: "America/Sao_Paulo",
+                }).format(new Date(appointment.startsAt))
+                : `${appointment.date} às ${appointment.time}`;
+            const serviceLabel = appointment.label || appointment.serviceType || "Atendimento privado";
+            const placeLabel = appointment.location
+                ? `<p style="font-size:14px;color:#444;line-height:1.6;margin:0 0 8px;"><strong>Local:</strong> ${appointment.location}</p>`
+                : "";
+            const notesLabel = appointment.notes
+                ? `<p style="font-size:14px;color:#444;line-height:1.6;margin:0 0 8px;"><strong>Observações:</strong> ${appointment.notes}</p>`
+                : "";
+            sendEmail({
+                to: appointment.userEmail,
+                subject: `${appName} — Agendamento confirmado`,
+                html: `
+          <div style="font-family:'Cormorant Garamond','Georgia',serif;max-width:480px;margin:0 auto;padding:40px 20px;color:#1a1a1a;">
+            <p style="font-size:11px;letter-spacing:.15em;color:#aaa;font-family:sans-serif;font-weight:600;margin-bottom:24px;">TSEBI</p>
+            <h2 style="font-size:22px;font-weight:400;margin-bottom:16px;">Agendamento confirmado</h2>
+            <p style="font-size:15px;line-height:1.6;color:#444;margin-bottom:20px;">
+              Olá, ${appointment.userName || "cliente"}. Seu agendamento foi confirmado com sucesso.
+            </p>
+            <div style="padding:16px;border:1px solid #eee;background:#fbfbfb;margin-bottom:24px;">
+              <p style="font-size:14px;color:#444;line-height:1.6;margin:0 0 8px;"><strong>Data e horário:</strong> ${scheduledAt}</p>
+              <p style="font-size:14px;color:#444;line-height:1.6;margin:0 0 8px;"><strong>Tipo:</strong> ${serviceLabel}</p>
+              <p style="font-size:14px;color:#444;line-height:1.6;margin:0 0 8px;"><strong>Modalidade:</strong> ${appointment.modality || "-"}</p>
+              ${placeLabel}
+              ${notesLabel}
+            </div>
+            <p style="font-size:14px;color:#888;line-height:1.6;">
+              Se precisar remarcar ou tiver dúvidas, entre em contato com nossa equipe.
+            </p>
+            <div style="margin-top:32px;padding-top:20px;border-top:1px solid #eee;">
+              <p style="font-size:11px;color:#bbb;font-family:sans-serif;">${appName} · Atendimento Privado</p>
+            </div>
+          </div>
+        `,
+                text: [
+                    `Olá, ${appointment.userName || "cliente"}. Seu agendamento foi confirmado com sucesso.`,
+                    `Data e horário: ${scheduledAt}`,
+                    `Tipo: ${serviceLabel}`,
+                    `Modalidade: ${appointment.modality || "-"}`,
+                    appointment.location ? `Local: ${appointment.location}` : "",
+                    appointment.notes ? `Observações: ${appointment.notes}` : "",
+                ]
+                    .filter(Boolean)
+                    .join("\n"),
+            }).catch(() => { });
+        }
+        return res.status(201).json({ appointment });
+    }
+    catch (error) {
+        return res.status(Number(error?.status || 500) || 500).json({ error: error?.message || "APPOINTMENT_CREATE_FAILED" });
+    }
+});
 exports.app.get("/api/products/:id", async (req, res) => {
     try {
         const product = await getProductByIdentifier(req.params.id);
@@ -2002,7 +2094,7 @@ async (req, res) => {
             if (!checkoutUser.passwordHash) {
                 try {
                     const tempPassword = generateCheckoutTempPassword();
-                    const tempPasswordHash = await bcrypt.hash(tempPassword, 12);
+                    const tempPasswordHash = await hashPassword(tempPassword);
                     const updatedGuest = await setGuestTempPasswordIfMissing(checkoutUser.id, tempPasswordHash);
                     if (updatedGuest) {
                         checkoutUser = updatedGuest;

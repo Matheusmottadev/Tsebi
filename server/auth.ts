@@ -50,6 +50,7 @@ const {
   listMyRepairRequests
 } = require("./lib/repairs-repository");
 const { sendRepairConfirmationEmail } = require("./lib/repair-email-service");
+const { logServerEvent, buildRequestLogContext, toErrorMeta } = require("./lib/observability-log");
 
 const authRouter = express.Router();
 const myRouter = express.Router();
@@ -2128,19 +2129,36 @@ myRouter.post(
     limit: "8mb"
   }),
   async (req: any, res: any) => {
+    const userId = String(req.session.userId || "").trim();
+    const requestContext = buildRequestLogContext(req, {
+      userId,
+      bodyBytes: Buffer.isBuffer(req.body) ? req.body.length : 0,
+    });
+
     if (!Buffer.isBuffer(req.body) || req.body.length === 0) {
+      logServerEvent("warn", {
+        event: "repair_photo_upload_rejected",
+        message: "Repair photo upload rejected because the request body is empty.",
+        ...requestContext,
+        errorCode: "IMAGE_REQUIRED",
+      });
       return res.status(400).json({ error: "IMAGE_REQUIRED" });
     }
 
     const detectedKind = detectImageKind(req.body);
     if (!detectedKind) {
+      logServerEvent("warn", {
+        event: "repair_photo_upload_rejected",
+        message: "Repair photo upload rejected because the image format is unsupported.",
+        ...requestContext,
+        errorCode: "UNSUPPORTED_IMAGE_TYPE",
+      });
       return res.status(415).json({ error: "UNSUPPORTED_IMAGE_TYPE" });
     }
 
     const contentType = `image/${detectedKind === "jpeg" ? "jpeg" : detectedKind}`;
 
     try {
-      const userId = String(req.session.userId || "").trim();
       const fileNameRaw = String(req.query.name || req.headers["x-file-name"] || "").trim();
       const contentTypeExtension = contentType.split("/")[1] || "jpg";
       const fileName =
@@ -2149,9 +2167,27 @@ myRouter.post(
         String(process.env.R2_REPAIRS_FOLDER || process.env.R2_FOLDER || "tsebi/repairs").trim() ||
         "tsebi/repairs";
       const publicId = `repair_${userId}_${Date.now()}_${crypto.randomUUID().slice(0, 8)}`;
+      logServerEvent("info", {
+        event: "repair_photo_upload_started",
+        message: "Repair photo upload started.",
+        ...requestContext,
+        fileName,
+        contentType,
+        storage: "r2",
+      });
       const uploaded = await getR2Upload()(req.body, { folder, publicId });
       const url = String(uploaded?.secure_url || uploaded?.url || "").trim();
       if (!url) return res.status(500).json({ error: "IMAGE_UPLOAD_FAILED" });
+
+      logServerEvent("info", {
+        event: "repair_photo_upload_succeeded",
+        message: "Repair photo upload finished successfully.",
+        ...requestContext,
+        fileName,
+        contentType,
+        storage: "r2",
+        publicId,
+      });
 
       return res.status(201).json({
         ok: true,
@@ -2169,6 +2205,16 @@ myRouter.post(
         const fileName =
           fileNameRaw.replace(/[^\w.\- ]+/g, "").slice(0, 120) || `reparo.${contentTypeExtension}`;
 
+        logServerEvent("warn", {
+          event: "repair_photo_upload_fallback_inline",
+          message: "Repair photo upload fell back to inline storage.",
+          ...requestContext,
+          fileName,
+          contentType,
+          storage: "inline",
+          ...toErrorMeta(error),
+        });
+
         return res.status(201).json({
           ok: true,
           photo: {
@@ -2180,6 +2226,14 @@ myRouter.post(
         });
       }
 
+      logServerEvent("error", {
+        event: "repair_photo_upload_failed",
+        message: "Repair photo upload failed.",
+        ...requestContext,
+        contentType,
+        ...toErrorMeta(error),
+      });
+
       return res.status(500).json({ error: "IMAGE_UPLOAD_FAILED" });
     }
   }
@@ -2187,7 +2241,24 @@ myRouter.post(
 
 myRouter.post("/repairs", requireAuth, async (req: any, res: any) => {
   const parsed = repairRequestSchema.safeParse(req.body || {});
+  const userId = String(req.session.userId || "").trim();
+  const requestContext = buildRequestLogContext(req, {
+    userId,
+    orderId: String(req.body?.orderId || "").trim(),
+    orderItemId: String(req.body?.orderItemId || "").trim(),
+    photoCount: Array.isArray(req.body?.photos) ? req.body.photos.length : 0,
+  });
   if (!parsed.success) {
+    logServerEvent("warn", {
+      event: "repair_request_create_rejected",
+      message: "Repair request rejected by input validation.",
+      ...requestContext,
+      errorCode: "INVALID_INPUT",
+      details: parsed.error.issues.map((issue: any) => ({
+        path: Array.isArray(issue.path) ? issue.path.join(".") : "",
+        message: String(issue.message || "INVALID_INPUT"),
+      })),
+    });
     return res.status(400).json({
       error: "INVALID_INPUT",
       details: parsed.error.issues.map((issue: any) => ({
@@ -2199,8 +2270,6 @@ myRouter.post("/repairs", requireAuth, async (req: any, res: any) => {
 
   try {
     await ensureRepairTables();
-
-    const userId = String(req.session.userId || "").trim();
     const user = await findUserById(userId);
     if (!user) return res.status(404).json({ error: "USER_NOT_FOUND" });
 
@@ -2221,6 +2290,13 @@ myRouter.post("/repairs", requireAuth, async (req: any, res: any) => {
 
     const orderRefRaw = String(targetOrder.orderNumber || targetOrder.id || "").trim();
     const orderRef = orderRefRaw.startsWith("#") ? orderRefRaw : `#${orderRefRaw}`;
+    logServerEvent("info", {
+      event: "repair_request_create_started",
+      message: "Repair request creation started.",
+      ...requestContext,
+      orderRef,
+      repairType: parsed.data.repairType,
+    });
     const repair = await createRepairRequest({
       userId,
       userName: String(user.name || "").trim(),
@@ -2236,6 +2312,15 @@ myRouter.post("/repairs", requireAuth, async (req: any, res: any) => {
       photos: parsed.data.photos,
     });
 
+    logServerEvent("info", {
+      event: "repair_request_created",
+      message: "Repair request persisted successfully.",
+      ...requestContext,
+      repairId: repair.id,
+      orderRef: repair.orderRef,
+      status: repair.status,
+    });
+
     try {
       await sendRepairConfirmationEmail({
         clientName: repair.userName || String(user.name || "").trim(),
@@ -2245,12 +2330,25 @@ myRouter.post("/repairs", requireAuth, async (req: any, res: any) => {
         repairDescription: repair.description,
       });
     } catch (emailError) {
-      console.error("[repairs] confirmation email failed", emailError);
+      logServerEvent("warn", {
+        event: "repair_confirmation_email_failed",
+        message: "Repair confirmation email failed after the request was created.",
+        ...requestContext,
+        repairId: repair.id,
+        orderRef: repair.orderRef,
+        ...toErrorMeta(emailError),
+      });
     }
 
     const history = await listMyRepairRequests(userId);
     return res.status(201).json({ repair, history });
   } catch (error: any) {
+    logServerEvent("error", {
+      event: "repair_request_create_failed",
+      message: "Repair request creation failed.",
+      ...requestContext,
+      ...toErrorMeta(error),
+    });
     return res.status(Number(error?.status || 500) || 500).json({ error: error?.message || "REPAIR_CREATE_FAILED" });
   }
 

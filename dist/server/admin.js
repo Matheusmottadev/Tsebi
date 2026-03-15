@@ -4,9 +4,9 @@ const express = require("express");
 const path = require("node:path");
 const rateLimit = require("express-rate-limit");
 const Stripe = require("stripe");
-const bcrypt = require("bcrypt");
 const crypto = require("node:crypto");
 const { z } = require("zod");
+const { hashPassword } = require("./lib/password-hash");
 const { listUsers, findUserById, createUser, adminUpdateUser, adminSetUserLoginDisabled, searchUsersAdmin, adminDisableUserLogin, adminSetUserTempPassword, adminRestoreUserAuthSnapshot, invalidateUserSessions, deleteUserById, normalizeEmail, createPasswordResetToken, restoreUserFromSnapshot } = require("./user-repository");
 const { listOrders, listOrdersByUserId, updateOrder, findOrderById, deleteOrderById } = require("./lib/order-repository");
 const { listAdminProducts, searchAdminProducts, getProductByIdentifier, createProduct, updateProductByIdentifier, archiveProductByIdentifier, deleteProductByIdentifier, restoreProductFromSnapshot } = require("./lib/product-repository");
@@ -16,8 +16,12 @@ const { ensureAdminProfile, updateAdminProfile } = require("./lib/admin-profile-
 const { listAdminLoginEvents } = require("./lib/admin-login-events-repository");
 const { readJson, writeJson } = require("./lib/json-store");
 const { sendEmail, sendPasswordResetEmail } = require("./lib/email-service");
+const { sendRepairAcceptedEmail, sendRepairRejectedEmail, sendRepairStageUpdateEmail } = require("./lib/repair-email-service");
 const { issueAuthEmailCode } = require("./lib/auth-email-code-repository");
 const { listAccessCodes, upsertAccessCode, deleteAccessCode, normalizeCode } = require("./lib/access-code-repository");
+const { listAdminAppointmentSlots, createAdminAppointmentSlot, updateAdminAppointmentSlot, deleteAdminAppointmentSlot, cancelAdminAppointment, rescheduleAdminAppointment, } = require("./lib/appointments-repository");
+const { ensureRepairTables, listAdminRepairRequests, updateRepairRequestStatus, } = require("./lib/repairs-repository");
+const { logServerEvent, buildRequestLogContext, toErrorMeta } = require("./lib/observability-log");
 const { query, withTransaction } = require("./lib/db");
 // Lazy load R2 upload module to avoid build-time errors
 let uploadR2Buffer = null;
@@ -186,6 +190,7 @@ const adminProfilePatchSchema = z.object({
 });
 const productOptionListSchema = z.array(z.string().trim().min(1).max(40)).max(40);
 const productVariantStockSchema = z.record(z.string().trim().min(3).max(120), z.coerce.number().int().min(0).max(999_999));
+const productAvailabilityStatusSchema = z.enum(["disponivel", "esgotando", "esgotado"]);
 const productCreateSchema = z.object({
     sku: z.string().trim().min(2).max(80),
     name: z.string().trim().min(2).max(160),
@@ -197,6 +202,7 @@ const productCreateSchema = z.object({
     sizes: productOptionListSchema.optional().default([]),
     colors: productOptionListSchema.optional().default([]),
     variantStock: productVariantStockSchema.optional().default({}),
+    availabilityStatus: productAvailabilityStatusSchema.optional().default("disponivel"),
     collection: z.string().trim().max(120).optional().default(""),
     category: z.string().trim().max(120).optional().default(""),
     subcategory: z.string().trim().max(120).optional().default(""),
@@ -222,6 +228,7 @@ const productPatchSchema = z.object({
     sizes: productOptionListSchema.optional(),
     colors: productOptionListSchema.optional(),
     variantStock: productVariantStockSchema.optional(),
+    availabilityStatus: productAvailabilityStatusSchema.optional(),
     collection: z.string().trim().max(120).optional(),
     category: z.string().trim().max(120).optional(),
     subcategory: z.string().trim().max(120).optional(),
@@ -267,6 +274,42 @@ const privateCarePatchSchema = z.object({
     decision: z.enum(["accept", "decline"]).optional(),
     adminNote: z.string().trim().max(2000).optional(),
     availableSlots: z.array(z.string().trim().min(1).max(120)).max(12).optional()
+});
+const repairPatchSchema = z.object({
+    decision: z.enum(["accept", "reject"]).optional(),
+    status: z.enum(["awaiting_shipment", "item_received", "in_repair", "completed", "returned"]).optional(),
+    rejectionReason: z.string().trim().max(2000).optional().default(""),
+    adminNote: z.string().trim().max(2000).optional().default(""),
+    trackingCode: z.string().trim().max(160).optional().default(""),
+    pieceReceivedAt: z.string().trim().max(80).nullable().optional(),
+    returnPostedAt: z.string().trim().max(80).nullable().optional(),
+    returnedDeliveredAt: z.string().trim().max(80).nullable().optional(),
+}).refine((value) => Boolean(value.decision || value.status), {
+    message: "INVALID_INPUT",
+}).refine((value) => !(value.decision && value.status), {
+    message: "INVALID_INPUT",
+});
+const appointmentSlotCreateSchema = z.object({
+    startsAt: z.string().trim().max(80),
+    endsAt: z.string().trim().max(80),
+    label: z.string().trim().max(160).optional().default(""),
+    modality: z.string().trim().max(120).optional().default(""),
+    location: z.string().trim().max(160).optional().default(""),
+    adminNote: z.string().trim().max(2000).optional().default(""),
+    capacity: z.coerce.number().int().min(1).max(20).optional().default(1),
+    isAvailable: z.coerce.boolean().optional().default(true),
+    isBlocked: z.coerce.boolean().optional().default(false)
+});
+const appointmentSlotPatchSchema = z.object({
+    startsAt: z.string().trim().max(80).optional(),
+    endsAt: z.string().trim().max(80).optional(),
+    label: z.string().trim().max(160).optional(),
+    modality: z.string().trim().max(120).optional(),
+    location: z.string().trim().max(160).optional(),
+    adminNote: z.string().trim().max(2000).optional(),
+    capacity: z.coerce.number().int().min(1).max(20).optional(),
+    isAvailable: z.coerce.boolean().optional(),
+    isBlocked: z.coerce.boolean().optional()
 });
 const accessCodeUpsertSchema = z.object({
     code: z
@@ -657,6 +700,7 @@ function sanitizeProductForAudit(product) {
         variantStock: product.variantStock && typeof product.variantStock === "object" && !Array.isArray(product.variantStock)
             ? product.variantStock
             : {},
+        availabilityStatus: String(product.availabilityStatus || "").trim().toLowerCase() || "disponivel",
         currency: product.currency || "brl",
         imageUrl: String(product.image || ""),
         active: Boolean(product.active),
@@ -676,6 +720,7 @@ function buildProductPatchFromSnapshot(product) {
         variantStock: product.variantStock && typeof product.variantStock === "object" && !Array.isArray(product.variantStock)
             ? product.variantStock
             : {},
+        availabilityStatus: String(product.availabilityStatus || "").trim().toLowerCase() || "disponivel",
         currency: product.currency || "brl",
         imageUrl: String(product.image || ""),
         active: Boolean(product.active)
@@ -1249,6 +1294,7 @@ adminRouter.get("/users/:id/orders", async (req, res) => {
         return res.json({
             orders: orders.map((order) => ({
                 id: String(order.id || ""),
+                orderNumber: String(order.orderNumber || ""),
                 createdAt: order.createdAt || null,
                 status: String(order.status || ""),
                 currency: String(order.currency || "brl"),
@@ -1272,7 +1318,7 @@ adminRouter.post("/users/:id/reset-password", sensitiveAdminRateLimit, async (re
         if (!before)
             return res.status(404).json({ error: "NOT_FOUND" });
         const tempPassword = generateTempPassword();
-        const hash = await bcrypt.hash(tempPassword, 12);
+        const hash = await hashPassword(tempPassword);
         const updated = await adminSetUserTempPassword(id, hash);
         if (!updated)
             return res.status(404).json({ error: "NOT_FOUND" });
@@ -1333,7 +1379,7 @@ adminRouter.post("/users/:id/temp-password", sensitiveAdminRateLimit, async (req
         if (!before)
             return res.status(404).json({ error: "NOT_FOUND" });
         const tempPassword = generateTempPassword();
-        const hash = await bcrypt.hash(tempPassword, 12);
+        const hash = await hashPassword(tempPassword);
         const updated = await adminSetUserTempPassword(id, hash);
         if (!updated)
             return res.status(404).json({ error: "NOT_FOUND" });
@@ -1439,7 +1485,7 @@ adminRouter.post("/users", async (req, res) => {
             name: payload.name,
             email: normalizeEmail(payload.email),
             phone: String(payload.phone || "").trim().slice(0, 40),
-            passwordHash: await bcrypt.hash(payload.password, 12),
+            passwordHash: await hashPassword(payload.password),
             birthDate: payload.birthDate || "",
             cpf: payload.cpf || "",
             cep: payload.cep || ""
@@ -1595,7 +1641,7 @@ adminRouter.get("/orders", async (req, res) => {
                 return false;
             if (!queryText)
                 return true;
-            const payload = `${order.id} ${order.userEmail || ""} ${order.userName || ""}`.toLowerCase();
+            const payload = `${order.orderNumber || ""} ${order.id} ${order.userEmail || ""} ${order.userName || ""}`.toLowerCase();
             return payload.includes(queryText);
         });
         const paged = paginateArray(filtered, limit, offset);
@@ -1637,6 +1683,7 @@ adminRouter.get("/orders", async (req, res) => {
                     : null;
             return {
                 id: order.id,
+                orderNumber: String(order.orderNumber || ""),
                 createdAt: order.createdAt || null,
                 updatedAt: order.updatedAt || null,
                 status: order.status,
@@ -1840,7 +1887,7 @@ adminRouter.patch("/orders/:id", async (req, res) => {
         if (beforeStatus === "refunded" && requestedStatus && requestedStatus !== "refunded") {
             return res.status(409).json({ error: "ORDER_REFUNDED_LOCKED" });
         }
-        if (requestedStatus === "canceled") {
+        if ((requestedStatus === "refunded" || (requestedStatus === "canceled" && before.stripePaymentIntentId)) && beforeStatus !== "refunded") {
             if (!before.stripePaymentIntentId) {
                 return res.status(409).json({ error: "ORDER_NOT_REFUNDABLE" });
             }
@@ -1850,10 +1897,17 @@ adminRouter.patch("/orders/:id", async (req, res) => {
             const refund = await stripe.refunds.create({
                 payment_intent: before.stripePaymentIntentId
             });
-            nextPatch.status = "refunded";
-            nextPatch.refundedAt = new Date().toISOString();
             nextPatch.stripeRefundId = refund?.id || before.stripeRefundId || null;
-            nextPatch.cancellationReason = nextPatch.cancellationReason || "refunded_by_admin";
+            if (requestedStatus === "refunded") {
+                nextPatch.status = "refunded";
+                nextPatch.refundedAt = new Date().toISOString();
+                nextPatch.cancellationReason = nextPatch.cancellationReason || "refunded_by_admin";
+            }
+            else {
+                nextPatch.status = "canceled";
+                nextPatch.canceledAt = nextPatch.canceledAt || before.canceledAt || new Date().toISOString();
+                nextPatch.cancellationReason = nextPatch.cancellationReason || "refund_requested_by_admin";
+            }
         }
         let updated = await updateOrder(req.params.id, nextPatch);
         if (hasItemsPatch) {
@@ -2240,6 +2294,199 @@ adminRouter.delete("/products/:id", async (req, res) => {
         return res.status(500).json({ error: "ADMIN_PRODUCT_DELETE_FAILED" });
     }
 });
+adminRouter.get("/appointment-slots", async (req, res) => {
+    try {
+        const rows = await listAdminAppointmentSlots({
+            date: String(req.query.date || "").trim(),
+            status: String(req.query.status || "").trim(),
+            includePast: String(req.query.includePast || "").trim(),
+        });
+        return res.json({ rows, total: rows.length });
+    }
+    catch (error) {
+        return res.status(Number(error?.status || 500) || 500).json({ error: error?.message || "ADMIN_APPOINTMENT_SLOTS_LIST_FAILED" });
+    }
+});
+adminRouter.post("/appointment-slots", async (req, res) => {
+    const parsed = appointmentSlotCreateSchema.safeParse(req.body || {});
+    if (!parsed.success)
+        return res.status(400).json({ error: "INVALID_INPUT" });
+    try {
+        const slot = await createAdminAppointmentSlot({
+            ...parsed.data,
+            createdByAdminId: String(req.adminProfile?.id || "").trim() || null,
+        });
+        await recordAuditLog(req, {
+            action: "create",
+            entityType: "appointment_slot",
+            entityId: slot.id,
+            summary: `Horario criado: ${slot.date} ${slot.time}`,
+            before: null,
+            after: slot,
+        });
+        return res.status(201).json({ ok: true, slot });
+    }
+    catch (error) {
+        return res.status(Number(error?.status || 500) || 500).json({ error: error?.message || "ADMIN_APPOINTMENT_SLOT_CREATE_FAILED" });
+    }
+});
+adminRouter.patch("/appointment-slots/:id", async (req, res) => {
+    const slotId = String(req.params.id || "").trim();
+    if (!slotId)
+        return res.status(400).json({ error: "INVALID_ID" });
+    const parsed = appointmentSlotPatchSchema.safeParse(req.body || {});
+    if (!parsed.success)
+        return res.status(400).json({ error: "INVALID_INPUT" });
+    if (Object.keys(parsed.data).length === 0)
+        return res.status(400).json({ error: "INVALID_INPUT" });
+    try {
+        const before = (await listAdminAppointmentSlots({ includePast: true })).find((row) => String(row.id || "") === slotId) || null;
+        const slot = await updateAdminAppointmentSlot(slotId, parsed.data);
+        await recordAuditLog(req, {
+            action: "save",
+            entityType: "appointment_slot",
+            entityId: slot.id,
+            summary: `Horario atualizado: ${slot.date} ${slot.time}`,
+            before,
+            after: slot,
+            reversible: false,
+        });
+        return res.json({ ok: true, slot });
+    }
+    catch (error) {
+        return res.status(Number(error?.status || 500) || 500).json({ error: error?.message || "ADMIN_APPOINTMENT_SLOT_UPDATE_FAILED" });
+    }
+});
+adminRouter.delete("/appointment-slots/:id", sensitiveAdminRateLimit, async (req, res) => {
+    const slotId = String(req.params.id || "").trim();
+    if (!slotId)
+        return res.status(400).json({ error: "INVALID_ID" });
+    try {
+        const before = (await listAdminAppointmentSlots({ includePast: true })).find((row) => String(row.id || "") === slotId) || null;
+        const removed = await deleteAdminAppointmentSlot(slotId);
+        await recordAuditLog(req, {
+            action: "delete",
+            entityType: "appointment_slot",
+            entityId: slotId,
+            summary: `Horario removido: ${removed.date} ${removed.time}`,
+            before,
+            after: null,
+            reversible: false,
+        });
+        return res.json({ ok: true, removed });
+    }
+    catch (error) {
+        return res.status(Number(error?.status || 500) || 500).json({ error: error?.message || "ADMIN_APPOINTMENT_SLOT_DELETE_FAILED" });
+    }
+});
+adminRouter.post("/appointments/:id/cancel", async (req, res) => {
+    const appointmentId = String(req.params.id || "").trim();
+    if (!appointmentId)
+        return res.status(400).json({ error: "INVALID_ID" });
+    try {
+        const appointment = await cancelAdminAppointment(appointmentId);
+        await recordAuditLog(req, {
+            action: "cancel",
+            entityType: "appointment",
+            entityId: appointmentId,
+            summary: `Agendamento cancelado: ${appointment.userEmail} em ${appointment.date} ${appointment.time}`,
+            before: null,
+            after: appointment,
+            reversible: false,
+        });
+        const appName = String(process.env.APP_NAME || "Tsebi").trim() || "Tsebi";
+        if (appointment.userEmail) {
+            sendEmail({
+                to: appointment.userEmail,
+                subject: `${appName} — Agendamento cancelado`,
+                html: `
+          <div style="font-family:'Cormorant Garamond','Georgia',serif;max-width:480px;margin:0 auto;padding:40px 20px;color:#1a1a1a;">
+            <p style="font-size:11px;letter-spacing:.15em;color:#aaa;font-family:sans-serif;font-weight:600;margin-bottom:24px;">TSEBI</p>
+            <h2 style="font-size:22px;font-weight:400;margin-bottom:16px;">Agendamento cancelado</h2>
+            <p style="font-size:15px;line-height:1.6;color:#444;margin-bottom:20px;">
+              Olá, ${appointment.userName || "cliente"}. Seu agendamento marcado para
+              <strong>${appointment.date} às ${appointment.time}</strong> foi cancelado pela nossa equipe.
+            </p>
+            <p style="font-size:14px;color:#888;line-height:1.6;">
+              Entre em contato conosco para remarcar ou esclarecer dúvidas.
+            </p>
+            <div style="margin-top:32px;padding-top:20px;border-top:1px solid #eee;">
+              <p style="font-size:11px;color:#bbb;font-family:sans-serif;">${appName} · Atendimento Privado</p>
+            </div>
+          </div>
+        `,
+                text: `Seu agendamento para ${appointment.date} às ${appointment.time} foi cancelado. Entre em contato para remarcar.`,
+            }).catch(() => { });
+        }
+        return res.json({ ok: true, appointment });
+    }
+    catch (error) {
+        return res.status(Number(error?.status || 500) || 500).json({ error: error?.message || "ADMIN_APPOINTMENT_CANCEL_FAILED" });
+    }
+});
+adminRouter.post("/appointments/:id/reschedule", async (req, res) => {
+    const appointmentId = String(req.params.id || "").trim();
+    if (!appointmentId)
+        return res.status(400).json({ error: "INVALID_ID" });
+    const newSlotId = String(req.body?.newSlotId || "").trim();
+    if (!newSlotId)
+        return res.status(400).json({ error: "INVALID_INPUT" });
+    try {
+        const { appointment, oldSlot } = await rescheduleAdminAppointment(appointmentId, newSlotId);
+        await recordAuditLog(req, {
+            action: "reschedule",
+            entityType: "appointment",
+            entityId: appointmentId,
+            summary: `Agendamento remarcado: ${appointment.userEmail} de ${oldSlot.startsAt} para ${appointment.startsAt}`,
+            before: { slotStartsAt: oldSlot.startsAt },
+            after: appointment,
+            reversible: false,
+        });
+        const appName = String(process.env.APP_NAME || "Tsebi").trim() || "Tsebi";
+        if (appointment.userEmail) {
+            const oldDateStr = oldSlot.startsAt
+                ? new Intl.DateTimeFormat("pt-BR", { dateStyle: "long", timeStyle: "short", timeZone: "America/Sao_Paulo" }).format(new Date(oldSlot.startsAt))
+                : "horário anterior";
+            const newDateStr = appointment.startsAt
+                ? new Intl.DateTimeFormat("pt-BR", { dateStyle: "long", timeStyle: "short", timeZone: "America/Sao_Paulo" }).format(new Date(appointment.startsAt))
+                : `${appointment.date} às ${appointment.time}`;
+            sendEmail({
+                to: appointment.userEmail,
+                subject: `${appName} — Agendamento remarcado`,
+                html: `
+          <div style="font-family:'Cormorant Garamond','Georgia',serif;max-width:480px;margin:0 auto;padding:40px 20px;color:#1a1a1a;">
+            <p style="font-size:11px;letter-spacing:.15em;color:#aaa;font-family:sans-serif;font-weight:600;margin-bottom:24px;">TSEBI</p>
+            <h2 style="font-size:22px;font-weight:400;margin-bottom:16px;">Agendamento remarcado</h2>
+            <p style="font-size:15px;line-height:1.6;color:#444;margin-bottom:20px;">
+              Olá, ${appointment.userName || "cliente"}. Seu agendamento foi remarcado pela nossa equipe.
+            </p>
+            <table style="width:100%;border-collapse:collapse;margin-bottom:24px;">
+              <tr>
+                <td style="padding:12px 16px;background:#f8f8f8;border:1px solid #eee;font-size:11px;letter-spacing:.1em;color:#aaa;font-family:sans-serif;font-weight:600;vertical-align:top;">DE</td>
+                <td style="padding:12px 16px;background:#f8f8f8;border:1px solid #eee;font-size:15px;color:#888;text-decoration:line-through;">${oldDateStr}</td>
+              </tr>
+              <tr>
+                <td style="padding:12px 16px;background:#fff;border:1px solid #eee;font-size:11px;letter-spacing:.1em;color:#aaa;font-family:sans-serif;font-weight:600;vertical-align:top;">PARA</td>
+                <td style="padding:12px 16px;background:#fff;border:1px solid #eee;font-size:15px;color:#1a1a1a;font-weight:500;">${newDateStr}</td>
+              </tr>
+            </table>
+            <p style="font-size:14px;color:#888;line-height:1.6;">
+              Em caso de dúvidas, entre em contato com nossa equipe.
+            </p>
+            <div style="margin-top:32px;padding-top:20px;border-top:1px solid #eee;">
+              <p style="font-size:11px;color:#bbb;font-family:sans-serif;">${appName} · Atendimento Privado</p>
+            </div>
+          </div>
+        `,
+                text: `Seu agendamento foi remarcado de ${oldDateStr} para ${newDateStr}.`,
+            }).catch(() => { });
+        }
+        return res.json({ ok: true, appointment });
+    }
+    catch (error) {
+        return res.status(Number(error?.status || 500) || 500).json({ error: error?.message || "ADMIN_APPOINTMENT_RESCHEDULE_FAILED" });
+    }
+});
 adminRouter.get("/private-care", async (req, res) => {
     const queryText = String(req.query.query || "").trim().toLowerCase();
     const statusRaw = String(req.query.status || "").trim();
@@ -2439,6 +2686,177 @@ adminRouter.delete("/private-care/:id", sensitiveAdminRateLimit, async (req, res
     }
     catch {
         return res.status(500).json({ error: "ADMIN_PRIVATE_CARE_DELETE_FAILED" });
+    }
+});
+adminRouter.get("/repairs", async (req, res) => {
+    const queryText = String(req.query.query || "").trim();
+    const status = String(req.query.status || "").trim();
+    const page = Math.max(1, Number(req.query.page || 1) || 1);
+    const pageSize = Math.max(1, Math.min(200, Number(req.query.pageSize || 50) || 50));
+    try {
+        await ensureRepairTables();
+        const response = await listAdminRepairRequests({
+            query: queryText,
+            status,
+            page,
+            pageSize,
+        });
+        return res.json(response);
+    }
+    catch (error) {
+        return res.status(Number(error?.status || 500) || 500).json({ error: error?.message || "ADMIN_REPAIRS_LIST_FAILED" });
+    }
+});
+adminRouter.patch("/repairs/:id", async (req, res) => {
+    const repairId = String(req.params.id || "").trim();
+    if (!repairId)
+        return res.status(400).json({ error: "INVALID_ID" });
+    const requestContext = buildRequestLogContext(req, {
+        repairId,
+        adminId: String(req.adminProfile?.id || "").trim() || null,
+        adminEmail: normalizeEmail(req.adminUser?.email || ""),
+    });
+    const parsed = repairPatchSchema.safeParse(req.body || {});
+    if (!parsed.success) {
+        logServerEvent("warn", {
+            event: "repair_admin_update_rejected",
+            message: "Repair admin update rejected by input validation.",
+            ...requestContext,
+            errorCode: "INVALID_INPUT",
+            details: parsed.error.issues.map((issue) => ({
+                path: Array.isArray(issue.path) ? issue.path.join(".") : "",
+                message: String(issue.message || "INVALID_INPUT"),
+            })),
+        });
+        return res.status(400).json({ error: "INVALID_INPUT" });
+    }
+    try {
+        await ensureRepairTables();
+        const nextStatus = parsed.data.decision === "reject"
+            ? "rejected"
+            : parsed.data.decision === "accept"
+                ? "awaiting_shipment"
+                : parsed.data.status;
+        logServerEvent("info", {
+            event: "repair_admin_update_started",
+            message: "Repair admin update started.",
+            ...requestContext,
+            actionType: parsed.data.decision ? "decision" : "progress",
+            decision: parsed.data.decision || null,
+            nextStatus,
+        });
+        const result = await updateRepairRequestStatus(repairId, {
+            action: parsed.data.decision ? "decision" : "progress",
+            status: nextStatus,
+            rejectionReason: parsed.data.rejectionReason,
+            adminNote: parsed.data.adminNote,
+            reviewedByAdminId: String(req.adminProfile?.id || "").trim() || null,
+            actorAdminName: String(req.adminUser?.name || req.adminProfile?.name || "").trim(),
+            actorAdminEmail: normalizeEmail(req.adminUser?.email || ""),
+            trackingCode: parsed.data.trackingCode,
+            pieceReceivedAt: parsed.data.pieceReceivedAt,
+            returnPostedAt: parsed.data.returnPostedAt,
+            returnedDeliveredAt: parsed.data.returnedDeliveredAt,
+        });
+        logServerEvent("info", {
+            event: "repair_admin_update_succeeded",
+            message: "Repair admin update persisted successfully.",
+            ...requestContext,
+            orderRef: result.repair.orderRef,
+            beforeStatus: result.before.status,
+            afterStatus: result.repair.status,
+        });
+        await recordAuditLog(req, {
+            action: "save",
+            entityType: "repair_request",
+            entityId: repairId,
+            summary: `Reparo atualizado para ${result.repair.status}: ${result.repair.orderRef}`,
+            before: result.before,
+            after: result.repair,
+            reversePayload: null,
+            reversible: false,
+        });
+        if (result.repair.userEmail) {
+            if (result.before.status === "pending" && result.repair.status === "awaiting_shipment") {
+                try {
+                    await sendRepairAcceptedEmail({
+                        clientName: result.repair.userName,
+                        clientEmail: result.repair.userEmail,
+                        pieceName: result.repair.pieceName,
+                        orderRef: result.repair.orderRef,
+                        repairDescription: result.repair.description,
+                    });
+                }
+                catch (emailError) {
+                    logServerEvent("error", {
+                        event: "repair_admin_accept_email_failed",
+                        message: "Repair accepted email failed after the status update.",
+                        ...requestContext,
+                        orderRef: result.repair.orderRef,
+                        repairStatus: result.repair.status,
+                        ...toErrorMeta(emailError),
+                    });
+                    throw emailError;
+                }
+            }
+            else if (result.before.status !== result.repair.status &&
+                ["item_received", "in_repair", "completed", "returned"].includes(result.repair.status)) {
+                try {
+                    await sendRepairStageUpdateEmail({
+                        clientName: result.repair.userName,
+                        clientEmail: result.repair.userEmail,
+                        pieceName: result.repair.pieceName,
+                        orderRef: result.repair.orderRef,
+                        repairDescription: result.repair.description,
+                        status: result.repair.status,
+                    });
+                }
+                catch (emailError) {
+                    logServerEvent("error", {
+                        event: "repair_admin_stage_email_failed",
+                        message: "Repair stage update email failed after the status update.",
+                        ...requestContext,
+                        orderRef: result.repair.orderRef,
+                        repairStatus: result.repair.status,
+                        ...toErrorMeta(emailError),
+                    });
+                    throw emailError;
+                }
+            }
+            else if (result.repair.status === "rejected") {
+                try {
+                    await sendRepairRejectedEmail({
+                        clientName: result.repair.userName,
+                        clientEmail: result.repair.userEmail,
+                        pieceName: result.repair.pieceName,
+                        orderRef: result.repair.orderRef,
+                        repairDescription: result.repair.description,
+                        rejectionReason: result.repair.rejectionReason,
+                    });
+                }
+                catch (emailError) {
+                    logServerEvent("error", {
+                        event: "repair_admin_reject_email_failed",
+                        message: "Repair rejected email failed after the status update.",
+                        ...requestContext,
+                        orderRef: result.repair.orderRef,
+                        repairStatus: result.repair.status,
+                        ...toErrorMeta(emailError),
+                    });
+                    throw emailError;
+                }
+            }
+        }
+        return res.json({ ok: true, repair: result.repair });
+    }
+    catch (error) {
+        logServerEvent("error", {
+            event: "repair_admin_update_failed",
+            message: "Repair admin update failed.",
+            ...requestContext,
+            ...toErrorMeta(error),
+        });
+        return res.status(Number(error?.status || 500) || 500).json({ error: error?.message || "ADMIN_REPAIR_UPDATE_FAILED" });
     }
 });
 adminRouter.get("/newsletter", async (req, res) => {

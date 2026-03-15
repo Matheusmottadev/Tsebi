@@ -26,6 +26,10 @@ export interface RepairRequest {
   description: string;
   returnAddress: string;
   photos: RepairPhoto[];
+  trackingCode: string;
+  pieceReceivedAt: string | null;
+  returnPostedAt: string | null;
+  returnedDeliveredAt: string | null;
   status: RepairStatus;
   rejectionReason: string;
   adminNote: string;

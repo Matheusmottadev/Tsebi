@@ -3,9 +3,9 @@ import type { RepairPhoto, RepairRequest } from "@/types";
 
 const userCsrfCookieName =
   String(process.env.NEXT_PUBLIC_USER_CSRF_COOKIE_NAME || "tsebi.csrf").trim() || "tsebi.csrf";
-const REPAIR_PHOTO_MAX_DIMENSION = 1600;
-const REPAIR_PHOTO_TARGET_BYTES = Math.round(2.5 * 1024 * 1024);
-const REPAIR_PHOTO_MIN_COMPRESS_BYTES = Math.round(1.2 * 1024 * 1024);
+const REPAIR_PHOTO_MAX_DIMENSION = 1280;
+const REPAIR_PHOTO_TARGET_BYTES = Math.round(1.2 * 1024 * 1024);
+const REPAIR_PHOTO_MIN_COMPRESS_BYTES = Math.round(450 * 1024);
 
 function readCookieByName(name: string): string {
   if (typeof document === "undefined") return "";
@@ -43,6 +43,14 @@ export interface UploadRepairPhotoResponse {
   photo: RepairPhoto & {
     contentType?: string;
   };
+}
+
+export interface PreparedRepairPhotoUpload {
+  file: File;
+  previewUrl: string;
+  width: number;
+  height: number;
+  sizeBytes: number;
 }
 
 function resolveUploadContentType(file: File): string {
@@ -159,6 +167,44 @@ export async function prepareRepairPhotoForUpload(file: File): Promise<File> {
   if (!bestCandidate) return file;
   if (bestCandidate.size >= file.size && file.size <= REPAIR_PHOTO_TARGET_BYTES) return file;
   return bestCandidate;
+}
+
+async function getPreparedPhotoMetadata(file: File): Promise<PreparedRepairPhotoUpload> {
+  const previewUrl = URL.createObjectURL(file);
+
+  if (typeof window === "undefined" || !String(file.type || "").startsWith("image/")) {
+    return {
+      file,
+      previewUrl,
+      width: 0,
+      height: 0,
+      sizeBytes: file.size,
+    };
+  }
+
+  try {
+    const image = await loadImageElement(file);
+    return {
+      file,
+      previewUrl,
+      width: Number(image.naturalWidth || image.width || 0),
+      height: Number(image.naturalHeight || image.height || 0),
+      sizeBytes: file.size,
+    };
+  } catch {
+    return {
+      file,
+      previewUrl,
+      width: 0,
+      height: 0,
+      sizeBytes: file.size,
+    };
+  }
+}
+
+export async function prepareRepairPhotoPreview(file: File): Promise<PreparedRepairPhotoUpload> {
+  const optimizedFile = await prepareRepairPhotoForUpload(file);
+  return getPreparedPhotoMetadata(optimizedFile);
 }
 
 function resolveUploadErrorMessage(error: unknown): string {

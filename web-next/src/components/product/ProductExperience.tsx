@@ -7,7 +7,6 @@ import { buildVariantSnapshot, getProductVariantOptions, getVariantStockQty } fr
 import { useCartStore } from "@/lib/cart/cartStore";
 import { getSmoothScrollEngine } from "@/lib/animation/smoothScrollEngine";
 import { getOrCreateAnonId, trackCommerceEvent } from "@/lib/analytics";
-import { quoteShipping } from "@/services/orders";
 import type { Product, ProductAvailabilityStatus } from "@/types";
 import { Drawer } from "./Drawer";
 import {
@@ -142,89 +141,6 @@ function normalizeText(value: unknown): string {
 function isUniqueSizeLabel(value: string): boolean {
   const normalized = normalizeText(value);
   return normalized === "unico" || normalized === "unique";
-}
-
-function normalizePostalCode(value: string): string {
-  return String(value || "").replace(/\D/g, "").slice(0, 8);
-}
-
-function formatPostalCode(value: string): string {
-  const digits = normalizePostalCode(value);
-  if (digits.length <= 5) return digits;
-  return `${digits.slice(0, 5)}-${digits.slice(5)}`;
-}
-
-function extractRangeFromUnknown(value: unknown): { minDays: number; maxDays: number } | null {
-  if (typeof value === "number" && Number.isFinite(value) && value > 0) {
-    const day = Math.max(1, Math.round(value));
-    return { minDays: day, maxDays: day };
-  }
-
-  const text = String(value || "").trim();
-  if (!text) return null;
-  const matches = text.match(/\d+/g);
-  if (!matches || matches.length === 0) return null;
-  const values = matches
-    .map((entry) => Number(entry))
-    .filter((entry) => Number.isFinite(entry) && entry > 0)
-    .map((entry) => Math.round(entry));
-  if (values.length === 0) return null;
-  const minDays = Math.min(...values);
-  const maxDays = Math.max(...values);
-  return { minDays, maxDays };
-}
-
-function resolveQuoteDeadlineRange(quote: {
-  deadlineDays?: number | null;
-  rawPayload?: unknown;
-  deadlineMinDays?: number | null;
-  deadlineMaxDays?: number | null;
-}): { minDays: number; maxDays: number } | null {
-  const explicitMin = Number(quote.deadlineMinDays);
-  const explicitMax = Number(quote.deadlineMaxDays);
-  if (Number.isFinite(explicitMin) && explicitMin > 0 && Number.isFinite(explicitMax) && explicitMax > 0) {
-    return { minDays: Math.min(explicitMin, explicitMax), maxDays: Math.max(explicitMin, explicitMax) };
-  }
-
-  const direct = extractRangeFromUnknown(quote.deadlineDays);
-  if (direct) return direct;
-
-  if (quote.rawPayload && typeof quote.rawPayload === "object" && !Array.isArray(quote.rawPayload)) {
-    const payload = quote.rawPayload as Record<string, unknown>;
-    const candidates: unknown[] = [
-      payload.custom_delivery_range,
-      payload.delivery_range,
-      payload.range,
-      payload.custom_delivery_time,
-      payload.delivery_time,
-      payload.deadline,
-      payload.time,
-    ];
-    for (const candidate of candidates) {
-      const parsed = extractRangeFromUnknown(candidate);
-      if (parsed) return parsed;
-    }
-  }
-
-  return null;
-}
-
-function formatDeliveryDeadline(range: { minDays: number; maxDays: number } | null): string {
-  if (!range) return "Prazo sob consulta";
-  const minDays = Math.max(1, Math.round(Number(range.minDays || 0)));
-  const maxDays = Math.max(minDays, Math.round(Number(range.maxDays || minDays)));
-  if (minDays === maxDays) {
-    if (minDays === 1) return "1 dia util";
-    return `${minDays} dias úteis`;
-  }
-  return `de ${minDays} a ${maxDays} dias úteis`;
-}
-
-function formatMoneyCentsBRL(cents: number): string {
-  return new Intl.NumberFormat("pt-BR", {
-    style: "currency",
-    currency: "BRL",
-  }).format(Number(cents || 0) / 100);
 }
 
 function resolveColorToken(rawColor: string): { cssColor: string; unknown: boolean } {
@@ -388,15 +304,11 @@ export function ProductExperience({ product, recommendations, imageBaseUrl }: Pr
   const [stickyToastMessage, setStickyToastMessage] = useState("");
   const [openDrawer, setOpenDrawer] = useState<DrawerKey | null>(null);
   const [showStickyBar, setShowStickyBar] = useState(false);
-  const [deliveryZip, setDeliveryZip] = useState("");
-  const [isDeliveryLoading, setIsDeliveryLoading] = useState(false);
-  const [deliveryError, setDeliveryError] = useState("");
-  const [deliverySummary, setDeliverySummary] = useState<{
-    priceCents: number;
-    deadlineRange: { minDays: number; maxDays: number } | null;
-    serviceName: string;
-    carrierName: string;
-  } | null>(null);
+  const [panelExpanded, setPanelExpanded] = useState(false);
+  const panelExpandedRef = useRef(false);
+  const gallerySentinelRef = useRef<HTMLDivElement | null>(null);
+  const mobileSheetRef = useRef<HTMLElement | null>(null);
+  const sheetTouchStartY = useRef(0);
 
   const colorRequired = colors.length > 0;
   const sizeRequired = sizes.length > 0;
@@ -541,6 +453,50 @@ export function ProductExperience({ product, recommendations, imageBaseUrl }: Pr
     };
   }, [showStickyBar]);
 
+  useEffect(() => {
+    setPanelExpanded(false);
+    panelExpandedRef.current = false;
+    if (mobileSheetRef.current) mobileSheetRef.current.scrollTop = 0;
+    document.body.style.overflow = "";
+  }, [product.id]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    // After collapse transition ends → reset internal scroll to top
+    const onTransitionEnd = (e: TransitionEvent) => {
+      if (e.propertyName !== "transform") return;
+      const sheet = mobileSheetRef.current;
+      if (!sheet) return;
+      if (!panelExpandedRef.current) {
+        sheet.scrollTop = 0;
+      }
+    };
+
+    const check = () => {
+      if (window.innerWidth > 767) return;
+      const sentinel = gallerySentinelRef.current;
+      if (!sentinel) return;
+      const rect = sentinel.getBoundingClientRect();
+      const shouldExpand = rect.top <= window.innerHeight - 172 + 20;
+      if (shouldExpand === panelExpandedRef.current) return;
+      panelExpandedRef.current = shouldExpand;
+      // Lock body scroll when panel is expanded so page doesn't scroll behind it
+      document.body.style.overflow = shouldExpand ? "hidden" : "";
+      setPanelExpanded(shouldExpand);
+    };
+
+    const sheet = mobileSheetRef.current;
+    sheet?.addEventListener("transitionend", onTransitionEnd);
+    window.addEventListener("scroll", check, { passive: true });
+    check();
+    return () => {
+      window.removeEventListener("scroll", check);
+      sheet?.removeEventListener("transitionend", onTransitionEnd);
+      document.body.style.overflow = "";
+    };
+  }, [product.id, galleryImages.length]);
+
   const syncMediaTransform = useCallback((offset: number) => {
     const mediaPanel = mediaPanelRef.current;
     if (!mediaPanel) return;
@@ -667,7 +623,10 @@ export function ProductExperience({ product, recommendations, imageBaseUrl }: Pr
       if (Math.abs(event.deltaY) < 0.5) return;
 
       const metrics = metricsRef.current;
-      if (metrics.maxMediaScroll <= 0) return;
+      if (metrics.maxMediaScroll <= 0) {
+        refreshMetrics();
+        if (metricsRef.current.maxMediaScroll <= 0) return;
+      }
       const viewportTop = window.scrollY;
       const sectionTop = metrics.sectionTop;
       const sectionBottom = metrics.sectionBottom;
@@ -706,7 +665,7 @@ export function ProductExperience({ product, recommendations, imageBaseUrl }: Pr
       resetMediaMotion();
       window.removeEventListener("wheel", onWheel as EventListener);
     };
-  }, [openDrawer, resetMediaMotion, startMediaAnimation]);
+  }, [openDrawer, refreshMetrics, resetMediaMotion, startMediaAnimation]);
 
   const showStickyToast = useCallback((message: string, scrollToTop = false) => {
     if (typeof window !== "undefined") {
@@ -770,49 +729,7 @@ export function ProductExperience({ product, recommendations, imageBaseUrl }: Pr
     setOpenDrawer(null);
   };
 
-  const handleEstimateDelivery = useCallback(async () => {
-    const normalizedZip = normalizePostalCode(deliveryZip);
-    if (normalizedZip.length !== 8) {
-      setDeliverySummary(null);
-      setDeliveryError("Informe um CEP valido com 8 digitos.");
-      return;
-    }
 
-    setIsDeliveryLoading(true);
-    setDeliveryError("");
-
-    try {
-      const response = await quoteShipping({ destinationZip: normalizedZip });
-      const quotes = Array.isArray(response?.data?.quotes) ? response.data.quotes : [];
-      if (quotes.length === 0) {
-        setDeliverySummary(null);
-        setDeliveryError("Não foi possível calcular para este CEP.");
-        return;
-      }
-
-      const bestQuote = [...quotes].sort((a, b) => {
-        const aRange = resolveQuoteDeadlineRange(a as unknown as { deadlineDays?: number | null; rawPayload?: unknown });
-        const bRange = resolveQuoteDeadlineRange(b as unknown as { deadlineDays?: number | null; rawPayload?: unknown });
-        const aMinDays = aRange ? aRange.minDays : Number.POSITIVE_INFINITY;
-        const bMinDays = bRange ? bRange.minDays : Number.POSITIVE_INFINITY;
-        if (aMinDays !== bMinDays) return aMinDays - bMinDays;
-        return Number(a.priceCents || 0) - Number(b.priceCents || 0);
-      })[0];
-
-      setDeliverySummary({
-        priceCents: Number(bestQuote.priceCents || 0),
-        deadlineRange: resolveQuoteDeadlineRange(bestQuote as unknown as { deadlineDays?: number | null; rawPayload?: unknown }),
-        serviceName: String(bestQuote.serviceName || ""),
-        carrierName: String(bestQuote.carrierName || ""),
-      });
-      setDeliveryError("");
-    } catch {
-      setDeliverySummary(null);
-      setDeliveryError("Não foi possível calcular agora. Tente novamente.");
-    } finally {
-      setIsDeliveryLoading(false);
-    }
-  }, [deliveryZip]);
 
   return (
     <div className={styles.page}>
@@ -848,6 +765,169 @@ export function ProductExperience({ product, recommendations, imageBaseUrl }: Pr
         </div>
       ) : null}
       <main className={styles.main} ref={mainRef}>
+        <section className={styles.mobileHeroStack} aria-label="Galeria do produto">
+          <figure className={styles.mobileHeroFigure}>
+            <ProductImage
+              src={galleryImages[0] || product.image || ""}
+              alt={`${product.name} - foto principal`}
+              width={1280}
+              height={1700}
+              className={styles.mobileHeroImage}
+              imageBaseUrl={imageBaseUrl}
+              priority
+            />
+            {galleryImages.length > 1 ? (
+              <div className={styles.mobileGalleryDots} aria-hidden="true">
+                {galleryImages.map((_, i) => (
+                  <span key={i} className={styles.mobileGalleryDot} />
+                ))}
+              </div>
+            ) : null}
+          </figure>
+
+          {/* Fixed bottom panel — collapsed: name+price+buy / expanded: full info */}
+          <section
+            ref={mobileSheetRef}
+            className={`${styles.mobileIntroCard}${panelExpanded ? ` ${styles.mobileIntroCardExpanded}` : ""}`}
+            aria-label="Informações do produto"
+            onTouchStart={(e) => { sheetTouchStartY.current = e.touches[0].clientY; }}
+            onTouchEnd={(e) => {
+              const dy = sheetTouchStartY.current - e.changedTouches[0].clientY;
+              const sheet = mobileSheetRef.current;
+              if (!panelExpandedRef.current && dy > 40) {
+                // Swipe up on collapsed panel → expand
+                panelExpandedRef.current = true;
+                document.body.style.overflow = "hidden";
+                setPanelExpanded(true);
+              } else if (panelExpandedRef.current && dy < -40 && (sheet?.scrollTop ?? 0) <= 2) {
+                // Swipe down from top of expanded panel → collapse
+                panelExpandedRef.current = false;
+                document.body.style.overflow = "";
+                setPanelExpanded(false);
+              }
+            }}
+          >
+            <p className={styles.mobileCollection}>{product.collection || "Colecao atual"}</p>
+            <h1 className={styles.mobileTitle}>{product.name}</h1>
+            <Price amountCents={product.unitAmount} currency={product.currency} className={styles.mobilePrice} />
+            {/* Collapsed CTA — hidden when expanded */}
+            <button
+              type="button"
+              className={styles.mobileIntroBuyButton}
+              onClick={() => handleBuy("main")}
+              disabled={isSoldOutByAvailability}
+            >
+              {isSoldOutByAvailability ? "Esgotado" : "Adicionar ao carrinho"}
+            </button>
+
+            {/* Expanded content */}
+            <div className={styles.mobileExpandedBody}>
+              {colors.length > 0 ? (
+                <>
+                  <div className={styles.colorRow}>
+                    <span>Cor</span>
+                    <span>{selectedColorLabel}</span>
+                  </div>
+                  <div className={styles.swatches}>
+                    {colors.map((color) => {
+                      const token = resolveColorToken(color);
+                      const isAvailable = !isSoldOutByAvailability && hasColorStock(product, color);
+                      return (
+                        <button
+                          key={color}
+                          type="button"
+                          className={`${styles.swatch}${selectedColor === color ? ` ${styles.swatchActive}` : ""}${!isAvailable ? ` ${styles.swatchDisabled}` : ""}`}
+                          aria-label={`Selecionar cor ${color}`}
+                          onClick={() => { if (!isAvailable) return; setSelectedColor(color); }}
+                          disabled={!isAvailable}
+                          style={{ backgroundColor: token.cssColor }}
+                        />
+                      );
+                    })}
+                  </div>
+                </>
+              ) : null}
+
+              {!isSingleUniqueSizeProduct ? (
+                <div className={styles.sizeSelectorRow}>
+                  <button type="button" className={styles.sizeTrigger} onClick={() => setOpenDrawer("size-chart")}>
+                    <span>{selectedSize ? `Tamanho: ${selectedSize}` : "Selecionar tamanho"}</span>
+                    <span className={styles.chevron}>&#8964;</span>
+                  </button>
+                </div>
+              ) : null}
+
+              <button
+                type="button"
+                className={styles.buyButton}
+                onClick={() => handleBuy("main")}
+                disabled={isSoldOutByAvailability}
+              >
+                {isSoldOutByAvailability ? "Esgotado" : "Adicionar ao carrinho"}
+              </button>
+
+              {feedback ? <p className={styles.feedback}>{feedback}</p> : null}
+
+              <div className={styles.infoRows}>
+                <button type="button" onClick={() => setOpenDrawer("details")}>Detalhes do produto</button>
+                {!isSingleUniqueSizeProduct ? (
+                  <button type="button" onClick={() => setOpenDrawer("size-chart")}>Tabela de tamanhos</button>
+                ) : null}
+                <button type="button" onClick={() => setOpenDrawer("materials")}>Materiais e cuidados</button>
+                <button type="button" onClick={() => setOpenDrawer("contact")}>Frete e devolução grátis</button>
+                <button type="button" className={styles.lastServiceOption} onClick={() => setOpenDrawer("store")}>
+                  Marque um atendimento com nossa equipe
+                </button>
+              </div>
+
+              {tailoredProducts.length > 0 ? (
+                <section className={styles.mobileTailored} aria-label="Tem a sua cara">
+                  <header className={styles.tailoredHeader}>
+                    <h2>Tem a sua cara</h2>
+                  </header>
+                  <div className={styles.tailoredGrid}>
+                    {tailoredProducts.map((item) => {
+                      const cardImages = resolveTailoredCardImages(item, galleryImages);
+                      return (
+                        <a key={item.id} href={`/product/${encodeURIComponent(item.id)}`} className={styles.tailoredCard}>
+                          <div className={styles.tailoredMedia}>
+                            <ProductImage src={cardImages.primary} alt={item.name} width={900} height={1200} className={`${styles.tailoredImage} ${styles.tailoredImagePrimary}`} imageBaseUrl={imageBaseUrl} />
+                            <ProductImage src={cardImages.secondary} alt={`${item.name} - segunda foto`} width={900} height={1200} className={`${styles.tailoredImage} ${styles.tailoredImageSecondary}`} imageBaseUrl={imageBaseUrl} />
+                            <div className={styles.tailoredMetaOverlay}>
+                              <p className={styles.tailoredName}>{item.name}</p>
+                              <Price amountCents={item.unitAmount} currency={item.currency} className={styles.tailoredPrice} />
+                            </div>
+                          </div>
+                        </a>
+                      );
+                    })}
+                  </div>
+                </section>
+              ) : null}
+            </div>
+          </section>
+
+          {galleryImages.slice(1).length > 0 ? (
+            <div className={styles.mobileGalleryStack}>
+              {galleryImages.slice(1).map((src, index) => (
+                <figure key={`mobile-${src}-${index}`} className={styles.mobileGalleryItem}>
+                  <ProductImage
+                    src={src}
+                    alt={`${product.name} - foto ${index + 2}`}
+                    width={1280}
+                    height={1700}
+                    className={styles.mobileGalleryImage}
+                    imageBaseUrl={imageBaseUrl}
+                  />
+                </figure>
+              ))}
+            </div>
+          ) : null}
+
+          {/* Sentinel: triggers panel expansion when end of gallery is reached */}
+          <div ref={gallerySentinelRef} className={styles.mobileGallerySentinel} aria-hidden="true" />
+        </section>
+
         <section className={styles.mediaPanel} ref={mediaPanelRef}>
           <div className={styles.mediaTrack} ref={mediaTrackRef}>
             {galleryImages.map((src, index) => (
@@ -868,9 +948,11 @@ export function ProductExperience({ product, recommendations, imageBaseUrl }: Pr
 
         <section className={styles.infoPanel}>
           <div className={styles.infoInner}>
-            <p className={styles.sku}>{product.sku}</p>
-            <h1 className={styles.title}>{product.name}</h1>
-            <Price amountCents={product.unitAmount} currency={product.currency} className={styles.price} />
+            <div className={styles.desktopIntroBlock}>
+              <p className={styles.sku}>{product.sku}</p>
+              <h1 className={styles.title}>{product.name}</h1>
+              <Price amountCents={product.unitAmount} currency={product.currency} className={styles.price} />
+            </div>
             <div className={styles.colorRow}>
               <span>Cor</span>
               <span>{selectedColorLabel}</span>
@@ -921,39 +1003,7 @@ export function ProductExperience({ product, recommendations, imageBaseUrl }: Pr
             </button>
 
             {feedback ? <p className={styles.feedback}>{feedback}</p> : null}
-            <section className={styles.deliveryEstimate} aria-label="Previsao de entrega">
-              <h3 className={styles.deliveryTitle}>Previsao de entrega</h3>
-              <div className={styles.deliveryForm}>
-                <input
-                  type="text"
-                  inputMode="numeric"
-                  autoComplete="postal-code"
-                  placeholder="Digite seu CEP"
-                  value={formatPostalCode(deliveryZip)}
-                  onChange={(event) => {
-                    setDeliveryZip(normalizePostalCode(event.target.value));
-                    setDeliveryError("");
-                  }}
-                  className={styles.deliveryInput}
-                  aria-label="CEP para calcular entrega"
-                />
-                <button
-                  type="button"
-                  className={styles.deliveryButton}
-                  onClick={() => void handleEstimateDelivery()}
-                  disabled={isDeliveryLoading}
-                >
-                  {isDeliveryLoading ? "Calculando..." : "Calcular"}
-                </button>
-              </div>
-              {deliverySummary ? (
-                <p className={styles.deliveryResult}>
-                  {formatDeliveryDeadline(deliverySummary.deadlineRange)} - {formatMoneyCentsBRL(deliverySummary.priceCents)}
-                  {deliverySummary.serviceName ? ` (${deliverySummary.serviceName})` : ""}
-                </p>
-              ) : null}
-              {deliveryError ? <p className={styles.deliveryError}>{deliveryError}</p> : null}
-            </section>
+
 
             <div className={styles.infoRows}>
               <button type="button" onClick={() => setOpenDrawer("details")}>Detalhes do produto</button>

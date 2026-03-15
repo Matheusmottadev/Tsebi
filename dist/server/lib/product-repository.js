@@ -741,6 +741,26 @@ function sanitizeVariantStockMap(value, validColors = [], validSizes = []) {
     });
     return normalized;
 }
+function normalizeAvailabilityStatus(value, fallback = "") {
+    const direct = String(value || "")
+        .trim()
+        .toLowerCase();
+    if (direct === "disponivel" || direct === "esgotando" || direct === "esgotado") {
+        return direct;
+    }
+    const fallbackValue = String(fallback || "")
+        .trim()
+        .toLowerCase();
+    if (fallbackValue === "disponivel" || fallbackValue === "esgotando" || fallbackValue === "esgotado") {
+        return fallbackValue;
+    }
+    return undefined;
+}
+function resolveAvailabilityStatus(explicitStatus, stockQty) {
+    if (explicitStatus)
+        return explicitStatus;
+    return Number(stockQty || 0) <= 0 ? "esgotado" : "disponivel";
+}
 function normalizeProductMetadata(value, fallback = {}) {
     const raw = asRecord(value);
     const fallbackSizes = normalizeTextList(fallback.sizes, ["?nico"]);
@@ -765,6 +785,7 @@ function normalizeProductMetadata(value, fallback = {}) {
     let sizes = normalizeTextList([...normalizeTextList(raw.sizes, []), ...normalizeTextList(extractedSizes, [])], fallbackSizes.length ? fallbackSizes : ["?nico"]);
     let colors = normalizeTextList([...normalizeTextList(raw.colors, []), ...normalizeTextList(extractedColors, [])], fallbackColors.length ? fallbackColors : ["?nico"]);
     let variantStock = sanitizeVariantStockMap(raw.variantStock ?? raw.variant_stock, colors, sizes);
+    const availabilityStatus = normalizeAvailabilityStatus(raw.availabilityStatus ?? raw.availability_status);
     const looksLikeLegacyBlackOnly = colors.length === 1 &&
         String(colors[0] || "").trim().toLowerCase() === "preto" &&
         fallbackColors.length > 1 &&
@@ -795,6 +816,7 @@ function normalizeProductMetadata(value, fallback = {}) {
         sizes: sizes.length ? sizes : ["?nico"],
         colors: colors.length ? colors : ["?nico"],
         variantStock,
+        availabilityStatus,
         collection: collection || undefined,
         category: category || undefined,
         subcategory: subcategory || undefined,
@@ -985,6 +1007,10 @@ function mapProduct(row) {
     const staticSecondaryImage = String(staticMetadata.secondaryImage || "").trim();
     const resolvedImage = dbImage || metadataImage || staticImage || DEFAULT_IMAGE;
     const resolvedSecondaryImage = metadataSecondaryImage || staticSecondaryImage;
+    const variantStockTotal = Object.values(metadata.variantStock || {}).reduce((sum, qty) => sum + Math.max(0, Number(qty || 0)), 0);
+    const stockQty = Math.max(0, Number(row?.stock_qty || 0));
+    const resolvedStock = stockQty > 0 ? stockQty : variantStockTotal;
+    const resolvedAvailability = resolveAvailabilityStatus(metadata.availabilityStatus, resolvedStock);
     const collections = normalizeTextList([String(metadata.collection || "").trim(), ...buildCollectionsArray(staticMetadata)], ["Alicerce"]);
     const resolvedGender = resolveProductGenderBySku(sku, metadata.gender || staticMetadata.gender);
     const category = sanitizeCatalogText(metadata.category || staticMetadata.category || "Colecao");
@@ -1008,13 +1034,14 @@ function mapProduct(row) {
         sizes: metadata.sizes,
         colors: metadata.colors,
         variantStock: metadata.variantStock,
+        availabilityStatus: resolvedAvailability,
         gender: resolvedGender,
         price: priceValue,
         priceLabel: formatPriceLabelFromCents(effectivePriceCents),
         priceValue,
         unitAmount: effectivePriceCents,
         currency: String(row?.currency || "brl").toLowerCase(),
-        stock: Math.max(0, Number(row?.stock_qty || 0)),
+        stock: resolvedStock,
         isNew,
         isBestSeller,
         isFeatured,
@@ -1622,6 +1649,7 @@ function buildPersistedMetadata(sku, input = {}) {
         sizes: normalized.sizes,
         colors: normalized.colors,
         variantStock: normalized.variantStock,
+        availabilityStatus: normalized.availabilityStatus,
         collection: normalized.collection,
         category: normalized.category,
         subcategory: normalized.subcategory,
@@ -1665,7 +1693,8 @@ async function createProduct(payload = {}) {
         careList: payload.careList,
         sizes: payload.sizes,
         colors: payload.colors,
-        variantStock: payload.variantStock
+        variantStock: payload.variantStock,
+        availabilityStatus: payload.availabilityStatus
     });
     const variantStockTotal = sumVariantStock(metadata);
     const resolvedStockQty = Object.prototype.hasOwnProperty.call(payload, "stockQty") && payload.stockQty != null
@@ -1747,7 +1776,8 @@ async function updateProductByIdentifier(identifier, patch = {}) {
         careList: patch.careList ?? currentMetadataRecord.careList,
         sizes: patch.sizes ?? current.sizes,
         colors: patch.colors ?? current.colors,
-        variantStock: patch.variantStock ?? current.variantStock
+        variantStock: patch.variantStock ?? current.variantStock,
+        availabilityStatus: patch.availabilityStatus ?? currentMetadataRecord.availabilityStatus
     });
     const variantStockTotal = sumVariantStock(metadata);
     const resolvedStockQty = Object.prototype.hasOwnProperty.call(patch, "stockQty") && patch.stockQty != null

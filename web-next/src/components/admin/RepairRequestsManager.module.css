@@ -4,11 +4,60 @@
   font-size: 13px;
 }
 
+.slaBanner {
+  margin: 16px 0 0;
+  padding: 12px 14px;
+  border: 1px solid #ecd9b4;
+  background: #faf3e3;
+  color: #8a5b24;
+  font-size: 13px;
+  line-height: 1.6;
+}
+
 .loading,
 .noResults {
   margin: 24px 0 0;
   color: #7a7a7a;
   font-size: 13px;
+}
+
+.filterRow {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin: -10px 0 20px;
+}
+
+.filterField {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.filterLabel {
+  margin: 0;
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: #9d9589;
+}
+
+.filterInput {
+  min-height: 44px;
+  border: 1px solid #e0e0e0;
+  padding: 0 14px;
+  font-family: var(--font-jost), sans-serif;
+  font-size: 12px;
+  font-weight: 300;
+  color: #111;
+  outline: none;
+  border-radius: 0;
+  background: #fff;
+  transition: border-color 0.2s;
+}
+
+.filterInput:focus {
+  border-color: #111;
 }
 
 .tableWrap {
@@ -41,6 +90,10 @@
   color: #8a847a;
 }
 
+.rowSlaLate td {
+  background: #fffaf2;
+}
+
 .actionCell {
   white-space: nowrap;
 }
@@ -66,6 +119,13 @@
   font-size: 11px;
   letter-spacing: 0.08em;
   text-transform: uppercase;
+}
+
+.slaInline {
+  margin: 8px 0 0;
+  color: #8a5b24;
+  font-size: 11px;
+  line-height: 1.4;
 }
 
 .status_pending {
@@ -206,9 +266,17 @@
 
 .photosSection,
 .decisionSection,
+.logisticsSection,
+.slaWarningBox,
 .reasonBox,
 .auditBox {
   margin-top: 24px;
+}
+
+.slaWarningBox {
+  border: 1px solid #ecd9b4;
+  background: #faf3e3;
+  padding: 18px;
 }
 
 .photosGrid {
@@ -253,6 +321,15 @@
   font-size: 14px;
   color: #1a1a1a;
   resize: vertical;
+}
+
+.input {
+  min-height: 52px;
+  border: 1px solid #d8d4cd;
+  background: #fff;
+  padding: 0 16px;
+  font-size: 14px;
+  color: #1a1a1a;
 }
 
 .select {
@@ -322,6 +399,7 @@
 }
 
 @media (max-width: 900px) {
+  .filterRow,
   .detailsGrid,
   .decisionSection,
   .photosGrid,

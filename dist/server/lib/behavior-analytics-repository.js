@@ -83,6 +83,12 @@ function normalizeCurrency(value) {
     const safe = foldText(value);
     return safe || "brl";
 }
+function splitTrackedProductIds(value) {
+    return String(value || "")
+        .split(/[,\s|;]+/g)
+        .map((entry) => normalizeText(entry))
+        .filter(Boolean);
+}
 function toMetaCustomData(input) {
     const value = Math.max(0, Number(input.price || 0) / 100);
     return {
@@ -264,7 +270,10 @@ async function logBehaviorEvent(input) {
             normalizeText(input.ipAddress) || null,
             normalizeText(input.occurredAt) || null,
         ]);
-        const baseWeight = Number(EVENT_WEIGHTS[eventName] || 0.5);
+        let baseWeight = Number(EVENT_WEIGHTS[eventName] || 0.5);
+        if (eventName === "favorite_toggle" && Object.prototype.hasOwnProperty.call(attributes, "active")) {
+            baseWeight = attributes.active === false ? -Math.abs(baseWeight) : Math.abs(baseWeight);
+        }
         const bucket = priceBucketFromCents(priceCents);
         const foldedCategory = sanitizeToken(safeCategory);
         const searchTokens = splitSearchTokens(queryText);
@@ -386,25 +395,73 @@ async function getRecommendationsForActor(input) {
     const placement = normalizeText(input.placement) || "search";
     const actorKey = resolveActorKey(input.userId, input.anonId);
     const activeProducts = (input.products || []).filter((item) => item && item.active !== false);
-    const [affinityRows, purchasedRows, profileRows] = await Promise.all([
+    const [affinityRows, purchasedRows, profileRows, orderRows, recentViewRows] = await Promise.all([
         query(`SELECT affinity_key, score::text FROM user_affinity WHERE actor_key = $1 ORDER BY score DESC LIMIT 120`, [actorKey]),
         query(`SELECT product_id FROM behavior_events WHERE actor_key = $1 AND event_name = 'purchase' AND product_id IS NOT NULL`, [actorKey]),
         query(`SELECT favorite_price_bucket FROM recommendation_profiles WHERE actor_key = $1 LIMIT 1`, [actorKey]),
+        input.userId
+            ? query(`
+          SELECT oi.product_sku
+          FROM orders o
+          JOIN order_items oi ON oi.order_id = o.id
+          WHERE o.user_id = $1::uuid
+          ORDER BY o.created_at DESC, oi.id ASC
+          LIMIT 120
+          `, [input.userId])
+            : Promise.resolve({ rows: [], rowCount: 0 }),
+        query(`
+      SELECT product_id
+      FROM behavior_events
+      WHERE actor_key = $1
+        AND event_name = 'view_item'
+        AND product_id IS NOT NULL
+      ORDER BY occurred_at DESC
+      LIMIT 24
+      `, [actorKey]),
     ]);
     const affinityMap = new Map();
     affinityRows.rows.forEach((row) => affinityMap.set(String(row.affinity_key || ""), Number(row.score || 0)));
-    const purchased = new Set(purchasedRows.rows.map((row) => normalizeText(row.product_id)).filter(Boolean));
+    const purchased = new Set([
+        ...purchasedRows.rows.flatMap((row) => splitTrackedProductIds(row.product_id)),
+        ...orderRows.rows.map((row) => normalizeText(row.product_sku)).filter(Boolean),
+    ].filter(Boolean));
+    const recentViewed = recentViewRows.rows.flatMap((row) => splitTrackedProductIds(row.product_id)).filter(Boolean);
+    const recentViewedSet = new Set(recentViewed);
     const favoriteBucket = normalizeText(profileRows.rows[0]?.favorite_price_bucket || "");
+    let accountFavorites = [];
+    if (input.userId) {
+        try {
+            const favoriteRows = await query(`SELECT account_favorites FROM users WHERE id = $1::uuid LIMIT 1`, [input.userId]);
+            const rawFavorites = favoriteRows.rows[0]?.account_favorites;
+            accountFavorites = Array.isArray(rawFavorites)
+                ? rawFavorites.map((entry) => normalizeText(entry)).filter(Boolean).slice(0, 60)
+                : [];
+        }
+        catch { }
+    }
+    const favoriteSet = new Set(accountFavorites);
     const topProductKey = Array.from(affinityMap.entries())
         .filter(([key]) => key.startsWith("prod:"))
         .sort((a, b) => b[1] - a[1])[0]?.[0] || "";
     const topProductSku = topProductKey.replace(/^prod:/, "");
     const topProduct = activeProducts.find((item) => sanitizeToken(item?.sku || item?.id) === topProductSku) || null;
     const thresholds = resolveBandThresholds(activeProducts);
+    const favoriteProducts = activeProducts.filter((item) => favoriteSet.has(normalizeText(item?.sku || item?.id)));
+    const viewedProducts = activeProducts.filter((item) => recentViewedSet.has(normalizeText(item?.sku || item?.id)));
+    const purchasedProducts = activeProducts.filter((item) => purchased.has(normalizeText(item?.sku || item?.id)));
+    const favoriteCategories = new Set(favoriteProducts.map((item) => sanitizeToken(item?.category || "")).filter(Boolean));
+    const viewedCategories = new Set(viewedProducts.map((item) => sanitizeToken(item?.category || "")).filter(Boolean));
+    const purchasedCategories = new Set(purchasedProducts.map((item) => sanitizeToken(item?.category || "")).filter(Boolean));
+    const favoriteMaterials = new Set(favoriteProducts.map((item) => sanitizeToken(item?.material || "")).filter(Boolean));
+    const viewedMaterials = new Set(viewedProducts.map((item) => sanitizeToken(item?.material || "")).filter(Boolean));
+    const purchasedMaterials = new Set(purchasedProducts.map((item) => sanitizeToken(item?.material || "")).filter(Boolean));
+    const favoriteCollections = new Set(favoriteProducts.map((item) => sanitizeToken(item?.collection || "")).filter(Boolean));
+    const purchasedCollections = new Set(purchasedProducts.map((item) => sanitizeToken(item?.collection || "")).filter(Boolean));
     const ranked = activeProducts.map((product) => {
         const sku = normalizeText(product?.sku || product?.id);
         const cat = sanitizeToken(product?.category || "");
         const material = sanitizeToken(product?.material || "");
+        const collection = sanitizeToken(product?.collection || "");
         const colors = Array.isArray(product?.colors) ? product.colors.map((entry) => sanitizeToken(entry)) : [];
         const searchable = foldText([product?.name, product?.category, product?.material, product?.collection].join(" "));
         const bucket = resolveProductPriceBandFromValue(Number(product?.priceValue || 0), thresholds);
@@ -432,6 +489,26 @@ async function getRecommendationsForActor(input) {
             if (sanitizeToken(topProduct.material) === material && material)
                 score += 2;
         }
+        if (favoriteSet.has(sku))
+            score += 18;
+        if (recentViewedSet.has(sku))
+            score += 8;
+        if (favoriteCategories.has(cat))
+            score += 8;
+        if (viewedCategories.has(cat))
+            score += 4;
+        if (purchasedCategories.has(cat))
+            score += 6;
+        if (material && favoriteMaterials.has(material))
+            score += 5;
+        if (material && viewedMaterials.has(material))
+            score += 2.5;
+        if (material && purchasedMaterials.has(material))
+            score += 3;
+        if (collection && favoriteCollections.has(collection))
+            score += 4;
+        if (collection && purchasedCollections.has(collection))
+            score += 3;
         if (purchased.has(sku))
             score -= 12;
         return { product, score };

@@ -1784,6 +1784,34 @@ body.menu-open::before {
   color: #fff;
 }
 
+.footer-accordion {
+  margin: 0;
+}
+
+.footer-accordion-summary {
+  border: 0;
+  background: transparent;
+  padding: 0;
+  width: 100%;
+  text-align: left;
+}
+
+.footer-accordion-summary h3 {
+  margin: 0;
+}
+
+.footer-accordion-icon {
+  display: none;
+}
+
+.footer-accordion-body {
+  margin-top: 14px;
+}
+
+.footer-accordion-content {
+  overflow: hidden;
+}
+
 .newsletter-form label {
   display: block;
   font-size: 20px;
@@ -1926,6 +1954,10 @@ body.menu-open::before {
   border-bottom-color: #000;
 }
 
+.site-footer.site-footer--light .footer-accordion-icon {
+  border-color: #000;
+}
+
 @media (max-width: 1500px) {
   .footer-grid {
     grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -1973,6 +2005,83 @@ body.menu-open::before {
 
   .newsletter-input-row input {
     font-size: 16px;
+  }
+
+  .footer-grid {
+    gap: 0;
+  }
+
+  .footer-newsletter {
+    padding-bottom: 22px;
+  }
+
+  .footer-accordion {
+    border-top: 1px solid rgba(255, 255, 255, 0.16);
+  }
+
+  .site-footer.site-footer--light .footer-accordion {
+    border-top-color: rgba(0, 0, 0, 0.12);
+  }
+
+  .footer-accordion-summary {
+    padding: 18px 0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    cursor: pointer;
+  }
+
+  .footer-accordion-summary h3 {
+    font-size: 14px;
+    margin: 0;
+    letter-spacing: 0.04em;
+  }
+
+  .footer-accordion-icon {
+    display: inline-flex;
+    width: 8px;
+    height: 8px;
+    border-right: 1.5px solid #fff;
+    border-bottom: 1.5px solid #fff;
+    transform: rotate(45deg);
+    transition: transform 0.18s ease;
+    flex: 0 0 auto;
+    margin-right: 2px;
+  }
+
+  .footer-accordion.is-open .footer-accordion-icon {
+    transform: rotate(225deg);
+  }
+
+  .footer-accordion-body {
+    margin-top: 0;
+    display: grid;
+    grid-template-rows: 0fr;
+    padding: 0;
+    transition: grid-template-rows 0.42s cubic-bezier(0.4, 0, 0.2, 1), padding-bottom 0.42s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .footer-accordion-content {
+    opacity: 0;
+    transform: translateY(-8px);
+    transition: opacity 0.34s ease, transform 0.42s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .footer-accordion.is-open .footer-accordion-body {
+    grid-template-rows: 1fr;
+    padding-bottom: 16px;
+  }
+
+  .footer-accordion.is-open .footer-accordion-content {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  .footer-accordion-body a {
+    font-size: 14px;
+    margin-bottom: 16px;
+    line-height: 1.35;
   }
 }
 
@@ -6057,6 +6166,20 @@ body:not(.home-page) .home-header.product-mode .product-search-trigger svg {
   pointer-events: none;
 }
 
+/* On mobile: product header is always white and never hides */
+@media (max-width: 767px) {
+  body:not(.home-page) .home-header.product-mode {
+    background: #fff !important;
+    border-bottom-color: #ececec !important;
+    box-shadow: none !important;
+  }
+
+  .home-header.product-mode.header--hidden {
+    transform: translate3d(0, 0, 0) !important;
+    pointer-events: auto !important;
+  }
+}
+
 /* ===== TSEBI SEARCH OVERLAY ===== */
 .sr-only{
   position: absolute;
@@ -6257,6 +6380,10 @@ body:not(.home-page) .home-header.product-mode .product-search-trigger svg {
   margin: 26px 0 0;
   width: 100%;
   max-width: none;
+}
+
+.tsebi-search-reco + .tsebi-search-reco{
+  margin-top: 64px;
 }
 
 .tsebi-search-reco-head{
@@ -6507,11 +6634,16 @@ body:not(.home-page) .home-header.product-mode .product-search-trigger svg {
     margin-top: 18px;
   }
 
+  .tsebi-search-reco + .tsebi-search-reco{
+    margin-top: 44px;
+  }
+
   .tsebi-search-reco-title{
     font-size: 16px;
   }
 
   .tsebi-search-reco-track{
+    display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
     width: calc(100% + 32px);
     margin-left: -16px;
@@ -6519,6 +6651,7 @@ body:not(.home-page) .home-header.product-mode .product-search-trigger svg {
   }
 
   .tsebi-search-reco-card{
+    min-width: 0;
     height: 300px;
     border-bottom: 1px solid rgba(17, 17, 17, 0.08);
   }

@@ -1,4 +1,7 @@
-﻿import Link from "next/link";
+"use client";
+
+import Link from "next/link";
+import { useState } from "react";
 
 type LegacyFooterProps = {
   variant?: "dark" | "light";
@@ -6,6 +9,16 @@ type LegacyFooterProps = {
 
 export function LegacyFooter({ variant = "dark" }: LegacyFooterProps) {
   const footerClassName = variant === "light" ? "site-footer site-footer--light" : "site-footer";
+  const [openSections, setOpenSections] = useState<Record<string, boolean>>({});
+  const whatsappHref = "https://wa.me/5511918596632?text=Ol%C3%A1%21%20Preciso%20de%20ajuda%20com%20meu%20pedido%20ou%20produto%20da%20Tsebi.";
+
+  function toggleSection(section: string) {
+    setOpenSections((current) => ({
+      ...current,
+      [section]: !current[section],
+    }));
+  }
+
   return (
     <footer className={footerClassName}>
       <div className="footer-grid">
@@ -75,44 +88,96 @@ export function LegacyFooter({ variant = "dark" }: LegacyFooterProps) {
           </div>
         </section>
 
-        <section className="footer-column">
-          <h3>PRECISA DE AJUDA?</h3>
-          <a href="tel:+5511934618004">Fale conosco pelo telefone (11) 93461-8004</a>
-          <Link href="/faq">FAQ</Link>
-          <Link href="/" prefetch={false}>
-            Mapa do site
-          </Link>
+        <section className={`footer-column footer-accordion ${openSections.help ? "is-open" : ""}`}>
+          <button
+            type="button"
+            className="footer-accordion-summary"
+            aria-expanded={openSections.help ? "true" : "false"}
+            onClick={() => toggleSection("help")}
+          >
+            <h3>PRECISA DE AJUDA?</h3>
+            <span className="footer-accordion-icon" aria-hidden="true" />
+          </button>
+          <div className="footer-accordion-body">
+            <div className="footer-accordion-content">
+              <a href={whatsappHref} target="_blank" rel="noreferrer">
+                Fale conosco pelo WhatsApp
+              </a>
+              <Link href="/account#private-care" prefetch={false}>
+                Agende seu atendimento especializado
+              </Link>
+              <a href="tel:+5511918596632">Fale conosco pelo telefone (11) 91859-6632</a>
+              <Link href="/faq">FAQ</Link>
+              <Link href="/" prefetch={false}>
+                Mapa do site
+              </Link>
+            </div>
+          </div>
         </section>
 
-        <section className="footer-column">
-          <h3>SERVIÇOS EXCLUSIVOS</h3>
-          <Link href="/processos">Serviços Tsebi</Link>
-          <Link href="/order" data-link-key="track-order">
-            Acompanhe seu pedido
-          </Link>
-          <Link href="/faq">Devoluções</Link>
+        <section className={`footer-column footer-accordion ${openSections.services ? "is-open" : ""}`}>
+          <button
+            type="button"
+            className="footer-accordion-summary"
+            aria-expanded={openSections.services ? "true" : "false"}
+            onClick={() => toggleSection("services")}
+          >
+            <h3>SERVIÇOS EXCLUSIVOS</h3>
+            <span className="footer-accordion-icon" aria-hidden="true" />
+          </button>
+          <div className="footer-accordion-body">
+            <div className="footer-accordion-content">
+              <Link href="/processos">Serviços Tsebi</Link>
+              <Link href="/order" data-link-key="track-order">
+                Acompanhe seu pedido
+              </Link>
+              <Link href="/faq">Devoluções</Link>
+            </div>
+          </div>
         </section>
 
-        <section className="footer-column">
-          <h3>EMPRESA</h3>
-          <Link href="/nossa-historia">A Tsebi</Link>
-          <Link href="/processos">Processos</Link>
-          <Link href="/processos">Sustentabilidade</Link>
-          <Link href="/loading-careers">Trabalhe conosco</Link>
+        <section className={`footer-column footer-accordion ${openSections.company ? "is-open" : ""}`}>
+          <button
+            type="button"
+            className="footer-accordion-summary"
+            aria-expanded={openSections.company ? "true" : "false"}
+            onClick={() => toggleSection("company")}
+          >
+            <h3>EMPRESA</h3>
+            <span className="footer-accordion-icon" aria-hidden="true" />
+          </button>
+          <div className="footer-accordion-body">
+            <div className="footer-accordion-content">
+              <Link href="/nossa-historia">A Tsebi</Link>
+              <Link href="/processos">Processos</Link>
+              <Link href="/processos">Sustentabilidade</Link>
+              <Link href="/loading-careers">Trabalhe conosco</Link>
+            </div>
+          </div>
         </section>
 
-        <section className="footer-column">
-          <h3>TERMOS E CONDIÇÕES LEGAIS</h3>
-          <Link href="/aviso-legal">Aviso legal</Link>
-          <Link href="/politica-privacidade">Política de Privacidade</Link>
-          <Link href="/cookie-policy">Política de cookies</Link>
-          <a href="/cookie-policy" data-cookie-settings-trigger="true">Configurações de cookies</a>
-          <Link href="/aviso-legal">Termos de venda</Link>
+        <section className={`footer-column footer-accordion ${openSections.legal ? "is-open" : ""}`}>
+          <button
+            type="button"
+            className="footer-accordion-summary"
+            aria-expanded={openSections.legal ? "true" : "false"}
+            onClick={() => toggleSection("legal")}
+          >
+            <h3>TERMOS E CONDIÇÕES LEGAIS</h3>
+            <span className="footer-accordion-icon" aria-hidden="true" />
+          </button>
+          <div className="footer-accordion-body">
+            <div className="footer-accordion-content">
+              <Link href="/aviso-legal">Aviso legal</Link>
+              <Link href="/politica-privacidade">Política de Privacidade</Link>
+              <Link href="/cookie-policy">Política de cookies</Link>
+              <a href="/cookie-policy" data-cookie-settings-trigger="true">Configurações de cookies</a>
+              <Link href="/aviso-legal">Termos de venda</Link>
+            </div>
+          </div>
         </section>
       </div>
       <p className="footer-cnpj">CNPJ: 65.164.000/0001-72</p>
     </footer>
   );
 }
-
-

@@ -9,8 +9,26 @@ function parseIntegerEnv(value, fallback) {
     return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
 }
 function getSessionMaxAgeMs() {
-    const days = parseIntegerEnv(process.env.SESSION_MAX_AGE_DAYS, 180);
+    const days = parseIntegerEnv(process.env.SESSION_MAX_AGE_DAYS, 30);
     return days * 24 * 60 * 60 * 1000;
+}
+function isLocalOrIpHost(hostname) {
+    const value = String(hostname || "").trim().toLowerCase();
+    if (!value)
+        return true;
+    if (value === "localhost")
+        return true;
+    if (/^\d{1,3}(\.\d{1,3}){3}$/.test(value))
+        return true;
+    return false;
+}
+function resolveCookieDomain() {
+    const explicit = String(process.env.SESSION_COOKIE_DOMAIN || "").trim().toLowerCase();
+    if (explicit && !isLocalOrIpHost(explicit)) {
+        const normalized = explicit.replace(/^\./, "").replace(/^www\./, "");
+        return normalized ? `.${normalized}` : undefined;
+    }
+    return undefined;
 }
 function createSessionStore() {
     const PgSession = pgSessionFactory(session);
@@ -35,6 +53,7 @@ function createSessionMiddleware() {
     const sessionName = process.env.SESSION_COOKIE_NAME || "tsebi.sid";
     const sessionSecret = String(process.env.SESSION_SECRET || "").trim();
     const hasStrongSessionSecret = Boolean(sessionSecret) && sessionSecret !== defaultSessionSecret && sessionSecret.length >= 32;
+    const cookieDomain = isLocalDevelopment ? undefined : resolveCookieDomain();
     if (!hasStrongSessionSecret && !isLocalDevelopment) {
         throw new Error("SESSION_SECRET_WEAK_OR_MISSING");
     }
@@ -43,18 +62,22 @@ function createSessionMiddleware() {
         console.warn("[session] using local development fallback secret");
     }
     const effectiveSessionSecret = hasStrongSessionSecret ? sessionSecret : defaultSessionSecret;
+    const cookieConfig = {
+        httpOnly: true,
+        sameSite: "lax",
+        secure: isProduction,
+        maxAge: getSessionMaxAgeMs()
+    };
+    if (cookieDomain) {
+        cookieConfig.domain = cookieDomain;
+    }
     const config = {
         name: sessionName,
         secret: effectiveSessionSecret,
         resave: false,
         saveUninitialized: false,
         rolling: true,
-        cookie: {
-            httpOnly: true,
-            sameSite: "lax",
-            secure: isProduction,
-            maxAge: getSessionMaxAgeMs()
-        }
+        cookie: cookieConfig
     };
     try {
         config.store = createSessionStore();

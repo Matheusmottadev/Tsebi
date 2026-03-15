@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import Image from "next/image";
 import { get } from "@/lib/http";
 import styles from "../account.module.css";
 
@@ -46,6 +45,17 @@ function getRecommendationKey(item: RecommendationItem, index: number): string {
   return parts.length ? `${parts.join("::")}::${index}` : `recommendation-${index}`;
 }
 
+function resolveRecommendationImageSrc(imageUrl?: string | null): string | null {
+  const raw = String(imageUrl || "").trim();
+  if (!raw) return null;
+
+  if (raw.startsWith("data:")) return raw;
+  if (/^https?:\/\//i.test(raw)) return raw;
+  if (raw.startsWith("/")) return raw;
+
+  return `/${raw.replace(/^\.?\//, "")}`;
+}
+
 export function RecommendationsTab() {
   const [items, setItems] = useState<RecommendationItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -85,34 +95,30 @@ export function RecommendationsTab() {
 
   return (
     <div className={styles.recsGrid}>
-      {items.map((item, index) => (
-        <div key={getRecommendationKey(item, index)} className={styles.recCard}>
-          <div className={styles.recImgWrap}>
-            {item.imageUrl ? (
-              <Image
-                src={item.imageUrl}
-                alt={item.name}
-                fill
-                sizes="(max-width: 768px) 50vw, 25vw"
-                style={{ objectFit: "cover" }}
-              />
-            ) : null}
-            {item.badge && <span className={styles.recBadge}>{item.badge}</span>}
+      {items.map((item, index) => {
+        const imageSrc = resolveRecommendationImageSrc(item.imageUrl);
+
+        return (
+          <div key={getRecommendationKey(item, index)} className={styles.recCard}>
+            <div className={styles.recImgWrap}>
+              {imageSrc ? <img src={imageSrc} alt={item.name} className={styles.recImg} loading="lazy" /> : null}
+              {item.badge && <span className={styles.recBadge}>{item.badge}</span>}
+            </div>
+            <p className={styles.recName}>{item.name}</p>
+            <p className={styles.recPrice}>{formatBRL(item.price)}</p>
+            {item.reason && <p className={styles.recReason}>"{item.reason}"</p>}
+            {item.href ? (
+              <a href={item.href} className={styles.btnPill}>
+                Ver produto
+              </a>
+            ) : (
+              <button type="button" className={styles.btnPill}>
+                Ver produto
+              </button>
+            )}
           </div>
-          <p className={styles.recName}>{item.name}</p>
-          <p className={styles.recPrice}>{formatBRL(item.price)}</p>
-          {item.reason && <p className={styles.recReason}>"{item.reason}"</p>}
-          {item.href ? (
-            <a href={item.href} className={styles.btnPill}>
-              Ver produto
-            </a>
-          ) : (
-            <button type="button" className={styles.btnPill}>
-              Ver produto
-            </button>
-          )}
-        </div>
-      ))}
+        );
+      })}
     </div>
   );
 }

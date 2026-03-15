@@ -54,7 +54,7 @@ const { ensureAdminProfile, updateAdminProfile } = require("./lib/admin-profile-
 const { listAdminLoginEvents } = require("./lib/admin-login-events-repository");
 const { readJson, writeJson } = require("./lib/json-store");
 const { sendEmail, sendPasswordResetEmail } = require("./lib/email-service");
-const { sendRepairAcceptedEmail, sendRepairRejectedEmail } = require("./lib/repair-email-service");
+const { sendRepairAcceptedEmail, sendRepairRejectedEmail, sendRepairStageUpdateEmail } = require("./lib/repair-email-service");
 const { issueAuthEmailCode } = require("./lib/auth-email-code-repository");
 const {
   listAccessCodes,
@@ -75,6 +75,7 @@ const {
   listAdminRepairRequests,
   updateRepairRequestStatus,
 } = require("./lib/repairs-repository");
+const { logServerEvent, buildRequestLogContext, toErrorMeta } = require("./lib/observability-log");
 const { query, withTransaction } = require("./lib/db");
 // Lazy load R2 upload module to avoid build-time errors
 let uploadR2Buffer: any = null;
@@ -358,6 +359,10 @@ const repairPatchSchema = z.object({
   status: z.enum(["awaiting_shipment", "item_received", "in_repair", "completed", "returned"]).optional(),
   rejectionReason: z.string().trim().max(2000).optional().default(""),
   adminNote: z.string().trim().max(2000).optional().default(""),
+  trackingCode: z.string().trim().max(160).optional().default(""),
+  pieceReceivedAt: z.string().trim().max(80).nullable().optional(),
+  returnPostedAt: z.string().trim().max(80).nullable().optional(),
+  returnedDeliveredAt: z.string().trim().max(80).nullable().optional(),
 }).refine((value: any) => Boolean(value.decision || value.status), {
   message: "INVALID_INPUT",
 }).refine((value: any) => !(value.decision && value.status), {
@@ -2921,9 +2926,26 @@ adminRouter.get("/repairs", async (req: any, res: any) => {
 adminRouter.patch("/repairs/:id", async (req: any, res: any) => {
   const repairId = String(req.params.id || "").trim();
   if (!repairId) return res.status(400).json({ error: "INVALID_ID" });
+  const requestContext = buildRequestLogContext(req, {
+    repairId,
+    adminId: String(req.adminProfile?.id || "").trim() || null,
+    adminEmail: normalizeEmail(req.adminUser?.email || ""),
+  });
 
   const parsed = repairPatchSchema.safeParse(req.body || {});
-  if (!parsed.success) return res.status(400).json({ error: "INVALID_INPUT" });
+  if (!parsed.success) {
+    logServerEvent("warn", {
+      event: "repair_admin_update_rejected",
+      message: "Repair admin update rejected by input validation.",
+      ...requestContext,
+      errorCode: "INVALID_INPUT",
+      details: parsed.error.issues.map((issue: any) => ({
+        path: Array.isArray(issue.path) ? issue.path.join(".") : "",
+        message: String(issue.message || "INVALID_INPUT"),
+      })),
+    });
+    return res.status(400).json({ error: "INVALID_INPUT" });
+  }
 
   try {
     await ensureRepairTables();
@@ -2931,8 +2953,17 @@ adminRouter.patch("/repairs/:id", async (req: any, res: any) => {
       parsed.data.decision === "reject"
         ? "rejected"
         : parsed.data.decision === "accept"
-          ? "awaiting_shipment"
+        ? "awaiting_shipment"
           : parsed.data.status;
+
+    logServerEvent("info", {
+      event: "repair_admin_update_started",
+      message: "Repair admin update started.",
+      ...requestContext,
+      actionType: parsed.data.decision ? "decision" : "progress",
+      decision: parsed.data.decision || null,
+      nextStatus,
+    });
 
     const result = await updateRepairRequestStatus(repairId, {
       action: parsed.data.decision ? "decision" : "progress",
@@ -2942,6 +2973,19 @@ adminRouter.patch("/repairs/:id", async (req: any, res: any) => {
       reviewedByAdminId: String(req.adminProfile?.id || "").trim() || null,
       actorAdminName: String(req.adminUser?.name || req.adminProfile?.name || "").trim(),
       actorAdminEmail: normalizeEmail(req.adminUser?.email || ""),
+      trackingCode: parsed.data.trackingCode,
+      pieceReceivedAt: parsed.data.pieceReceivedAt,
+      returnPostedAt: parsed.data.returnPostedAt,
+      returnedDeliveredAt: parsed.data.returnedDeliveredAt,
+    });
+
+    logServerEvent("info", {
+      event: "repair_admin_update_succeeded",
+      message: "Repair admin update persisted successfully.",
+      ...requestContext,
+      orderRef: result.repair.orderRef,
+      beforeStatus: result.before.status,
+      afterStatus: result.repair.status,
     });
 
     await recordAuditLog(req, {
@@ -2957,27 +3001,81 @@ adminRouter.patch("/repairs/:id", async (req: any, res: any) => {
 
     if (result.repair.userEmail) {
       if (result.before.status === "pending" && result.repair.status === "awaiting_shipment") {
-        await sendRepairAcceptedEmail({
-          clientName: result.repair.userName,
-          clientEmail: result.repair.userEmail,
-          pieceName: result.repair.pieceName,
-          orderRef: result.repair.orderRef,
-          repairDescription: result.repair.description,
-        });
+        try {
+          await sendRepairAcceptedEmail({
+            clientName: result.repair.userName,
+            clientEmail: result.repair.userEmail,
+            pieceName: result.repair.pieceName,
+            orderRef: result.repair.orderRef,
+            repairDescription: result.repair.description,
+          });
+        } catch (emailError) {
+          logServerEvent("error", {
+            event: "repair_admin_accept_email_failed",
+            message: "Repair accepted email failed after the status update.",
+            ...requestContext,
+            orderRef: result.repair.orderRef,
+            repairStatus: result.repair.status,
+            ...toErrorMeta(emailError),
+          });
+          throw emailError;
+        }
+      } else if (
+        result.before.status !== result.repair.status &&
+        ["item_received", "in_repair", "completed", "returned"].includes(result.repair.status)
+      ) {
+        try {
+          await sendRepairStageUpdateEmail({
+            clientName: result.repair.userName,
+            clientEmail: result.repair.userEmail,
+            pieceName: result.repair.pieceName,
+            orderRef: result.repair.orderRef,
+            repairDescription: result.repair.description,
+            status: result.repair.status as "item_received" | "in_repair" | "completed" | "returned",
+          });
+        } catch (emailError) {
+          logServerEvent("error", {
+            event: "repair_admin_stage_email_failed",
+            message: "Repair stage update email failed after the status update.",
+            ...requestContext,
+            orderRef: result.repair.orderRef,
+            repairStatus: result.repair.status,
+            ...toErrorMeta(emailError),
+          });
+          throw emailError;
+        }
       } else if (result.repair.status === "rejected") {
-        await sendRepairRejectedEmail({
-          clientName: result.repair.userName,
-          clientEmail: result.repair.userEmail,
-          pieceName: result.repair.pieceName,
-          orderRef: result.repair.orderRef,
-          repairDescription: result.repair.description,
-          rejectionReason: result.repair.rejectionReason,
-        });
+        try {
+          await sendRepairRejectedEmail({
+            clientName: result.repair.userName,
+            clientEmail: result.repair.userEmail,
+            pieceName: result.repair.pieceName,
+            orderRef: result.repair.orderRef,
+            repairDescription: result.repair.description,
+            rejectionReason: result.repair.rejectionReason,
+          });
+        } catch (emailError) {
+          logServerEvent("error", {
+            event: "repair_admin_reject_email_failed",
+            message: "Repair rejected email failed after the status update.",
+            ...requestContext,
+            orderRef: result.repair.orderRef,
+            repairStatus: result.repair.status,
+            ...toErrorMeta(emailError),
+          });
+          throw emailError;
+        }
       }
     }
 
     return res.json({ ok: true, repair: result.repair });
   } catch (error: any) {
+    logServerEvent("error", {
+      event: "repair_admin_update_failed",
+      message: "Repair admin update failed.",
+      ...requestContext,
+      ...toErrorMeta(error),
+    });
     return res.status(Number(error?.status || 500) || 500).json({ error: error?.message || "ADMIN_REPAIR_UPDATE_FAILED" });
   }
 });

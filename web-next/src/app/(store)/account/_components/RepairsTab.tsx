@@ -5,7 +5,7 @@ import { listMyOrders } from "@/services/orders";
 import {
   createRepairRequest,
   listMyRepairs,
-  prepareRepairPhotoForUpload,
+  prepareRepairPhotoPreview,
   resolveRepairRequestErrorMessage,
   resolveUploadErrorMessage,
   uploadRepairPhoto,
@@ -55,6 +55,33 @@ type DeliveredItemOption = {
   imageUrl: string | null;
 };
 
+type LocalRepairPhotoUpload = {
+  photo: RepairPhoto;
+  previewUrl: string;
+  width: number;
+  height: number;
+  sizeBytes: number;
+};
+
+const REPAIR_TIMELINE_STEPS = [
+  "Solicitação",
+  "Aguardando envio",
+  "Peça recebida",
+  "Em reparo",
+  "Finalizado",
+  "Devolvido",
+] as const;
+
+const REPAIR_TIMELINE_INDEX: Record<RepairRequest["status"], number> = {
+  pending: 0,
+  awaiting_shipment: 1,
+  item_received: 2,
+  in_repair: 3,
+  completed: 4,
+  returned: 5,
+  rejected: 0,
+};
+
 function formatDateTime(value: string | null): string {
   if (!value) return "-";
   const date = new Date(value);
@@ -70,6 +97,22 @@ function formatRepairStatus(status: RepairRequest["status"]): string {
   if (status === "returned") return "Devolvido";
   if (status === "rejected") return "Recusado";
   return "Em análise";
+}
+
+function getRepairTimelineNote(repair: RepairRequest): string {
+  if (repair.status === "rejected") return "Solicitação recusada pela equipe.";
+  if (repair.status === "pending") return "Solicitação recebida e aguardando análise.";
+  if (repair.status === "awaiting_shipment") return "Aprovado. Aguarde as instruções de envio da peça.";
+  if (repair.status === "item_received") return "Sua peça já foi recebida pelo ateliê.";
+  if (repair.status === "in_repair") return "O reparo está em andamento no ateliê.";
+  if (repair.status === "completed") return "O reparo foi concluído e está em preparação de envio.";
+  return "A devolução da peça já foi concluída.";
+}
+
+function formatPhotoSize(sizeBytes: number): string {
+  if (!sizeBytes || sizeBytes <= 0) return "-";
+  if (sizeBytes >= 1024 * 1024) return `${(sizeBytes / (1024 * 1024)).toFixed(1)} MB`;
+  return `${Math.max(1, Math.round(sizeBytes / 1024))} KB`;
 }
 
 function validateRepairForm(params: {
@@ -92,15 +135,19 @@ function validateRepairForm(params: {
 export function RepairsTab({ user }: Props) {
   const [deliveredItems, setDeliveredItems] = useState<DeliveredItemOption[]>([]);
   const [history, setHistory] = useState<RepairRequest[]>([]);
+  const [isRequestFormVisible, setIsRequestFormVisible] = useState(false);
+  const [visibleStepIndexes, setVisibleStepIndexes] = useState<number[]>([]);
   const [selectedItemKey, setSelectedItemKey] = useState("");
   const [repairType, setRepairType] = useState(REPAIR_TYPES[0] ?? "");
   const [description, setDescription] = useState("");
-  const [photos, setPhotos] = useState<RepairPhoto[]>([]);
+  const [photoUploads, setPhotoUploads] = useState<LocalRepairPhotoUpload[]>([]);
   const [submitting, setSubmitting] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const photoUploadsRef = useRef<LocalRepairPhotoUpload[]>([]);
+  const stepRefs = useRef<Array<HTMLDivElement | null>>([]);
 
   const defaultAddress =
     user.addresses.find((address) => address.id === user.defaultAddressId) ?? user.addresses[0] ?? null;
@@ -109,6 +156,10 @@ export function RepairsTab({ user }: Props) {
       ? `${defaultAddress.street}${defaultAddress.number ? `, ${defaultAddress.number}` : ""} - ${defaultAddress.city}, ${defaultAddress.state}`
       : ""
   );
+
+  useEffect(() => {
+    photoUploadsRef.current = photoUploads;
+  }, [photoUploads]);
 
   useEffect(() => {
     let cancelled = false;
@@ -155,7 +206,7 @@ export function RepairsTab({ user }: Props) {
   const trimmedReturnAddress = returnAddress.trim();
   const descriptionTooShort = trimmedDescription.length > 0 && trimmedDescription.length < 4;
   const returnAddressTooShort = trimmedReturnAddress.length > 0 && trimmedReturnAddress.length < 8;
-  const maxPhotosReached = photos.length >= 8;
+  const maxPhotosReached = photoUploads.length >= 8;
   const submitDisabled =
     submitting ||
     !selectedItem ||
@@ -164,16 +215,27 @@ export function RepairsTab({ user }: Props) {
     trimmedReturnAddress.length < 8;
 
   async function handlePhotoSelection(event: React.ChangeEvent<HTMLInputElement>) {
-    const remainingSlots = Math.max(0, 8 - photos.length);
+    const remainingSlots = Math.max(0, 8 - photoUploads.length);
     const files = Array.from(event.target.files || []).slice(0, Math.min(5, remainingSlots));
     if (!files.length) return;
 
     setUploading(true);
     setSubmitError(null);
     try {
-      const optimizedFiles = await Promise.all(files.map((file) => prepareRepairPhotoForUpload(file)));
-      const uploaded = await Promise.all(optimizedFiles.map((file) => uploadRepairPhoto(file)));
-      setPhotos((current) => [...current, ...uploaded].slice(0, 8));
+      const preparedUploads = await Promise.all(files.map((file) => prepareRepairPhotoPreview(file)));
+      const uploadedPhotos = await Promise.all(preparedUploads.map((item) => uploadRepairPhoto(item.file)));
+      setPhotoUploads((current) =>
+        [
+          ...current,
+          ...preparedUploads.map((item, index) => ({
+            photo: uploadedPhotos[index],
+            previewUrl: item.previewUrl,
+            width: item.width,
+            height: item.height,
+            sizeBytes: item.sizeBytes,
+          })),
+        ].slice(0, 8)
+      );
     } catch (error) {
       setSubmitError(resolveUploadErrorMessage(error));
     } finally {
@@ -206,11 +268,14 @@ export function RepairsTab({ user }: Props) {
         repairType: repairType.trim(),
         description: trimmedDescription,
         returnAddress: trimmedReturnAddress,
-        photos,
+        photos: photoUploads.map((item) => item.photo),
       });
       setHistory(response.history);
       setDescription("");
-      setPhotos([]);
+      setPhotoUploads((current) => {
+        current.forEach((item) => URL.revokeObjectURL(item.previewUrl));
+        return [];
+      });
       setSubmitted(true);
       window.setTimeout(() => setSubmitted(false), 5000);
     } catch (error) {
@@ -219,6 +284,38 @@ export function RepairsTab({ user }: Props) {
       setSubmitting(false);
     }
   }
+
+  useEffect(() => {
+    return () => {
+      photoUploadsRef.current.forEach((item) => URL.revokeObjectURL(item.previewUrl));
+    };
+  }, []);
+
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        setVisibleStepIndexes((current) => {
+          const next = new Set(current);
+          entries.forEach((entry) => {
+            if (!entry.isIntersecting) return;
+            const index = Number(entry.target.getAttribute("data-step-index"));
+            if (!Number.isNaN(index)) next.add(index);
+          });
+          return Array.from(next).sort((a, b) => a - b);
+        });
+      },
+      {
+        threshold: 0.2,
+        rootMargin: "0px 0px -12% 0px",
+      }
+    );
+
+    stepRefs.current.forEach((element) => {
+      if (element) observer.observe(element);
+    });
+
+    return () => observer.disconnect();
+  }, []);
 
   return (
     <div>
@@ -231,8 +328,16 @@ export function RepairsTab({ user }: Props) {
       </div>
 
       <div className={styles.stepsRowRepair}>
-        {STEPS.map(({ num, title, desc }) => (
-          <div key={num} className={styles.step}>
+        {STEPS.map(({ num, title, desc }, index) => (
+          <div
+            key={num}
+            ref={(element) => {
+              stepRefs.current[index] = element;
+            }}
+            data-step-index={index}
+            className={`${styles.step} ${visibleStepIndexes.includes(index) ? styles.stepVisible : ""}`}
+            style={{ transitionDelay: `${index * 90}ms` }}
+          >
             <span className={styles.stepNum}>{num}</span>
             <p className={styles.stepTitle}>{title}</p>
             <p className={styles.stepDesc}>{desc}</p>
@@ -240,6 +345,22 @@ export function RepairsTab({ user }: Props) {
         ))}
       </div>
 
+      {!isRequestFormVisible ? (
+        <div className={styles.repairsLaunchCard}>
+          <p className={styles.repairSummaryEyebrow}>Atendimento de reparos</p>
+          <h3 className={styles.repairsLaunchTitle}>Abra sua solicitacao de reparo</h3>
+          <p className={styles.repairsLaunchText}>
+            Reunimos formulario e resumo no mesmo fluxo para facilitar o preenchimento e manter tudo mais limpo.
+          </p>
+          <button
+            type="button"
+            className={`${styles.btnPill} ${styles.btnPillFilled}`}
+            onClick={() => setIsRequestFormVisible(true)}
+          >
+            Solicitar reparo
+          </button>
+        </div>
+      ) : (
       <div className={styles.repairsLayout}>
         <form onSubmit={handleSubmit} className={styles.repairsFormCard}>
           <div className={styles.formGrid}>
@@ -326,15 +447,19 @@ export function RepairsTab({ user }: Props) {
                 onChange={handlePhotoSelection}
                 className={styles.hiddenFileInput}
               />
-              {photos.length > 0 ? (
+              {photoUploads.length > 0 ? (
                 <div className={styles.repairPhotosGrid}>
-                  {photos.map((photo) => (
-                    <div key={`${photo.url}-${photo.fileName}`} className={styles.repairPhotoCard}>
+                  {photoUploads.map((item) => (
+                    <div key={`${item.photo.url}-${item.photo.fileName}`} className={styles.repairPhotoCard}>
                       <img
-                        src={photo.url}
-                        alt={photo.fileName || "Foto do reparo"}
+                        src={item.previewUrl}
+                        alt={item.photo.fileName || "Foto do reparo"}
                         className={styles.repairPhotoImage}
                       />
+                      <div className={styles.repairPhotoMeta}>
+                        <span>{item.width > 0 && item.height > 0 ? `${item.width}×${item.height}` : "Imagem"}</span>
+                        <span>{formatPhotoSize(item.sizeBytes)}</span>
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -345,7 +470,7 @@ export function RepairsTab({ user }: Props) {
               )}
               <p className={styles.fieldHint}>
                 Aceitamos JPG, PNG, WEBP ou GIF, com até 8 MB por imagem e no máximo 8 fotos. As imagens são
-                otimizadas automaticamente antes do envio.
+                otimizadas automaticamente antes do envio, com preview limitado a 1280 px e cerca de 1,2 MB.
               </p>
             </div>
           </div>
@@ -380,7 +505,7 @@ export function RepairsTab({ user }: Props) {
             </div>
             <div className={styles.repairsSummaryRow}>
               <span className={styles.repairsSummaryLabel}>Fotos enviadas</span>
-              <span className={styles.repairsSummaryValue}>{photos.length}</span>
+              <span className={styles.repairsSummaryValue}>{photoUploads.length}</span>
             </div>
             <div className={styles.repairsSummaryRow}>
               <span className={styles.repairsSummaryLabel}>Endereço de devolução</span>
@@ -396,6 +521,7 @@ export function RepairsTab({ user }: Props) {
           </div>
         </aside>
       </div>
+      )}
 
       <section className={styles.repairsHistorySection}>
         <p className={styles.sectionEyebrow}>Suas solicitações</p>
@@ -415,6 +541,62 @@ export function RepairsTab({ user }: Props) {
                   </span>
                 </div>
                 <p className={styles.repairHistoryType}>{repair.repairType}</p>
+                <div className={styles.repairTimelineBlock}>
+                  <div className={styles.repairTimelineHeader}>
+                    <p className={styles.repairTimelineTitle}>Acompanhamento</p>
+                    <p className={styles.repairTimelineCurrent}>{formatRepairStatus(repair.status)}</p>
+                  </div>
+                  <div className={styles.repairTimelineRow}>
+                    {REPAIR_TIMELINE_STEPS.map((step, index) => {
+                      const currentIndex = REPAIR_TIMELINE_INDEX[repair.status];
+                      const isRejected = repair.status === "rejected";
+                      const isDone = !isRejected && index < currentIndex;
+                      const isCurrent = !isRejected && index === currentIndex;
+                      const isLocked = isRejected && index > 0;
+
+                      return (
+                        <div key={`${repair.id}-${step}`} className={styles.repairTimelineStep}>
+                          <div className={styles.repairTimelineTrack}>
+                            <span
+                              className={[
+                                styles.repairTimelineDot,
+                                isDone ? styles.repairTimelineDotDone : "",
+                                isCurrent ? styles.repairTimelineDotCurrent : "",
+                                isLocked ? styles.repairTimelineDotLocked : "",
+                              ]
+                                .filter(Boolean)
+                                .join(" ")}
+                            />
+                            {index < REPAIR_TIMELINE_STEPS.length - 1 ? (
+                              <span
+                                className={[
+                                  styles.repairTimelineLine,
+                                  !isRejected && index < currentIndex ? styles.repairTimelineLineDone : "",
+                                  isLocked ? styles.repairTimelineLineLocked : "",
+                                ]
+                                  .filter(Boolean)
+                                  .join(" ")}
+                              />
+                            ) : null}
+                          </div>
+                          <p
+                            className={[
+                              styles.repairTimelineLabel,
+                              isCurrent ? styles.repairTimelineLabelCurrent : "",
+                              isDone ? styles.repairTimelineLabelDone : "",
+                              isLocked ? styles.repairTimelineLabelLocked : "",
+                            ]
+                              .filter(Boolean)
+                              .join(" ")}
+                          >
+                            {step}
+                          </p>
+                        </div>
+                      );
+                    })}
+                  </div>
+                  <p className={styles.repairTimelineNote}>{getRepairTimelineNote(repair)}</p>
+                </div>
                 <p className={styles.repairHistoryText}>{repair.description}</p>
                 {repair.photos.length > 0 ? (
                   <div className={styles.repairHistoryPhotos}>

@@ -1,11 +1,13 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 const express = require("express");
-const bcrypt = require("bcrypt");
 const crypto = require("node:crypto");
 const Stripe = require("stripe");
 const rateLimit = require("express-rate-limit");
 const { z } = require("zod");
+const { hashPassword, verifyPassword } = require("./lib/password-hash");
+const { applyCustomerSessionLifetime } = require("./lib/session-lifetime");
+const { loginLimiter, forgotPasswordLimiter, registerLimiter } = require("./middlewares/rateLimiter");
 const { generateRegistrationOptions, verifyRegistrationResponse, generateAuthenticationOptions, verifyAuthenticationResponse } = require("@simplewebauthn/server");
 const { publicUser, normalizeEmail, findUserByEmail, findUserById, createUser, updateUser, markUserLoggedInNow, markUserEmailVerified } = require("./user-repository");
 const { listPasskeysByUserId, findPasskeyByCredentialId, createPasskey, updatePasskeyCounter } = require("./lib/passkey-repository");
@@ -13,11 +15,23 @@ const { query } = require("./lib/db");
 const { unprotectJsonFromStorage } = require("./lib/data-protection");
 const { listOrdersByUserId, updateOrder } = require("./lib/order-repository");
 const { commitStock } = require("./lib/inventory-repository");
+const { listMyAppointments, cancelUserAppointment } = require("./lib/appointments-repository");
 const { requireAuth } = require("./middlewares/requireAuth");
+const { userCsrfCookieName } = require("./middlewares/userCsrf");
 const { issueAuthEmailCode, consumeAuthEmailCode } = require("./lib/auth-email-code-repository");
-const { sendAccountVerificationEmail, sendLoginVerificationEmail, sendPasswordResetEmail } = require("./lib/email-service");
+const { sendAccountVerificationEmail, sendLoginVerificationEmail, sendPasswordResetEmail, sendEmail } = require("./lib/email-service");
+const { ensureRepairTables, createRepairRequest, listMyRepairRequests } = require("./lib/repairs-repository");
+const { sendRepairConfirmationEmail } = require("./lib/repair-email-service");
+const { logServerEvent, buildRequestLogContext, toErrorMeta } = require("./lib/observability-log");
 const authRouter = express.Router();
 const myRouter = express.Router();
+let uploadR2Buffer = null;
+function getR2Upload() {
+    if (!uploadR2Buffer) {
+        uploadR2Buffer = require("./lib/cloudflare-r2-upload").uploadBuffer;
+    }
+    return uploadR2Buffer;
+}
 const REFUND_WINDOW_MS = 10 * 60 * 1000;
 let stripeClient = null;
 function parseBooleanEnv(value, fallback = false) {
@@ -29,6 +43,30 @@ function parseBooleanEnv(value, fallback = false) {
     if (["0", "false", "no", "off"].includes(normalized))
         return false;
     return fallback;
+}
+function detectImageKind(buffer) {
+    if (!Buffer.isBuffer(buffer) || buffer.length < 16)
+        return "";
+    if (buffer[0] === 0xff && buffer[1] === 0xd8 && buffer[2] === 0xff)
+        return "jpeg";
+    if (buffer[0] === 0x89 && buffer[1] === 0x50 && buffer[2] === 0x4e && buffer[3] === 0x47)
+        return "png";
+    if (buffer[0] === 0x47 && buffer[1] === 0x49 && buffer[2] === 0x46)
+        return "gif";
+    if (buffer[0] === 0x52 &&
+        buffer[1] === 0x49 &&
+        buffer[2] === 0x46 &&
+        buffer[3] === 0x46 &&
+        buffer[8] === 0x57 &&
+        buffer[9] === 0x45 &&
+        buffer[10] === 0x42 &&
+        buffer[11] === 0x50) {
+        return "webp";
+    }
+    return "";
+}
+function buildInlineImageDataUrl(buffer, contentType) {
+    return `data:${contentType};base64,${buffer.toString("base64")}`;
 }
 function isLoginEmailVerificationRequired() {
     return parseBooleanEnv(process.env.AUTH_LOGIN_EMAIL_CODE_REQUIRED, false);
@@ -65,6 +103,17 @@ function resolveConfiguredEmailProvider() {
         return explicit;
     return "console";
 }
+async function persistSession(req) {
+    if (!req?.session || typeof req.session.save !== "function")
+        return false;
+    return new Promise((resolve) => {
+        req.session.save((error) => {
+            if (error)
+                return resolve(false);
+            return resolve(true);
+        });
+    });
+}
 const authRateLimit = rateLimit({
     windowMs: 15 * 60 * 1000,
     max: 10,
@@ -96,6 +145,11 @@ const registerSchema = z.object({
     birthDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
     cpf: z.string().transform((value) => String(value || "").replace(/\D/g, "")).refine((value) => /^\d{11}$/.test(value)),
     cep: z.string().transform((value) => String(value || "").replace(/\D/g, "")).refine((value) => /^\d{8}$/.test(value))
+});
+const registerLiteSchema = z.object({
+    title: titleSchema.optional().default("nao_informar"),
+    name: z.string().trim().min(2).max(120),
+    email: emailSchema
 });
 const loginSchema = z.object({
     email: emailSchema,
@@ -209,10 +263,23 @@ const privateCarePreferencesSchema = z.object({
     sms: z.coerce.boolean().optional().default(false)
 });
 const repairRequestSchema = z.object({
-    product: z.string().trim().min(2).max(180),
-    reason: z.string().trim().min(2).max(80),
-    description: z.string().trim().max(2000).optional().default(""),
-    photoName: z.string().trim().max(260).optional().default("")
+    orderId: z.string().trim().min(1).max(120),
+    orderItemId: z.string().trim().min(1).max(120),
+    repairType: z.string().trim().min(2).max(80),
+    description: z.string().trim().min(4).max(2000),
+    returnAddress: z.string().trim().min(8).max(300),
+    photos: z
+        .array(z.object({
+        url: z
+            .string()
+            .trim()
+            .min(1)
+            .refine((value) => /^https?:\/\//i.test(value) || /^data:image\//i.test(value), "INVALID_PHOTO_URL"),
+        fileName: z.string().trim().max(260).optional().default("")
+    }))
+        .max(8)
+        .optional()
+        .default([])
 });
 let accountDataSchemaPromise = null;
 function parseBirthDate(value) {
@@ -482,7 +549,61 @@ function getGoogleClientIds() {
         .map((value) => value.trim())
         .filter(Boolean);
 }
-function parseWebauthnOrigins() {
+function normalizeHostCandidate(value) {
+    const raw = String(value || "").trim().toLowerCase();
+    if (!raw)
+        return "";
+    return raw.replace(/^\[|\]$/g, "").replace(/:\d+$/, "");
+}
+function resolveRequestOrigin(req) {
+    if (!req)
+        return "";
+    const originHeader = String(req.get?.("origin") || "").trim();
+    if (originHeader) {
+        try {
+            return new URL(originHeader).origin;
+        }
+        catch { }
+    }
+    const host = String(req.get?.("host") || "").trim();
+    if (!host)
+        return "";
+    const protocol = String(req.protocol || "https").trim() || "https";
+    try {
+        return new URL(`${protocol}://${host}`).origin;
+    }
+    catch {
+        return "";
+    }
+}
+function deriveRpIdFromOrigin(origin) {
+    if (!origin)
+        return "";
+    try {
+        const hostname = normalizeHostCandidate(new URL(origin).hostname);
+        if (!hostname)
+            return "";
+        if (hostname === "localhost" || /^\d{1,3}(\.\d{1,3}){3}$/.test(hostname))
+            return hostname;
+        if (hostname.startsWith("www."))
+            return hostname.slice(4);
+        return hostname;
+    }
+    catch {
+        return "";
+    }
+}
+function resolveWebauthnRpId(req) {
+    const explicit = normalizeHostCandidate(process.env.WEBAUTHN_RP_ID);
+    if (explicit)
+        return explicit;
+    const appBaseOrigin = String(process.env.APP_BASE_URL || "").trim();
+    const fromAppBase = deriveRpIdFromOrigin(appBaseOrigin);
+    if (fromAppBase)
+        return fromAppBase;
+    return deriveRpIdFromOrigin(resolveRequestOrigin(req));
+}
+function parseWebauthnOrigins(req, rpId) {
     const fromEnv = String(process.env.WEBAUTHN_ORIGIN || "")
         .split(",")
         .map((item) => String(item || "").trim())
@@ -490,10 +611,12 @@ function parseWebauthnOrigins() {
     const appBase = String(process.env.APP_BASE_URL || "").trim();
     if (appBase)
         fromEnv.push(appBase);
-    const rpId = String(process.env.WEBAUTHN_RP_ID || "").trim().toLowerCase();
+    const requestOrigin = resolveRequestOrigin(req);
+    if (requestOrigin)
+        fromEnv.push(requestOrigin);
     if (rpId) {
         fromEnv.push(`https://${rpId}`);
-        if (!rpId.startsWith("www.")) {
+        if (!rpId.startsWith("www.") && rpId !== "localhost" && !/^\d{1,3}(\.\d{1,3}){3}$/.test(rpId)) {
             fromEnv.push(`https://www.${rpId}`);
         }
     }
@@ -511,10 +634,10 @@ function parseWebauthnOrigins() {
     }
     return unique;
 }
-function getWebauthnConfig() {
-    const rpId = String(process.env.WEBAUTHN_RP_ID || "").trim().toLowerCase();
+function getWebauthnConfig(req = null) {
+    const rpId = resolveWebauthnRpId(req);
     const rpName = String(process.env.WEBAUTHN_RP_NAME || process.env.APP_NAME || "Tsebi").trim() || "Tsebi";
-    const origins = parseWebauthnOrigins();
+    const origins = parseWebauthnOrigins(req, rpId);
     return {
         enabled: Boolean(rpId && origins.length > 0),
         rpId,
@@ -522,8 +645,8 @@ function getWebauthnConfig() {
         origins
     };
 }
-function getWebauthnExpectedOrigin() {
-    const config = getWebauthnConfig();
+function getWebauthnExpectedOrigin(req = null) {
+    const config = getWebauthnConfig(req);
     if (config.origins.length <= 1)
         return config.origins[0] || "";
     return config.origins;
@@ -576,7 +699,7 @@ authRouter.get("/google/config", (req, res) => {
     });
 });
 authRouter.get("/passkey/config", (req, res) => {
-    const config = getWebauthnConfig();
+    const config = getWebauthnConfig(req);
     return res.json({
         ok: true,
         enabled: config.enabled,
@@ -585,7 +708,7 @@ authRouter.get("/passkey/config", (req, res) => {
     });
 });
 authRouter.post("/passkey/register/options", requireAuth, async (req, res) => {
-    const config = getWebauthnConfig();
+    const config = getWebauthnConfig(req);
     if (!config.enabled)
         return res.status(503).json({ error: "PASSKEY_NOT_CONFIGURED" });
     const user = await findUserById(req.session.userId);
@@ -618,7 +741,7 @@ authRouter.post("/passkey/register/options", requireAuth, async (req, res) => {
     return res.json({ ok: true, options });
 });
 authRouter.post("/passkey/register/verify", requireAuth, async (req, res) => {
-    const config = getWebauthnConfig();
+    const config = getWebauthnConfig(req);
     if (!config.enabled)
         return res.status(503).json({ error: "PASSKEY_NOT_CONFIGURED" });
     const parsed = passkeyRegistrationVerifySchema.safeParse(req.body || {});
@@ -633,7 +756,7 @@ authRouter.post("/passkey/register/verify", requireAuth, async (req, res) => {
         verification = await verifyRegistrationResponse({
             response: parsed.data.credential,
             expectedChallenge: pending.challenge,
-            expectedOrigin: getWebauthnExpectedOrigin(),
+            expectedOrigin: getWebauthnExpectedOrigin(req),
             expectedRPID: config.rpId,
             requireUserVerification: true
         });
@@ -664,7 +787,7 @@ authRouter.post("/passkey/register/verify", requireAuth, async (req, res) => {
     return res.json({ ok: true });
 });
 authRouter.post("/passkey/login/options", authRateLimit, async (req, res) => {
-    const config = getWebauthnConfig();
+    const config = getWebauthnConfig(req);
     if (!config.enabled)
         return res.status(503).json({ error: "PASSKEY_NOT_CONFIGURED" });
     const parsed = passkeyLoginOptionsSchema.safeParse(req.body || {});
@@ -698,7 +821,7 @@ authRouter.post("/passkey/login/options", authRateLimit, async (req, res) => {
     return res.json({ ok: true, options });
 });
 authRouter.post("/passkey/login/verify", authRateLimit, async (req, res) => {
-    const config = getWebauthnConfig();
+    const config = getWebauthnConfig(req);
     if (!config.enabled)
         return res.status(503).json({ error: "PASSKEY_NOT_CONFIGURED" });
     const parsed = passkeyLoginVerifySchema.safeParse(req.body || {});
@@ -730,7 +853,7 @@ authRouter.post("/passkey/login/verify", authRateLimit, async (req, res) => {
         verification = await verifyAuthenticationResponse({
             response: parsed.data.credential,
             expectedChallenge: pending.challenge,
-            expectedOrigin: getWebauthnExpectedOrigin(),
+            expectedOrigin: getWebauthnExpectedOrigin(req),
             expectedRPID: config.rpId,
             requireUserVerification: true,
             authenticator: {
@@ -750,6 +873,10 @@ authRouter.post("/passkey/login/verify", authRateLimit, async (req, res) => {
     await updatePasskeyCounter(storedPasskey.credentialId, Number(verification.authenticationInfo?.newCounter || 0));
     delete req.session.passkeyAuthentication;
     req.session.userId = user.id;
+    applyCustomerSessionLifetime(req);
+    if (!(await persistSession(req))) {
+        return res.status(500).json({ error: "SESSION_SAVE_FAILED" });
+    }
     markUserLoggedInNow(user.id).catch(() => { });
     return res.json({ ok: true, user: publicUser(user), stage: "authenticated" });
 });
@@ -798,7 +925,7 @@ async function issueAndSendPasswordResetCode(user) {
     });
     return { ok: true, issued };
 }
-authRouter.post("/register", authRateLimit, async (req, res) => {
+authRouter.post("/register", registerLimiter, async (req, res) => {
     const parsed = registerSchema.safeParse(req.body || {});
     if (!parsed.success) {
         return res.status(400).json({ error: "INVALID_INPUT" });
@@ -827,7 +954,7 @@ authRouter.post("/register", authRateLimit, async (req, res) => {
         title: payload.title,
         name: payload.name,
         email: normalizedEmail,
-        passwordHash: await bcrypt.hash(payload.password, 12),
+        passwordHash: await hashPassword(payload.password),
         birthDate: payload.birthDate,
         cpf: payload.cpf,
         cep: payload.cep,
@@ -846,12 +973,60 @@ authRouter.post("/register", authRateLimit, async (req, res) => {
         return res.status(500).json({ error: "EMAIL_DELIVERY_FAILED" });
     }
 });
-authRouter.post("/check-email", async (req, res) => {
+authRouter.post("/register-lite", registerLimiter, async (req, res) => {
+    const parsed = registerLiteSchema.safeParse(req.body || {});
+    if (!parsed.success) {
+        return res.status(400).json({ error: "INVALID_INPUT" });
+    }
+    const payload = parsed.data;
+    const normalizedEmail = normalizeEmail(payload.email);
+    const existing = await findUserByEmail(normalizedEmail);
+    if (existing) {
+        if (existing.emailVerified) {
+            return res.status(409).json({ error: "EMAIL_ALREADY_EXISTS" });
+        }
+        try {
+            const resend = await issueAndSendAccountVerifyCode(existing);
+            if (!resend.ok)
+                return res.status(500).json({ error: "AUTH_CODE_ISSUE_FAILED" });
+            return res.json(buildEmailCodeResponseBase(existing.email, "account_verification_required", resend.issued));
+        }
+        catch {
+            return res.status(500).json({ error: "EMAIL_DELIVERY_FAILED" });
+        }
+    }
+    const autoPassword = `Tsebi${crypto.randomBytes(12).toString("hex")}1`;
+    const created = await createUser({
+        title: payload.title,
+        name: payload.name,
+        email: normalizedEmail,
+        passwordHash: await hashPassword(autoPassword),
+        birthDate: "",
+        cpf: "",
+        cep: "",
+        emailVerified: false
+    });
+    if (!created.ok) {
+        return res.status(409).json({ error: "EMAIL_ALREADY_EXISTS" });
+    }
+    try {
+        const sent = await issueAndSendAccountVerifyCode(created.user);
+        if (!sent.ok)
+            return res.status(500).json({ error: "AUTH_CODE_ISSUE_FAILED" });
+        return res.status(201).json(buildEmailCodeResponseBase(created.user.email, "account_verification_required", sent.issued));
+    }
+    catch {
+        return res.status(500).json({ error: "EMAIL_DELIVERY_FAILED" });
+    }
+});
+authRouter.post("/check-email", authRateLimit, async (req, res) => {
     const parsed = checkEmailSchema.safeParse(req.body || {});
     if (!parsed.success) {
         return res.status(400).json({ error: "INVALID_INPUT" });
     }
-    return res.json({ ok: true });
+    const email = normalizeEmail(parsed.data.email);
+    const user = await findUserByEmail(email);
+    return res.json({ ok: true, exists: Boolean(user) });
 });
 authRouter.post("/email/verify-account", authRateLimit, async (req, res) => {
     const parsed = accountVerifySchema.safeParse(req.body || {});
@@ -874,6 +1049,10 @@ authRouter.post("/email/verify-account", authRateLimit, async (req, res) => {
     if (!verified)
         return res.status(404).json({ error: "USER_NOT_FOUND" });
     req.session.userId = verified.id;
+    applyCustomerSessionLifetime(req);
+    if (!(await persistSession(req))) {
+        return res.status(500).json({ error: "SESSION_SAVE_FAILED" });
+    }
     return res.json({ ok: true, user: publicUser(verified) });
 });
 authRouter.post("/email/resend-account-code", resetRateLimit, async (req, res) => {
@@ -961,10 +1140,14 @@ authRouter.post("/email/verify", authRateLimit, async (req, res) => {
         return res.status(400).json({ error: "INVALID_OR_EXPIRED_CODE" });
     }
     req.session.userId = user.id;
+    applyCustomerSessionLifetime(req);
+    if (!(await persistSession(req))) {
+        return res.status(500).json({ error: "SESSION_SAVE_FAILED" });
+    }
     markUserLoggedInNow(user.id).catch(() => { });
     return res.json({ ok: true, user: publicUser(user), stage: "authenticated" });
 });
-authRouter.post("/login", authRateLimit, 
+authRouter.post("/login", loginLimiter, 
 /**
  * @param {import("express").Request} req
  * @param {import("express").Response} res
@@ -976,7 +1159,7 @@ async (req, res) => {
     }
     const email = normalizeEmail(parsed.data.email);
     const password = parsed.data.password;
-    const user = await findUserByEmail(email);
+    let user = await findUserByEmail(email);
     if (!user) {
         return res.status(401).json({ error: "INVALID_CREDENTIALS" });
     }
@@ -984,15 +1167,18 @@ async (req, res) => {
     if (!storedHash) {
         return res.status(401).json({ error: "INVALID_CREDENTIALS" });
     }
-    let isMatch = false;
-    try {
-        isMatch = await bcrypt.compare(password, storedHash);
-    }
-    catch {
+    const passwordCheck = await verifyPassword(password, storedHash);
+    if (!passwordCheck.ok) {
         return res.status(401).json({ error: "INVALID_CREDENTIALS" });
     }
-    if (!isMatch) {
-        return res.status(401).json({ error: "INVALID_CREDENTIALS" });
+    if (passwordCheck.needsRehash) {
+        try {
+            const refreshedHash = await hashPassword(password);
+            const refreshedUser = await updateUser(user.id, { passwordHash: refreshedHash });
+            if (refreshedUser)
+                user = refreshedUser;
+        }
+        catch { }
     }
     try {
         if (!user.emailVerified) {
@@ -1009,6 +1195,10 @@ async (req, res) => {
         }
         if (!isLoginEmailVerificationRequired()) {
             req.session.userId = user.id;
+            applyCustomerSessionLifetime(req);
+            if (!(await persistSession(req))) {
+                return res.status(500).json({ error: "SESSION_SAVE_FAILED" });
+            }
             markUserLoggedInNow(user.id).catch(() => { });
             return res.json({ ok: true, user: publicUser(user), stage: "authenticated" });
         }
@@ -1045,7 +1235,7 @@ authRouter.post("/google", authRateLimit, async (req, res) => {
         const fallbackName = payload.name ||
             [payload.givenName, payload.familyName].filter(Boolean).join(" ").trim() ||
             "Cliente Tsebi";
-        const randomPasswordHash = await bcrypt.hash(crypto.randomBytes(24).toString("hex"), 12);
+        const randomPasswordHash = await hashPassword(crypto.randomBytes(24).toString("hex"));
         const created = await createUser({
             title: "nao_informar",
             name: fallbackName,
@@ -1068,6 +1258,10 @@ authRouter.post("/google", authRateLimit, async (req, res) => {
         return res.status(403).json({ error: "FORBIDDEN" });
     }
     req.session.userId = user.id;
+    applyCustomerSessionLifetime(req);
+    if (!(await persistSession(req))) {
+        return res.status(500).json({ error: "SESSION_SAVE_FAILED" });
+    }
     markUserLoggedInNow(user.id).catch(() => { });
     return res.json({ ok: true, user: publicUser(user), stage: "authenticated" });
 });
@@ -1092,6 +1286,10 @@ authRouter.post("/login/verify-code", authRateLimit, async (req, res) => {
         return res.status(400).json({ error: "INVALID_OR_EXPIRED_CODE" });
     }
     req.session.userId = user.id;
+    applyCustomerSessionLifetime(req);
+    if (!(await persistSession(req))) {
+        return res.status(500).json({ error: "SESSION_SAVE_FAILED" });
+    }
     markUserLoggedInNow(user.id).catch(() => { });
     return res.json({ ok: true, user: publicUser(user) });
 });
@@ -1128,7 +1326,7 @@ authRouter.post("/activate", authRateLimit, async (req, res) => {
             return res.status(400).json({ error: "ORDER_NOT_FOUND_FOR_EMAIL" });
         }
     }
-    const passwordHash = await bcrypt.hash(payload.password, 12);
+    const passwordHash = await hashPassword(payload.password);
     const updated = await updateUser(user.id, {
         passwordHash,
         passwordResetRequired: false,
@@ -1138,17 +1336,55 @@ authRouter.post("/activate", authRateLimit, async (req, res) => {
     if (!updated)
         return res.status(404).json({ error: "USER_NOT_FOUND" });
     req.session.userId = updated.id;
+    applyCustomerSessionLifetime(req);
+    if (!(await persistSession(req))) {
+        return res.status(500).json({ error: "SESSION_SAVE_FAILED" });
+    }
     markUserLoggedInNow(updated.id).catch(() => { });
     return res.json({ ok: true, user: publicUser(updated), stage: "authenticated" });
 });
 authRouter.post("/logout", (req, res) => {
-    if (!req.session)
+    const sessionCookieName = String(process.env.SESSION_COOKIE_NAME || "tsebi.sid");
+    const isProduction = String(process.env.NODE_ENV || "").trim().toLowerCase() === "production";
+    const csrfCookieName = String(userCsrfCookieName || process.env.USER_CSRF_COOKIE_NAME || "tsebi.csrf").trim() || "tsebi.csrf";
+    const cookieDomain = (() => {
+        const explicit = String(process.env.SESSION_COOKIE_DOMAIN || "").trim().toLowerCase();
+        const isLocalOrIp = (value) => !value || value === "localhost" || /^\d{1,3}(\.\d{1,3}){3}$/.test(String(value || "").trim().toLowerCase());
+        if (explicit && !isLocalOrIp(explicit)) {
+            const normalized = explicit.replace(/^\./, "").replace(/^www\./, "");
+            return normalized ? `.${normalized}` : "";
+        }
+        return "";
+    })();
+    const clearSessionCookies = () => {
+        res.clearCookie(sessionCookieName, {
+            httpOnly: true,
+            sameSite: "lax",
+            secure: isProduction,
+            path: "/",
+            ...(cookieDomain ? { domain: cookieDomain } : {})
+        });
+        res.clearCookie(csrfCookieName, {
+            httpOnly: false,
+            sameSite: "strict",
+            secure: isProduction,
+            path: "/",
+            ...(cookieDomain ? { domain: cookieDomain } : {})
+        });
+    };
+    res.setHeader("Cache-Control", "no-store");
+    if (!req.session) {
+        clearSessionCookies();
         return res.json({ ok: true });
-    if (req.session.userId) {
-        delete req.session.userId;
     }
-    req.session.save(() => {
-        res.json({ ok: true });
+    delete req.session.userId;
+    delete req.session.userCsrfToken;
+    delete req.session.passkeyAuthentication;
+    delete req.session.passkeyRegistration;
+    delete req.session.adminAuth;
+    return req.session.destroy(() => {
+        clearSessionCookies();
+        return res.json({ ok: true });
     });
 });
 authRouter.get("/me", 
@@ -1157,6 +1393,9 @@ authRouter.get("/me",
  * @param {import("express").Response} res
  */
 async (req, res) => {
+    res.setHeader("Cache-Control", "private, no-store, no-cache, must-revalidate");
+    res.setHeader("Pragma", "no-cache");
+    res.setHeader("Expires", "0");
     const userId = req.session?.userId;
     if (!userId)
         return res.json({ authenticated: false, user: null });
@@ -1165,7 +1404,7 @@ async (req, res) => {
         return res.json({ authenticated: false, user: null });
     return res.json({ authenticated: true, user: publicUser(user) });
 });
-authRouter.post("/forgot-password", resetRateLimit, async (req, res) => {
+authRouter.post("/forgot-password", forgotPasswordLimiter, async (req, res) => {
     const parsed = forgotPasswordSchema.safeParse(req.body || {});
     if (!parsed.success) {
         return res.status(400).json({ error: "INVALID_INPUT" });
@@ -1207,7 +1446,7 @@ authRouter.post("/forgot-password", resetRateLimit, async (req, res) => {
         return res.status(500).json({ error: "EMAIL_DELIVERY_FAILED" });
     }
 });
-authRouter.post("/forgot-password/verify-code", resetRateLimit, async (req, res) => {
+authRouter.post("/forgot-password/verify-code", forgotPasswordLimiter, async (req, res) => {
     const parsed = resetPasswordCodeSchema.safeParse(req.body || {});
     if (!parsed.success) {
         return res.status(400).json({ error: "INVALID_INPUT" });
@@ -1226,7 +1465,7 @@ authRouter.post("/forgot-password/verify-code", resetRateLimit, async (req, res)
         return res.status(400).json({ error: "INVALID_OR_EXPIRED_CODE" });
     }
     const updated = await updateUser(user.id, {
-        passwordHash: await bcrypt.hash(parsed.data.password, 12),
+        passwordHash: await hashPassword(parsed.data.password),
         passwordResetRequired: false,
         isGuest: false
     });
@@ -1236,7 +1475,7 @@ authRouter.post("/forgot-password/verify-code", resetRateLimit, async (req, res)
     return res.json({ ok: true });
 });
 // Compat legado (token antigo): mantido para nao quebrar clientes antigos.
-authRouter.post("/reset-password", resetRateLimit, async (req, res) => {
+authRouter.post("/reset-password", forgotPasswordLimiter, async (req, res) => {
     const parsed = resetPasswordSchema.safeParse(req.body || {});
     if (!parsed.success)
         return res.status(400).json({ error: "INVALID_INPUT" });
@@ -1634,21 +1873,269 @@ myRouter.post("/private-care", requireAuth, async (req, res) => {
     `, [req.session.userId, JSON.stringify(history)]);
     return res.status(201).json({ request: entry, history });
 });
+myRouter.get("/appointments", requireAuth, async (req, res) => {
+    try {
+        const appointments = await listMyAppointments(String(req.session.userId || ""));
+        return res.json({ appointments });
+    }
+    catch (error) {
+        return res.status(Number(error?.status || 500) || 500).json({ error: error?.message || "APPOINTMENTS_LIST_FAILED" });
+    }
+});
+myRouter.post("/appointments/:id/cancel", requireAuth, async (req, res) => {
+    const appointmentId = String(req.params.id || "").trim();
+    if (!appointmentId)
+        return res.status(400).json({ error: "INVALID_ID" });
+    try {
+        const appointment = await cancelUserAppointment(String(req.session.userId || ""), appointmentId);
+        const appName = String(process.env.APP_NAME || "Tsebi").trim() || "Tsebi";
+        if (appointment.userEmail) {
+            sendEmail({
+                to: appointment.userEmail,
+                subject: `${appName} — Agendamento cancelado`,
+                html: `
+          <div style="font-family:'Cormorant Garamond','Georgia',serif;max-width:480px;margin:0 auto;padding:40px 20px;color:#1a1a1a;">
+            <p style="font-size:11px;letter-spacing:.15em;color:#aaa;font-family:sans-serif;font-weight:600;margin-bottom:24px;">TSEBI</p>
+            <h2 style="font-size:22px;font-weight:400;margin-bottom:16px;">Agendamento cancelado</h2>
+            <p style="font-size:15px;line-height:1.6;color:#444;margin-bottom:20px;">
+              Olá, ${appointment.userName || "cliente"}. Recebemos sua solicitação de cancelamento.
+            </p>
+            <p style="font-size:14px;color:#444;line-height:1.6;margin:0 0 8px;"><strong>Data:</strong> ${appointment.date} às ${appointment.time}</p>
+            <p style="font-size:14px;color:#444;line-height:1.6;margin:0 0 8px;"><strong>Tipo:</strong> ${appointment.label || appointment.serviceType || "Atendimento privado"}</p>
+            <p style="font-size:14px;color:#888;line-height:1.6;margin-top:20px;">
+              Se quiser remarcar, você pode escolher um novo horário na sua conta.
+            </p>
+            <div style="margin-top:32px;padding-top:20px;border-top:1px solid #eee;">
+              <p style="font-size:11px;color:#bbb;font-family:sans-serif;">${appName} · Atendimento Privado</p>
+            </div>
+          </div>
+        `,
+                text: `Seu agendamento para ${appointment.date} às ${appointment.time} foi cancelado com sucesso.`,
+            }).catch(() => { });
+        }
+        return res.json({ ok: true, appointment });
+    }
+    catch (error) {
+        return res.status(Number(error?.status || 500) || 500).json({ error: error?.message || "APPOINTMENT_CANCEL_FAILED" });
+    }
+});
 myRouter.get("/repairs", requireAuth, async (req, res) => {
-    const row = await getAccountDataRow(req.session.userId);
-    if (!row)
-        return res.status(404).json({ error: "USER_NOT_FOUND" });
-    return res.json({
-        history: normalizeRepairsHistory(row.account_repairs_history)
+    try {
+        const history = await listMyRepairRequests(String(req.session.userId || ""));
+        return res.json({ history });
+    }
+    catch (error) {
+        return res.status(Number(error?.status || 500) || 500).json({ error: error?.message || "REPAIRS_LIST_FAILED" });
+    }
+});
+myRouter.post("/repairs/photos", requireAuth, express.raw({
+    type: () => true,
+    limit: "8mb"
+}), async (req, res) => {
+    const userId = String(req.session.userId || "").trim();
+    const requestContext = buildRequestLogContext(req, {
+        userId,
+        bodyBytes: Buffer.isBuffer(req.body) ? req.body.length : 0,
     });
+    if (!Buffer.isBuffer(req.body) || req.body.length === 0) {
+        logServerEvent("warn", {
+            event: "repair_photo_upload_rejected",
+            message: "Repair photo upload rejected because the request body is empty.",
+            ...requestContext,
+            errorCode: "IMAGE_REQUIRED",
+        });
+        return res.status(400).json({ error: "IMAGE_REQUIRED" });
+    }
+    const detectedKind = detectImageKind(req.body);
+    if (!detectedKind) {
+        logServerEvent("warn", {
+            event: "repair_photo_upload_rejected",
+            message: "Repair photo upload rejected because the image format is unsupported.",
+            ...requestContext,
+            errorCode: "UNSUPPORTED_IMAGE_TYPE",
+        });
+        return res.status(415).json({ error: "UNSUPPORTED_IMAGE_TYPE" });
+    }
+    const contentType = `image/${detectedKind === "jpeg" ? "jpeg" : detectedKind}`;
+    try {
+        const fileNameRaw = String(req.query.name || req.headers["x-file-name"] || "").trim();
+        const contentTypeExtension = contentType.split("/")[1] || "jpg";
+        const fileName = fileNameRaw.replace(/[^\w.\- ]+/g, "").slice(0, 120) || `reparo.${contentTypeExtension}`;
+        const folder = String(process.env.R2_REPAIRS_FOLDER || process.env.R2_FOLDER || "tsebi/repairs").trim() ||
+            "tsebi/repairs";
+        const publicId = `repair_${userId}_${Date.now()}_${crypto.randomUUID().slice(0, 8)}`;
+        logServerEvent("info", {
+            event: "repair_photo_upload_started",
+            message: "Repair photo upload started.",
+            ...requestContext,
+            fileName,
+            contentType,
+            storage: "r2",
+        });
+        const uploaded = await getR2Upload()(req.body, { folder, publicId });
+        const url = String(uploaded?.secure_url || uploaded?.url || "").trim();
+        if (!url)
+            return res.status(500).json({ error: "IMAGE_UPLOAD_FAILED" });
+        logServerEvent("info", {
+            event: "repair_photo_upload_succeeded",
+            message: "Repair photo upload finished successfully.",
+            ...requestContext,
+            fileName,
+            contentType,
+            storage: "r2",
+            publicId,
+        });
+        return res.status(201).json({
+            ok: true,
+            photo: {
+                url,
+                fileName,
+                contentType
+            }
+        });
+    }
+    catch (error) {
+        const fallbackUrl = buildInlineImageDataUrl(req.body, contentType);
+        if (fallbackUrl) {
+            const fileNameRaw = String(req.query.name || req.headers["x-file-name"] || "").trim();
+            const contentTypeExtension = contentType.split("/")[1] || "jpg";
+            const fileName = fileNameRaw.replace(/[^\w.\- ]+/g, "").slice(0, 120) || `reparo.${contentTypeExtension}`;
+            logServerEvent("warn", {
+                event: "repair_photo_upload_fallback_inline",
+                message: "Repair photo upload fell back to inline storage.",
+                ...requestContext,
+                fileName,
+                contentType,
+                storage: "inline",
+                ...toErrorMeta(error),
+            });
+            return res.status(201).json({
+                ok: true,
+                photo: {
+                    url: fallbackUrl,
+                    fileName,
+                    contentType
+                },
+                storage: "inline"
+            });
+        }
+        logServerEvent("error", {
+            event: "repair_photo_upload_failed",
+            message: "Repair photo upload failed.",
+            ...requestContext,
+            contentType,
+            ...toErrorMeta(error),
+        });
+        return res.status(500).json({ error: "IMAGE_UPLOAD_FAILED" });
+    }
 });
 myRouter.post("/repairs", requireAuth, async (req, res) => {
     const parsed = repairRequestSchema.safeParse(req.body || {});
-    if (!parsed.success)
-        return res.status(400).json({ error: "INVALID_INPUT" });
-    const row = await getAccountDataRow(req.session.userId);
-    if (!row)
-        return res.status(404).json({ error: "USER_NOT_FOUND" });
+    const userId = String(req.session.userId || "").trim();
+    const requestContext = buildRequestLogContext(req, {
+        userId,
+        orderId: String(req.body?.orderId || "").trim(),
+        orderItemId: String(req.body?.orderItemId || "").trim(),
+        photoCount: Array.isArray(req.body?.photos) ? req.body.photos.length : 0,
+    });
+    if (!parsed.success) {
+        logServerEvent("warn", {
+            event: "repair_request_create_rejected",
+            message: "Repair request rejected by input validation.",
+            ...requestContext,
+            errorCode: "INVALID_INPUT",
+            details: parsed.error.issues.map((issue) => ({
+                path: Array.isArray(issue.path) ? issue.path.join(".") : "",
+                message: String(issue.message || "INVALID_INPUT"),
+            })),
+        });
+        return res.status(400).json({
+            error: "INVALID_INPUT",
+            details: parsed.error.issues.map((issue) => ({
+                path: Array.isArray(issue.path) ? issue.path.join(".") : "",
+                message: String(issue.message || "INVALID_INPUT"),
+            })),
+        });
+    }
+    try {
+        await ensureRepairTables();
+        const user = await findUserById(userId);
+        if (!user)
+            return res.status(404).json({ error: "USER_NOT_FOUND" });
+        const orders = await listOrdersByUserId(userId);
+        const targetOrder = orders.find((order) => String(order.id || "") === parsed.data.orderId) || null;
+        if (!targetOrder)
+            return res.status(404).json({ error: "ORDER_NOT_FOUND" });
+        const isDelivered = String(targetOrder.currentStatus || "").trim().toUpperCase() === "DELIVERED" ||
+            Boolean(targetOrder.deliveredAt);
+        if (!isDelivered)
+            return res.status(409).json({ error: "ORDER_NOT_DELIVERED" });
+        const targetItem = (Array.isArray(targetOrder.items) ? targetOrder.items : []).find((item) => String(item.id || "") === parsed.data.orderItemId) || null;
+        if (!targetItem)
+            return res.status(404).json({ error: "ORDER_ITEM_NOT_FOUND" });
+        const orderRefRaw = String(targetOrder.orderNumber || targetOrder.id || "").trim();
+        const orderRef = orderRefRaw.startsWith("#") ? orderRefRaw : `#${orderRefRaw}`;
+        logServerEvent("info", {
+            event: "repair_request_create_started",
+            message: "Repair request creation started.",
+            ...requestContext,
+            orderRef,
+            repairType: parsed.data.repairType,
+        });
+        const repair = await createRepairRequest({
+            userId,
+            userName: String(user.name || "").trim(),
+            userEmail: String(user.email || "").trim(),
+            orderId: String(targetOrder.id || ""),
+            orderRef,
+            orderItemId: String(targetItem.id || ""),
+            pieceName: String(targetItem.name || "").trim(),
+            pieceImageUrl: String(targetItem.imageUrl || "").trim(),
+            repairType: parsed.data.repairType,
+            description: parsed.data.description,
+            returnAddress: parsed.data.returnAddress,
+            photos: parsed.data.photos,
+        });
+        logServerEvent("info", {
+            event: "repair_request_created",
+            message: "Repair request persisted successfully.",
+            ...requestContext,
+            repairId: repair.id,
+            orderRef: repair.orderRef,
+            status: repair.status,
+        });
+        try {
+            await sendRepairConfirmationEmail({
+                clientName: repair.userName || String(user.name || "").trim(),
+                clientEmail: repair.userEmail || String(user.email || "").trim(),
+                pieceName: repair.pieceName,
+                orderRef: repair.orderRef,
+                repairDescription: repair.description,
+            });
+        }
+        catch (emailError) {
+            logServerEvent("warn", {
+                event: "repair_confirmation_email_failed",
+                message: "Repair confirmation email failed after the request was created.",
+                ...requestContext,
+                repairId: repair.id,
+                orderRef: repair.orderRef,
+                ...toErrorMeta(emailError),
+            });
+        }
+        const history = await listMyRepairRequests(userId);
+        return res.status(201).json({ repair, history });
+    }
+    catch (error) {
+        logServerEvent("error", {
+            event: "repair_request_create_failed",
+            message: "Repair request creation failed.",
+            ...requestContext,
+            ...toErrorMeta(error),
+        });
+        return res.status(Number(error?.status || 500) || 500).json({ error: error?.message || "REPAIR_CREATE_FAILED" });
+    }
+    const row = { account_repairs_history: [] };
     const now = new Date().toISOString();
     const entry = {
         id: `rp-${crypto.randomUUID()}`,

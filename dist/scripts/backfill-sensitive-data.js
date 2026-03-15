@@ -2,7 +2,7 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 require("dotenv/config");
 const { query } = require("../server/lib/db");
-const { encryptSensitiveString, decryptSensitiveString, protectJsonForStorage, unprotectJsonFromStorage } = require("../server/lib/data-protection");
+const { isEncryptedString, encryptSensitiveString, decryptSensitiveString, protectJsonForStorage, unprotectJsonFromStorage } = require("../server/lib/data-protection");
 function parseArg(name, fallback = "") {
     const raw = process.argv.find((entry) => entry.startsWith(`--${name}=`));
     if (!raw)
@@ -19,7 +19,17 @@ function normalizeCep(value) {
     return String(value || "").replace(/\D/g, "").slice(0, 8);
 }
 function protectNullableText(value, normalize) {
-    const plain = normalize(decryptSensitiveString(value));
+    const raw = String(value ?? "").trim();
+    if (!raw)
+        return null;
+    const plain = normalize(decryptSensitiveString(raw));
+    if (!plain)
+        return null;
+    // Keep existing ciphertext when it already decrypts to the expected value.
+    // This makes backfill idempotent and avoids churn on every run.
+    if (isEncryptedString(raw)) {
+        return raw;
+    }
     return plain ? encryptSensitiveString(plain) : null;
 }
 function asComparableJson(value) {
@@ -29,6 +39,12 @@ function asComparableJson(value) {
     catch {
         return "null";
     }
+}
+function isEncryptedJsonEnvelope(value) {
+    if (!value || typeof value !== "object" || Array.isArray(value))
+        return false;
+    const payload = value;
+    return isEncryptedString(payload.__enc);
 }
 async function backfillUsers(dryRun, limit) {
     const result = await query(`
@@ -47,7 +63,9 @@ async function backfillUsers(dryRun, limit) {
         const nextCep = protectNullableText(row.cep, normalizeCep);
         const addressesRaw = unprotectJsonFromStorage(row.addresses, row.addresses ?? []);
         const normalizedAddresses = Array.isArray(addressesRaw) ? addressesRaw : addressesRaw ?? [];
-        const nextAddresses = protectJsonForStorage(normalizedAddresses);
+        const nextAddresses = isEncryptedJsonEnvelope(row.addresses)
+            ? row.addresses
+            : protectJsonForStorage(normalizedAddresses);
         const changed = String(row.phone || "") !== String(nextPhone || "") ||
             String(row.cpf || "") !== String(nextCpf || "") ||
             String(row.cep || "") !== String(nextCep || "") ||
@@ -86,7 +104,11 @@ async function backfillOrders(dryRun, limit) {
         if (!orderId)
             continue;
         const shippingRaw = unprotectJsonFromStorage(row.shipping_json, row.shipping_json ?? null);
-        const nextShipping = shippingRaw == null ? null : protectJsonForStorage(shippingRaw);
+        const nextShipping = shippingRaw == null
+            ? null
+            : isEncryptedJsonEnvelope(row.shipping_json)
+                ? row.shipping_json
+                : protectJsonForStorage(shippingRaw);
         const changed = asComparableJson(row.shipping_json) !== asComparableJson(nextShipping);
         if (!changed)
             continue;

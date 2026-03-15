@@ -14,8 +14,9 @@ export function WhatsAppContactButton() {
   const isStudioRoute = pathname === "/studio" || pathname.startsWith("/studio/");
   const isAdminRoute = pathname === "/admin" || pathname.startsWith("/admin/");
   const isPasswordRecoveryRoute = normalizedPath.startsWith("/recuperar-senha");
+  const isProductRoute = normalizedPath.startsWith("/product");
   const isHomeRoute = normalizedPath === "/";
-  const shouldHideButton = isStudioRoute || isAdminRoute || isPasswordRecoveryRoute;
+  const shouldHideButton = isStudioRoute || isAdminRoute || isPasswordRecoveryRoute || isProductRoute;
   const [isVisible, setIsVisible] = useState(!isHomeRoute);
 
   useEffect(() => {

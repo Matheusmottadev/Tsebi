@@ -32,6 +32,10 @@ type RepairRequestRow = JsonRecord & {
   description?: string;
   return_address?: string;
   photos_json?: unknown;
+  tracking_code?: string;
+  piece_received_at?: string;
+  return_posted_at?: string;
+  returned_delivered_at?: string;
   status?: string;
   rejection_reason?: string;
   admin_note?: string;
@@ -73,6 +77,16 @@ function normalizeText(value: unknown): string {
 function normalizeDate(value: unknown): string | null {
   const raw = normalizeText(value);
   return raw || null;
+}
+
+function normalizeOptionalIsoDate(value: unknown): string | null {
+  const raw = normalizeText(value);
+  if (!raw) return null;
+  const parsed = new Date(raw);
+  if (Number.isNaN(parsed.getTime())) {
+    throw createRepairError("INVALID_LOGISTICS_DATE", 400, "Data logistica invalida.");
+  }
+  return parsed.toISOString();
 }
 
 function normalizeRepairStatus(value: unknown): NormalizedRepairStatus {
@@ -131,6 +145,10 @@ function mapRepairRow(row: RepairRequestRow) {
     description: normalizeText(row.description),
     returnAddress: normalizeText(row.return_address),
     photos: normalizePhotoList(row.photos_json),
+    trackingCode: normalizeText(row.tracking_code),
+    pieceReceivedAt: normalizeDate(row.piece_received_at),
+    returnPostedAt: normalizeDate(row.return_posted_at),
+    returnedDeliveredAt: normalizeDate(row.returned_delivered_at),
     status: normalizeRepairStatus(row.status),
     rejectionReason: normalizeText(row.rejection_reason),
     adminNote: normalizeText(row.admin_note),
@@ -166,6 +184,10 @@ async function ensureRepairTables(): Promise<void> {
           description TEXT NOT NULL DEFAULT '',
           return_address TEXT NOT NULL DEFAULT '',
           photos_json JSONB NOT NULL DEFAULT '[]'::jsonb,
+          tracking_code TEXT NOT NULL DEFAULT '',
+          piece_received_at TIMESTAMPTZ NULL,
+          return_posted_at TIMESTAMPTZ NULL,
+          returned_delivered_at TIMESTAMPTZ NULL,
           status TEXT NOT NULL DEFAULT 'pending',
           rejection_reason TEXT NOT NULL DEFAULT '',
           admin_note TEXT NOT NULL DEFAULT '',
@@ -180,6 +202,13 @@ async function ensureRepairTables(): Promise<void> {
           created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
           updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
         );
+      `);
+      await query(`
+        ALTER TABLE repair_requests
+          ADD COLUMN IF NOT EXISTS tracking_code TEXT NOT NULL DEFAULT '',
+          ADD COLUMN IF NOT EXISTS piece_received_at TIMESTAMPTZ NULL,
+          ADD COLUMN IF NOT EXISTS return_posted_at TIMESTAMPTZ NULL,
+          ADD COLUMN IF NOT EXISTS returned_delivered_at TIMESTAMPTZ NULL;
       `);
       await query(`
         ALTER TABLE repair_requests
@@ -354,6 +383,7 @@ async function listAdminRepairRequests(input: {
         row.repairType,
         row.description,
         row.returnAddress,
+        row.trackingCode,
         row.rejectionReason,
       ]
         .join(" ")
@@ -398,6 +428,10 @@ async function updateRepairRequestStatus(
     reviewedByAdminId?: string | null;
     actorAdminName?: string;
     actorAdminEmail?: string;
+    trackingCode?: string;
+    pieceReceivedAt?: string | null;
+    returnPostedAt?: string | null;
+    returnedDeliveredAt?: string | null;
   }
 ) {
   await ensureRepairTables();
@@ -411,6 +445,15 @@ async function updateRepairRequestStatus(
   const reviewedByAdminId = normalizeText(input.reviewedByAdminId) || null;
   const actorAdminName = normalizeText(input.actorAdminName);
   const actorAdminEmail = normalizeText(input.actorAdminEmail).toLowerCase();
+  const trackingCode = normalizeText(input.trackingCode);
+  const pieceReceivedAt =
+    Object.prototype.hasOwnProperty.call(input, "pieceReceivedAt") ? normalizeOptionalIsoDate(input.pieceReceivedAt) : undefined;
+  const returnPostedAt =
+    Object.prototype.hasOwnProperty.call(input, "returnPostedAt") ? normalizeOptionalIsoDate(input.returnPostedAt) : undefined;
+  const returnedDeliveredAt =
+    Object.prototype.hasOwnProperty.call(input, "returnedDeliveredAt")
+      ? normalizeOptionalIsoDate(input.returnedDeliveredAt)
+      : undefined;
 
   if (nextStatus === "pending") {
     throw createRepairError("INVALID_STATUS", 400, "Status de reparo invalido.");
@@ -478,6 +521,12 @@ async function updateRepairRequestStatus(
     const nextDecisionByAdminId = action === "decision" ? reviewedByAdminId : currentMapped.decisionByAdminId;
     const nextDecisionByAdminName = action === "decision" ? actorAdminName : currentMapped.decisionByAdminName;
     const nextDecisionByAdminEmail = action === "decision" ? actorAdminEmail : currentMapped.decisionByAdminEmail;
+    const nextTrackingCode =
+      Object.prototype.hasOwnProperty.call(input, "trackingCode") ? trackingCode : currentMapped.trackingCode;
+    const nextPieceReceivedAt = pieceReceivedAt === undefined ? currentMapped.pieceReceivedAt : pieceReceivedAt;
+    const nextReturnPostedAt = returnPostedAt === undefined ? currentMapped.returnPostedAt : returnPostedAt;
+    const nextReturnedDeliveredAt =
+      returnedDeliveredAt === undefined ? currentMapped.returnedDeliveredAt : returnedDeliveredAt;
 
     const updatedResult = await client.query<RepairRequestRow>(
       `
@@ -485,14 +534,18 @@ async function updateRepairRequestStatus(
       SET status = $2,
           rejection_reason = $3,
           admin_note = $4,
-          decision_outcome = $5,
-          decision_reason = $6,
+          tracking_code = $5,
+          piece_received_at = $6::timestamptz,
+          return_posted_at = $7::timestamptz,
+          returned_delivered_at = $8::timestamptz,
+          decision_outcome = $9,
+          decision_reason = $10,
           decision_at = ${nextDecisionAt},
-          decision_by_admin_id = $7::uuid,
-          decision_by_admin_name = $8,
-          decision_by_admin_email = $9,
+          decision_by_admin_id = $11::uuid,
+          decision_by_admin_name = $12,
+          decision_by_admin_email = $13,
           reviewed_at = NOW(),
-          reviewed_by_admin_id = $10::uuid,
+          reviewed_by_admin_id = $14::uuid,
           updated_at = NOW()
       WHERE id = $1::uuid
       RETURNING *
@@ -502,6 +555,10 @@ async function updateRepairRequestStatus(
         nextStatus,
         nextStatus === "rejected" ? rejectionReason : currentMapped.rejectionReason,
         adminNote,
+        nextTrackingCode,
+        nextPieceReceivedAt,
+        nextReturnPostedAt,
+        nextReturnedDeliveredAt,
         nextDecisionOutcome || "",
         nextDecisionReason,
         nextDecisionByAdminId,

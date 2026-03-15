@@ -97,6 +97,7 @@ function mapOrderItemRow(row) {
         qty: Number(row.qty || 0),
         unitAmount: Number(row.price_cents || 0),
         currency: String(row.currency || "brl"),
+        imageUrl: row.image_url ? String(row.image_url) : null,
         variantColor: row.variant_color || null,
         variantSize: row.variant_size || null,
         variantKey: row.variant_key || null
@@ -106,10 +107,22 @@ async function listItemsByOrderIds(orderIds) {
     if (!Array.isArray(orderIds) || orderIds.length === 0)
         return new Map();
     const result = await query(`
-    SELECT order_id, product_sku, product_id, name, qty, price_cents, currency, variant_color, variant_size, variant_key
-    FROM order_items
-    WHERE order_id = ANY($1::uuid[])
-    ORDER BY id ASC
+    SELECT
+      oi.order_id,
+      oi.product_sku,
+      oi.product_id,
+      oi.name,
+      oi.qty,
+      oi.price_cents,
+      oi.currency,
+      p.image_url,
+      oi.variant_color,
+      oi.variant_size,
+      oi.variant_key
+    FROM order_items oi
+    LEFT JOIN products p ON p.id = oi.product_id
+    WHERE oi.order_id = ANY($1::uuid[])
+    ORDER BY oi.id ASC
     `, [orderIds]);
     const byOrderId = new Map();
     result.rows.forEach((row) => {
@@ -203,7 +216,21 @@ async function createOrder(payload) {
         if (Array.isArray(payload.items) && payload.items.length > 0) {
             await insertOrderItems(client, orderRow.id, payload.items);
         }
-        const itemResult = await client.query(`SELECT order_id, product_sku, product_id, name, qty, price_cents, currency, variant_color, variant_size, variant_key FROM order_items WHERE order_id = $1`, [orderRow.id]);
+        const itemResult = await client.query(`SELECT
+         oi.order_id,
+         oi.product_sku,
+         oi.product_id,
+         oi.name,
+         oi.qty,
+         oi.price_cents,
+         oi.currency,
+         p.image_url,
+         oi.variant_color,
+         oi.variant_size,
+         oi.variant_key
+       FROM order_items oi
+       LEFT JOIN products p ON p.id = oi.product_id
+       WHERE oi.order_id = $1`, [orderRow.id]);
         return mapOrderRow(orderRow, itemResult.rows.map(mapOrderItemRow));
     });
 }
@@ -278,7 +305,21 @@ async function updateOrder(orderId, patch) {
     const row = result.rows[0];
     if (!row)
         return null;
-    const itemResult = await query(`SELECT order_id, product_sku, product_id, name, qty, price_cents, currency, variant_color, variant_size, variant_key FROM order_items WHERE order_id = $1`, [row.id]);
+    const itemResult = await query(`SELECT
+       oi.order_id,
+       oi.product_sku,
+       oi.product_id,
+       oi.name,
+       oi.qty,
+       oi.price_cents,
+       oi.currency,
+       p.image_url,
+       oi.variant_color,
+       oi.variant_size,
+       oi.variant_key
+     FROM order_items oi
+     LEFT JOIN products p ON p.id = oi.product_id
+     WHERE oi.order_id = $1`, [row.id]);
     return mapOrderRow(row, itemResult.rows.map(mapOrderItemRow));
 }
 async function findOrderById(orderId) {
@@ -289,7 +330,21 @@ async function findOrderById(orderId) {
     const row = result.rows[0];
     if (!row)
         return null;
-    const itemResult = await query(`SELECT order_id, product_sku, product_id, name, qty, price_cents, currency, variant_color, variant_size, variant_key FROM order_items WHERE order_id = $1`, [row.id]);
+    const itemResult = await query(`SELECT
+       oi.order_id,
+       oi.product_sku,
+       oi.product_id,
+       oi.name,
+       oi.qty,
+       oi.price_cents,
+       oi.currency,
+       p.image_url,
+       oi.variant_color,
+       oi.variant_size,
+       oi.variant_key
+     FROM order_items oi
+     LEFT JOIN products p ON p.id = oi.product_id
+     WHERE oi.order_id = $1`, [row.id]);
     return mapOrderRow(row, itemResult.rows.map(mapOrderItemRow));
 }
 async function deleteOrderById(orderId) {
@@ -313,7 +368,21 @@ async function findOrderByPaymentIntentId(paymentIntentId) {
     const row = result.rows[0];
     if (!row)
         return null;
-    const itemResult = await query(`SELECT order_id, product_sku, product_id, name, qty, price_cents, currency, variant_color, variant_size, variant_key FROM order_items WHERE order_id = $1`, [row.id]);
+    const itemResult = await query(`SELECT
+       oi.order_id,
+       oi.product_sku,
+       oi.product_id,
+       oi.name,
+       oi.qty,
+       oi.price_cents,
+       oi.currency,
+       p.image_url,
+       oi.variant_color,
+       oi.variant_size,
+       oi.variant_key
+     FROM order_items oi
+     LEFT JOIN products p ON p.id = oi.product_id
+     WHERE oi.order_id = $1`, [row.id]);
     return mapOrderRow(row, itemResult.rows.map(mapOrderItemRow));
 }
 async function listOrders() {

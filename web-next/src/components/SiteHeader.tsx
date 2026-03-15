@@ -18,7 +18,7 @@ const TOP_MESSAGES = [
   "Produção em pequena escala. Qualidade em cada detalhe.",
 ];
 
-const SEARCH_CATEGORIES = ["Feminino", "Masculino", "Calças", "Camisas", "Blazers", "Bolsas"] as const;
+const SEARCH_CATEGORIES = ["Feminino", "Masculino", "Calças", "Camisas", "Bolsas"] as const;
 const MENU_NAV_ITEMS = ["Novidades", "Presentes", "Feminino", "Masculino", "Bolsas e Acessórios", "Seleção Tsebi"] as const;
 const MENU_NOVIDADES_GALLERY_ITEMS = [
   { name: "Origem Shirt", image: "/images/product/origem-shirt-1.jpg", href: "/product/origem-shirt" },
