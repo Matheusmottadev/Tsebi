@@ -900,10 +900,7 @@ export function ProductExperience({ product, recommendations, imageBaseUrl }: Pr
                   <button type="button" onClick={() => setOpenDrawer("size-chart")}>Tabela de tamanhos</button>
                 ) : null}
                 <button type="button" onClick={() => setOpenDrawer("materials")}>Materiais e cuidados</button>
-                <button type="button" onClick={() => setOpenDrawer("contact")}>Frete e devolução grátis</button>
-                <button type="button" className={styles.lastServiceOption} onClick={() => setOpenDrawer("store")}>
-                  Marque um atendimento com nossa equipe
-                </button>
+                <button type="button" onClick={() => setOpenDrawer("contact")}>Frete e devolução</button>
               </div>
 
               {tailoredProducts.length > 0 ? (
@@ -1035,9 +1032,6 @@ export function ProductExperience({ product, recommendations, imageBaseUrl }: Pr
               <button type="button" onClick={() => setOpenDrawer("details")}>Detalhes do produto</button>
               <button type="button" onClick={() => setOpenDrawer("materials")}>Materiais e cuidados</button>
               <button type="button" onClick={() => setOpenDrawer("contact")}>Frete e devolução grátis</button>
-              <button type="button" className={styles.lastServiceOption} onClick={() => setOpenDrawer("store")}>
-                Marque um atendimento com nossa equipe
-              </button>
             </div>
           </div>
           <p className={styles.signatureQuote}>
