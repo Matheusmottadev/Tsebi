@@ -7,6 +7,7 @@ import { getProduct, getRecommendations, listProducts } from "@/services/product
 import type { Product } from "@/types";
 
 export const revalidate = 60;
+const PRODUCT_MOBILE_TAILORED_LIMIT = 6;
 
 type ProductPageProps = {
   params: Promise<{
@@ -156,14 +157,14 @@ export default async function ProductPage({ params }: ProductPageProps) {
 
   let recommendations: Product[] = [];
   try {
-    const result = await getRecommendations(id, 4);
+    const result = await getRecommendations(id, PRODUCT_MOBILE_TAILORED_LIMIT);
     recommendations = Array.isArray(result.recommendations) ? result.recommendations : [];
   } catch {
     recommendations = [];
   }
 
   let catalogFallback: Product[] = [];
-  if (recommendations.length < 4) {
+  if (recommendations.length < PRODUCT_MOBILE_TAILORED_LIMIT) {
     try {
       catalogFallback = await listProducts();
     } catch {
@@ -171,7 +172,7 @@ export default async function ProductPage({ params }: ProductPageProps) {
     }
   }
 
-  const tailoredRecommendations = buildTailoredRecommendations(product, recommendations, catalogFallback, 4);
+  const tailoredRecommendations = buildTailoredRecommendations(product, recommendations, catalogFallback, PRODUCT_MOBILE_TAILORED_LIMIT);
 
   const imageBaseUrl = buildImageBaseUrl();
   const canonicalPath = `/product/${encodeURIComponent(product.id)}`;

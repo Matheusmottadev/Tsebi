@@ -1195,6 +1195,10 @@
     background: #fff;
   }
 
+  .mobileTailoredCard:first-child .mobileTailoredMeta {
+    padding-left: 12px;
+  }
+
   .mobileTailoredMeta .tailoredName,
   .mobileTailoredMeta .tailoredPrice {
     color: #111;

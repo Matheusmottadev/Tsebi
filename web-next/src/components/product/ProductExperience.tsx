@@ -321,7 +321,14 @@ export function ProductExperience({ product, recommendations, imageBaseUrl }: Pr
         .slice(0, 4),
     [product, recommendations]
   );
-  const [mobileTailoredProducts, setMobileTailoredProducts] = useState<Product[]>(tailoredProducts);
+  const mobileTailoredSeed = useMemo(
+    () =>
+      [...recommendations]
+        .sort((a, b) => scoreRelatedProduct(product, b) - scoreRelatedProduct(product, a))
+        .slice(0, MOBILE_TAILORED_LIMIT),
+    [product, recommendations]
+  );
+  const [mobileTailoredProducts, setMobileTailoredProducts] = useState<Product[]>(mobileTailoredSeed);
   const metricsRef = useRef({
     sectionTop: 0,
     sectionHeight: 0,
@@ -428,12 +435,12 @@ export function ProductExperience({ product, recommendations, imageBaseUrl }: Pr
   }, [colors]);
 
   useEffect(() => {
-    setMobileTailoredProducts(tailoredProducts);
-  }, [tailoredProducts]);
+    setMobileTailoredProducts(mobileTailoredSeed);
+  }, [mobileTailoredSeed]);
 
   useEffect(() => {
     if (typeof window === "undefined" || window.innerWidth > 767) return;
-    if (tailoredProducts.length >= MOBILE_TAILORED_LIMIT) return;
+    if (mobileTailoredSeed.length >= MOBILE_TAILORED_LIMIT) return;
 
     let cancelled = false;
 
@@ -484,7 +491,7 @@ export function ProductExperience({ product, recommendations, imageBaseUrl }: Pr
     return () => {
       cancelled = true;
     };
-  }, [product, tailoredProducts]);
+  }, [product, mobileTailoredSeed]);
 
   useEffect(() => {
     setSelectedSize((current) => (sizes.includes(current) ? current : ""));
