@@ -1291,6 +1291,40 @@ function mapProduct(row: ProductRow | null | undefined): Product {
   };
 }
 
+function formatSkuDisplayName(value: string): string {
+  return String(value || "")
+    .trim()
+    .split(/[-_]+/)
+    .filter(Boolean)
+    .map((part) => {
+      const lower = part.toLowerCase();
+      return lower.charAt(0).toUpperCase() + lower.slice(1);
+    })
+    .join(" ");
+}
+
+function buildStaticProductRow(sku: string): ProductRow | null {
+  const normalizedSku = String(sku || "").trim().toLowerCase();
+  if (!normalizedSku) return null;
+
+  const staticMetadata = PRODUCT_METADATA[normalizedSku];
+  if (!staticMetadata) return null;
+
+  return {
+    id: normalizedSku,
+    sku: normalizedSku,
+    name: formatSkuDisplayName(normalizedSku),
+    price_cents: STOREFRONT_DEFAULT_PRICE_CENTS,
+    stock_qty: 1,
+    currency: "brl",
+    active: true,
+    image_url: String(staticMetadata.image || DEFAULT_IMAGE).trim() || DEFAULT_IMAGE,
+    metadata: buildPersistedMetadata(normalizedSku, staticMetadata),
+    created_at: null,
+    updated_at: null
+  };
+}
+
 function getErrorCode(error: unknown): string {
   return String((error as { code?: unknown })?.code || "");
 }
@@ -1928,31 +1962,37 @@ async function searchAdminProducts({
 }
 
 async function getProductByIdentifier(identifier: string): Promise<Product | null> {
-  await ensureInventorySeededFromFile();
-
   const normalized = String(identifier || "").trim();
   if (!normalized) return null;
+  try {
+    await ensureInventorySeededFromFile();
 
-  const result = await queryWithOptionalMetadata(
-    `
-    SELECT id, sku, name, price_cents, stock_qty, currency, active, image_url, metadata, created_at, updated_at
-    FROM products
-    WHERE lower(sku) = lower($1)
-       OR id::text = $1
-    LIMIT 1
-    `,
-    `
-    SELECT id, sku, name, price_cents, stock_qty, currency, active, image_url, created_at, updated_at
-    FROM products
-    WHERE lower(sku) = lower($1)
-       OR id::text = $1
-    LIMIT 1
-    `,
-    [normalized]
-  );
+    const result = await queryWithOptionalMetadata(
+      `
+      SELECT id, sku, name, price_cents, stock_qty, currency, active, image_url, metadata, created_at, updated_at
+      FROM products
+      WHERE lower(sku) = lower($1)
+         OR id::text = $1
+      LIMIT 1
+      `,
+      `
+      SELECT id, sku, name, price_cents, stock_qty, currency, active, image_url, created_at, updated_at
+      FROM products
+      WHERE lower(sku) = lower($1)
+         OR id::text = $1
+      LIMIT 1
+      `,
+      [normalized]
+    );
 
-  if (result.rowCount === 0) return null;
-  return mapProduct(result.rows[0]);
+    if (result.rowCount > 0) {
+      return mapProduct(result.rows[0]);
+    }
+  } catch {
+    // Fallback to static catalog below for local/dev resilience.
+  }
+
+  return mapProduct(buildStaticProductRow(normalized));
 }
 
 function normalizeSku(value: unknown): string {

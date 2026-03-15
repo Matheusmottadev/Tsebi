@@ -918,25 +918,30 @@
     object-position: center top;
   }
 
-  /* Vertical gallery dots — left side of hero image */
+  /* Gallery dots — bottom-left of hero image */
   .mobileGalleryDots {
     position: absolute;
-    left: 12px;
-    top: 50%;
-    transform: translateY(-50%);
+    left: 16px;
+    bottom: 16px;
     display: flex;
     flex-direction: column;
-    gap: 5px;
+    gap: 8px;
     z-index: 5;
     pointer-events: none;
   }
 
   .mobileGalleryDot {
     display: block;
-    width: 3px;
-    height: 3px;
-    background: rgba(255, 255, 255, 0.75);
+    width: 7px;
+    height: 7px;
+    background: transparent;
+    border: 1px solid rgba(255, 255, 255, 0.92);
     border-radius: 50%;
+  }
+
+  .mobileGalleryDotActive {
+    background: #111;
+    border-color: #111;
   }
 
   /* Gallery images: same height as hero — 1 photo per view */
@@ -949,6 +954,7 @@
     height: calc(100vh - var(--product-fixed-stack, 122px) - 168px);
     height: calc(100svh - var(--product-fixed-stack, 122px) - 168px);
     min-height: 260px;
+    position: relative;
   }
 
   .mobileGalleryImage {
@@ -1107,6 +1113,78 @@
     margin-top: 4px;
   }
 
+  .mobileTailoredCarousel {
+    position: relative;
+  }
+
+  .mobileTailoredTrack {
+    display: grid;
+    grid-auto-flow: column;
+    grid-auto-columns: calc((100% - 12px) / 2);
+    gap: 12px;
+    overflow-x: auto;
+    overflow-y: hidden;
+    scroll-snap-type: x mandatory;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+    -webkit-overflow-scrolling: touch;
+    border-top: 1px solid #ededed;
+  }
+
+  .mobileTailoredTrack::-webkit-scrollbar {
+    display: none;
+  }
+
+  .mobileTailoredCard {
+    min-width: 0;
+    border-right: 0;
+    scroll-snap-align: start;
+    scroll-snap-stop: always;
+    display: grid;
+    grid-template-rows: auto auto;
+  }
+
+  .mobileTailoredArrow {
+    position: absolute;
+    top: 50%;
+    z-index: 4;
+    display: block;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: #111;
+    font-size: 24px;
+    line-height: 1;
+    cursor: pointer;
+    transform: translateY(-50%);
+  }
+
+  .mobileTailoredArrowPrev {
+    left: 6px;
+  }
+
+  .mobileTailoredArrowNext {
+    right: 6px;
+  }
+
+  .mobileTailoredCard .tailoredMedia {
+    aspect-ratio: 4 / 5;
+  }
+
+  .mobileTailoredCard .tailoredMetaOverlay {
+    position: static;
+    display: grid;
+    gap: 2px;
+    padding: 8px 0 0;
+    background: transparent;
+    box-shadow: none;
+  }
+
+  .mobileTailoredCard .tailoredName,
+  .mobileTailoredCard .tailoredPrice {
+    color: #111;
+  }
+
   .tailoredHeader {
     padding: 16px 16px 14px;
   }
@@ -1120,20 +1198,22 @@
   }
 
   .tailoredGrid {
-    grid-auto-flow: row;
-    grid-template-columns: 1fr 1fr;
-    overflow-x: visible;
-    overflow-y: visible;
+    display: grid;
+    grid-auto-flow: column;
+    grid-auto-columns: 78vw;
+    overflow-x: auto;
+    overflow-y: hidden;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
     border-top: 1px solid #ededed;
+  }
+
+  .tailoredGrid::-webkit-scrollbar {
+    display: none;
   }
 
   .tailoredCard {
     border-right: 1px solid #ededed;
-    border-bottom: 1px solid #ededed;
-  }
-
-  .tailoredCard:nth-child(2n) {
-    border-right: none;
   }
 
   /* Vertical "FROM THE RUNWAY" label on product cards */

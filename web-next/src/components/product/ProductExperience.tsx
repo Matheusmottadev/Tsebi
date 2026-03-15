@@ -7,6 +7,7 @@ import { buildVariantSnapshot, getProductVariantOptions, getVariantStockQty } fr
 import { useCartStore } from "@/lib/cart/cartStore";
 import { getSmoothScrollEngine } from "@/lib/animation/smoothScrollEngine";
 import { getOrCreateAnonId, trackCommerceEvent } from "@/lib/analytics";
+import { getRecommendations, listProducts } from "@/services/products";
 import type { Product, ProductAvailabilityStatus } from "@/types";
 import { Drawer } from "./Drawer";
 import {
@@ -285,9 +286,10 @@ export function ProductExperience({ product, recommendations, imageBaseUrl }: Pr
     () =>
       [...recommendations]
         .sort((a, b) => scoreRelatedProduct(product, b) - scoreRelatedProduct(product, a))
-        .slice(0, 8),
+        .slice(0, 4),
     [product, recommendations]
   );
+  const [mobileTailoredProducts, setMobileTailoredProducts] = useState<Product[]>(tailoredProducts);
   const metricsRef = useRef({
     sectionTop: 0,
     sectionHeight: 0,
@@ -305,10 +307,13 @@ export function ProductExperience({ product, recommendations, imageBaseUrl }: Pr
   const [openDrawer, setOpenDrawer] = useState<DrawerKey | null>(null);
   const [showStickyBar, setShowStickyBar] = useState(false);
   const [panelExpanded, setPanelExpanded] = useState(false);
+  const [activeMobileImageIndex, setActiveMobileImageIndex] = useState(0);
   const panelExpandedRef = useRef(false);
   const panelForcedOpenRef = useRef(false);
   const gallerySentinelRef = useRef<HTMLDivElement | null>(null);
   const mobileSheetRef = useRef<HTMLElement | null>(null);
+  const mobileTailoredTrackRef = useRef<HTMLDivElement | null>(null);
+  const mobileGalleryItemRefs = useRef<Array<HTMLElement | null>>([]);
   const sheetTouchStartY = useRef(0);
 
   const colorRequired = colors.length > 0;
@@ -389,6 +394,59 @@ export function ProductExperience({ product, recommendations, imageBaseUrl }: Pr
   useEffect(() => {
     setSelectedColor((current) => (colors.includes(current) ? current : ""));
   }, [colors]);
+
+  useEffect(() => {
+    setMobileTailoredProducts(tailoredProducts);
+  }, [tailoredProducts]);
+
+  useEffect(() => {
+    if (typeof window === "undefined" || window.innerWidth > 767) return;
+    if (tailoredProducts.length > 0) return;
+
+    let cancelled = false;
+
+    const loadMobileTailoredProducts = async () => {
+      try {
+        const recommendationResponse = await getRecommendations(product.id, 4);
+        const fetchedRecommendations = Array.isArray(recommendationResponse?.recommendations)
+          ? recommendationResponse.recommendations
+          : [];
+        const rankedRecommendations = [...fetchedRecommendations]
+          .filter((item) => String(item?.id || "").trim() && String(item.id) !== String(product.id))
+          .sort((a, b) => scoreRelatedProduct(product, b) - scoreRelatedProduct(product, a))
+          .slice(0, 4);
+
+        if (rankedRecommendations.length > 0) {
+          if (!cancelled) setMobileTailoredProducts(rankedRecommendations);
+          return;
+        }
+      } catch {
+        // Ignore and fall back to catalog below.
+      }
+
+      try {
+        const catalog = await listProducts();
+        const fallbackRecommendations = [...catalog]
+          .filter((item) => String(item?.id || "").trim() && String(item.id) !== String(product.id))
+          .sort((a, b) => scoreRelatedProduct(product, b) - scoreRelatedProduct(product, a))
+          .slice(0, 4);
+
+        if (!cancelled) {
+          setMobileTailoredProducts(fallbackRecommendations);
+        }
+      } catch {
+        if (!cancelled) {
+          setMobileTailoredProducts([]);
+        }
+      }
+    };
+
+    void loadMobileTailoredProducts();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [product, tailoredProducts]);
 
   useEffect(() => {
     setSelectedSize((current) => (sizes.includes(current) ? current : ""));
@@ -474,11 +532,61 @@ export function ProductExperience({ product, recommendations, imageBaseUrl }: Pr
 
   useEffect(() => {
     setPanelExpanded(false);
+    setActiveMobileImageIndex(0);
     panelExpandedRef.current = false;
     panelForcedOpenRef.current = false;
     if (mobileSheetRef.current) mobileSheetRef.current.scrollTop = 0;
     document.body.style.overflow = "";
   }, [product.id]);
+
+  useEffect(() => {
+    if (typeof window === "undefined" || typeof window.IntersectionObserver !== "function") return;
+    if (window.innerWidth > 767) return;
+
+    const items = mobileGalleryItemRefs.current.filter(Boolean) as HTMLElement[];
+    if (items.length === 0) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        let nextIndex: number | null = null;
+        let bestRatio = 0;
+
+        entries.forEach((entry) => {
+          if (!entry.isIntersecting) return;
+          if (entry.intersectionRatio < bestRatio) return;
+          const index = Number((entry.target as HTMLElement).dataset.galleryIndex ?? -1);
+          if (index < 0) return;
+          bestRatio = entry.intersectionRatio;
+          nextIndex = index;
+        });
+
+        if (nextIndex !== null) {
+          setActiveMobileImageIndex(nextIndex);
+        }
+      },
+      {
+        threshold: [0.35, 0.55, 0.75],
+      }
+    );
+
+    items.forEach((item) => observer.observe(item));
+    return () => observer.disconnect();
+  }, [galleryImages.length, product.id]);
+
+  const renderMobileGalleryDots = () => {
+    if (galleryImages.length <= 1) return null;
+
+    return (
+      <div className={styles.mobileGalleryDots} aria-hidden="true">
+        {galleryImages.map((_, i) => (
+          <span
+            key={i}
+            className={`${styles.mobileGalleryDot}${i === activeMobileImageIndex ? ` ${styles.mobileGalleryDotActive}` : ""}`}
+          />
+        ))}
+      </div>
+    );
+  };
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -704,13 +812,19 @@ export function ProductExperience({ product, recommendations, imageBaseUrl }: Pr
     }, 6000);
   }, []);
 
-  const handleBuy = (source: "main" | "sticky" = "main") => {
+  const scrollMobileTailored = useCallback((direction: -1 | 1) => {
+    const track = mobileTailoredTrackRef.current;
+    if (!track) return;
+    const amount = track.clientWidth;
+    track.scrollBy({ left: amount * direction, behavior: "smooth" });
+  }, []);
+
+  const runBuyFlow = useCallback((source: "main" | "sticky" = "main") => {
     if (isSoldOutByAvailability) {
       if (source === "sticky") {
         showStickyToast("Produto esgotado.");
       } else {
         setFeedback("Produto esgotado.");
-        window.setTimeout(() => setFeedback(""), 1800);
       }
       return;
     }
@@ -720,7 +834,6 @@ export function ProductExperience({ product, recommendations, imageBaseUrl }: Pr
         showStickyToast("Você precisa escolher o tamanho e cor da peça", true);
       } else {
         setFeedback("Selecione cor e tamanho para continuar.");
-        window.setTimeout(() => setFeedback(""), 1800);
       }
       return;
     }
@@ -744,6 +857,33 @@ export function ProductExperience({ product, recommendations, imageBaseUrl }: Pr
     }
     setFeedback(result.ok ? "Produto adicionado ao carrinho." : result.error || "Não foi possível adicionar.");
     window.setTimeout(() => setFeedback(""), 1800);
+  }, [
+    addItem,
+    canBuy,
+    clearError,
+    isSoldOutByAvailability,
+    product.currency,
+    product.id,
+    product.image,
+    product.name,
+    product.unitAmount,
+    selectedColor,
+    selectedSize,
+    showStickyToast,
+  ]);
+
+  const handleBuy = (source: "main" | "sticky" = "main") => {
+    if (typeof window !== "undefined" && window.innerWidth <= 767 && source === "main" && !panelExpandedRef.current) {
+      expandMobilePanel({ manual: true });
+      window.requestAnimationFrame(() => {
+        window.requestAnimationFrame(() => {
+          runBuyFlow(source);
+        });
+      });
+      return;
+    }
+
+    runBuyFlow(source);
   };
 
   const handleApplySizeFromChart = (size: string) => {
@@ -788,7 +928,11 @@ export function ProductExperience({ product, recommendations, imageBaseUrl }: Pr
       ) : null}
       <main className={styles.main} ref={mainRef}>
         <section className={styles.mobileHeroStack} aria-label="Galeria do produto">
-          <figure className={styles.mobileHeroFigure}>
+          <figure
+            className={styles.mobileHeroFigure}
+            ref={(node) => { mobileGalleryItemRefs.current[0] = node; }}
+            data-gallery-index={0}
+          >
             <ProductImage
               src={galleryImages[0] || product.image || ""}
               alt={`${product.name} - foto principal`}
@@ -798,13 +942,7 @@ export function ProductExperience({ product, recommendations, imageBaseUrl }: Pr
               imageBaseUrl={imageBaseUrl}
               priority
             />
-            {galleryImages.length > 1 ? (
-              <div className={styles.mobileGalleryDots} aria-hidden="true">
-                {galleryImages.map((_, i) => (
-                  <span key={i} className={styles.mobileGalleryDot} />
-                ))}
-              </div>
-            ) : null}
+            {renderMobileGalleryDots()}
           </figure>
 
           {/* Fixed bottom panel — collapsed: name+price+buy / expanded: full info */}
@@ -903,27 +1041,49 @@ export function ProductExperience({ product, recommendations, imageBaseUrl }: Pr
                 <button type="button" onClick={() => setOpenDrawer("contact")}>Frete e devolução</button>
               </div>
 
-              {tailoredProducts.length > 0 ? (
+              {mobileTailoredProducts.length > 0 ? (
                 <section className={styles.mobileTailored} aria-label="Tem a sua cara">
                   <header className={styles.tailoredHeader}>
                     <h2>Tem a sua cara</h2>
                   </header>
-                  <div className={styles.tailoredGrid}>
-                    {tailoredProducts.map((item) => {
-                      const cardImages = resolveTailoredCardImages(item, galleryImages);
-                      return (
-                        <a key={item.id} href={`/product/${encodeURIComponent(item.id)}`} className={styles.tailoredCard}>
-                          <div className={styles.tailoredMedia}>
-                            <ProductImage src={cardImages.primary} alt={item.name} width={900} height={1200} className={`${styles.tailoredImage} ${styles.tailoredImagePrimary}`} imageBaseUrl={imageBaseUrl} />
-                            <ProductImage src={cardImages.secondary} alt={`${item.name} - segunda foto`} width={900} height={1200} className={`${styles.tailoredImage} ${styles.tailoredImageSecondary}`} imageBaseUrl={imageBaseUrl} />
-                            <div className={styles.tailoredMetaOverlay}>
-                              <p className={styles.tailoredName}>{item.name}</p>
-                              <Price amountCents={item.unitAmount} currency={item.currency} className={styles.tailoredPrice} />
+                  <div className={styles.mobileTailoredCarousel}>
+                    <button
+                      type="button"
+                      className={`${styles.mobileTailoredArrow} ${styles.mobileTailoredArrowPrev}`}
+                      onClick={() => scrollMobileTailored(-1)}
+                      aria-label="Ver produtos anteriores"
+                    >
+                      &#8249;
+                    </button>
+                    <div className={styles.mobileTailoredTrack} ref={mobileTailoredTrackRef}>
+                      {mobileTailoredProducts.map((item) => {
+                        const cardImages = resolveTailoredCardImages(item, galleryImages);
+                        return (
+                          <a
+                            key={item.id}
+                            href={`/product/${encodeURIComponent(item.id)}`}
+                            className={`${styles.tailoredCard} ${styles.mobileTailoredCard}`}
+                          >
+                            <div className={styles.tailoredMedia}>
+                              <ProductImage src={cardImages.primary} alt={item.name} width={900} height={1200} className={`${styles.tailoredImage} ${styles.tailoredImagePrimary}`} imageBaseUrl={imageBaseUrl} />
+                              <ProductImage src={cardImages.secondary} alt={`${item.name} - segunda foto`} width={900} height={1200} className={`${styles.tailoredImage} ${styles.tailoredImageSecondary}`} imageBaseUrl={imageBaseUrl} />
+                              <div className={styles.tailoredMetaOverlay}>
+                                <p className={styles.tailoredName}>{item.name}</p>
+                                <Price amountCents={item.unitAmount} currency={item.currency} className={styles.tailoredPrice} />
+                              </div>
                             </div>
-                          </div>
-                        </a>
-                      );
-                    })}
+                          </a>
+                        );
+                      })}
+                    </div>
+                    <button
+                      type="button"
+                      className={`${styles.mobileTailoredArrow} ${styles.mobileTailoredArrowNext}`}
+                      onClick={() => scrollMobileTailored(1)}
+                      aria-label="Ver próximos produtos"
+                    >
+                      &#8250;
+                    </button>
                   </div>
                 </section>
               ) : null}
@@ -933,7 +1093,12 @@ export function ProductExperience({ product, recommendations, imageBaseUrl }: Pr
           {galleryImages.slice(1).length > 0 ? (
             <div className={styles.mobileGalleryStack}>
               {galleryImages.slice(1).map((src, index) => (
-                <figure key={`mobile-${src}-${index}`} className={styles.mobileGalleryItem}>
+                <figure
+                  key={`mobile-${src}-${index}`}
+                  className={styles.mobileGalleryItem}
+                  ref={(node) => { mobileGalleryItemRefs.current[index + 1] = node; }}
+                  data-gallery-index={index + 1}
+                >
                   <ProductImage
                     src={src}
                     alt={`${product.name} - foto ${index + 2}`}
@@ -942,6 +1107,7 @@ export function ProductExperience({ product, recommendations, imageBaseUrl }: Pr
                     className={styles.mobileGalleryImage}
                     imageBaseUrl={imageBaseUrl}
                   />
+                  {renderMobileGalleryDots()}
                 </figure>
               ))}
             </div>
@@ -1032,6 +1198,9 @@ export function ProductExperience({ product, recommendations, imageBaseUrl }: Pr
               <button type="button" onClick={() => setOpenDrawer("details")}>Detalhes do produto</button>
               <button type="button" onClick={() => setOpenDrawer("materials")}>Materiais e cuidados</button>
               <button type="button" onClick={() => setOpenDrawer("contact")}>Frete e devolução grátis</button>
+              <button type="button" className={styles.lastServiceOption} onClick={() => setOpenDrawer("store")}>
+                Marque um atendimento com nossa equipe
+              </button>
             </div>
           </div>
           <p className={styles.signatureQuote}>

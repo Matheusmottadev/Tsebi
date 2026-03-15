@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import { ProductExperience } from "@/components/product/ProductExperience";
 import { LegacyFooter } from "@/components/home-legacy/LegacyFooter";
 import { readPublicEnv } from "@/lib/env";
-import { getProduct, getRecommendations } from "@/services/products";
+import { getProduct, getRecommendations, listProducts } from "@/services/products";
 import type { Product } from "@/types";
 
 export const revalidate = 60;
@@ -50,6 +50,61 @@ function buildOgImage(product: Product): string | undefined {
   } catch {
     return undefined;
   }
+}
+
+function normalizeRecommendationText(value: string): string {
+  return String(value || "").trim().toLowerCase();
+}
+
+function scoreFallbackRecommendation(base: Product, candidate: Product): number {
+  let score = 0;
+
+  if (normalizeRecommendationText(base.collection) && normalizeRecommendationText(base.collection) === normalizeRecommendationText(candidate.collection)) {
+    score += 5;
+  }
+
+  if (normalizeRecommendationText(base.category) && normalizeRecommendationText(base.category) === normalizeRecommendationText(candidate.category)) {
+    score += 4;
+  }
+
+  if (normalizeRecommendationText(base.material) && normalizeRecommendationText(base.material) === normalizeRecommendationText(candidate.material)) {
+    score += 2;
+  }
+
+  if (Number(candidate.stock || 0) > 0) {
+    score += 1;
+  }
+
+  return score;
+}
+
+function buildTailoredRecommendations(base: Product, primary: Product[], catalog: Product[], limit = 4): Product[] {
+  const seen = new Set<string>([String(base.id || "").trim()]);
+  const merged: Product[] = [];
+
+  for (const item of primary) {
+    const key = String(item.id || "").trim();
+    if (!key || seen.has(key)) continue;
+    seen.add(key);
+    merged.push(item);
+  }
+
+  const fallback = [...catalog]
+    .filter((item) => {
+      const key = String(item.id || "").trim();
+      return Boolean(key) && !seen.has(key);
+    })
+    .sort((a, b) => scoreFallbackRecommendation(base, b) - scoreFallbackRecommendation(base, a));
+
+  for (const item of fallback) {
+    if (merged.length >= limit) break;
+    const key = String(item.id || "").trim();
+    if (!key || seen.has(key)) continue;
+    seen.add(key);
+    merged.push(item);
+  }
+
+  return merged.slice(0, limit);
 }
 
 export async function generateMetadata({ params }: ProductPageProps): Promise<Metadata> {
@@ -107,6 +162,17 @@ export default async function ProductPage({ params }: ProductPageProps) {
     recommendations = [];
   }
 
+  let catalogFallback: Product[] = [];
+  if (recommendations.length < 4) {
+    try {
+      catalogFallback = await listProducts();
+    } catch {
+      catalogFallback = [];
+    }
+  }
+
+  const tailoredRecommendations = buildTailoredRecommendations(product, recommendations, catalogFallback, 4);
+
   const imageBaseUrl = buildImageBaseUrl();
   const canonicalPath = `/product/${encodeURIComponent(product.id)}`;
   const baseUrl = String(process.env.NEXT_PUBLIC_SITE_URL || "https://tsebi.com.br").replace(/\/+$/, "");
@@ -151,7 +217,7 @@ export default async function ProductPage({ params }: ProductPageProps) {
           __html: JSON.stringify(productSchema),
         }}
       />
-      <ProductExperience product={product} recommendations={recommendations} imageBaseUrl={imageBaseUrl} />
+      <ProductExperience product={product} recommendations={tailoredRecommendations} imageBaseUrl={imageBaseUrl} />
       <div className="product-mobile-footer">
         <LegacyFooter variant="light" />
       </div>
