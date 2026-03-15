@@ -108,6 +108,109 @@ const LEGACY_SHOWCASE_CARDS: Record<GenderTab, LegacyShowcaseCard[]> = {
   ],
 };
 
+type ShowcaseCardProduct = {
+  id: string;
+  sku: string;
+  name: string;
+  image: string;
+  secondaryImage?: string;
+  alt: string;
+  href: string;
+};
+
+function ShowcaseCard({ product }: { product: ShowcaseCardProduct }) {
+  const [activeIndex, setActiveIndex] = useState(0);
+  const touchStartXRef = useRef<number | null>(null);
+  const touchStartYRef = useRef<number | null>(null);
+  const isHorizontalRef = useRef<boolean | null>(null);
+  const isSwipingRef = useRef(false);
+
+  const images = [product.image, product.secondaryImage].filter(Boolean) as string[];
+
+  const handleTouchStart = (e: React.TouchEvent) => {
+    touchStartXRef.current = e.touches[0].clientX;
+    touchStartYRef.current = e.touches[0].clientY;
+    isSwipingRef.current = false;
+    isHorizontalRef.current = null;
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    if (touchStartXRef.current === null || touchStartYRef.current === null) return;
+    if (isHorizontalRef.current === null) {
+      const dx = Math.abs(e.touches[0].clientX - touchStartXRef.current);
+      const dy = Math.abs(e.touches[0].clientY - touchStartYRef.current);
+      if (dx > 5 || dy > 5) isHorizontalRef.current = dx > dy;
+    }
+    if (isHorizontalRef.current) e.preventDefault();
+  };
+
+  const handleTouchEnd = (e: React.TouchEvent) => {
+    if (touchStartXRef.current === null) return;
+    const deltaX = e.changedTouches[0].clientX - touchStartXRef.current;
+    touchStartXRef.current = null;
+    touchStartYRef.current = null;
+    if (isHorizontalRef.current && Math.abs(deltaX) > 30) {
+      isSwipingRef.current = true;
+      setActiveIndex((prev) =>
+        deltaX < 0 ? Math.min(prev + 1, images.length - 1) : Math.max(prev - 1, 0)
+      );
+    }
+    isHorizontalRef.current = null;
+  };
+
+  const handleClick = (e: React.MouseEvent) => {
+    if (isSwipingRef.current) {
+      e.preventDefault();
+      isSwipingRef.current = false;
+    }
+  };
+
+  return (
+    <article className="category-card">
+      <Link
+        href={product.href}
+        className="category-media"
+        onClick={handleClick}
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
+      >
+        <div className="category-image">
+          {images.map((src, i) => (
+            <Image
+              key={src}
+              className={`card-media-img${i === activeIndex ? " card-media-img-active" : ""}`}
+              src={src}
+              alt={i === 0 ? product.alt : `${product.alt} - foto ${i + 1}`}
+              width={900}
+              height={1200}
+              unoptimized
+              onError={(event) => {
+                const el = event.currentTarget;
+                el.onerror = null;
+                el.src = product.image;
+              }}
+            />
+          ))}
+        </div>
+        {images.length > 1 && (
+          <div className="card-dots" aria-hidden="true">
+            {images.map((_, i) => (
+              <span
+                key={i}
+                className={`card-dot${i === activeIndex ? " card-dot-active" : i < activeIndex ? " card-dot-done" : ""}`}
+              />
+            ))}
+          </div>
+        )}
+      </Link>
+      <h3>
+        <Link href={product.href}>{product.name}</Link>
+      </h3>
+    </article>
+  );
+}
+
 function resolveProductImageSrc(image: string): string {
   const raw = String(image || "").trim();
   if (!raw) return "/images/product/origem-skirt-1.jpg";
@@ -265,41 +368,10 @@ export function GenderShowcase({ products }: GenderShowcaseProps) {
       </button>
       <div ref={gridRef} className={`category-grid ${isSwitching ? "is-switching" : ""}`} id="categoryGrid">
         {visibleProducts.map((product) => (
-          <article key={`${product.sku || product.id}-${product.name}`} className="category-card">
-            <Link href={product.href} className="category-media">
-              <div className="category-image">
-                <Image
-                  className="card-media-img card-media-img-primary"
-                  src={product.image}
-                  alt={product.alt}
-                  width={900}
-                  height={1200}
-                  unoptimized
-                  onError={(event) => {
-                    const element = event.currentTarget;
-                    element.onerror = null;
-                    element.src = product.image || "/images/product/origem-skirt-1.jpg";
-                  }}
-                />
-                <Image
-                  className="card-media-img card-media-img-secondary"
-                  src={product.secondaryImage || product.image}
-                  alt={`${product.alt} - segunda foto`}
-                  width={900}
-                  height={1200}
-                  unoptimized
-                  onError={(event) => {
-                    const element = event.currentTarget;
-                    element.onerror = null;
-                    element.src = product.image || "/images/product/origem-skirt-1.jpg";
-                  }}
-                />
-              </div>
-            </Link>
-            <h3>
-              <Link href={product.href}>{product.name}</Link>
-            </h3>
-          </article>
+          <ShowcaseCard
+            key={`${product.sku || product.id}-${product.name}`}
+            product={product}
+          />
         ))}
       </div>
       </div>

@@ -1702,6 +1702,8 @@ body.menu-open::before {
 .card-media-img{
   position: absolute;
   inset: 0;
+  opacity: 0;
+  transition: opacity 220ms ease;
 }
 
 .card-media-img-primary{
@@ -1712,14 +1714,34 @@ body.menu-open::before {
   opacity: 0;
 }
 
-.category-card:hover .card-media-img-primary,
-.category-card:focus-within .card-media-img-primary{
-  opacity: 0;
+.card-media-img-active{
+  opacity: 1;
 }
 
-.category-card:hover .card-media-img-secondary,
-.category-card:focus-within .card-media-img-secondary{
-  opacity: 1;
+/* hover only on real pointer devices */
+@media (hover: hover) {
+  .category-card:hover .card-media-img-primary,
+  .category-card:focus-within .card-media-img-primary{
+    opacity: 0;
+  }
+
+  .category-card:hover .card-media-img-secondary,
+  .category-card:focus-within .card-media-img-secondary{
+    opacity: 1;
+  }
+
+  .category-card:hover .card-media-img:nth-child(1){
+    opacity: 0;
+  }
+
+  .category-card:hover .card-media-img:nth-child(2){
+    opacity: 1;
+  }
+}
+
+/* card dot indicators — hidden on desktop */
+.card-dots{
+  display: none;
 }
 
 .category-card h3{
@@ -2732,6 +2754,35 @@ body.no-scroll .top-bar{
 
   .category-grid::-webkit-scrollbar{
     display: none;
+  }
+
+  .card-dots{
+    display: flex;
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    flex-direction: row;
+    gap: 3px;
+    z-index: 2;
+    pointer-events: none;
+  }
+
+  .card-dot{
+    flex: 1;
+    height: 2px;
+    background: rgba(255,255,255,0.3);
+    transform-origin: center;
+    transition: background 0.25s ease, transform 0.25s ease;
+  }
+
+  .card-dot-active{
+    background: #fff;
+    transform: scaleY(2);
+  }
+
+  .card-dot-done{
+    background: rgba(255,255,255,0.65);
   }
 
   .category-card{
