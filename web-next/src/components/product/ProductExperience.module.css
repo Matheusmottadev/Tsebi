@@ -761,6 +761,18 @@
   font-size: 13px;
 }
 
+.mobilePanelFooter {
+  display: none;
+}
+
+.mobileTailoredColors {
+  display: none;
+}
+
+.mobileTailoredColorDot {
+  display: none;
+}
+
 @media (max-width: 1000px) {
   .stickyProductBar {
     height: 64px;
@@ -920,20 +932,20 @@
 
   /* Gallery dots — bottom-left of hero image */
   .mobileGalleryDots {
-    position: absolute;
+    position: fixed;
     left: 16px;
-    bottom: 16px;
+    bottom: calc(192px + env(safe-area-inset-bottom, 20px) + 14px);
     display: flex;
     flex-direction: column;
-    gap: 8px;
-    z-index: 5;
+    gap: 10px;
+    z-index: 25;
     pointer-events: none;
   }
 
   .mobileGalleryDot {
     display: block;
-    width: 7px;
-    height: 7px;
+    width: 10px;
+    height: 10px;
     background: transparent;
     border: 1px solid rgba(255, 255, 255, 0.92);
     border-radius: 50%;
@@ -1115,12 +1127,14 @@
 
   .mobileTailoredCarousel {
     position: relative;
+    --mobile-tailored-card-width: calc((100% - 12px) / 2);
+    --mobile-tailored-image-height: calc(var(--mobile-tailored-card-width) * 5 / 4);
   }
 
   .mobileTailoredTrack {
     display: grid;
     grid-auto-flow: column;
-    grid-auto-columns: calc((100% - 12px) / 2);
+    grid-auto-columns: var(--mobile-tailored-card-width);
     gap: 12px;
     overflow-x: auto;
     overflow-y: hidden;
@@ -1137,7 +1151,8 @@
 
   .mobileTailoredCard {
     min-width: 0;
-    border-right: 0;
+    border: 0;
+    background: transparent;
     scroll-snap-align: start;
     scroll-snap-stop: always;
     display: grid;
@@ -1146,7 +1161,7 @@
 
   .mobileTailoredArrow {
     position: absolute;
-    top: 50%;
+    top: calc((var(--mobile-tailored-image-height) / 2) + 26px);
     z-index: 4;
     display: block;
     padding: 0;
@@ -1171,18 +1186,39 @@
     aspect-ratio: 4 / 5;
   }
 
-  .mobileTailoredCard .tailoredMetaOverlay {
-    position: static;
+  .mobileTailoredMeta {
     display: grid;
     gap: 2px;
-    padding: 8px 0 0;
-    background: transparent;
-    box-shadow: none;
+    padding: 10px 0 0;
+    background: #fff;
   }
 
-  .mobileTailoredCard .tailoredName,
-  .mobileTailoredCard .tailoredPrice {
+  .mobileTailoredMeta .tailoredName,
+  .mobileTailoredMeta .tailoredPrice {
     color: #111;
+  }
+
+  .mobileTailoredColors {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: 4px;
+  }
+
+  .mobileTailoredColorDot {
+    display: block;
+    width: 12px;
+    height: 12px;
+    border-radius: 999px;
+    border: 1px solid #d0d0d0;
+    background-repeat: no-repeat;
+    background-size: cover;
+    flex: 0 0 auto;
+  }
+
+  .mobilePanelFooter {
+    display: block;
+    margin: 20px -20px 0;
   }
 
   .tailoredHeader {

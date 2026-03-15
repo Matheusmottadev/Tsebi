@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { ProductImage } from "@/components/ProductImage";
 import { Price } from "@/components/Price";
+import { LegacyFooter } from "@/components/home-legacy/LegacyFooter";
 import { buildVariantSnapshot, getProductVariantOptions, getVariantStockQty } from "@/lib/cart/cartItem";
 import { useCartStore } from "@/lib/cart/cartStore";
 import { getSmoothScrollEngine } from "@/lib/animation/smoothScrollEngine";
@@ -540,37 +541,54 @@ export function ProductExperience({ product, recommendations, imageBaseUrl }: Pr
   }, [product.id]);
 
   useEffect(() => {
-    if (typeof window === "undefined" || typeof window.IntersectionObserver !== "function") return;
+    if (typeof window === "undefined") return;
     if (window.innerWidth > 767) return;
 
-    const items = mobileGalleryItemRefs.current.filter(Boolean) as HTMLElement[];
-    if (items.length === 0) return;
+    let rafId = 0;
 
-    const observer = new IntersectionObserver(
-      (entries) => {
-        let nextIndex: number | null = null;
-        let bestRatio = 0;
+    const updateActiveImage = () => {
+      const items = mobileGalleryItemRefs.current.filter(Boolean) as HTMLElement[];
+      if (items.length === 0) return;
 
-        entries.forEach((entry) => {
-          if (!entry.isIntersecting) return;
-          if (entry.intersectionRatio < bestRatio) return;
-          const index = Number((entry.target as HTMLElement).dataset.galleryIndex ?? -1);
-          if (index < 0) return;
-          bestRatio = entry.intersectionRatio;
+      const anchorY = Math.round(window.innerHeight * 0.34);
+      let nextIndex = 0;
+      let closestDistance = Number.POSITIVE_INFINITY;
+
+      for (const item of items) {
+        const rect = item.getBoundingClientRect();
+        const index = Number(item.dataset.galleryIndex ?? -1);
+        if (index < 0) continue;
+
+        if (anchorY >= rect.top && anchorY <= rect.bottom) {
           nextIndex = index;
-        });
-
-        if (nextIndex !== null) {
-          setActiveMobileImageIndex(nextIndex);
+          closestDistance = 0;
+          break;
         }
-      },
-      {
-        threshold: [0.35, 0.55, 0.75],
-      }
-    );
 
-    items.forEach((item) => observer.observe(item));
-    return () => observer.disconnect();
+        const distance = Math.min(Math.abs(anchorY - rect.top), Math.abs(anchorY - rect.bottom));
+        if (distance < closestDistance) {
+          closestDistance = distance;
+          nextIndex = index;
+        }
+      }
+
+      setActiveMobileImageIndex((current) => (current === nextIndex ? current : nextIndex));
+    };
+
+    const onScroll = () => {
+      if (rafId) window.cancelAnimationFrame(rafId);
+      rafId = window.requestAnimationFrame(updateActiveImage);
+    };
+
+    updateActiveImage();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    window.addEventListener("resize", onScroll, { passive: true });
+
+    return () => {
+      if (rafId) window.cancelAnimationFrame(rafId);
+      window.removeEventListener("scroll", onScroll);
+      window.removeEventListener("resize", onScroll);
+    };
   }, [galleryImages.length, product.id]);
 
   const renderMobileGalleryDots = () => {
@@ -607,7 +625,7 @@ export function ProductExperience({ product, recommendations, imageBaseUrl }: Pr
       const sentinel = gallerySentinelRef.current;
       if (!sentinel) return;
       const rect = sentinel.getBoundingClientRect();
-      const shouldExpand = rect.top <= window.innerHeight - 192 - 60;
+      const shouldExpand = rect.top <= window.innerHeight - 192 - 64;
       if (shouldExpand === panelExpandedRef.current) return;
       if (shouldExpand) {
         expandMobilePanel();
@@ -928,6 +946,7 @@ export function ProductExperience({ product, recommendations, imageBaseUrl }: Pr
       ) : null}
       <main className={styles.main} ref={mainRef}>
         <section className={styles.mobileHeroStack} aria-label="Galeria do produto">
+          {renderMobileGalleryDots()}
           <figure
             className={styles.mobileHeroFigure}
             ref={(node) => { mobileGalleryItemRefs.current[0] = node; }}
@@ -942,7 +961,6 @@ export function ProductExperience({ product, recommendations, imageBaseUrl }: Pr
               imageBaseUrl={imageBaseUrl}
               priority
             />
-            {renderMobileGalleryDots()}
           </figure>
 
           {/* Fixed bottom panel — collapsed: name+price+buy / expanded: full info */}
@@ -1067,10 +1085,26 @@ export function ProductExperience({ product, recommendations, imageBaseUrl }: Pr
                             <div className={styles.tailoredMedia}>
                               <ProductImage src={cardImages.primary} alt={item.name} width={900} height={1200} className={`${styles.tailoredImage} ${styles.tailoredImagePrimary}`} imageBaseUrl={imageBaseUrl} />
                               <ProductImage src={cardImages.secondary} alt={`${item.name} - segunda foto`} width={900} height={1200} className={`${styles.tailoredImage} ${styles.tailoredImageSecondary}`} imageBaseUrl={imageBaseUrl} />
-                              <div className={styles.tailoredMetaOverlay}>
-                                <p className={styles.tailoredName}>{item.name}</p>
-                                <Price amountCents={item.unitAmount} currency={item.currency} className={styles.tailoredPrice} />
-                              </div>
+                            </div>
+                            <div className={styles.mobileTailoredMeta}>
+                              <p className={styles.tailoredName}>{item.name}</p>
+                              <Price amountCents={item.unitAmount} currency={item.currency} className={styles.tailoredPrice} />
+                              {Array.isArray(item.colors) && item.colors.length > 0 ? (
+                                <div className={styles.mobileTailoredColors} aria-label="Cores disponíveis">
+                                  {item.colors.slice(0, 5).map((color) => {
+                                    const token = resolveColorToken(color);
+                                    return (
+                                      <span
+                                        key={`${item.id}-${color}`}
+                                        className={styles.mobileTailoredColorDot}
+                                        title={color}
+                                        aria-label={color}
+                                        style={{ backgroundColor: token.cssColor }}
+                                      />
+                                    );
+                                  })}
+                                </div>
+                              ) : null}
                             </div>
                           </a>
                         );
@@ -1087,6 +1121,10 @@ export function ProductExperience({ product, recommendations, imageBaseUrl }: Pr
                   </div>
                 </section>
               ) : null}
+
+              <div className={styles.mobilePanelFooter}>
+                <LegacyFooter variant="light" />
+              </div>
             </div>
           </section>
 
@@ -1103,11 +1141,10 @@ export function ProductExperience({ product, recommendations, imageBaseUrl }: Pr
                     src={src}
                     alt={`${product.name} - foto ${index + 2}`}
                     width={1280}
-                    height={1700}
-                    className={styles.mobileGalleryImage}
-                    imageBaseUrl={imageBaseUrl}
-                  />
-                  {renderMobileGalleryDots()}
+                  height={1700}
+                  className={styles.mobileGalleryImage}
+                  imageBaseUrl={imageBaseUrl}
+                />
                 </figure>
               ))}
             </div>
