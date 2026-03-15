@@ -126,6 +126,7 @@ export function GenderShowcase({ products }: GenderShowcaseProps) {
   const [renderedTab, setRenderedTab] = useState<GenderTab>("feminino");
   const [isSwitching, setIsSwitching] = useState(false);
   const switchTimerRef = useRef<number | null>(null);
+  const gridRef = useRef<HTMLDivElement | null>(null);
 
   const productById = useMemo(() => {
     const map = new Map<string, Product>();
@@ -146,6 +147,26 @@ export function GenderShowcase({ products }: GenderShowcaseProps) {
     },
     []
   );
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (window.innerWidth > 760) return;
+
+    const resetCarousel = () => {
+      const grid = gridRef.current;
+      if (!grid) return;
+      grid.scrollTo({ left: 0, behavior: "auto" });
+    };
+
+    resetCarousel();
+    const rafId = window.requestAnimationFrame(resetCarousel);
+    const timeoutId = window.setTimeout(resetCarousel, 120);
+
+    return () => {
+      window.cancelAnimationFrame(rafId);
+      window.clearTimeout(timeoutId);
+    };
+  }, [renderedTab]);
 
   function handleTabChange(nextTab: GenderTab) {
     if (nextTab === activeTab && nextTab === renderedTab && !isSwitching) return;
@@ -223,7 +244,7 @@ export function GenderShowcase({ products }: GenderShowcaseProps) {
         </div>
       </div>
 
-      <div className={`category-grid ${isSwitching ? "is-switching" : ""}`} id="categoryGrid">
+      <div ref={gridRef} className={`category-grid ${isSwitching ? "is-switching" : ""}`} id="categoryGrid">
         {visibleProducts.map((product) => (
           <article key={`${product.sku || product.id}-${product.name}`} className="category-card">
             <Link href={product.href} className="category-media">

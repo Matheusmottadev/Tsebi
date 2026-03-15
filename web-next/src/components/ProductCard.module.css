@@ -24,25 +24,48 @@
   aspect-ratio: 4 / 5;
   object-fit: cover;
   display: block;
+  opacity: 0;
   transition: opacity 220ms ease;
 }
 
-.imagePrimary {
+.imageActive {
   opacity: 1;
 }
 
-.imageSecondary {
-  opacity: 0;
+/* Bar indicators — mobile only */
+.dots {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  display: none;
+  flex-direction: row;
+  gap: 3px;
+  z-index: 2;
+  pointer-events: none;
 }
 
-.card:hover .imagePrimary,
-.card:focus-within .imagePrimary {
-  opacity: 0;
+@media (max-width: 767px) {
+  .dots {
+    display: flex;
+  }
 }
 
-.card:hover .imageSecondary,
-.card:focus-within .imageSecondary {
-  opacity: 1;
+.dot {
+  flex: 1;
+  height: 2px;
+  background: rgba(255, 255, 255, 0.3);
+  transform-origin: center;
+  transition: background 0.25s ease, transform 0.25s ease;
+}
+
+.dotActive {
+  background: #fff;
+  transform: scaleY(2);
+}
+
+.dotDone {
+  background: rgba(255, 255, 255, 0.65);
 }
 
 .content {

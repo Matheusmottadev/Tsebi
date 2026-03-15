@@ -217,6 +217,10 @@ h6 {
 }
 
 @media (max-width: 639px) {
+  .homepage-categories-card--desktop-only {
+    display: none;
+  }
+
   .homepage-categories-section {
     padding-block: 24px 30px;
   }

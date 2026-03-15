@@ -1,10 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { buildVariantSnapshot, canQuickAddWithoutSelection, getProductVariantOptions } from "@/lib/cart/cartItem";
 import { useCartStore } from "@/lib/cart/cartStore";
-import { buildHoverImagePair } from "@/lib/product-media";
+import { collectProductMedia } from "@/lib/product-media";
 import type { Product } from "@/types";
 import { Price } from "@/components/Price";
 import { ProductImage } from "@/components/ProductImage";
@@ -19,16 +19,15 @@ type ProductCardProps = {
 export function ProductCard({ product, imageBaseUrl, priority = false }: ProductCardProps) {
   const addItem = useCartStore((state) => state.addItem);
   const [feedback, setFeedback] = useState("");
+  const [activeIndex, setActiveIndex] = useState(0);
+  const touchStartXRef = useRef<number | null>(null);
+  const isSwipingRef = useRef(false);
 
   const { colors, sizes } = useMemo(() => getProductVariantOptions(product), [product]);
-  const imagePair = useMemo(() => buildHoverImagePair(product), [product]);
+  const images = useMemo(() => collectProductMedia(product).slice(0, 5), [product]);
   const quickAddEnabled = canQuickAddWithoutSelection(product);
   const quickAddVariant = useMemo(
-    () =>
-      buildVariantSnapshot({
-        color: colors[0] || null,
-        size: sizes[0] || null,
-      }),
+    () => buildVariantSnapshot({ color: colors[0] || null, size: sizes[0] || null }),
     [colors, sizes]
   );
 
@@ -44,28 +43,67 @@ export function ProductCard({ product, imageBaseUrl, priority = false }: Product
       },
       qty: 1,
     });
-
     setFeedback(result.ok ? "Added" : result.error || "Could not add");
     window.setTimeout(() => setFeedback(""), 1200);
   };
 
+  const handleTouchStart = (e: React.TouchEvent) => {
+    touchStartXRef.current = e.touches[0].clientX;
+    isSwipingRef.current = false;
+  };
+
+  const handleTouchEnd = (e: React.TouchEvent) => {
+    if (touchStartXRef.current === null) return;
+    const deltaX = e.changedTouches[0].clientX - touchStartXRef.current;
+    touchStartXRef.current = null;
+    if (Math.abs(deltaX) > 30) {
+      isSwipingRef.current = true;
+      setActiveIndex((prev) =>
+        deltaX < 0 ? Math.min(prev + 1, images.length - 1) : Math.max(prev - 1, 0)
+      );
+    }
+  };
+
+  const handleLinkClick = (e: React.MouseEvent) => {
+    if (isSwipingRef.current) {
+      e.preventDefault();
+      isSwipingRef.current = false;
+    }
+  };
+
   return (
-    <article className={styles.card}>
-      <Link href={`/product/${encodeURIComponent(product.id)}`} className={styles.imageLink}>
-        <ProductImage
-          src={imagePair.primary}
-          alt={product.name}
-          className={`${styles.image} ${styles.imagePrimary}`}
-          imageBaseUrl={imageBaseUrl}
-          priority={priority}
-        />
-        <ProductImage
-          src={imagePair.secondary}
-          alt={`${product.name} - segunda foto`}
-          className={`${styles.image} ${styles.imageSecondary}`}
-          imageBaseUrl={imageBaseUrl}
-          priority={priority}
-        />
+    <article
+      className={styles.card}
+      onMouseEnter={() => images.length > 1 && setActiveIndex((prev) => (prev === 0 ? 1 : prev))}
+      onMouseLeave={() => setActiveIndex(0)}
+    >
+      <Link
+        href={`/product/${encodeURIComponent(product.id)}`}
+        className={styles.imageLink}
+        onClick={handleLinkClick}
+        onTouchStart={handleTouchStart}
+        onTouchEnd={handleTouchEnd}
+      >
+        {images.map((src, i) => (
+          <ProductImage
+            key={src}
+            src={src}
+            alt={i === 0 ? product.name : `${product.name} - foto ${i + 1}`}
+            className={`${styles.image}${i === activeIndex ? ` ${styles.imageActive}` : ""}`}
+            imageBaseUrl={imageBaseUrl}
+            priority={priority && i === 0}
+          />
+        ))}
+        {images.length > 1 && (
+          <div className={styles.dots} aria-hidden="true">
+            {images.map((_, i) => (
+              <span
+                key={i}
+                className={`${styles.dot}${i === activeIndex ? ` ${styles.dotActive}` : i < activeIndex ? ` ${styles.dotDone}` : ""}`}
+              />
+            ))}
+          </div>
+        )}
       </Link>
       <div className={styles.content}>
         <p className={styles.collection}>{product.collection}</p>
