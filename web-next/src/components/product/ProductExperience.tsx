@@ -306,6 +306,7 @@ export function ProductExperience({ product, recommendations, imageBaseUrl }: Pr
   const [showStickyBar, setShowStickyBar] = useState(false);
   const [panelExpanded, setPanelExpanded] = useState(false);
   const panelExpandedRef = useRef(false);
+  const panelForcedOpenRef = useRef(false);
   const gallerySentinelRef = useRef<HTMLDivElement | null>(null);
   const mobileSheetRef = useRef<HTMLElement | null>(null);
   const sheetTouchStartY = useRef(0);
@@ -324,6 +325,24 @@ export function ProductExperience({ product, recommendations, imageBaseUrl }: Pr
   const canBuy = hasValidColorSelection && hasValidSizeSelection && !isSoldOutByAvailability;
   const selectedColorLabel = hasValidColorSelection ? selectedColor : "Selecione";
   const drawerSizes = useMemo(() => (sizes.length > 0 ? sizes : [...GLOBAL_SIZES]), [sizes]);
+
+  const expandMobilePanel = useCallback((options?: { manual?: boolean }) => {
+    if (options?.manual) {
+      panelForcedOpenRef.current = true;
+    }
+    panelExpandedRef.current = true;
+    document.body.style.overflow = "hidden";
+    setPanelExpanded(true);
+  }, []);
+
+  const collapseMobilePanel = useCallback((options?: { manual?: boolean }) => {
+    if (options?.manual) {
+      panelForcedOpenRef.current = false;
+    }
+    panelExpandedRef.current = false;
+    document.body.style.overflow = "";
+    setPanelExpanded(false);
+  }, []);
 
   const getDrawerStockBySize = useCallback(
     (size: string) => {
@@ -456,6 +475,7 @@ export function ProductExperience({ product, recommendations, imageBaseUrl }: Pr
   useEffect(() => {
     setPanelExpanded(false);
     panelExpandedRef.current = false;
+    panelForcedOpenRef.current = false;
     if (mobileSheetRef.current) mobileSheetRef.current.scrollTop = 0;
     document.body.style.overflow = "";
   }, [product.id]);
@@ -475,15 +495,17 @@ export function ProductExperience({ product, recommendations, imageBaseUrl }: Pr
 
     const check = () => {
       if (window.innerWidth > 767) return;
+      if (panelForcedOpenRef.current) return;
       const sentinel = gallerySentinelRef.current;
       if (!sentinel) return;
       const rect = sentinel.getBoundingClientRect();
       const shouldExpand = rect.top <= window.innerHeight - 192 - 60;
       if (shouldExpand === panelExpandedRef.current) return;
-      panelExpandedRef.current = shouldExpand;
-      // Lock body scroll when panel is expanded so page doesn't scroll behind it
-      document.body.style.overflow = shouldExpand ? "hidden" : "";
-      setPanelExpanded(shouldExpand);
+      if (shouldExpand) {
+        expandMobilePanel();
+        return;
+      }
+      collapseMobilePanel();
     };
 
     const sheet = mobileSheetRef.current;
@@ -495,7 +517,7 @@ export function ProductExperience({ product, recommendations, imageBaseUrl }: Pr
       sheet?.removeEventListener("transitionend", onTransitionEnd);
       document.body.style.overflow = "";
     };
-  }, [product.id, galleryImages.length]);
+  }, [collapseMobilePanel, expandMobilePanel, product.id, galleryImages.length]);
 
   const syncMediaTransform = useCallback((offset: number) => {
     const mediaPanel = mediaPanelRef.current;
@@ -796,17 +818,21 @@ export function ProductExperience({ product, recommendations, imageBaseUrl }: Pr
               const sheet = mobileSheetRef.current;
               if (!panelExpandedRef.current && dy > 40) {
                 // Swipe up on collapsed panel → expand
-                panelExpandedRef.current = true;
-                document.body.style.overflow = "hidden";
-                setPanelExpanded(true);
+                expandMobilePanel({ manual: true });
               } else if (panelExpandedRef.current && dy < -40 && (sheet?.scrollTop ?? 0) <= 2) {
                 // Swipe down from top of expanded panel → collapse
-                panelExpandedRef.current = false;
-                document.body.style.overflow = "";
-                setPanelExpanded(false);
+                collapseMobilePanel({ manual: true });
               }
             }}
           >
+            <button
+              type="button"
+              className={styles.mobileSheetHandleButton}
+              aria-label="Expandir informações do produto"
+              onClick={() => expandMobilePanel({ manual: true })}
+            >
+              <span className={styles.mobileSheetHandleBar} aria-hidden="true" />
+            </button>
             <p className={styles.mobileCollection}>{product.collection || "Colecao atual"}</p>
             <h1 className={styles.mobileTitle}>{product.name}</h1>
             <Price amountCents={product.unitAmount} currency={product.currency} className={styles.mobilePrice} />

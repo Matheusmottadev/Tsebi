@@ -981,15 +981,25 @@
     transform: translateY(0);
   }
 
-  /* Handle */
-  .mobileIntroCard::before {
-    content: "";
+  .mobileSheetHandleButton {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    padding: 10px 0 14px;
+    margin: 0;
+    border: 0;
+    background: transparent;
+    cursor: pointer;
+    touch-action: none;
+  }
+
+  .mobileSheetHandleBar {
     display: block;
     width: 32px;
     height: 3px;
     background: #ddd;
     border-radius: 2px;
-    margin: 10px auto 14px;
   }
 
   .mobileCollection {
