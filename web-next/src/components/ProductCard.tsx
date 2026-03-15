@@ -21,6 +21,8 @@ export function ProductCard({ product, imageBaseUrl, priority = false }: Product
   const [feedback, setFeedback] = useState("");
   const [activeIndex, setActiveIndex] = useState(0);
   const touchStartXRef = useRef<number | null>(null);
+  const touchStartYRef = useRef<number | null>(null);
+  const isHorizontalRef = useRef<boolean | null>(null);
   const isSwipingRef = useRef(false);
 
   const { colors, sizes } = useMemo(() => getProductVariantOptions(product), [product]);
@@ -49,19 +51,37 @@ export function ProductCard({ product, imageBaseUrl, priority = false }: Product
 
   const handleTouchStart = (e: React.TouchEvent) => {
     touchStartXRef.current = e.touches[0].clientX;
+    touchStartYRef.current = e.touches[0].clientY;
     isSwipingRef.current = false;
+    isHorizontalRef.current = null;
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    if (touchStartXRef.current === null || touchStartYRef.current === null) return;
+    if (isHorizontalRef.current === null) {
+      const dx = Math.abs(e.touches[0].clientX - touchStartXRef.current);
+      const dy = Math.abs(e.touches[0].clientY - touchStartYRef.current);
+      if (dx > 5 || dy > 5) {
+        isHorizontalRef.current = dx > dy;
+      }
+    }
+    if (isHorizontalRef.current) {
+      e.preventDefault();
+    }
   };
 
   const handleTouchEnd = (e: React.TouchEvent) => {
     if (touchStartXRef.current === null) return;
     const deltaX = e.changedTouches[0].clientX - touchStartXRef.current;
     touchStartXRef.current = null;
-    if (Math.abs(deltaX) > 30) {
+    touchStartYRef.current = null;
+    if (isHorizontalRef.current && Math.abs(deltaX) > 30) {
       isSwipingRef.current = true;
       setActiveIndex((prev) =>
         deltaX < 0 ? Math.min(prev + 1, images.length - 1) : Math.max(prev - 1, 0)
       );
     }
+    isHorizontalRef.current = null;
   };
 
   const handleLinkClick = (e: React.MouseEvent) => {
@@ -72,16 +92,13 @@ export function ProductCard({ product, imageBaseUrl, priority = false }: Product
   };
 
   return (
-    <article
-      className={styles.card}
-      onMouseEnter={() => images.length > 1 && setActiveIndex((prev) => (prev === 0 ? 1 : prev))}
-      onMouseLeave={() => setActiveIndex(0)}
-    >
+    <article className={styles.card}>
       <Link
         href={`/product/${encodeURIComponent(product.id)}`}
         className={styles.imageLink}
         onClick={handleLinkClick}
         onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
       >
         {images.map((src, i) => (

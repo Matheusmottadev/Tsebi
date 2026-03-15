@@ -4,6 +4,7 @@ import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } fr
 import { ProductImage } from "@/components/ProductImage";
 import { Price } from "@/components/Price";
 import { LegacyFooter } from "@/components/home-legacy/LegacyFooter";
+import { collectProductMedia } from "@/lib/product-media";
 import { buildVariantSnapshot, getProductVariantOptions, getVariantStockQty } from "@/lib/cart/cartItem";
 import { useCartStore } from "@/lib/cart/cartStore";
 import { getSmoothScrollEngine } from "@/lib/animation/smoothScrollEngine";
@@ -37,9 +38,7 @@ function normalizeImageValue(input: unknown): string {
 }
 
 function buildSkuImageFallbacks(product: Product): string[] {
-  const sku = String(product.sku || "").trim();
-  if (!sku) return [];
-  return [1, 2, 3, 4, 5].map((index) => `/images/product/${sku}-${index}.jpg`);
+  return collectProductMedia(product).filter((entry) => entry.startsWith("/images/product/")).slice(0, 5);
 }
 
 function buildGalleryImages(product: Product): string[] {

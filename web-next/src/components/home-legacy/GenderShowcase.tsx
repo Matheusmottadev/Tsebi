@@ -128,6 +128,14 @@ export function GenderShowcase({ products }: GenderShowcaseProps) {
   const switchTimerRef = useRef<number | null>(null);
   const gridRef = useRef<HTMLDivElement | null>(null);
 
+  const scrollCarousel = (direction: "prev" | "next") => {
+    const grid = gridRef.current;
+    if (!grid) return;
+    const card = grid.querySelector<HTMLElement>(".category-card");
+    const cardWidth = (card?.offsetWidth ?? 200) + 12;
+    grid.scrollBy({ left: direction === "next" ? cardWidth : -cardWidth, behavior: "smooth" });
+  };
+
   const productById = useMemo(() => {
     const map = new Map<string, Product>();
     (Array.isArray(products) ? products : []).forEach((product) => {
@@ -244,6 +252,17 @@ export function GenderShowcase({ products }: GenderShowcaseProps) {
         </div>
       </div>
 
+      <div className="carousel-wrapper">
+      <button type="button" className="carousel-nav-btn carousel-nav-prev" onClick={() => scrollCarousel("prev")} aria-label="Anterior">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+          <path d="M15 18l-6-6 6-6" />
+        </svg>
+      </button>
+      <button type="button" className="carousel-nav-btn carousel-nav-next" onClick={() => scrollCarousel("next")} aria-label="Próximo">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+          <path d="M9 18l6-6-6-6" />
+        </svg>
+      </button>
       <div ref={gridRef} className={`category-grid ${isSwitching ? "is-switching" : ""}`} id="categoryGrid">
         {visibleProducts.map((product) => (
           <article key={`${product.sku || product.id}-${product.name}`} className="category-card">
@@ -282,6 +301,7 @@ export function GenderShowcase({ products }: GenderShowcaseProps) {
             </h3>
           </article>
         ))}
+      </div>
       </div>
     </section>
   );

@@ -17,6 +17,12 @@ export const PRODUCT_IMAGE_POOL = [
 ] as const;
 
 export const PRODUCT_IMAGE_FALLBACK = PRODUCT_IMAGE_POOL[0];
+const PRODUCT_IMAGE_ASSET_ALIASES: Record<string, string> = {
+  "drift-bifold-wallet": "pulse-leather-wallet",
+  "north-zip-wallet": "nox-card-wallet",
+  "orion-buckle-belt": "titan-buckle-belt",
+  "iris-slim-belt": "aura-thin-belt",
+};
 
 function normalizeImageCompareKey(value: string): string {
   const raw = String(value || "").trim().toLowerCase();
@@ -25,7 +31,8 @@ function normalizeImageCompareKey(value: string): string {
 }
 
 function buildSkuImageFallbacks(item: ProductLikeWithMedia): string[] {
-  const sku = String(item?.sku || item?.id || "").trim();
+  const rawSku = String(item?.sku || item?.id || "").trim();
+  const sku = PRODUCT_IMAGE_ASSET_ALIASES[rawSku] || rawSku;
   if (!sku) return [];
   return [1, 2, 3, 4, 5].map((index) => `/images/product/${sku}-${index}.jpg`);
 }

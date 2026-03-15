@@ -248,22 +248,22 @@ const HOMEPAGE_CATEGORIES = [
 ] as const;
 
 const FALLBACK_POPULAR_PRODUCTS: HomeProductCard[] = [
-  { id: "origem-skirt", sku: "origem-skirt", name: "Origem Skirt", image: "/images/placeholderreal.webp", secondaryImage: "/images/placeholderreal.webp" },
-  { id: "genesis-tailored", sku: "genesis-tailored", name: "Genesis Tailored", image: "/images/placeholderreal.webp", secondaryImage: "/images/placeholderreal.webp" },
-  { id: "atelier-heels", sku: "atelier-heels", name: "Atelier Heels", image: "/images/placeholderreal.webp", secondaryImage: "/images/placeholderreal.webp" },
-  { id: "essence-blazer", sku: "essence-blazer", name: "Essence Blazer", image: "/images/placeholderreal.webp", secondaryImage: "/images/placeholderreal.webp" },
-  { id: "noir-dress", sku: "noir-dress", name: "Noir Dress", image: "/images/placeholderreal.webp", secondaryImage: "/images/placeholderreal.webp" },
+  { id: "origem-skirt", sku: "origem-skirt", name: "Origem Skirt", image: "/images/product/origem-skirt-1.jpg", secondaryImage: "/images/product/origem-skirt-2.jpg" },
+  { id: "genesis-tailored", sku: "genesis-tailored", name: "Genesis Tailored", image: "/images/product/genesis-tailored-1.jpg", secondaryImage: "/images/product/genesis-tailored-2.jpg" },
+  { id: "atelier-heels", sku: "atelier-heels", name: "Atelier Heels", image: "/images/product/atelier-heels-1.jpg", secondaryImage: "/images/product/atelier-heels-2.jpg" },
+  { id: "essence-blazer", sku: "essence-blazer", name: "Essence Blazer", image: "/images/product/essence-blazer-1.jpg", secondaryImage: "/images/product/essence-blazer-2.jpg" },
+  { id: "noir-dress", sku: "noir-dress", name: "Noir Dress", image: "/images/product/noir-dress-1.jpg", secondaryImage: "/images/product/noir-dress-2.jpg" },
 ];
 
 const FALLBACK_SEARCH_PIECES: SearchPiece[] = [
-  { id: "origem-skirt", sku: "origem-skirt", name: "Sabrina charmosa", image: "/images/placeholderreal.webp", secondaryImage: "/images/placeholderreal.webp", href: "/product/origem-skirt" },
-  { id: "origem-shirt", sku: "origem-shirt", name: "Sabrina linda", image: "/images/placeholderreal.webp", secondaryImage: "/images/placeholderreal.webp", href: "/product/origem-shirt" },
+  { id: "origem-skirt", sku: "origem-skirt", name: "Sabrina charmosa", image: "/images/product/origem-skirt-1.jpg", secondaryImage: "/images/product/origem-skirt-2.jpg", href: "/product/origem-skirt" },
+  { id: "origem-shirt", sku: "origem-shirt", name: "Sabrina linda", image: "/images/product/origem-shirt-1.jpg", secondaryImage: "/images/product/origem-shirt-2.jpg", href: "/product/origem-shirt" },
   {
     id: "genesis-tailored",
     sku: "genesis-tailored",
     name: "Sabrina maravilhosa",
-    image: "/images/placeholderreal.webp",
-    secondaryImage: "/images/placeholderreal.webp",
+    image: "/images/product/genesis-tailored-1.jpg",
+    secondaryImage: "/images/product/genesis-tailored-2.jpg",
     href: "/product/genesis-tailored",
   },
   { id: "genesis-bomber", sku: "genesis-bomber", name: "Sabrina incrível", image: "/images/placeholderreal.webp", secondaryImage: "/images/placeholderreal.webp", href: "/product/genesis-bomber" },

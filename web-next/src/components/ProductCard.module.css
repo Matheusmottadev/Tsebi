@@ -32,6 +32,17 @@
   opacity: 1;
 }
 
+/* Desktop hover: show second image — only on true pointer devices */
+@media (hover: hover) {
+  .card:hover .imageLink .image:first-child {
+    opacity: 0;
+  }
+
+  .card:hover .imageLink .image:nth-child(2) {
+    opacity: 1;
+  }
+}
+
 /* Bar indicators — mobile only */
 .dots {
   position: absolute;
