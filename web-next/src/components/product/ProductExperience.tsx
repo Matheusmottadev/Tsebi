@@ -255,6 +255,7 @@ function emitStickyBarVisibility(active: boolean): void {
 
 const MEDIA_SCROLL_DELTA_GAIN = 1.9;
 const MEDIA_SCROLL_EASING = 0.44;
+const MOBILE_TAILORED_LIMIT = 6;
 type DrawerKey = "size-chart" | "details" | "materials" | "contact" | "store";
 
 function buildDescription(product: Product): string {
@@ -402,20 +403,20 @@ export function ProductExperience({ product, recommendations, imageBaseUrl }: Pr
 
   useEffect(() => {
     if (typeof window === "undefined" || window.innerWidth > 767) return;
-    if (tailoredProducts.length > 0) return;
+    if (tailoredProducts.length >= MOBILE_TAILORED_LIMIT) return;
 
     let cancelled = false;
 
     const loadMobileTailoredProducts = async () => {
       try {
-        const recommendationResponse = await getRecommendations(product.id, 4);
+        const recommendationResponse = await getRecommendations(product.id, MOBILE_TAILORED_LIMIT);
         const fetchedRecommendations = Array.isArray(recommendationResponse?.recommendations)
           ? recommendationResponse.recommendations
           : [];
         const rankedRecommendations = [...fetchedRecommendations]
           .filter((item) => String(item?.id || "").trim() && String(item.id) !== String(product.id))
           .sort((a, b) => scoreRelatedProduct(product, b) - scoreRelatedProduct(product, a))
-          .slice(0, 4);
+          .slice(0, MOBILE_TAILORED_LIMIT);
 
         if (rankedRecommendations.length > 0) {
           if (!cancelled) setMobileTailoredProducts(rankedRecommendations);
@@ -430,7 +431,7 @@ export function ProductExperience({ product, recommendations, imageBaseUrl }: Pr
         const fallbackRecommendations = [...catalog]
           .filter((item) => String(item?.id || "").trim() && String(item.id) !== String(product.id))
           .sort((a, b) => scoreRelatedProduct(product, b) - scoreRelatedProduct(product, a))
-          .slice(0, 4);
+          .slice(0, MOBILE_TAILORED_LIMIT);
 
         if (!cancelled) {
           setMobileTailoredProducts(fallbackRecommendations);

@@ -1123,11 +1123,13 @@
   .mobileTailored {
     border-top: 1px solid #ededed;
     margin-top: 4px;
+    margin-left: -20px;
+    margin-right: -20px;
   }
 
   .mobileTailoredCarousel {
     position: relative;
-    --mobile-tailored-card-width: calc((100% - 12px) / 2);
+    --mobile-tailored-card-width: 50%;
     --mobile-tailored-image-height: calc(var(--mobile-tailored-card-width) * 5 / 4);
   }
 
@@ -1135,7 +1137,7 @@
     display: grid;
     grid-auto-flow: column;
     grid-auto-columns: var(--mobile-tailored-card-width);
-    gap: 12px;
+    gap: 0;
     overflow-x: auto;
     overflow-y: hidden;
     scroll-snap-type: x mandatory;
@@ -1222,7 +1224,7 @@
   }
 
   .tailoredHeader {
-    padding: 16px 16px 14px;
+    padding: 16px 20px 14px;
   }
 
   .tailoredHeader h2 {
