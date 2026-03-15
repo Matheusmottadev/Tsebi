@@ -478,7 +478,7 @@ export function ProductExperience({ product, recommendations, imageBaseUrl }: Pr
       const sentinel = gallerySentinelRef.current;
       if (!sentinel) return;
       const rect = sentinel.getBoundingClientRect();
-      const shouldExpand = rect.top <= window.innerHeight - 172 + 20;
+      const shouldExpand = rect.top <= window.innerHeight - 172 - 80;
       if (shouldExpand === panelExpandedRef.current) return;
       panelExpandedRef.current = shouldExpand;
       // Lock body scroll when panel is expanded so page doesn't scroll behind it

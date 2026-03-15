@@ -1044,7 +1044,7 @@
 
   /* Bottom padding: collapsed panel height so gallery scrolls fully */
   .page {
-    padding-bottom: 180px;
+    padding-bottom: 260px;
   }
 
   /* Sticky bar not needed — fixed panel is always visible */

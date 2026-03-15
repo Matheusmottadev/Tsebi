@@ -152,7 +152,9 @@ export default async function ProductPage({ params }: ProductPageProps) {
         }}
       />
       <ProductExperience product={product} recommendations={recommendations} imageBaseUrl={imageBaseUrl} />
-      <LegacyFooter variant="light" />
+      <div className="product-mobile-footer">
+        <LegacyFooter variant="light" />
+      </div>
     </>
   );
 }

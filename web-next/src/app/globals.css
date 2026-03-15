@@ -457,6 +457,10 @@ body.faq-page-body .faq-faqQuestion {
 }
 
 @media (max-width: 768px) {
+  .product-mobile-footer {
+    display: none;
+  }
+
   .header-contact-backdrop {
     background: rgba(0, 0, 0, 0.35);
   }
