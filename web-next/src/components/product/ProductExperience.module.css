@@ -930,30 +930,35 @@
     object-position: center top;
   }
 
-  /* Gallery dots — bottom-left of hero image */
+  /* Gallery dots — bar indicators at bottom of image */
   .mobileGalleryDots {
     position: fixed;
-    left: 16px;
-    bottom: calc(192px + env(safe-area-inset-bottom, 20px) + 14px);
+    left: 0;
+    right: 0;
+    bottom: calc(192px + env(safe-area-inset-bottom, 20px));
     display: flex;
-    flex-direction: column;
-    gap: 10px;
+    flex-direction: row;
+    gap: 3px;
     z-index: 25;
     pointer-events: none;
   }
 
   .mobileGalleryDot {
     display: block;
-    width: 10px;
-    height: 10px;
-    background: transparent;
-    border: 1px solid rgba(255, 255, 255, 0.92);
-    border-radius: 50%;
+    flex: 1;
+    height: 2px;
+    background: rgba(255, 255, 255, 0.3);
+    transform-origin: center;
+    transition: background 0.25s ease, transform 0.25s ease, opacity 0.25s ease;
   }
 
   .mobileGalleryDotActive {
-    background: #111;
-    border-color: #111;
+    background: #fff;
+    transform: scaleY(2);
+  }
+
+  .mobileGalleryDotDone {
+    background: rgba(255, 255, 255, 0.65);
   }
 
   /* Gallery images: same height as hero — 1 photo per view */
@@ -1186,6 +1191,14 @@
 
   .mobileTailoredCard .tailoredMedia {
     aspect-ratio: 4 / 5;
+  }
+
+  .mobileTailoredCard .tailoredImagePrimary {
+    opacity: 1 !important;
+  }
+
+  .mobileTailoredCard .tailoredImageSecondary {
+    opacity: 0 !important;
   }
 
   .mobileTailoredMeta {

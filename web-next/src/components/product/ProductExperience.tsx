@@ -643,7 +643,7 @@ export function ProductExperience({ product, recommendations, imageBaseUrl }: Pr
         {galleryImages.map((_, i) => (
           <span
             key={i}
-            className={`${styles.mobileGalleryDot}${i === activeMobileImageIndex ? ` ${styles.mobileGalleryDotActive}` : ""}`}
+            className={`${styles.mobileGalleryDot}${i === activeMobileImageIndex ? ` ${styles.mobileGalleryDotActive}` : i < activeMobileImageIndex ? ` ${styles.mobileGalleryDotDone}` : ""}`}
           />
         ))}
       </div>
