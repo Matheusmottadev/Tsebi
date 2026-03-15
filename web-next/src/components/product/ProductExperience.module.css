@@ -1191,7 +1191,7 @@
   .mobileTailoredMeta {
     display: grid;
     gap: 2px;
-    padding: 10px 0 0;
+    padding: 10px 8px 0;
     background: #fff;
   }
 

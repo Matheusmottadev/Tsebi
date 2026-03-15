@@ -274,6 +274,36 @@ function scoreRelatedProduct(base: Product, candidate: Product): number {
   return score;
 }
 
+function buildMobileTailoredRecommendations(base: Product, primary: Product[], catalog: Product[], limit: number): Product[] {
+  const seen = new Set<string>([String(base.id || "").trim()]);
+  const merged: Product[] = [];
+
+  for (const item of primary) {
+    const key = String(item?.id || "").trim();
+    if (!key || seen.has(key)) continue;
+    seen.add(key);
+    merged.push(item);
+    if (merged.length >= limit) return merged;
+  }
+
+  const fallback = [...catalog]
+    .filter((item) => {
+      const key = String(item?.id || "").trim();
+      return Boolean(key) && !seen.has(key);
+    })
+    .sort((a, b) => scoreRelatedProduct(base, b) - scoreRelatedProduct(base, a));
+
+  for (const item of fallback) {
+    const key = String(item?.id || "").trim();
+    if (!key || seen.has(key)) continue;
+    seen.add(key);
+    merged.push(item);
+    if (merged.length >= limit) break;
+  }
+
+  return merged.slice(0, limit);
+}
+
 export function ProductExperience({ product, recommendations, imageBaseUrl }: ProductExperienceProps) {
   const mainRef = useRef<HTMLElement | null>(null);
   const mediaPanelRef = useRef<HTMLElement | null>(null);
@@ -408,17 +438,20 @@ export function ProductExperience({ product, recommendations, imageBaseUrl }: Pr
     let cancelled = false;
 
     const loadMobileTailoredProducts = async () => {
+      let rankedRecommendations: Product[] = [];
+      let catalog: Product[] = [];
+
       try {
         const recommendationResponse = await getRecommendations(product.id, MOBILE_TAILORED_LIMIT);
         const fetchedRecommendations = Array.isArray(recommendationResponse?.recommendations)
           ? recommendationResponse.recommendations
           : [];
-        const rankedRecommendations = [...fetchedRecommendations]
+        rankedRecommendations = [...fetchedRecommendations]
           .filter((item) => String(item?.id || "").trim() && String(item.id) !== String(product.id))
           .sort((a, b) => scoreRelatedProduct(product, b) - scoreRelatedProduct(product, a))
           .slice(0, MOBILE_TAILORED_LIMIT);
 
-        if (rankedRecommendations.length > 0) {
+        if (rankedRecommendations.length >= MOBILE_TAILORED_LIMIT) {
           if (!cancelled) setMobileTailoredProducts(rankedRecommendations);
           return;
         }
@@ -427,18 +460,21 @@ export function ProductExperience({ product, recommendations, imageBaseUrl }: Pr
       }
 
       try {
-        const catalog = await listProducts();
-        const fallbackRecommendations = [...catalog]
-          .filter((item) => String(item?.id || "").trim() && String(item.id) !== String(product.id))
-          .sort((a, b) => scoreRelatedProduct(product, b) - scoreRelatedProduct(product, a))
-          .slice(0, MOBILE_TAILORED_LIMIT);
+        catalog = await listProducts();
+      } catch {
+        catalog = [];
+      }
+
+      try {
+        const combinedRecommendations = buildMobileTailoredRecommendations(product, rankedRecommendations, catalog, MOBILE_TAILORED_LIMIT);
 
         if (!cancelled) {
-          setMobileTailoredProducts(fallbackRecommendations);
+          setMobileTailoredProducts(combinedRecommendations);
         }
       } catch {
         if (!cancelled) {
-          setMobileTailoredProducts([]);
+          const fallbackRecommendations = buildMobileTailoredRecommendations(product, [], catalog, MOBILE_TAILORED_LIMIT);
+          setMobileTailoredProducts(fallbackRecommendations);
         }
       }
     };
