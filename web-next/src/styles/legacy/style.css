@@ -2759,12 +2759,14 @@ body.no-scroll .top-bar{
     padding: 0 0 8px;
   }
 
-  [data-category-switch="featured"] .category-grid{
+  [data-category-switch="featured"] .category-grid,
+  [data-category-switch="popular"] .category-grid{
     overflow-x: hidden;
     justify-content: center;
   }
 
-  [data-category-switch="featured"] .mobile-showcase-shell{
+  [data-category-switch="featured"] .mobile-showcase-shell,
+  [data-category-switch="popular"] .mobile-showcase-shell{
     --mobile-showcase-card-width: calc(100% - 28px);
     --mobile-showcase-card-ratio: 259 / 402;
     position: relative;
@@ -2773,7 +2775,8 @@ body.no-scroll .top-bar{
     overflow: hidden;
   }
 
-  [data-category-switch="featured"] .mobile-showcase-active{
+  [data-category-switch="featured"] .mobile-showcase-active,
+  [data-category-switch="popular"] .mobile-showcase-active{
     display: flex;
     justify-content: center;
     position: relative;
@@ -2785,7 +2788,8 @@ body.no-scroll .top-bar{
     will-change: transform, opacity;
   }
 
-  [data-category-switch="featured"] .mobile-showcase-peek{
+  [data-category-switch="featured"] .mobile-showcase-peek,
+  [data-category-switch="popular"] .mobile-showcase-peek{
     position: absolute;
     top: 0;
     bottom: 80px;
@@ -2796,24 +2800,28 @@ body.no-scroll .top-bar{
     z-index: 1;
   }
 
-  [data-category-switch="featured"] .mobile-showcase-peek-prev{
+  [data-category-switch="featured"] .mobile-showcase-peek-prev,
+  [data-category-switch="popular"] .mobile-showcase-peek-prev{
     bottom: 77px;
     transform: translateX(calc(-50% - 97.15%));
   }
 
-  [data-category-switch="featured"] .mobile-showcase-peek-next{
+  [data-category-switch="featured"] .mobile-showcase-peek-next,
+  [data-category-switch="popular"] .mobile-showcase-peek-next{
     bottom: 74px;
     transform: translateX(calc(-50% + 97.15%));
   }
 
-  [data-category-switch="featured"] .mobile-showcase-peek-image{
+  [data-category-switch="featured"] .mobile-showcase-peek-image,
+  [data-category-switch="popular"] .mobile-showcase-peek-image{
     width: 100%;
     height: 100%;
     object-fit: cover;
     display: block;
   }
 
-  [data-category-switch="featured"] .mobile-showcase-active .category-card{
+  [data-category-switch="featured"] .mobile-showcase-active .category-card,
+  [data-category-switch="popular"] .mobile-showcase-active .category-card{
     flex: 0 0 auto;
     width: calc(var(--mobile-showcase-card-width) - 20px);
     margin: 0 auto;
@@ -2821,17 +2829,21 @@ body.no-scroll .top-bar{
   }
 
   [data-category-switch="featured"] .mobile-showcase-active .category-card:first-child,
-  [data-category-switch="featured"] .mobile-showcase-active .category-card:last-child{
+  [data-category-switch="featured"] .mobile-showcase-active .category-card:last-child,
+  [data-category-switch="popular"] .mobile-showcase-active .category-card:first-child,
+  [data-category-switch="popular"] .mobile-showcase-active .category-card:last-child{
     margin-left: 0;
     margin-right: 0;
   }
 
-  [data-category-switch="featured"] .mobile-showcase-active .category-image{
+  [data-category-switch="featured"] .mobile-showcase-active .category-image,
+  [data-category-switch="popular"] .mobile-showcase-active .category-image{
     aspect-ratio: var(--mobile-showcase-card-ratio);
     box-shadow: none;
   }
 
-  [data-category-switch="featured"] .mobile-showcase-pagination{
+  [data-category-switch="featured"] .mobile-showcase-pagination,
+  [data-category-switch="popular"] .mobile-showcase-pagination{
     display: flex;
     align-items: center;
     justify-content: center;
@@ -2839,7 +2851,8 @@ body.no-scroll .top-bar{
     padding-top: 12px;
   }
 
-  [data-category-switch="featured"] .mobile-showcase-dot{
+  [data-category-switch="featured"] .mobile-showcase-dot,
+  [data-category-switch="popular"] .mobile-showcase-dot{
     width: 5px;
     height: 5px;
     border-radius: 999px;
@@ -2849,16 +2862,19 @@ body.no-scroll .top-bar{
     transition: background-color 180ms ease, transform 180ms ease, width 180ms ease;
   }
 
-  [data-category-switch="featured"] .mobile-showcase-dot.is-active{
+  [data-category-switch="featured"] .mobile-showcase-dot.is-active,
+  [data-category-switch="popular"] .mobile-showcase-dot.is-active{
     width: 14px;
     background: #111;
   }
 
-  [data-category-switch="featured"] .mobile-showcase-active-next{
+  [data-category-switch="featured"] .mobile-showcase-active-next,
+  [data-category-switch="popular"] .mobile-showcase-active-next{
     animation-name: tsebiShowcaseSlideNext;
   }
 
-  [data-category-switch="featured"] .mobile-showcase-active-prev{
+  [data-category-switch="featured"] .mobile-showcase-active-prev,
+  [data-category-switch="popular"] .mobile-showcase-active-prev{
     animation-name: tsebiShowcaseSlidePrev;
   }
 

@@ -31,6 +31,14 @@ type LegacyHomeProps = {
 };
 
 type HomeProductCard = Pick<Product, "id" | "sku" | "name" | "image" | "secondaryImage">;
+type HomeCarouselProduct = {
+  id: string;
+  sku: string;
+  name: string;
+  images: string[];
+  href: string;
+};
+type CarouselDirection = "prev" | "next";
 
 type SearchPiece = {
   id: string;
@@ -182,6 +190,7 @@ const COLLECTION_DROP_IMAGE = "https://media.tsebi.com.br/generation-6393ea28-75
 const COLLECTION_PLACEHOLDER = "/images/hero.jpg";
 const HOMEPAGE_PICTURE_IMAGE = "https://media.tsebi.com.br/generation-57e63375-48cf-4bbf-a7b9-22ce3f1b5a6a.png";
 const HOMEPAGE_PICTURE_FALLBACK = "/images/hero.jpg";
+const MOBILE_MAX_WIDTH_PX = 760;
 
 const HOMEPAGE_CATEGORIES = [
   {
@@ -322,6 +331,109 @@ function mapProductToSearchPiece(product: HomeProductCard): SearchPiece | null {
   };
 }
 
+function PopularCarouselCard({ product }: { product: HomeCarouselProduct }) {
+  const [activeIndex, setActiveIndex] = useState(0);
+  const touchStartXRef = useRef<number | null>(null);
+  const touchStartYRef = useRef<number | null>(null);
+  const isHorizontalRef = useRef<boolean | null>(null);
+  const isSwipingRef = useRef(false);
+
+  const handleTouchStart = (e: React.TouchEvent) => {
+    touchStartXRef.current = e.touches[0].clientX;
+    touchStartYRef.current = e.touches[0].clientY;
+    isSwipingRef.current = false;
+    isHorizontalRef.current = null;
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    if (touchStartXRef.current === null || touchStartYRef.current === null) return;
+    if (isHorizontalRef.current === null) {
+      const dx = Math.abs(e.touches[0].clientX - touchStartXRef.current);
+      const dy = Math.abs(e.touches[0].clientY - touchStartYRef.current);
+      if (dx > 5 || dy > 5) isHorizontalRef.current = dx > dy;
+    }
+    if (isHorizontalRef.current) e.preventDefault();
+  };
+
+  const handleTouchEnd = (e: React.TouchEvent) => {
+    if (touchStartXRef.current === null) return;
+    const deltaX = e.changedTouches[0].clientX - touchStartXRef.current;
+    touchStartXRef.current = null;
+    touchStartYRef.current = null;
+    if (isHorizontalRef.current && Math.abs(deltaX) > 30) {
+      isSwipingRef.current = true;
+      setActiveIndex((prev) =>
+        deltaX < 0 ? Math.min(prev + 1, product.images.length - 1) : Math.max(prev - 1, 0)
+      );
+    }
+    isHorizontalRef.current = null;
+  };
+
+  const handleClick = (e: React.MouseEvent) => {
+    if (isSwipingRef.current) {
+      e.preventDefault();
+      isSwipingRef.current = false;
+    }
+  };
+
+  return (
+    <article className="category-card">
+      <Link
+        href={product.href}
+        className="category-media"
+        prefetch={false}
+        onClick={handleClick}
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
+      >
+        <div className="category-image">
+          {product.images.map((src, i) => (
+            <Image
+              key={src}
+              className={`card-media-img${i === activeIndex ? " card-media-img-active" : ""}`}
+              src={src}
+              alt={i === 0 ? product.name : `${product.name} - foto ${i + 1}`}
+              width={900}
+              height={1200}
+              unoptimized
+              onError={(event) => {
+                const element = event.currentTarget;
+                element.onerror = null;
+                element.src = product.images[0] ?? COLLECTION_PLACEHOLDER;
+              }}
+            />
+          ))}
+        </div>
+        {product.images.length > 1 ? (
+          <div className="card-dots" aria-hidden="true">
+            {product.images.map((_, i) => (
+              <span
+                key={i}
+                className={`card-dot${i === activeIndex ? " card-dot-active" : i < activeIndex ? " card-dot-done" : ""}`}
+              />
+            ))}
+          </div>
+        ) : null}
+      </Link>
+      <h3>
+        <Link href={product.href} prefetch={false}>
+          {product.name}
+        </Link>
+      </h3>
+    </article>
+  );
+}
+
+function PopularCarouselPeek({ product, side }: { product: HomeCarouselProduct; side: CarouselDirection }) {
+  const previewImage = product.images[0] || COLLECTION_PLACEHOLDER;
+  return (
+    <div className={`mobile-showcase-peek mobile-showcase-peek-${side}`} aria-hidden="true">
+      <Image className="mobile-showcase-peek-image" src={previewImage} alt="" width={900} height={1200} unoptimized />
+    </div>
+  );
+}
+
 
 export function LegacyHome({ products }: LegacyHomeProps) {
   const router = useRouter();
@@ -349,6 +461,9 @@ export function LegacyHome({ products }: LegacyHomeProps) {
   const [isSearching, setIsSearching] = useState(false);
   const [hasSearchRequest, setHasSearchRequest] = useState(false);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [isMobileViewport, setIsMobileViewport] = useState(false);
+  const [activePopularCarouselIndex, setActivePopularCarouselIndex] = useState(0);
+  const [popularTransitionDirection, setPopularTransitionDirection] = useState<CarouselDirection>("next");
   const wishlistTarget = "/account#wishlist";
   const wishlistHref = isAuthenticated
     ? wishlistTarget
@@ -383,6 +498,45 @@ export function LegacyHome({ products }: LegacyHomeProps) {
     });
     return bySku;
   }, [safeProducts]);
+
+  const popularCarouselProducts = useMemo<HomeCarouselProduct[]>(() => {
+    return popularProducts
+      .map((product) => {
+        const href = resolveProductHref(product);
+        if (!href) return null;
+        const pair = buildHoverImagePair(product);
+        const images = [pair.primary || resolveProductImageSrc(product), pair.secondary || resolveProductImageSrc(product)].filter(
+          Boolean
+        ) as string[];
+
+        return {
+          id: String(product.id || product.sku),
+          sku: String(product.sku || product.id),
+          name: String(product.name || "Produto TSEBI"),
+          images: images.length > 0 ? images : [COLLECTION_PLACEHOLDER],
+          href,
+        };
+      })
+      .filter(Boolean) as HomeCarouselProduct[];
+  }, [popularProducts]);
+
+  const normalizedPopularCarouselIndex =
+    popularCarouselProducts.length > 0
+      ? Math.min(Math.max(activePopularCarouselIndex, 0), popularCarouselProducts.length - 1)
+      : 0;
+  const activePopularMobileProduct = popularCarouselProducts[normalizedPopularCarouselIndex] || null;
+  const previousPopularMobileProduct =
+    popularCarouselProducts.length > 1
+      ? popularCarouselProducts[
+          normalizedPopularCarouselIndex === 0 ? popularCarouselProducts.length - 1 : normalizedPopularCarouselIndex - 1
+        ]
+      : null;
+  const nextPopularMobileProduct =
+    popularCarouselProducts.length > 1
+      ? popularCarouselProducts[
+          normalizedPopularCarouselIndex === popularCarouselProducts.length - 1 ? 0 : normalizedPopularCarouselIndex + 1
+        ]
+      : null;
 
   const searchTopPieces = useMemo<SearchPiece[]>(() => {
     if (safeProducts.length === 0) return FALLBACK_SEARCH_PIECES;
@@ -498,6 +652,22 @@ export function LegacyHome({ products }: LegacyHomeProps) {
   }, []);
 
   useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    const mediaQuery = window.matchMedia(`(max-width: ${MOBILE_MAX_WIDTH_PX}px)`);
+    const syncViewport = () => {
+      setIsMobileViewport(mediaQuery.matches);
+    };
+
+    syncViewport();
+    mediaQuery.addEventListener("change", syncViewport);
+
+    return () => {
+      mediaQuery.removeEventListener("change", syncViewport);
+    };
+  }, []);
+
+  useEffect(() => {
     if (document.body.classList.contains("processos-page")) return;
 
     function startLogoCycle() {
@@ -554,6 +724,11 @@ export function LegacyHome({ products }: LegacyHomeProps) {
       document.documentElement.classList.remove("menu-open");
     };
   }, [isMenuOpen]);
+
+  useEffect(() => {
+    setActivePopularCarouselIndex(0);
+    setPopularTransitionDirection("next");
+  }, [isMobileViewport]);
 
   useEffect(() => {
     if (!isMenuOpen) return;
@@ -669,6 +844,18 @@ export function LegacyHome({ products }: LegacyHomeProps) {
     setIsMenuNavPanelOpen(false);
     setActiveMenuNavPanel(null);
   }, []);
+
+  const scrollPopularCarousel = useCallback((direction: CarouselDirection) => {
+    if (popularCarouselProducts.length === 0) return;
+    setPopularTransitionDirection(direction);
+    setActivePopularCarouselIndex((current) => {
+      const normalizedCurrent = Math.min(Math.max(current, 0), popularCarouselProducts.length - 1);
+      if (direction === "prev") {
+        return normalizedCurrent <= 0 ? popularCarouselProducts.length - 1 : normalizedCurrent - 1;
+      }
+      return normalizedCurrent >= popularCarouselProducts.length - 1 ? 0 : normalizedCurrent + 1;
+    });
+  }, [popularCarouselProducts.length]);
 
   const handleMenuNavPanelOpen = useCallback((event: React.MouseEvent<HTMLAnchorElement>) => {
     const link = event.currentTarget;
@@ -1605,52 +1792,97 @@ export function LegacyHome({ products }: LegacyHomeProps) {
       </section>
 
       <section className="category-switch" data-category-switch="popular" aria-label="Peças mais clicadas">
-        <div className="category-grid" id="popularGrid">
-          {popularProducts.map((product) => {
-            const href = resolveProductHref(product);
-            if (!href) {
-              if (process.env.NODE_ENV !== "production") {
-                console.warn("[home-legacy] skipping popular product without id", { product });
-              }
-              return null;
-            }
-
-            const pair = buildHoverImagePair(product);
-            return (
-              <article key={`popular-${product.sku || product.id}-${product.name}`} className="category-card">
-                <Link href={href} className="category-media" prefetch={false}>
-                  <div className="category-image">
-                    <Image
-                      className="card-media-img card-media-img-primary"
-                      src={pair.primary || resolveProductImageSrc(product)}
-                      alt={product.name}
-                      width={900}
-                      height={1200}
-                      unoptimized
-                      onError={(event) => {
-                        const element = event.currentTarget;
-                        element.onerror = null;
-                        element.src = COLLECTION_PLACEHOLDER;
-                      }}
-                    />
-                    <Image
-                      className="card-media-img card-media-img-secondary"
-                      src={pair.secondary || resolveProductImageSrc(product)}
-                      alt={`${product.name} - segunda foto`}
-                      width={900}
-                      height={1200}
-                      unoptimized
-                      onError={(event) => {
-                        const element = event.currentTarget;
-                        element.onerror = null;
-                        element.src = pair.primary || COLLECTION_PLACEHOLDER;
-                      }}
-                    />
+        <div className="carousel-wrapper">
+          <button type="button" className="carousel-nav-btn carousel-nav-prev" onClick={() => scrollPopularCarousel("prev")} aria-label="Anterior">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <path d="M15 18l-6-6 6-6" />
+            </svg>
+          </button>
+          <button type="button" className="carousel-nav-btn carousel-nav-next" onClick={() => scrollPopularCarousel("next")} aria-label="Próximo">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <path d="M9 18l6-6-6-6" />
+            </svg>
+          </button>
+          <div className="category-grid" id="popularGrid">
+            {isMobileViewport ? (
+              <div className="mobile-showcase-shell">
+                {previousPopularMobileProduct ? <PopularCarouselPeek product={previousPopularMobileProduct} side="prev" /> : null}
+                {activePopularMobileProduct ? (
+                  <div
+                    key={`${activePopularMobileProduct.sku}-${normalizedPopularCarouselIndex}-${popularTransitionDirection}`}
+                    className={`mobile-showcase-active mobile-showcase-active-${popularTransitionDirection}`}
+                  >
+                    <PopularCarouselCard product={activePopularMobileProduct} />
                   </div>
-                </Link>
-              </article>
-            );
-          })}
+                ) : null}
+                {nextPopularMobileProduct ? <PopularCarouselPeek product={nextPopularMobileProduct} side="next" /> : null}
+                {popularCarouselProducts.length > 1 ? (
+                  <div className="mobile-showcase-pagination" aria-label="Paginação dos destaques">
+                    {popularCarouselProducts.map((product, index) => (
+                      <button
+                        key={product.sku || product.id}
+                        type="button"
+                        className={`mobile-showcase-dot${index === normalizedPopularCarouselIndex ? " is-active" : ""}`}
+                        aria-label={`Ir para item ${index + 1}`}
+                        aria-pressed={index === normalizedPopularCarouselIndex}
+                        onClick={() => {
+                          if (index === normalizedPopularCarouselIndex) return;
+                          setPopularTransitionDirection(index < normalizedPopularCarouselIndex ? "prev" : "next");
+                          setActivePopularCarouselIndex(index);
+                        }}
+                      />
+                    ))}
+                  </div>
+                ) : null}
+              </div>
+            ) : (
+              popularProducts.map((product) => {
+                const href = resolveProductHref(product);
+                if (!href) {
+                  if (process.env.NODE_ENV !== "production") {
+                    console.warn("[home-legacy] skipping popular product without id", { product });
+                  }
+                  return null;
+                }
+
+                const pair = buildHoverImagePair(product);
+                return (
+                  <article key={`popular-${product.sku || product.id}-${product.name}`} className="category-card">
+                    <Link href={href} className="category-media" prefetch={false}>
+                      <div className="category-image">
+                        <Image
+                          className="card-media-img card-media-img-primary"
+                          src={pair.primary || resolveProductImageSrc(product)}
+                          alt={product.name}
+                          width={900}
+                          height={1200}
+                          unoptimized
+                          onError={(event) => {
+                            const element = event.currentTarget;
+                            element.onerror = null;
+                            element.src = COLLECTION_PLACEHOLDER;
+                          }}
+                        />
+                        <Image
+                          className="card-media-img card-media-img-secondary"
+                          src={pair.secondary || resolveProductImageSrc(product)}
+                          alt={`${product.name} - segunda foto`}
+                          width={900}
+                          height={1200}
+                          unoptimized
+                          onError={(event) => {
+                            const element = event.currentTarget;
+                            element.onerror = null;
+                            element.src = pair.primary || COLLECTION_PLACEHOLDER;
+                          }}
+                        />
+                      </div>
+                    </Link>
+                  </article>
+                );
+              })
+            )}
+          </div>
         </div>
       </section>
 
