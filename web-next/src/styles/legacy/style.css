@@ -1522,6 +1522,10 @@ body.menu-open::before {
   max-width: calc((var(--category-card-width) * 5) + (22px * 4));
 }
 
+[data-category-switch="featured"] .category-grid [data-carousel-clone]{
+  display: none;
+}
+
 #popularGrid.category-grid{
   grid-template-columns: repeat(5, minmax(0, var(--category-card-width)));
   max-width: calc((var(--category-card-width) * 5) + (22px * 4));
@@ -2757,6 +2761,10 @@ body.no-scroll .top-bar{
 
   .category-grid::-webkit-scrollbar{
     display: none;
+  }
+
+  .category-grid [data-carousel-clone]{
+    display: block;
   }
 
   .card-dots{

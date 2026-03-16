@@ -117,7 +117,7 @@ type ShowcaseCardProduct = {
   href: string;
 };
 
-function ShowcaseCard({ product }: { product: ShowcaseCardProduct }) {
+function ShowcaseCard({ product, isClone }: { product: ShowcaseCardProduct; isClone?: boolean }) {
   const [activeIndex, setActiveIndex] = useState(0);
   const touchStartXRef = useRef<number | null>(null);
   const touchStartYRef = useRef<number | null>(null);
@@ -165,7 +165,7 @@ function ShowcaseCard({ product }: { product: ShowcaseCardProduct }) {
   };
 
   return (
-    <article className="category-card">
+    <article className="category-card" {...(isClone ? { "data-carousel-clone": "true" } : {})}>
       <Link
         href={product.href}
         className="category-media"
@@ -187,7 +187,7 @@ function ShowcaseCard({ product }: { product: ShowcaseCardProduct }) {
               onError={(event) => {
                 const el = event.currentTarget;
                 el.onerror = null;
-                el.src = product.image;
+                el.src = product.images[0] ?? "";
               }}
             />
           ))}
@@ -234,38 +234,46 @@ export function GenderShowcase({ products }: GenderShowcaseProps) {
     const grid = gridRef.current;
     if (!grid) return;
     const cards = Array.from(grid.children) as HTMLElement[];
-    if (!cards.length) return;
+    // cards = [clone_last, real_0..real_N, clone_first]
+    if (cards.length < 3) return;
 
     const gridCenter = grid.getBoundingClientRect().left + grid.clientWidth / 2;
 
-    // Find the card visually closest to center
     let activeIdx = 0;
     let minDist = Infinity;
     cards.forEach((card, i) => {
       const r = card.getBoundingClientRect();
-      const dist = Math.abs(r.left + r.width / 2 - gridCenter);
-      if (dist < minDist) { minDist = dist; activeIdx = i; }
+      const d = Math.abs(r.left + r.width / 2 - gridCenter);
+      if (d < minDist) { minDist = d; activeIdx = i; }
     });
 
-    const isWrapping =
-      (direction === "next" && activeIdx === cards.length - 1) ||
-      (direction === "prev" && activeIdx === 0);
-
+    const n = cards.length;
     const targetIdx =
       direction === "next"
-        ? (activeIdx + 1) % cards.length
-        : (activeIdx - 1 + cards.length) % cards.length;
+        ? Math.min(activeIdx + 1, n - 1)
+        : Math.max(activeIdx - 1, 0);
 
     const targetRect = cards[targetIdx].getBoundingClientRect();
-    const delta = targetRect.left + targetRect.width / 2 - gridCenter;
+    const newLeft = grid.scrollLeft + (targetRect.left + targetRect.width / 2 - gridCenter);
+    grid.scrollTo({ left: Math.max(0, newLeft), behavior: "smooth" });
 
-    if (isWrapping) {
-      // Instant jump for wrap-around (no animation across all cards)
-      grid.style.scrollBehavior = "auto";
-      grid.scrollLeft = grid.scrollLeft + delta;
-      requestAnimationFrame(() => { grid.style.scrollBehavior = ""; });
-    } else {
-      grid.scrollLeft = grid.scrollLeft + delta;
+    // After animating to a clone, teleport invisibly to the real counterpart
+    if (targetIdx === 0 || targetIdx === n - 1) {
+      const teleport = () => {
+        const realCard = targetIdx === 0 ? cards[n - 2] : cards[1];
+        const gc = grid.getBoundingClientRect().left + grid.clientWidth / 2;
+        const r = realCard.getBoundingClientRect();
+        grid.style.scrollBehavior = "auto";
+        grid.scrollLeft = grid.scrollLeft + (r.left + r.width / 2 - gc);
+        window.requestAnimationFrame(() => { grid.style.scrollBehavior = ""; });
+      };
+      let fallback: number;
+      const onEnd = () => { window.clearTimeout(fallback); teleport(); };
+      grid.addEventListener("scrollend", onEnd, { once: true });
+      fallback = window.setTimeout(() => {
+        grid.removeEventListener("scrollend", onEnd);
+        teleport();
+      }, 500);
     }
   };
 
@@ -296,16 +304,24 @@ export function GenderShowcase({ products }: GenderShowcaseProps) {
     const resetCarousel = () => {
       const grid = gridRef.current;
       if (!grid) return;
-      grid.scrollTo({ left: 0, behavior: "auto" });
+      // cards[0] is start clone, cards[1] is real first — scroll to center cards[1]
+      const cards = Array.from(grid.children) as HTMLElement[];
+      const realFirst = cards[1];
+      if (!realFirst) { grid.scrollLeft = 0; return; }
+      grid.style.scrollBehavior = "auto";
+      grid.scrollLeft = Math.max(0, realFirst.offsetLeft + realFirst.offsetWidth / 2 - grid.clientWidth / 2);
+      requestAnimationFrame(() => { grid.style.scrollBehavior = ""; });
     };
 
     resetCarousel();
     const rafId = window.requestAnimationFrame(resetCarousel);
     const timeoutId = window.setTimeout(resetCarousel, 120);
+    const timeoutId2 = window.setTimeout(resetCarousel, 400);
 
     return () => {
       window.cancelAnimationFrame(rafId);
       window.clearTimeout(timeoutId);
+      window.clearTimeout(timeoutId2);
     };
   }, [renderedTab]);
 
@@ -357,6 +373,15 @@ export function GenderShowcase({ products }: GenderShowcaseProps) {
     });
   }, [productById, renderedTab]);
 
+  // Infinite loop: prepend clone of last, append clone of first
+  const carouselItems = useMemo(
+    () =>
+      visibleProducts.length === 0
+        ? visibleProducts
+        : [visibleProducts[visibleProducts.length - 1], ...visibleProducts, visibleProducts[0]],
+    [visibleProducts]
+  );
+
   return (
     <section className="category-switch" data-category-switch="featured" aria-label="Destaques por gênero">
       <div className="category-intro">
@@ -401,10 +426,11 @@ export function GenderShowcase({ products }: GenderShowcaseProps) {
         </svg>
       </button>
       <div ref={gridRef} className={`category-grid ${isSwitching ? "is-switching" : ""}`} id="categoryGrid">
-        {visibleProducts.map((product) => (
+        {carouselItems.map((product, i) => (
           <ShowcaseCard
-            key={`${product.sku || product.id}-${product.name}`}
+            key={`${product.sku || product.id}-${i}`}
             product={product}
+            isClone={carouselItems.length > 1 && (i === 0 || i === carouselItems.length - 1)}
           />
         ))}
       </div>
@@ -412,4 +438,3 @@ export function GenderShowcase({ products }: GenderShowcaseProps) {
     </section>
   );
 }
-
