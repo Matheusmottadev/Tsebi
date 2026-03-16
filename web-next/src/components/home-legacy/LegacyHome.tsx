@@ -19,7 +19,7 @@ import {
 import { startSearchPlaceholderRotator } from "@/lib/searchPlaceholderRotator";
 import { getMe } from "@/services/auth";
 import { searchProductsDetailed, trackSearchEvent } from "@/services/products";
-import { buildHoverImagePair } from "@/lib/product-media";
+import { buildHoverImagePair, collectProductMedia } from "@/lib/product-media";
 
 const GenderShowcase = dynamic(
   () => import("@/components/home-legacy/GenderShowcase").then((mod) => mod.GenderShowcase),
@@ -461,6 +461,7 @@ export function LegacyHome({ products }: LegacyHomeProps) {
   const [isSearching, setIsSearching] = useState(false);
   const [hasSearchRequest, setHasSearchRequest] = useState(false);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [hasMounted, setHasMounted] = useState(false);
   const [isMobileViewport, setIsMobileViewport] = useState(false);
   const [activePopularCarouselIndex, setActivePopularCarouselIndex] = useState(0);
   const [popularTransitionDirection, setPopularTransitionDirection] = useState<CarouselDirection>("next");
@@ -504,10 +505,8 @@ export function LegacyHome({ products }: LegacyHomeProps) {
       .map((product) => {
         const href = resolveProductHref(product);
         if (!href) return null;
-        const pair = buildHoverImagePair(product);
-        const images = [pair.primary || resolveProductImageSrc(product), pair.secondary || resolveProductImageSrc(product)].filter(
-          Boolean
-        ) as string[];
+        const fullProduct = productBySku.get(String(product.sku || product.id || "").trim());
+        const images = collectProductMedia(fullProduct || product).slice(0, 5);
 
         return {
           id: String(product.id || product.sku),
@@ -518,7 +517,7 @@ export function LegacyHome({ products }: LegacyHomeProps) {
         };
       })
       .filter(Boolean) as HomeCarouselProduct[];
-  }, [popularProducts]);
+  }, [popularProducts, productBySku]);
 
   const normalizedPopularCarouselIndex =
     popularCarouselProducts.length > 0
@@ -646,6 +645,7 @@ export function LegacyHome({ products }: LegacyHomeProps) {
 
   useEffect(() => {
     document.body.classList.add("home-page");
+    setHasMounted(true);
     return () => {
       document.body.classList.remove("home-page");
     };
@@ -1804,7 +1804,7 @@ export function LegacyHome({ products }: LegacyHomeProps) {
             </svg>
           </button>
           <div className="category-grid" id="popularGrid">
-            {isMobileViewport ? (
+            {hasMounted && isMobileViewport ? (
               <div className="mobile-showcase-shell">
                 {previousPopularMobileProduct ? <PopularCarouselPeek product={previousPopularMobileProduct} side="prev" /> : null}
                 {activePopularMobileProduct ? (

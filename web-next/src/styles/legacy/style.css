@@ -2800,16 +2800,37 @@ body.no-scroll .top-bar{
     z-index: 1;
   }
 
+  [data-category-switch="featured"] .mobile-showcase-peek::after,
+  [data-category-switch="popular"] .mobile-showcase-peek::after{
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    z-index: 1;
+  }
+
   [data-category-switch="featured"] .mobile-showcase-peek-prev,
   [data-category-switch="popular"] .mobile-showcase-peek-prev{
     bottom: 77px;
     transform: translateX(calc(-50% - 97.15%));
   }
 
+  [data-category-switch="featured"] .mobile-showcase-peek-prev::after,
+  [data-category-switch="popular"] .mobile-showcase-peek-prev::after{
+    background:
+      linear-gradient(90deg, rgba(255,255,255,0.03) 0%, rgba(255,255,255,0.01) 24%, rgba(0,0,0,0.22) 100%);
+  }
+
   [data-category-switch="featured"] .mobile-showcase-peek-next,
   [data-category-switch="popular"] .mobile-showcase-peek-next{
     bottom: 74px;
     transform: translateX(calc(-50% + 97.15%));
+  }
+
+  [data-category-switch="featured"] .mobile-showcase-peek-next::after,
+  [data-category-switch="popular"] .mobile-showcase-peek-next::after{
+    background:
+      linear-gradient(270deg, rgba(255,255,255,0.03) 0%, rgba(255,255,255,0.01) 24%, rgba(0,0,0,0.22) 100%);
   }
 
   [data-category-switch="featured"] .mobile-showcase-peek-image,
@@ -2847,25 +2868,25 @@ body.no-scroll .top-bar{
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 8px;
-    padding-top: 12px;
+    gap: 6px;
+    padding-top: 10px;
   }
 
   [data-category-switch="featured"] .mobile-showcase-dot,
   [data-category-switch="popular"] .mobile-showcase-dot{
-    width: 5px;
-    height: 5px;
+    width: 3px;
+    height: 3px;
     border-radius: 999px;
     border: 0;
     padding: 0;
-    background: rgba(17, 17, 17, 0.22);
+    background: rgba(17, 17, 17, 0.1);
     transition: background-color 180ms ease, transform 180ms ease, width 180ms ease;
   }
 
   [data-category-switch="featured"] .mobile-showcase-dot.is-active,
   [data-category-switch="popular"] .mobile-showcase-dot.is-active{
-    width: 14px;
-    background: #111;
+    width: 9px;
+    background: rgba(17, 17, 17, 0.58);
   }
 
   [data-category-switch="featured"] .mobile-showcase-active-next,
