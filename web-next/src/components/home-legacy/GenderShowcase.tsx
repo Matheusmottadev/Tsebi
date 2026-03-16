@@ -117,6 +117,22 @@ type ShowcaseCardProduct = {
   href: string;
 };
 
+type CarouselDirection = "prev" | "next";
+
+const MOBILE_MAX_WIDTH_PX = 760;
+const MOBILE_SHOWCASE_REPLACEMENTS: Partial<Record<GenderTab, Record<string, LegacyShowcaseCard>>> = {
+  feminino: {
+    "genesis-tailored": {
+      id: "atelier-bag",
+      sku: "atelier-bag",
+      name: "Bolsa Atelier em couro estruturado",
+      image: "/images/product/atelier-bag-1.jpg",
+      secondaryImage: "/images/product/atelier-bag-2.jpg",
+      alt: "Bolsa Atelier em couro estruturado",
+    },
+  },
+};
+
 function ShowcaseCard({ product, isClone }: { product: ShowcaseCardProduct; isClone?: boolean }) {
   const [activeIndex, setActiveIndex] = useState(0);
   const touchStartXRef = useRef<number | null>(null);
@@ -210,6 +226,18 @@ function ShowcaseCard({ product, isClone }: { product: ShowcaseCardProduct; isCl
   );
 }
 
+function ShowcasePeek({ product, side }: { product: ShowcaseCardProduct; side: CarouselDirection }) {
+  const previewImage = product.images[0] || "";
+
+  if (!previewImage) return null;
+
+  return (
+    <div className={`mobile-showcase-peek mobile-showcase-peek-${side}`} aria-hidden="true">
+      <Image className="mobile-showcase-peek-image" src={previewImage} alt="" width={900} height={1200} unoptimized />
+    </div>
+  );
+}
+
 function resolveProductImageSrc(image: string): string {
   const raw = String(image || "").trim();
   if (!raw) return "/images/product/origem-skirt-1.jpg";
@@ -227,55 +255,10 @@ export function GenderShowcase({ products }: GenderShowcaseProps) {
   const [activeTab, setActiveTab] = useState<GenderTab>("feminino");
   const [renderedTab, setRenderedTab] = useState<GenderTab>("feminino");
   const [isSwitching, setIsSwitching] = useState(false);
+  const [isMobileViewport, setIsMobileViewport] = useState(false);
+  const [activeCarouselIndex, setActiveCarouselIndex] = useState(0);
+  const [mobileTransitionDirection, setMobileTransitionDirection] = useState<CarouselDirection>("next");
   const switchTimerRef = useRef<number | null>(null);
-  const gridRef = useRef<HTMLDivElement | null>(null);
-
-  const scrollCarousel = (direction: "prev" | "next") => {
-    const grid = gridRef.current;
-    if (!grid) return;
-    const cards = Array.from(grid.children) as HTMLElement[];
-    // cards = [clone_last, real_0..real_N, clone_first]
-    if (cards.length < 3) return;
-
-    const gridCenter = grid.getBoundingClientRect().left + grid.clientWidth / 2;
-
-    let activeIdx = 0;
-    let minDist = Infinity;
-    cards.forEach((card, i) => {
-      const r = card.getBoundingClientRect();
-      const d = Math.abs(r.left + r.width / 2 - gridCenter);
-      if (d < minDist) { minDist = d; activeIdx = i; }
-    });
-
-    const n = cards.length;
-    const targetIdx =
-      direction === "next"
-        ? Math.min(activeIdx + 1, n - 1)
-        : Math.max(activeIdx - 1, 0);
-
-    const targetRect = cards[targetIdx].getBoundingClientRect();
-    const newLeft = grid.scrollLeft + (targetRect.left + targetRect.width / 2 - gridCenter);
-    grid.scrollTo({ left: Math.max(0, newLeft), behavior: "smooth" });
-
-    // After animating to a clone, teleport invisibly to the real counterpart
-    if (targetIdx === 0 || targetIdx === n - 1) {
-      const teleport = () => {
-        const realCard = targetIdx === 0 ? cards[n - 2] : cards[1];
-        const gc = grid.getBoundingClientRect().left + grid.clientWidth / 2;
-        const r = realCard.getBoundingClientRect();
-        grid.style.scrollBehavior = "auto";
-        grid.scrollLeft = grid.scrollLeft + (r.left + r.width / 2 - gc);
-        window.requestAnimationFrame(() => { grid.style.scrollBehavior = ""; });
-      };
-      let fallback: number;
-      const onEnd = () => { window.clearTimeout(fallback); teleport(); };
-      grid.addEventListener("scrollend", onEnd, { once: true });
-      fallback = window.setTimeout(() => {
-        grid.removeEventListener("scrollend", onEnd);
-        teleport();
-      }, 500);
-    }
-  };
 
   const productById = useMemo(() => {
     const map = new Map<string, Product>();
@@ -288,61 +271,14 @@ export function GenderShowcase({ products }: GenderShowcaseProps) {
     return map;
   }, [products]);
 
-  useEffect(
-    () => () => {
-      if (switchTimerRef.current !== null) {
-        window.clearTimeout(switchTimerRef.current);
-      }
-    },
-    []
-  );
-
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    if (window.innerWidth > 760) return;
-
-    const resetCarousel = () => {
-      const grid = gridRef.current;
-      if (!grid) return;
-      // cards[0] is start clone, cards[1] is real first — scroll to center cards[1]
-      const cards = Array.from(grid.children) as HTMLElement[];
-      const realFirst = cards[1];
-      if (!realFirst) { grid.scrollLeft = 0; return; }
-      grid.style.scrollBehavior = "auto";
-      grid.scrollLeft = Math.max(0, realFirst.offsetLeft + realFirst.offsetWidth / 2 - grid.clientWidth / 2);
-      requestAnimationFrame(() => { grid.style.scrollBehavior = ""; });
-    };
-
-    resetCarousel();
-    const rafId = window.requestAnimationFrame(resetCarousel);
-    const timeoutId = window.setTimeout(resetCarousel, 120);
-    const timeoutId2 = window.setTimeout(resetCarousel, 400);
-
-    return () => {
-      window.cancelAnimationFrame(rafId);
-      window.clearTimeout(timeoutId);
-      window.clearTimeout(timeoutId2);
-    };
-  }, [renderedTab]);
-
-  function handleTabChange(nextTab: GenderTab) {
-    if (nextTab === activeTab && nextTab === renderedTab && !isSwitching) return;
-
-    setActiveTab(nextTab);
-    if (switchTimerRef.current !== null) {
-      window.clearTimeout(switchTimerRef.current);
-    }
-
-    setIsSwitching(true);
-    switchTimerRef.current = window.setTimeout(() => {
-      setRenderedTab(nextTab);
-      setIsSwitching(false);
-      switchTimerRef.current = null;
-    }, 180);
-  }
-
   const visibleProducts = useMemo(() => {
-    return LEGACY_SHOWCASE_CARDS[renderedTab].map((item) => {
+    const baseCards = LEGACY_SHOWCASE_CARDS[renderedTab].map((item) => {
+      if (!isMobileViewport) return item;
+      const replacement = MOBILE_SHOWCASE_REPLACEMENTS[renderedTab]?.[item.sku];
+      return replacement || item;
+    });
+
+    return baseCards.map((item) => {
       const matched = productById.get(item.sku) || productById.get(item.id);
       const resolvedName = String(matched?.name || "").trim() || item.name;
       const matchedRecord = (matched || {}) as Record<string, unknown>;
@@ -371,16 +307,79 @@ export function GenderShowcase({ products }: GenderShowcaseProps) {
         href,
       };
     });
-  }, [productById, renderedTab]);
+  }, [isMobileViewport, productById, renderedTab]);
 
-  // Infinite loop: prepend clone of last, append clone of first
-  const carouselItems = useMemo(
-    () =>
-      visibleProducts.length === 0
-        ? visibleProducts
-        : [visibleProducts[visibleProducts.length - 1], ...visibleProducts, visibleProducts[0]],
-    [visibleProducts]
+  const normalizedActiveCarouselIndex =
+    visibleProducts.length > 0 ? Math.min(Math.max(activeCarouselIndex, 0), visibleProducts.length - 1) : 0;
+  const activeMobileProduct = visibleProducts[normalizedActiveCarouselIndex] || null;
+  const previousMobileProduct =
+    visibleProducts.length > 1
+      ? visibleProducts[normalizedActiveCarouselIndex === 0 ? visibleProducts.length - 1 : normalizedActiveCarouselIndex - 1]
+      : null;
+  const nextMobileProduct =
+    visibleProducts.length > 1
+      ? visibleProducts[normalizedActiveCarouselIndex === visibleProducts.length - 1 ? 0 : normalizedActiveCarouselIndex + 1]
+      : null;
+
+  const scrollCarousel = (direction: "prev" | "next") => {
+    if (visibleProducts.length === 0) return;
+    setMobileTransitionDirection(direction);
+    setActiveCarouselIndex((current) => {
+      const normalizedCurrent = Math.min(Math.max(current, 0), visibleProducts.length - 1);
+      if (direction === "prev") {
+        return normalizedCurrent <= 0 ? visibleProducts.length - 1 : normalizedCurrent - 1;
+      }
+      return normalizedCurrent >= visibleProducts.length - 1 ? 0 : normalizedCurrent + 1;
+    });
+  };
+
+  useEffect(
+    () => () => {
+      if (switchTimerRef.current !== null) {
+        window.clearTimeout(switchTimerRef.current);
+      }
+    },
+    []
   );
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    const mediaQuery = window.matchMedia(`(max-width: ${MOBILE_MAX_WIDTH_PX}px)`);
+    const syncViewport = () => {
+      setIsMobileViewport(mediaQuery.matches);
+    };
+
+    syncViewport();
+    mediaQuery.addEventListener("change", syncViewport);
+
+    return () => {
+      mediaQuery.removeEventListener("change", syncViewport);
+    };
+  }, []);
+
+  function handleTabChange(nextTab: GenderTab) {
+    if (nextTab === activeTab && nextTab === renderedTab && !isSwitching) return;
+
+    setActiveTab(nextTab);
+    setActiveCarouselIndex(0);
+    setMobileTransitionDirection("next");
+    if (switchTimerRef.current !== null) {
+      window.clearTimeout(switchTimerRef.current);
+    }
+
+    setIsSwitching(true);
+    switchTimerRef.current = window.setTimeout(() => {
+      setRenderedTab(nextTab);
+      setIsSwitching(false);
+      switchTimerRef.current = null;
+    }, 180);
+  }
+
+  const carouselItems = useMemo(() => {
+    if (!isMobileViewport) return visibleProducts;
+    return activeMobileProduct ? [activeMobileProduct] : [];
+  }, [activeMobileProduct, isMobileViewport, visibleProducts]);
 
   return (
     <section className="category-switch" data-category-switch="featured" aria-label="Destaques por gênero">
@@ -425,14 +424,46 @@ export function GenderShowcase({ products }: GenderShowcaseProps) {
           <path d="M9 18l6-6-6-6" />
         </svg>
       </button>
-      <div ref={gridRef} className={`category-grid ${isSwitching ? "is-switching" : ""}`} id="categoryGrid">
-        {carouselItems.map((product, i) => (
-          <ShowcaseCard
-            key={`${product.sku || product.id}-${i}`}
-            product={product}
-            isClone={carouselItems.length > 1 && (i === 0 || i === carouselItems.length - 1)}
-          />
-        ))}
+      <div className={`category-grid ${isSwitching ? "is-switching" : ""}`} id="categoryGrid">
+        {isMobileViewport ? (
+          <div className="mobile-showcase-shell">
+            {previousMobileProduct ? <ShowcasePeek product={previousMobileProduct} side="prev" /> : null}
+            {activeMobileProduct ? (
+              <div
+                key={`${activeMobileProduct.sku}-${normalizedActiveCarouselIndex}-${mobileTransitionDirection}`}
+                className={`mobile-showcase-active mobile-showcase-active-${mobileTransitionDirection}`}
+              >
+                <ShowcaseCard product={activeMobileProduct} />
+              </div>
+            ) : null}
+            {nextMobileProduct ? <ShowcasePeek product={nextMobileProduct} side="next" /> : null}
+            {visibleProducts.length > 1 ? (
+              <div className="mobile-showcase-pagination" aria-label="Paginação dos destaques">
+                {visibleProducts.map((product, index) => (
+                  <button
+                    key={product.sku || product.id}
+                    type="button"
+                    className={`mobile-showcase-dot${index === normalizedActiveCarouselIndex ? " is-active" : ""}`}
+                    aria-label={`Ir para item ${index + 1}`}
+                    aria-pressed={index === normalizedActiveCarouselIndex}
+                    onClick={() => {
+                      if (index === normalizedActiveCarouselIndex) return;
+                      setMobileTransitionDirection(index < normalizedActiveCarouselIndex ? "prev" : "next");
+                      setActiveCarouselIndex(index);
+                    }}
+                  />
+                ))}
+              </div>
+            ) : null}
+          </div>
+        ) : (
+          carouselItems.map((product, i) => (
+            <ShowcaseCard
+              key={`${product.sku || product.id}-${i}`}
+              product={product}
+            />
+          ))
+        )}
       </div>
       </div>
     </section>

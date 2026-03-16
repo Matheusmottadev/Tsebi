@@ -1,6 +1,7 @@
 "use client";
 
 import posthog from "posthog-js";
+import { createClientUuid } from "@/lib/browser-crypto";
 
 export type CommerceEventName =
   | "view_item"
@@ -48,7 +49,7 @@ export function getOrCreateAnonId(): string {
   if (typeof window === "undefined") return "";
   const existing = normalizeText(window.localStorage.getItem(ANON_STORAGE_KEY));
   if (existing) return existing;
-  const generated = `anon_${crypto.randomUUID()}`;
+  const generated = `anon_${createClientUuid()}`;
   window.localStorage.setItem(ANON_STORAGE_KEY, generated);
   return generated;
 }
@@ -99,7 +100,7 @@ function capturePosthog(name: CommerceEventName, payload: CommerceEventPayload) 
 export async function trackCommerceEvent(input: CommerceEventPayload): Promise<void> {
   if (typeof window === "undefined") return;
 
-  const eventId = normalizeText(input.eventId) || crypto.randomUUID();
+  const eventId = normalizeText(input.eventId) || createClientUuid();
   const anonId = normalizeText(input.anonId) || getOrCreateAnonId();
   const storedUserId = normalizeText(window.localStorage.getItem("tsebi.user_id"));
   const userId = normalizeText(input.userId) || storedUserId;

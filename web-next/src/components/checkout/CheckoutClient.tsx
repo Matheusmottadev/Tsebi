@@ -10,6 +10,7 @@ import { CheckoutPaymentForm } from "@/components/checkout/CheckoutPaymentForm";
 import { cartSelectors, useCartStore } from "@/lib/cart/cartStore";
 import { HttpError } from "@/lib/http";
 import { getOrCreateAnonId, trackCommerceEvent } from "@/lib/analytics";
+import { createClientUuid } from "@/lib/browser-crypto";
 import { isCheckoutEnabled } from "@/lib/env";
 import { resolveStripePromise } from "@/lib/stripe";
 import { addAddress, getCheckoutPrefill, getMe } from "@/services/auth";
@@ -748,7 +749,7 @@ export function CheckoutClient() {
   const beginCheckoutEventIdRef = useRef("");
   const getBeginCheckoutEventId = useCallback(() => {
     if (!beginCheckoutEventIdRef.current) {
-      beginCheckoutEventIdRef.current = crypto.randomUUID();
+      beginCheckoutEventIdRef.current = createClientUuid();
     }
     return beginCheckoutEventIdRef.current;
   }, []);
