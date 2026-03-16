@@ -6,13 +6,16 @@ import { listProducts } from "@/services/products";
 import { ProductGrid } from "@/components/ProductGrid";
 import { BodyClassName } from "@/components/BodyClassName";
 import { Price } from "@/components/Price";
-import { buildHoverImagePair } from "@/lib/product-media";
+import { buildHoverImagePair, collectProductMedia } from "@/lib/product-media";
 import type { Product } from "@/types";
 import { LegacyFooter } from "@/components/home-legacy/LegacyFooter";
 import { ExclusiveSuggestions, type ExclusiveSuggestionFallbackCard } from "./ExclusiveSuggestions";
 import { ProductsSearchGrid, type ProductsSearchGridItem } from "./ProductsSearchGrid";
 import styles from "./page.module.css";
 import { NovidadesGrid, type NovidadesGridTile } from "./NovidadesGrid";
+import { ProductsToolbarSearch } from "./ProductsToolbarSearch";
+import { ProductsMobileFilterPanel } from "./ProductsMobileFilterPanel";
+import { ProductsMobileSortPanel } from "./ProductsMobileSortPanel";
 
 export const revalidate = 3600;
 
@@ -312,6 +315,16 @@ function sanitizeDisplayText(value: unknown): string {
   return text;
 }
 
+function shortenProductsTitle(value: unknown): string {
+  const text = sanitizeDisplayText(value);
+  if (!text) return "";
+
+  const trimmedByClause = text.split(/\s+(?:com|para)\s+/i)[0]?.trim() || text;
+  const words = trimmedByClause.split(/\s+/).filter(Boolean);
+  if (words.length <= 6) return trimmedByClause;
+  return words.slice(0, 6).join(" ");
+}
+
 function normalizeText(value: unknown): string {
   return sanitizeDisplayText(value)
     .normalize("NFD")
@@ -344,13 +357,17 @@ function buildSearchSuggestionLinks(
   const queryValue = sanitizeDisplayText(params.q).trim();
   const normalizedQuery = normalizeText(queryValue);
   const stopWords = new Set(["de", "da", "do", "das", "dos", "e", "em", "com", "para", "a", "o", "as", "os"]);
-  const baseKeyword =
-    sanitizeDisplayText(
-      queryValue
-        .replace(/\b(masculino|feminino|tsebi|premium|basica|basico)\b/gi, "")
-        .replace(/\s+/g, " ")
-        .trim()
-    ) || "camisa";
+
+  // If the query is only gender/modifier words with no substantive product keyword, skip suggestions
+  const coreQuery = sanitizeDisplayText(
+    queryValue
+      .replace(/\b(masculino|feminino|tsebi|premium|basica|basico)\b/gi, "")
+      .replace(/\s+/g, " ")
+      .trim()
+  );
+  if (!coreQuery) return [];
+
+  const baseKeyword = coreQuery;
   const baseKeywordNormalized = normalizeText(baseKeyword);
   const queryTokens = normalizedQuery
     .split(/\s+/)
@@ -367,11 +384,13 @@ function buildSearchSuggestionLinks(
     return fuzzyMatchQueryAgainstSearchable(queryValue || normalizedQuery, [name]);
   });
 
-  const namesForSuggestions = relevantNames.length > 0 ? relevantNames : catalogNames;
+  // No fallback to full catalog — if nothing matches, return no suggestions
+  if (relevantNames.length === 0) return [];
+
   const dedupeNormalized = new Set<string>();
   const finalSuggestions: string[] = [];
 
-  namesForSuggestions.forEach((name) => {
+  relevantNames.forEach((name) => {
     if (finalSuggestions.length >= 3) return;
 
     const displayWords = name.split(/\s+/).filter(Boolean);
@@ -386,11 +405,12 @@ function buildSearchSuggestionLinks(
 
     const phraseWords: string[] = [displayWords[anchorIndex]];
     for (let index = anchorIndex + 1; index < displayWords.length && phraseWords.length < 3; index += 1) {
-      const nextWord = displayWords[index];
-      phraseWords.push(nextWord);
-      if (!stopWords.has(normalizeText(nextWord))) break;
+      phraseWords.push(displayWords[index]);
     }
 
+    while (phraseWords.length > 1 && stopWords.has(normalizeText(phraseWords[phraseWords.length - 1]))) {
+      phraseWords.pop();
+    }
     const suggestion = sanitizeDisplayText(phraseWords.join(" ")).replace(/\s+/g, " ").trim();
     const normalizedSuggestion = normalizeText(suggestion);
     if (!normalizedSuggestion || normalizedSuggestion === normalizedQuery) return;
@@ -399,10 +419,6 @@ function buildSearchSuggestionLinks(
     dedupeNormalized.add(normalizedSuggestion);
     finalSuggestions.push(suggestion);
   });
-
-  if (finalSuggestions.length === 0) {
-    finalSuggestions.push(baseKeyword);
-  }
 
   return finalSuggestions.map((term, index) => {
     const isActive = normalizedQuery ? normalizeText(term) === normalizedQuery : index === 0;
@@ -418,12 +434,16 @@ function renderRootProductsToolbar(
   filtersToggleId: string,
   mainCategoryLinks: ReadonlyArray<{ href: string; label: string; active: boolean }> = ROOT_PRODUCTS_MAIN_CATEGORY_LINKS,
   showActions: boolean = true,
-  resultsCount?: number
+  resultsCount?: number,
+  searchQuery?: string,
+  sortLinks?: ReadonlyArray<{ href: string; label: string; active: boolean }>,
+  mobileFilterPanel?: React.ReactNode
 ) {
   return (
     <section className={styles.novidadesToolbarSection} aria-label="Filtros de produtos">
       <div className={styles.novidadesToolbarInner}>
         <div className={styles.novidadesFiltersLeft}>
+          <ProductsToolbarSearch initialQuery={searchQuery} />
           <div className={styles.novidadesCategoriesRow}>
             {mainCategoryLinks.map((item) => (
               <Link
@@ -438,8 +458,13 @@ function renderRootProductsToolbar(
             ))}
           </div>
         </div>
-        {showActions ? (
+        {(showActions || (sortLinks && sortLinks.length > 0)) ? (
           <div className={styles.novidadesActionsRight}>
+            {sortLinks && sortLinks.length > 0 && (
+              <ProductsMobileSortPanel sortLinks={[...sortLinks]} />
+            )}
+            {mobileFilterPanel}
+            {showActions && <>
             <details className={styles.novidadesSortGroup}>
               <summary className={styles.novidadesSortToggle}>
                 <span>Ordenação</span>
@@ -585,6 +610,7 @@ function renderRootProductsToolbar(
                 </div>
               </div>
             </div>
+          </>}
           </div>
         ) : typeof resultsCount === "number" ? (
           <div className={styles.novidadesActionsRight}>
@@ -623,7 +649,7 @@ function buildExclusiveSuggestionFallbackCards(products: ExtendedProduct[]): Exc
         : `/product/${encodeURIComponent(String(product.id || id).trim())}`;
       return {
         id,
-        name: sanitizeDisplayText(product.name) || id,
+        name: shortenProductsTitle(product.name) || id,
         image: imagePair.primary || "/images/placeholderreal.webp",
         href,
       } satisfies ExclusiveSuggestionFallbackCard;
@@ -631,7 +657,18 @@ function buildExclusiveSuggestionFallbackCards(products: ExtendedProduct[]): Exc
     .filter((entry): entry is ExclusiveSuggestionFallbackCard => Boolean(entry));
 }
 
-function renderProductsSearchSidebar(
+function renderProductsSelectedMark() {
+  return (
+    <span className={styles.novidadesFiltersSelectedMark} aria-hidden="true">
+      <Image src="/images/logo-tsebi.png" alt="" className={styles.novidadesFiltersSelectedLogo} width={18} height={18} />
+      <svg viewBox="0 0 12 12" className={styles.novidadesFiltersSelectedTick}>
+        <path d="M2.2 6.2 4.8 8.8 9.8 3.8" />
+      </svg>
+    </span>
+  );
+}
+
+function renderProductsFilterBody(
   params: ProductsSearchParams,
   collectionOptions: string[],
   colorOptions: string[],
@@ -661,209 +698,219 @@ function renderProductsSearchSidebar(
   const activeColorsSet = new Set(activeColors.map((entry) => normalizeText(entry)));
   const activeMaterialsSet = new Set(activeMaterials.map((entry) => normalizeText(entry)));
   const activeSizesSet = new Set(activeSizes.map((entry) => normalizeText(entry)));
-  const renderSelectedMark = () => (
-    <span className={styles.novidadesFiltersSelectedMark} aria-hidden="true">
-      <Image src="/images/logo-tsebi.png" alt="" className={styles.novidadesFiltersSelectedLogo} width={18} height={18} />
-      <svg viewBox="0 0 12 12" className={styles.novidadesFiltersSelectedTick}>
-        <path d="M2.2 6.2 4.8 8.8 9.8 3.8" />
-      </svg>
-    </span>
-  );
 
+  return (
+    <>
+      <div className={styles.productsSearchGenderToggle}>
+        <Link
+          href={masculineHref}
+          className={`${styles.productsSearchGenderChip} ${activeGender === "masculino" ? styles.productsSearchGenderChipActive : ""}`}
+          scroll={false}
+          prefetch={false}
+        >
+          Homem
+        </Link>
+        <Link
+          href={feminineHref}
+          className={`${styles.productsSearchGenderChip} ${activeGender === "feminino" ? styles.productsSearchGenderChipActive : ""}`}
+          scroll={false}
+          prefetch={false}
+        >
+          Mulher
+        </Link>
+      </div>
+
+      <ExclusiveSuggestions
+        query={exclusiveSuggestions.query}
+        contextHint={exclusiveSuggestions.contextHint}
+        fallbackCards={exclusiveSuggestions.fallbackCards}
+      />
+
+      <details className={`${styles.productsSearchSidebarGroup} ${styles.productsSearchSidebarGroupSort}`}>
+        <summary className={styles.productsSearchSidebarSummary}>Ordenar por</summary>
+        <div className={styles.productsSearchSidebarBody}>
+          {ROOT_PRODUCTS_SORT_LINKS.map((item) => {
+            const sortPatch = resolveSortPatchFromLabel(item.label);
+            if (!sortPatch) return null;
+            const isActive = sortPatch === activeSort;
+            return (
+              <Link
+                key={item.label}
+                href={buildProductsHref(params, { sort: sortPatch })}
+                className={`${styles.productsSearchSidebarOption} ${isActive ? styles.productsSearchSidebarOptionActive : ""}`}
+                scroll={false}
+                prefetch={false}
+              >
+                {sanitizeDisplayText(item.label)}
+                {isActive ? renderProductsSelectedMark() : null}
+              </Link>
+            );
+          })}
+        </div>
+      </details>
+
+      <details className={styles.productsSearchSidebarGroup}>
+        <summary className={styles.productsSearchSidebarSummary}>Coleção</summary>
+        <div className={`${styles.productsSearchSidebarBody} ${styles.productsSearchSidebarBodyInline}`}>
+          {collectionOptions.map((collectionOption) => {
+            const isActive = activeCollectionsSet.has(normalizeText(collectionOption));
+            const isUnavailable = !isActive && !collectionAvailability.get(normalizeText(collectionOption));
+            const optionClassName = `${styles.productsSearchSidebarOption} ${isActive ? styles.productsSearchSidebarOptionActive : ""} ${isUnavailable ? styles.productsSearchSidebarOptionUnavailable : ""}`;
+            if (isUnavailable) {
+              return (
+                <span key={collectionOption} className={optionClassName} aria-disabled="true">
+                  {sanitizeDisplayText(collectionOption)}
+                  {isActive ? renderProductsSelectedMark() : null}
+                </span>
+              );
+            }
+            return (
+              <Link
+                key={collectionOption}
+                href={buildProductsHref(params, { collection: toggleMultiSelectOption(activeCollections, collectionOption) })}
+                className={optionClassName}
+                scroll={false}
+                prefetch={false}
+              >
+                {sanitizeDisplayText(collectionOption)}
+                {isActive ? renderProductsSelectedMark() : null}
+              </Link>
+            );
+          })}
+        </div>
+      </details>
+
+      <details className={styles.productsSearchSidebarGroup}>
+        <summary className={styles.productsSearchSidebarSummary}>Cor</summary>
+        <div className={styles.productsSearchSidebarBody}>
+          {colorOptions.map((colorOption) => {
+            const isActive = activeColorsSet.has(normalizeText(colorOption));
+            const isUnavailable = !isActive && !colorAvailability.get(normalizeText(colorOption));
+            const optionClassName = `${styles.productsSearchSidebarOption} ${styles.productsSearchSidebarColorOption} ${isActive ? styles.productsSearchSidebarOptionActive : ""} ${isUnavailable ? styles.productsSearchSidebarOptionUnavailable : ""}`;
+            if (isUnavailable) {
+              return (
+                <span key={colorOption} className={optionClassName} aria-disabled="true">
+                  <span className={styles.productsSearchSidebarColorDot} aria-hidden="true" style={{ backgroundColor: resolveColorSwatch(colorOption) }} />
+                  <span>{sanitizeDisplayText(colorOption)}</span>
+                  {isActive ? renderProductsSelectedMark() : null}
+                </span>
+              );
+            }
+            return (
+              <Link
+                key={colorOption}
+                href={buildProductsHref(params, { color: toggleMultiSelectOption(activeColors, colorOption) })}
+                className={optionClassName}
+                scroll={false}
+                prefetch={false}
+              >
+                <span className={styles.productsSearchSidebarColorDot} aria-hidden="true" style={{ backgroundColor: resolveColorSwatch(colorOption) }} />
+                <span>{sanitizeDisplayText(colorOption)}</span>
+                {isActive ? renderProductsSelectedMark() : null}
+              </Link>
+            );
+          })}
+        </div>
+      </details>
+
+      {materialOptions.length > 0 ? (
+        <details className={styles.productsSearchSidebarGroup}>
+          <summary className={styles.productsSearchSidebarSummary}>Material</summary>
+          <div className={styles.productsSearchSidebarBody}>
+            {materialOptions.map((material) => {
+              const isActive = activeMaterialsSet.has(normalizeText(material));
+              const isUnavailable = !isActive && !materialAvailability.get(normalizeText(material));
+              const optionClassName = `${styles.productsSearchSidebarOption} ${isActive ? styles.productsSearchSidebarOptionActive : ""} ${isUnavailable ? styles.productsSearchSidebarOptionUnavailable : ""}`;
+              if (isUnavailable) {
+                return (
+                  <span key={material} className={optionClassName} aria-disabled="true">
+                    {sanitizeDisplayText(material)}
+                    {isActive ? renderProductsSelectedMark() : null}
+                  </span>
+                );
+              }
+              return (
+                <Link
+                  key={material}
+                  href={buildProductsHref(params, { material: toggleMultiSelectOption(activeMaterials, material) })}
+                  className={optionClassName}
+                  scroll={false}
+                  prefetch={false}
+                >
+                  {sanitizeDisplayText(material)}
+                  {isActive ? renderProductsSelectedMark() : null}
+                </Link>
+              );
+            })}
+          </div>
+        </details>
+      ) : null}
+
+      <details className={styles.productsSearchSidebarGroup}>
+        <summary className={styles.productsSearchSidebarSummary}>Tamanho</summary>
+        <div className={styles.productsSearchSidebarBody}>
+          {sizeOptions.map((size) => {
+            const isActive = activeSizesSet.has(normalizeText(size));
+            const isUnavailable = !isActive && !sizeAvailability.get(normalizeText(size));
+            const optionClassName = `${styles.productsSearchSidebarOption} ${isActive ? styles.productsSearchSidebarOptionActive : ""} ${isUnavailable ? styles.productsSearchSidebarOptionUnavailable : ""}`;
+            if (isUnavailable) {
+              return (
+                <span key={size} className={optionClassName} aria-disabled="true">
+                  {sanitizeDisplayText(size)}
+                  {isActive ? renderProductsSelectedMark() : null}
+                </span>
+              );
+            }
+            return (
+              <Link
+                key={size}
+                href={buildProductsHref(params, { size: toggleMultiSelectOption(activeSizes, size) })}
+                className={optionClassName}
+                scroll={false}
+                prefetch={false}
+              >
+                {sanitizeDisplayText(size)}
+                {isActive ? renderProductsSelectedMark() : null}
+              </Link>
+            );
+          })}
+        </div>
+      </details>
+    </>
+  );
+}
+
+function renderProductsSearchSidebar(
+  params: ProductsSearchParams,
+  collectionOptions: string[],
+  colorOptions: string[],
+  sizeOptions: string[],
+  materialOptions: string[],
+  collectionAvailability: Map<string, boolean>,
+  colorAvailability: Map<string, boolean>,
+  materialAvailability: Map<string, boolean>,
+  sizeAvailability: Map<string, boolean>,
+  exclusiveSuggestions: {
+    query: string;
+    contextHint: string;
+    fallbackCards: ExclusiveSuggestionFallbackCard[];
+  }
+) {
   return (
     <div className={styles.productsSearchSidebarSlot}>
       <aside className={styles.productsSearchSidebar}>
-        <div className={styles.productsSearchGenderToggle}>
-          <Link
-            href={masculineHref}
-            className={`${styles.productsSearchGenderChip} ${activeGender === "masculino" ? styles.productsSearchGenderChipActive : ""}`}
-            scroll={false}
-            prefetch={false}
-          >
-            Homem
-          </Link>
-          <Link
-            href={feminineHref}
-            className={`${styles.productsSearchGenderChip} ${activeGender === "feminino" ? styles.productsSearchGenderChipActive : ""}`}
-            scroll={false}
-            prefetch={false}
-          >
-            Mulher
-          </Link>
-        </div>
-
-        <ExclusiveSuggestions
-          query={exclusiveSuggestions.query}
-          contextHint={exclusiveSuggestions.contextHint}
-          fallbackCards={exclusiveSuggestions.fallbackCards}
-        />
-
-        <details className={styles.productsSearchSidebarGroup}>
-          <summary className={styles.productsSearchSidebarSummary}>Ordenar por</summary>
-          <div className={styles.productsSearchSidebarBody}>
-            {ROOT_PRODUCTS_SORT_LINKS.map((item) => {
-              const sortPatch = resolveSortPatchFromLabel(item.label);
-              if (!sortPatch) return null;
-              const isActive = sortPatch === activeSort;
-              return (
-                <Link
-                  key={item.label}
-                  href={buildProductsHref(params, { sort: sortPatch })}
-                  className={`${styles.productsSearchSidebarOption} ${isActive ? styles.productsSearchSidebarOptionActive : ""}`}
-                  scroll={false}
-                  prefetch={false}
-                >
-                  {sanitizeDisplayText(item.label)}
-                  {isActive ? renderSelectedMark() : null}
-                </Link>
-              );
-            })}
-          </div>
-        </details>
-
-        <details className={styles.productsSearchSidebarGroup}>
-          <summary className={styles.productsSearchSidebarSummary}>Coleção</summary>
-          <div className={`${styles.productsSearchSidebarBody} ${styles.productsSearchSidebarBodyInline}`}>
-            {collectionOptions.map((collectionOption) => {
-              const isActive = activeCollectionsSet.has(normalizeText(collectionOption));
-              const isUnavailable = !isActive && !collectionAvailability.get(normalizeText(collectionOption));
-              const optionClassName = `${styles.productsSearchSidebarOption} ${isActive ? styles.productsSearchSidebarOptionActive : ""} ${isUnavailable ? styles.productsSearchSidebarOptionUnavailable : ""}`;
-              if (isUnavailable) {
-                return (
-                  <span key={collectionOption} className={optionClassName} aria-disabled="true">
-                    {sanitizeDisplayText(collectionOption)}
-                    {isActive ? renderSelectedMark() : null}
-                  </span>
-                );
-              }
-              return (
-                <Link
-                  key={collectionOption}
-                  href={buildProductsHref(params, {
-                    collection: toggleMultiSelectOption(activeCollections, collectionOption),
-                  })}
-                  className={optionClassName}
-                  scroll={false}
-                  prefetch={false}
-                >
-                  {sanitizeDisplayText(collectionOption)}
-                  {isActive ? renderSelectedMark() : null}
-                </Link>
-              );
-            })}
-          </div>
-        </details>
-
-        <details className={styles.productsSearchSidebarGroup}>
-          <summary className={styles.productsSearchSidebarSummary}>Cor</summary>
-          <div className={styles.productsSearchSidebarBody}>
-            {colorOptions.map((colorOption) => {
-              const isActive = activeColorsSet.has(normalizeText(colorOption));
-              const isUnavailable = !isActive && !colorAvailability.get(normalizeText(colorOption));
-              const optionClassName = `${styles.productsSearchSidebarOption} ${styles.productsSearchSidebarColorOption} ${isActive ? styles.productsSearchSidebarOptionActive : ""} ${isUnavailable ? styles.productsSearchSidebarOptionUnavailable : ""}`;
-              if (isUnavailable) {
-                return (
-                  <span key={colorOption} className={optionClassName} aria-disabled="true">
-                    <span
-                      className={styles.productsSearchSidebarColorDot}
-                      aria-hidden="true"
-                      style={{ backgroundColor: resolveColorSwatch(colorOption) }}
-                    />
-                    <span>{sanitizeDisplayText(colorOption)}</span>
-                    {isActive ? renderSelectedMark() : null}
-                  </span>
-                );
-              }
-              return (
-                <Link
-                  key={colorOption}
-                  href={buildProductsHref(params, {
-                    color: toggleMultiSelectOption(activeColors, colorOption),
-                  })}
-                  className={optionClassName}
-                  scroll={false}
-                  prefetch={false}
-                >
-                  <span
-                    className={styles.productsSearchSidebarColorDot}
-                    aria-hidden="true"
-                    style={{ backgroundColor: resolveColorSwatch(colorOption) }}
-                  />
-                  <span>{sanitizeDisplayText(colorOption)}</span>
-                  {isActive ? renderSelectedMark() : null}
-                </Link>
-              );
-            })}
-          </div>
-        </details>
-
-        {materialOptions.length > 0 ? (
-          <details className={styles.productsSearchSidebarGroup}>
-            <summary className={styles.productsSearchSidebarSummary}>Material</summary>
-            <div className={styles.productsSearchSidebarBody}>
-              {materialOptions.map((material) => {
-                const isActive = activeMaterialsSet.has(normalizeText(material));
-                const isUnavailable = !isActive && !materialAvailability.get(normalizeText(material));
-                const optionClassName = `${styles.productsSearchSidebarOption} ${isActive ? styles.productsSearchSidebarOptionActive : ""} ${isUnavailable ? styles.productsSearchSidebarOptionUnavailable : ""}`;
-                if (isUnavailable) {
-                  return (
-                    <span key={material} className={optionClassName} aria-disabled="true">
-                      {sanitizeDisplayText(material)}
-                      {isActive ? renderSelectedMark() : null}
-                    </span>
-                  );
-                }
-                return (
-                  <Link
-                    key={material}
-                    href={buildProductsHref(params, {
-                      material: toggleMultiSelectOption(activeMaterials, material),
-                    })}
-                    className={optionClassName}
-                    scroll={false}
-                    prefetch={false}
-                  >
-                    {sanitizeDisplayText(material)}
-                    {isActive ? renderSelectedMark() : null}
-                  </Link>
-                );
-              })}
-            </div>
-          </details>
-        ) : null}
-
-        <details className={styles.productsSearchSidebarGroup}>
-          <summary className={styles.productsSearchSidebarSummary}>Tamanho</summary>
-          <div className={styles.productsSearchSidebarBody}>
-            {sizeOptions.map((size) => {
-              const isActive = activeSizesSet.has(normalizeText(size));
-              const isUnavailable = !isActive && !sizeAvailability.get(normalizeText(size));
-              const optionClassName = `${styles.productsSearchSidebarOption} ${isActive ? styles.productsSearchSidebarOptionActive : ""} ${isUnavailable ? styles.productsSearchSidebarOptionUnavailable : ""}`;
-              if (isUnavailable) {
-                return (
-                  <span key={size} className={optionClassName} aria-disabled="true">
-                    {sanitizeDisplayText(size)}
-                    {isActive ? renderSelectedMark() : null}
-                  </span>
-                );
-              }
-              return (
-                <Link
-                  key={size}
-                  href={buildProductsHref(params, {
-                    size: toggleMultiSelectOption(activeSizes, size),
-                  })}
-                  className={optionClassName}
-                  scroll={false}
-                  prefetch={false}
-                >
-                  {sanitizeDisplayText(size)}
-                  {isActive ? renderSelectedMark() : null}
-                </Link>
-              );
-            })}
-          </div>
-        </details>
+        {renderProductsFilterBody(
+          params,
+          collectionOptions,
+          colorOptions,
+          sizeOptions,
+          materialOptions,
+          collectionAvailability,
+          colorAvailability,
+          materialAvailability,
+          sizeAvailability,
+          exclusiveSuggestions
+        )}
       </aside>
     </div>
   );
@@ -1798,7 +1845,7 @@ function buildNovidadesTiles(products: ExtendedProduct[], mode: NovidadesGridMod
     return {
       key: `${baseId}-${variant}-${index}`,
       id: id || baseId,
-      name: sanitizeDisplayText(product.name || "Produto Tsebi"),
+      name: shortenProductsTitle(product.name || "Produto Tsebi"),
       image: pair.primary,
       secondaryImage: pair.secondary,
       priceLabel: sanitizeDisplayText(product.priceLabel || ""),
@@ -1993,7 +2040,12 @@ export default async function ProductsPage({
   if (hasLegacyLongParams) {
     redirect(buildProductsHref(params, {}));
   }
-  const products = (await listProducts()) as ExtendedProduct[];
+  let products: ExtendedProduct[] = [];
+  try {
+    products = (await listProducts()) as ExtendedProduct[];
+  } catch (error) {
+    console.error("[products-page] failed to load products", error);
+  }
   const inStockProducts = products.filter((product) => productHasAnyStock(product));
   const allStockFilters = getAvailableFilters(inStockProducts);
   const filteredForFacets = filterProducts(inStockProducts, params, { ignoreAttributeFilters: true });
@@ -2086,15 +2138,6 @@ export default async function ProductsPage({
   const isGenderMenuView =
     !normalizedView && (normalizeText(params.gender) === "feminino" || normalizeText(params.gender) === "masculino");
   const shouldUseExpandedToolbar = Boolean(activeFilterGroup) && !isGenderMenuView;
-  const renderSelectedMark = () => (
-    <span className={styles.novidadesFiltersSelectedMark} aria-hidden="true">
-      <Image src="/images/logo-tsebi.png" alt="" className={styles.novidadesFiltersSelectedLogo} width={18} height={18} />
-      <svg viewBox="0 0 12 12" className={styles.novidadesFiltersSelectedTick}>
-        <path d="M2.2 6.2 4.8 8.8 9.8 3.8" />
-      </svg>
-    </span>
-  );
-
   const hasProductsToolbar = novidadesFilterGroups.length > 0;
 
   if ((heroConfig || hasProductsToolbar) && !hasSearchQuery) {
@@ -2304,7 +2347,7 @@ export default async function ProductsPage({
                                   className={optionClassName}
                                 >
                                   <span className={styles.novidadesFiltersOptionLabel}>{sanitizeDisplayText(collectionOption)}</span>
-                                  {isActive ? renderSelectedMark() : null}
+                                  {isActive ? renderProductsSelectedMark() : null}
                                 </a>
                               );
                             })}
@@ -2349,7 +2392,7 @@ export default async function ProductsPage({
                                       style={{ backgroundColor: resolveColorSwatch(colorOption) }}
                                     />
                                     <span className={styles.novidadesFiltersOptionLabel}>{sanitizeDisplayText(colorOption)}</span>
-                                    {isActive ? renderSelectedMark() : null}
+                                    {isActive ? renderProductsSelectedMark() : null}
                                   </a>
                                 );
                               })}
@@ -2391,7 +2434,7 @@ export default async function ProductsPage({
                                           style={{ backgroundColor: resolveColorSwatch(colorOption) }}
                                         />
                                         <span className={styles.novidadesFiltersOptionLabel}>{sanitizeDisplayText(colorOption)}</span>
-                                        {isActive ? renderSelectedMark() : null}
+                                        {isActive ? renderProductsSelectedMark() : null}
                                       </a>
                                     );
                                   })}
@@ -2429,7 +2472,7 @@ export default async function ProductsPage({
                                     className={optionClassName}
                                   >
                                     <span className={styles.novidadesFiltersOptionLabel}>{sanitizeDisplayText(materialOption)}</span>
-                                    {isActive ? renderSelectedMark() : null}
+                                    {isActive ? renderProductsSelectedMark() : null}
                                   </a>
                                 );
                               })}
@@ -2461,7 +2504,7 @@ export default async function ProductsPage({
                                         className={optionClassName}
                                       >
                                         <span className={styles.novidadesFiltersOptionLabel}>{sanitizeDisplayText(materialOption)}</span>
-                                        {isActive ? renderSelectedMark() : null}
+                                        {isActive ? renderProductsSelectedMark() : null}
                                       </a>
                                     );
                                   })}
@@ -2498,7 +2541,7 @@ export default async function ProductsPage({
                                   className={optionClassName}
                                 >
                                   {sanitizeDisplayText(sizeOption)}
-                                  {isActive ? renderSelectedMark() : null}
+                                  {isActive ? renderProductsSelectedMark() : null}
                                 </a>
                               );
                             })}
@@ -2523,7 +2566,7 @@ export default async function ProductsPage({
                                   className={optionClassName}
                                 >
                                   {sanitizeDisplayText(sizeOption)}
-                                  {isActive ? renderSelectedMark() : null}
+                                  {isActive ? renderProductsSelectedMark() : null}
                                 </a>
                               );
                             })}
@@ -2606,7 +2649,7 @@ export default async function ProductsPage({
   }
 
   if (hasSearchQuery || !hasRawParams) {
-    const searchSuggestionLinks = buildSearchSuggestionLinks(params, sorted.length > 0 ? sorted : products);
+    const searchSuggestionLinks = buildSearchSuggestionLinks(params, sorted);
     const searchSidebarSizeOptions = buildSearchSidebarSizeOptions(params, filteredForFacets, orderedSizes, activeSizes);
     const searchSidebarMaterialOptions = materialOptions;
     const exclusiveSuggestionFallbackCards = buildExclusiveSuggestionFallbackCards(
@@ -2622,9 +2665,9 @@ export default async function ProductsPage({
       .join(" ");
 
     const searchGridItems: ProductsSearchGridItem[] = sorted.map((product, index) => {
-      const imagePair = buildHoverImagePair(product);
-      const productName = sanitizeDisplayText(product.name) || product.id;
+      const productName = shortenProductsTitle(product.name) || product.id;
       const productHref = `/product/${encodeURIComponent(product.id)}`;
+      const allImages = collectProductMedia(product).slice(0, 5);
       return {
         key: `${product.id}-${index}`,
         id: String(product.id || "").trim(),
@@ -2633,16 +2676,53 @@ export default async function ProductsPage({
         category: String(product.category || "").trim(),
         currency: String(product.currency || "brl"),
         unitAmount: Number(product.unitAmount || 0),
-        primaryImage: imagePair.primary,
-        secondaryImage: imagePair.secondary || imagePair.primary,
+        images: allImages,
         isEditorial: index > 0 && index % 9 === 0,
       };
     });
 
+    const activeSearchSort = normalizeSortParam(params.sort);
+    const toolbarSortLinks = [
+      { href: buildProductsHref(params, { sort: null }), label: "Ordenação", active: !activeSearchSort },
+      ...NOVIDADES_SORT_OPTIONS.map((option) => ({
+        href: buildProductsHref(params, { sort: option.value }),
+        label: option.label,
+        active: option.value === activeSearchSort,
+      })),
+    ];
+    const filterClearHref = buildProductsHref(params, {
+      collection: null,
+      color: null,
+      size: null,
+      material: null,
+      gender: null,
+      sort: null,
+    });
+    const mobileFilterPanel = (
+      <ProductsMobileFilterPanel resultsCount={sorted.length} clearHref={filterClearHref}>
+        {renderProductsFilterBody(
+          params,
+          collectionOptions,
+          colorOptions,
+          searchSidebarSizeOptions,
+          searchSidebarMaterialOptions,
+          collectionAvailability,
+          colorAvailability,
+          materialAvailability,
+          sizeAvailability,
+          {
+            query: String(params.q || "").trim(),
+            contextHint: exclusiveSuggestionContextHint,
+            fallbackCards: exclusiveSuggestionFallbackCards,
+          }
+        )}
+      </ProductsMobileFilterPanel>
+    );
+
     return (
       <main>
         <BodyClassName className="products-novidades-view" />
-        {renderRootProductsToolbar("novidades-filtros-toggle", searchSuggestionLinks, false, sorted.length)}
+        {renderRootProductsToolbar("novidades-filtros-toggle", searchSuggestionLinks, false, sorted.length, String(params.q || "").trim(), toolbarSortLinks, mobileFilterPanel)}
         <section className={styles.productsSearchLayout} aria-label="Resultado de busca">
           {renderProductsSearchSidebar(
             params,

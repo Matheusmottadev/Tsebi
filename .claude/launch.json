@@ -1,0 +1,19 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "API (backend)",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "dev"],
+      "port": 4242,
+      "autoPort": false
+    },
+    {
+      "name": "Web (Next.js)",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["--prefix", "web-next", "run", "dev"],
+      "port": 3000,
+      "autoPort": false
+    }
+  ]
+}

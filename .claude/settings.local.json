@@ -9,7 +9,10 @@
       "Bash(find 'c:\\\\Users\\\\mathe\\\\OneDrive\\\\Área de Trabalho\\\\Curso de JS\\\\tsebi' -type f \\\\\\(-name *.mp4 -o -name *.webm -o -name *.mov -o -name *.avi \\\\\\))",
       "Bash(find 'c:\\\\Users\\\\mathe\\\\OneDrive\\\\Área de Trabalho\\\\Curso de JS\\\\tsebi\\\\web-next\\\\src' -type f -name *.css -o -name *.module.css)",
       "Bash(find 'c:\\\\Users\\\\mathe\\\\OneDrive\\\\Área de Trabalho\\\\Curso de JS\\\\tsebi\\\\web-next\\\\src' -type f \\\\\\(-name *.css -o -name *.module.css \\\\\\))",
-      "Bash(grep -E \"\\(^|/\\)page\\\\.tsx$\")"
+      "Bash(grep -E \"\\(^|/\\)page\\\\.tsx$\")",
+      "Bash(curl -s http://localhost:4242/api/products)",
+      "Bash(pg_isready -h localhost -p 5432)",
+      "mcp__Claude_Preview__preview_start"
     ]
   }
 }

@@ -545,7 +545,7 @@ body.faq-page-body .faq-faqQuestion {
   position: relative;
   display: inline-flex;
   align-items: center;
-  width: min(42vw, 560px);
+  width: min(34vw, 460px);
   min-width: 260px;
   height: 40px;
   margin-left: 10px;
@@ -650,7 +650,7 @@ body.products-novidades-view .header-inline-search {
   position: relative;
   display: inline-flex;
   align-items: center;
-  width: min(42vw, 560px);
+  width: min(34vw, 460px);
   min-width: 260px;
   height: 40px;
   margin-left: 10px;
@@ -714,6 +714,12 @@ body.products-novidades-view .header-inline-search-clear {
     opacity: 1;
     transform: scaleX(1);
     transform-origin: left center;
+  }
+}
+
+@media (max-width: 760px) {
+  body.products-novidades-view .header-inline-search {
+    display: none;
   }
 }
 
