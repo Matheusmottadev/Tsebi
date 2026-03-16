@@ -247,14 +247,26 @@ export function GenderShowcase({ products }: GenderShowcaseProps) {
       if (dist < minDist) { minDist = dist; activeIdx = i; }
     });
 
+    const isWrapping =
+      (direction === "next" && activeIdx === cards.length - 1) ||
+      (direction === "prev" && activeIdx === 0);
+
     const targetIdx =
       direction === "next"
-        ? Math.min(activeIdx + 1, cards.length - 1)
-        : Math.max(activeIdx - 1, 0);
+        ? (activeIdx + 1) % cards.length
+        : (activeIdx - 1 + cards.length) % cards.length;
 
     const targetRect = cards[targetIdx].getBoundingClientRect();
     const delta = targetRect.left + targetRect.width / 2 - gridCenter;
-    grid.scrollLeft = grid.scrollLeft + delta;
+
+    if (isWrapping) {
+      // Instant jump for wrap-around (no animation across all cards)
+      grid.style.scrollBehavior = "auto";
+      grid.scrollLeft = grid.scrollLeft + delta;
+      requestAnimationFrame(() => { grid.style.scrollBehavior = ""; });
+    } else {
+      grid.scrollLeft = grid.scrollLeft + delta;
+    }
   };
 
   const productById = useMemo(() => {
