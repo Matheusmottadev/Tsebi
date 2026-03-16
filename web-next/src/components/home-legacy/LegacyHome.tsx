@@ -1,11 +1,11 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import Link from "next/link";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { Product } from "@/types";
-import { GenderShowcase } from "@/components/home-legacy/GenderShowcase";
 import { LegacyFooter } from "@/components/home-legacy/LegacyFooter";
 import { LegacyHero } from "@/components/home-legacy/LegacyHero";
 import { NewsletterPopup } from "@/components/home-legacy/NewsletterPopup";
@@ -20,6 +20,11 @@ import { startSearchPlaceholderRotator } from "@/lib/searchPlaceholderRotator";
 import { getMe } from "@/services/auth";
 import { searchProductsDetailed, trackSearchEvent } from "@/services/products";
 import { buildHoverImagePair } from "@/lib/product-media";
+
+const GenderShowcase = dynamic(
+  () => import("@/components/home-legacy/GenderShowcase").then((mod) => mod.GenderShowcase),
+  { ssr: false }
+);
 
 type LegacyHomeProps = {
   products: Product[];

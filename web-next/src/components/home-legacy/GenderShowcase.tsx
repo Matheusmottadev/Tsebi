@@ -3,7 +3,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { buildHoverImagePair } from "@/lib/product-media";
+import { buildHoverImagePair, collectProductMedia } from "@/lib/product-media";
 import type { Product } from "@/types";
 
 type GenderTab = "feminino" | "masculino";
@@ -112,8 +112,7 @@ type ShowcaseCardProduct = {
   id: string;
   sku: string;
   name: string;
-  image: string;
-  secondaryImage?: string;
+  images: string[];
   alt: string;
   href: string;
 };
@@ -125,7 +124,7 @@ function ShowcaseCard({ product }: { product: ShowcaseCardProduct }) {
   const isHorizontalRef = useRef<boolean | null>(null);
   const isSwipingRef = useRef(false);
 
-  const images = [product.image, product.secondaryImage].filter(Boolean) as string[];
+  const images = product.images;
 
   const handleTouchStart = (e: React.TouchEvent) => {
     touchStartXRef.current = e.touches[0].clientX;
@@ -234,9 +233,28 @@ export function GenderShowcase({ products }: GenderShowcaseProps) {
   const scrollCarousel = (direction: "prev" | "next") => {
     const grid = gridRef.current;
     if (!grid) return;
-    const card = grid.querySelector<HTMLElement>(".category-card");
-    const cardWidth = (card?.offsetWidth ?? 200) + 12;
-    grid.scrollBy({ left: direction === "next" ? cardWidth : -cardWidth, behavior: "smooth" });
+    const cards = Array.from(grid.children) as HTMLElement[];
+    if (!cards.length) return;
+
+    const gridCenter = grid.getBoundingClientRect().left + grid.clientWidth / 2;
+
+    // Find the card visually closest to center
+    let activeIdx = 0;
+    let minDist = Infinity;
+    cards.forEach((card, i) => {
+      const r = card.getBoundingClientRect();
+      const dist = Math.abs(r.left + r.width / 2 - gridCenter);
+      if (dist < minDist) { minDist = dist; activeIdx = i; }
+    });
+
+    const targetIdx =
+      direction === "next"
+        ? Math.min(activeIdx + 1, cards.length - 1)
+        : Math.max(activeIdx - 1, 0);
+
+    const targetRect = cards[targetIdx].getBoundingClientRect();
+    const delta = targetRect.left + targetRect.width / 2 - gridCenter;
+    grid.scrollLeft = grid.scrollLeft + delta;
   };
 
   const productById = useMemo(() => {
@@ -311,13 +329,17 @@ export function GenderShowcase({ products }: GenderShowcaseProps) {
               ? resolveProductImageSrc(String(matchedRecord.image_url))
               : item.image),
       });
+      const allImages: string[] = matched
+        ? collectProductMedia(matched).slice(0, 5)
+        : [pair.primary, pair.secondary].filter(Boolean) as string[];
+      const images = allImages.length > 0 ? allImages : [pair.primary].filter(Boolean) as string[];
+
       const href = `/product/${encodeURIComponent(item.sku || item.id)}`;
 
       return {
         ...item,
         name: resolvedName,
-        image: pair.primary,
-        secondaryImage: pair.secondary,
+        images,
         href,
       };
     });

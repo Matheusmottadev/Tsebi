@@ -2708,6 +2708,7 @@ body.no-scroll .top-bar{
 
   .carousel-wrapper {
     position: relative;
+    overflow: hidden;
   }
 
   .carousel-nav-btn {
@@ -2744,12 +2745,14 @@ body.no-scroll .top-bar{
 
   .category-grid{
     display: flex;
-    gap: 12px;
-    overflow-x: auto;
+    gap: 10px;
+    overflow-x: scroll;
     overflow-y: hidden;
-    -webkit-overflow-scrolling: touch;
-    scroll-snap-type: x mandatory;
-    padding: 0 12px 8px;
+    touch-action: pan-y;
+    position: relative;
+    scroll-behavior: smooth;
+    scrollbar-width: none;
+    padding: 0 0 8px;
   }
 
   .category-grid::-webkit-scrollbar{
@@ -2786,9 +2789,22 @@ body.no-scroll .top-bar{
   }
 
   .category-card{
-    flex: 0 0 min(72vw, 260px);
+    flex: 0 0 calc(100% - 60px);
     border-right: none;
-    scroll-snap-align: start;
+    border-radius: 12px;
+    overflow: hidden;
+  }
+
+  .category-card:first-child{
+    margin-left: 30px;
+  }
+
+  .category-card:last-child{
+    margin-right: 30px;
+  }
+
+  .category-image{
+    aspect-ratio: 4 / 4.2;
   }
 
   .top-img,
