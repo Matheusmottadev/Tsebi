@@ -13,6 +13,7 @@ import { PwaInstallPrompt } from "@/components/PwaInstallPrompt";
 import { PwaUpdateBanner } from "@/components/PwaUpdateBanner";
 import { PwaPushPrompt } from "@/components/PwaPushPrompt";
 import { PwaSplashScreen } from "@/components/PwaSplashScreen";
+import { PwaRegistration } from "@/components/PwaRegistration";
 import "./globals.css";
 import "@/styles/legacy/design-tokens.css";
 import "@/styles/legacy/primitives.css";
@@ -217,6 +218,7 @@ export default function RootLayout({
         </Script>
         {isProduction ? <MetaPixelPageViewTracker /> : null}
         {isProduction ? <TrackingScripts /> : null}
+        {isProduction ? <PwaRegistration /> : null}
         <PwaSplashScreen />
         <WhatsAppContactButton />
         <PwaInstallPrompt />

@@ -5,45 +5,57 @@ import Image from "next/image";
 import s from "./PwaSplashScreen.module.css";
 
 export function PwaSplashScreen() {
-  const [phase, setPhase] = useState<"hidden" | "in" | "hold" | "out" | "done">("hidden");
+  const [visible, setVisible] = useState(false);
+  const [showLogo, setShowLogo] = useState(true);
+  const [fadeOut, setFadeOut] = useState(false);
 
   useEffect(() => {
-    // Só mostra quando aberto como PWA instalado (standalone/fullscreen)
     const isStandalone =
       window.matchMedia("(display-mode: standalone)").matches ||
       window.matchMedia("(display-mode: fullscreen)").matches ||
       (navigator as { standalone?: boolean }).standalone === true;
 
     if (!isStandalone) return;
-
-    // Não repete na mesma sessão
     if (sessionStorage.getItem("pwa-splash-shown")) return;
     sessionStorage.setItem("pwa-splash-shown", "1");
 
-    // Sequência: hidden → in (fade in 600ms) → hold (800ms) → out (fade out 500ms) → done
-    setPhase("in");
-    const t1 = setTimeout(() => setPhase("hold"), 600);
-    const t2 = setTimeout(() => setPhase("out"), 1400);
-    const t3 = setTimeout(() => setPhase("done"), 1900);
+    setVisible(true);
+
+    // Alterna logo ↔ texto a cada 2400ms, igual ao header da homepage
+    const cycleInterval = setInterval(() => {
+      setShowLogo((v) => !v);
+    }, 2400);
+
+    // Depois de 7.2s (3 ciclos completos), inicia fade out
+    const fadeTimer = setTimeout(() => {
+      clearInterval(cycleInterval);
+      setFadeOut(true);
+    }, 7200);
+
+    // Remove do DOM após o fade out (500ms)
+    const doneTimer = setTimeout(() => {
+      setVisible(false);
+    }, 7700);
 
     return () => {
-      clearTimeout(t1);
-      clearTimeout(t2);
-      clearTimeout(t3);
+      clearInterval(cycleInterval);
+      clearTimeout(fadeTimer);
+      clearTimeout(doneTimer);
     };
   }, []);
 
-  if (phase === "hidden" || phase === "done") return null;
+  if (!visible) return null;
 
   return (
-    <div className={s.overlay} data-phase={phase} aria-hidden>
+    <div className={`${s.overlay} ${fadeOut ? s.fadeOut : ""}`} aria-hidden>
       <div className={s.inner}>
+        <span className={`${s.text} ${showLogo ? s.hidden : s.shown}`}>TSEBI</span>
         <Image
           src="/images/logo-tsebi.png"
           alt="Tsebi Brasil"
-          width={160}
-          height={60}
-          className={s.logo}
+          width={56}
+          height={56}
+          className={`${s.logo} ${showLogo ? s.shown : s.hidden}`}
           priority
         />
       </div>
