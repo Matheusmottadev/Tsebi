@@ -14,7 +14,13 @@
       "Bash(pg_isready -h localhost -p 5432)",
       "mcp__Claude_Preview__preview_start",
       "Bash(node -e \"const p = require\\(''./package.json''\\); console.log\\(''deps:'', Object.keys\\(p.dependencies || {}\\)\\); console.log\\(''devdeps:'', Object.keys\\(p.devDependencies || {}\\)\\);\")",
-      "Bash(npm run:*)"
+      "Bash(npm run:*)",
+      "WebFetch(domain:tsebi.com.br)",
+      "Bash(git -C \"C:\\\\Users\\\\mathe\\\\OneDrive\\\\Área de Trabalho\\\\Curso de JS\\\\tsebi\" log --oneline origin/main..HEAD)",
+      "Bash(git -C \"C:\\\\Users\\\\mathe\\\\OneDrive\\\\Área de Trabalho\\\\Curso de JS\\\\tsebi\" log --oneline -3)",
+      "Bash(git -C \"C:\\\\Users\\\\mathe\\\\OneDrive\\\\Área de Trabalho\\\\Curso de JS\\\\tsebi\" show HEAD:web-next/public/manifest.webmanifest)",
+      "Bash(python3 -c \"import sys,json; d=json.load\\(sys.stdin\\); print\\(''''screenshots:'''', bool\\(d.get\\(''''screenshots''''\\)\\)\\); print\\(''''shortcut icons:'''', bool\\(d[''''shortcuts''''][0].get\\(''''icons''''\\) if d.get\\(''''shortcuts''''\\) else False\\)\\)\")",
+      "Bash(gh api:*)"
     ]
   }
 }
