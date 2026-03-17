@@ -1,0 +1,53 @@
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  background: #ffffff;
+  display: grid;
+  place-items: center;
+  pointer-events: none;
+}
+
+/* Fade in */
+.overlay[data-phase="in"] {
+  animation: splashIn 0.6s ease forwards;
+}
+
+/* Segura visível */
+.overlay[data-phase="hold"] {
+  opacity: 1;
+}
+
+/* Fade out */
+.overlay[data-phase="out"] {
+  animation: splashOut 0.5s ease forwards;
+}
+
+@keyframes splashIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+@keyframes splashOut {
+  from { opacity: 1; }
+  to   { opacity: 0; }
+}
+
+.inner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0;
+}
+
+.logo {
+  width: 160px;
+  height: auto;
+  object-fit: contain;
+  animation: logoRise 0.7s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+@keyframes logoRise {
+  from { transform: translateY(10px); opacity: 0; }
+  to   { transform: translateY(0);    opacity: 1; }
+}
