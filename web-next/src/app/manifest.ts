@@ -40,11 +40,33 @@ export default function manifest(): MetadataRoute.Manifest {
         purpose: "maskable",
       },
     ],
+    screenshots: [
+      {
+        src: "/images/screenshot-mobile.png",
+        sizes: "736x1600",
+        type: "image/png",
+        label: "Tsebi Brasil — página inicial",
+      },
+      {
+        src: "/images/screenshot-desktop.png",
+        sizes: "1280x853",
+        type: "image/png",
+        form_factor: "wide",
+        label: "Tsebi Brasil — página inicial desktop",
+      },
+    ],
     shortcuts: [
       {
         name: "Ver Produtos",
         url: "/products",
         description: "Explorar o catálogo completo",
+        icons: [
+          {
+            src: "/images/pwa-96.png",
+            sizes: "96x96",
+            type: "image/png",
+          },
+        ],
       },
     ],
   };
