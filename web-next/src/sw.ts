@@ -137,7 +137,7 @@ serwist.addEventListeners();
 self.addEventListener("push", (event: PushEvent) => {
   const data = event.data?.json() ?? {};
   const title: string = data.title ?? "Tsebi Brasil";
-  const options: NotificationOptions = {
+  const options: NotificationOptions & { vibrate?: number[] } = {
     body: data.body ?? "",
     icon: data.icon ?? "/images/pwa-192.png",
     badge: data.badge ?? "/images/pwa-maskable-192.png",
