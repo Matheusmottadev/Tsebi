@@ -26,6 +26,7 @@ const {
   listOrdersByUserId
 } = require("./lib/order-repository");
 const { notifyOrderConfirmed, notifyPaymentApproved } = require("./lib/order-notification-service");
+const { saveSubscription, deleteSubscription } = require("./lib/push-notification-service");
 const {
   listProducts,
   getProductByIdentifier,
@@ -2627,6 +2628,46 @@ app.get("/api/orders/:orderId", async (req: any, res: any) => {
     return res.json(reconciled || order);
   } catch {
     return res.json(order);
+  }
+});
+
+// ── Push Notification routes ───────────────────────────────────────────────
+app.get("/api/push/vapid-key", (_req: any, res: any) => {
+  const publicKey = process.env.VAPID_PUBLIC_KEY || "";
+  if (!publicKey) return res.status(503).json({ error: "PUSH_NOT_CONFIGURED" });
+  res.json({ publicKey });
+});
+
+app.post("/api/push/subscribe", attachUserCsrfToken, requireUserCsrfForMutations, async (req: any, res: any) => {
+  const userId = req.session?.userId ? String(req.session.userId) : "";
+  if (!userId) return res.status(401).json({ error: "NOT_AUTHENTICATED" });
+
+  const sub = req.body?.subscription;
+  if (!sub?.endpoint || !sub?.keys?.p256dh || !sub?.keys?.auth) {
+    return res.status(400).json({ error: "INVALID_SUBSCRIPTION" });
+  }
+
+  try {
+    await saveSubscription(userId, sub, req.headers["user-agent"]);
+    res.json({ ok: true });
+  } catch (err: unknown) {
+    // eslint-disable-next-line no-console
+    console.error("[PUSH_SUBSCRIBE_FAILED]", err);
+    res.status(500).json({ error: "SUBSCRIBE_FAILED" });
+  }
+});
+
+app.delete("/api/push/unsubscribe", attachUserCsrfToken, requireUserCsrfForMutations, async (req: any, res: any) => {
+  const endpoint = String(req.body?.endpoint || "").trim();
+  if (!endpoint) return res.status(400).json({ error: "MISSING_ENDPOINT" });
+
+  try {
+    await deleteSubscription(endpoint);
+    res.json({ ok: true });
+  } catch (err: unknown) {
+    // eslint-disable-next-line no-console
+    console.error("[PUSH_UNSUBSCRIBE_FAILED]", err);
+    res.status(500).json({ error: "UNSUBSCRIBE_FAILED" });
   }
 });
 

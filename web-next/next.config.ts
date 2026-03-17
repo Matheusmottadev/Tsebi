@@ -1,5 +1,6 @@
 import path from "node:path";
 import type { NextConfig } from "next";
+import withSerwistInit from "@serwist/next";
 
 const projectRoot = path.resolve(__dirname);
 
@@ -125,6 +126,28 @@ const nextConfig: NextConfig = {
           },
         ],
       },
+      {
+        source: "/sw.js",
+        headers: [
+          {
+            key: "Cache-Control",
+            value: "public, max-age=0, must-revalidate",
+          },
+          {
+            key: "Service-Worker-Allowed",
+            value: "/",
+          },
+        ],
+      },
+      {
+        source: "/sw.js.map",
+        headers: [
+          {
+            key: "Cache-Control",
+            value: "no-store",
+          },
+        ],
+      },
     ];
   },
   async redirects() {
@@ -194,5 +217,12 @@ const nextConfig: NextConfig = {
   },
 };
 
-export default nextConfig;
+const withSerwist = withSerwistInit({
+  swSrc: "src/sw.ts",
+  swDest: "public/sw.js",
+  disable: process.env.NODE_ENV === "development",
+  reloadOnOnline: true,
+});
+
+export default withSerwist(nextConfig);
 

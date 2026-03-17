@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Cormorant_Garamond, Jost, Montserrat, Playfair_Display } from "next/font/google";
 import Script from "next/script";
 import { Suspense } from "react";
@@ -9,6 +9,9 @@ import { MetaPixelBase } from "@/components/MetaPixelBase";
 import { MetaPixelPageViewTracker } from "@/components/MetaPixelPageViewTracker";
 import { WhatsAppContactButton } from "@/components/WhatsAppContactButton";
 import { TrackingScripts } from "@/components/TrackingScripts";
+import { PwaInstallPrompt } from "@/components/PwaInstallPrompt";
+import { PwaUpdateBanner } from "@/components/PwaUpdateBanner";
+import { PwaPushPrompt } from "@/components/PwaPushPrompt";
 import "./globals.css";
 import "@/styles/legacy/design-tokens.css";
 import "@/styles/legacy/primitives.css";
@@ -52,6 +55,16 @@ function resolveMetadataBaseUrl(): URL {
     return new URL(defaultSiteUrl);
   }
 }
+
+export const viewport: Viewport = {
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#ffffff" },
+    { media: "(prefers-color-scheme: dark)", color: "#111111" },
+  ],
+  width: "device-width",
+  initialScale: 1,
+  minimumScale: 1,
+};
 
 export const metadata: Metadata = {
   title: {
@@ -132,7 +145,15 @@ export const metadata: Metadata = {
       },
     ],
     shortcut: [{ url: "/images/Gazelalogo-round-256.png?v=20260304b" }],
-    apple: [{ url: "/images/Gazelalogo-round-256.png?v=20260304b" }],
+    apple: [
+      { url: "/images/pwa-192.png", sizes: "192x192", type: "image/png" },
+      { url: "/images/pwa-512.png", sizes: "512x512", type: "image/png" },
+    ],
+  },
+  appleWebApp: {
+    capable: true,
+    title: "Tsebi Brasil",
+    statusBarStyle: "black-translucent",
   },
 };
 
@@ -195,6 +216,9 @@ export default function RootLayout({
         {isProduction ? <MetaPixelPageViewTracker /> : null}
         {isProduction ? <TrackingScripts /> : null}
         <WhatsAppContactButton />
+        <PwaInstallPrompt />
+        <PwaPushPrompt />
+        <PwaUpdateBanner />
         <IdentityBridge />
         <Suspense fallback={null}>
           <LayoutChrome>{children}</LayoutChrome>

@@ -12,7 +12,9 @@
       "Bash(grep -E \"\\(^|/\\)page\\\\.tsx$\")",
       "Bash(curl -s http://localhost:4242/api/products)",
       "Bash(pg_isready -h localhost -p 5432)",
-      "mcp__Claude_Preview__preview_start"
+      "mcp__Claude_Preview__preview_start",
+      "Bash(node -e \"const p = require\\(''./package.json''\\); console.log\\(''deps:'', Object.keys\\(p.dependencies || {}\\)\\); console.log\\(''devdeps:'', Object.keys\\(p.devDependencies || {}\\)\\);\")",
+      "Bash(npm run:*)"
     ]
   }
 }

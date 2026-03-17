@@ -6,9 +6,15 @@ const {
   sendOrderOutForDeliveryEmail,
   sendOrderDeliveredEmail
 } = require("./email-service");
+const { sendPushToUser } = require("./push-notification-service");
+
+const PUSH_ICON = "/images/pwa-192.png";
+const PUSH_BADGE = "/images/pwa-maskable-192.png";
 
 type OrderLike = {
   id?: string;
+  userId?: string;
+  orderNumber?: string;
   shipping?: { email?: string };
   userEmail?: string;
 };
@@ -80,8 +86,26 @@ async function safeNotify(kind: string, handler: () => Promise<void>, context: {
   }
 }
 
+async function safePush(userId: string | undefined, payload: { title: string; body: string; url: string }): Promise<void> {
+  if (!userId) return;
+  try {
+    await sendPushToUser(userId, { ...payload, icon: PUSH_ICON, badge: PUSH_BADGE });
+  } catch (err: unknown) {
+    // eslint-disable-next-line no-console
+    console.error("[ORDER_PUSH_FAILED]", { userId, title: payload.title, message: String(err) });
+  }
+}
+
 async function notifyOrderConfirmed(order: OrderLike | null | undefined): Promise<{ ok: boolean; skipped?: string; kind?: string; error?: string }> {
   const to = getOrderRecipientEmail(order);
+  const num = order?.orderNumber || order?.id || "";
+
+  await safePush(order?.userId, {
+    title: "Pedido recebido! 🎉",
+    body: num ? `Seu pedido #${num} foi confirmado.` : "Seu pedido foi confirmado.",
+    url: "/account",
+  });
+
   if (!to) return { ok: false, skipped: "NO_EMAIL_RECIPIENT" };
 
   return safeNotify(
@@ -95,6 +119,14 @@ async function notifyOrderConfirmed(order: OrderLike | null | undefined): Promis
 
 async function notifyPaymentApproved(order: OrderLike | null | undefined): Promise<{ ok: boolean; skipped?: string; kind?: string; error?: string }> {
   const to = getOrderRecipientEmail(order);
+  const num = order?.orderNumber || order?.id || "";
+
+  await safePush(order?.userId, {
+    title: "Pagamento aprovado ✅",
+    body: num ? `Pagamento do pedido #${num} aprovado.` : "Seu pagamento foi aprovado.",
+    url: "/account",
+  });
+
   if (!to) return { ok: false, skipped: "NO_EMAIL_RECIPIENT" };
 
   return safeNotify(
@@ -108,6 +140,14 @@ async function notifyPaymentApproved(order: OrderLike | null | undefined): Promi
 
 async function notifyOrderShipped(order: OrderLike | null | undefined, shipment: ShipmentLike): Promise<{ ok: boolean; skipped?: string; kind?: string; error?: string }> {
   const to = getOrderRecipientEmail(order);
+  const trackingCode = shipment?.trackingCode || shipment?.tracking_code || "";
+
+  await safePush(order?.userId, {
+    title: "Pedido enviado 📦",
+    body: trackingCode ? `Código de rastreio: ${trackingCode}` : "Seu pedido está a caminho!",
+    url: "/account",
+  });
+
   if (!to) return { ok: false, skipped: "NO_EMAIL_RECIPIENT" };
 
   return safeNotify(
@@ -140,6 +180,12 @@ async function notifyShipmentMilestoneTransition({
   if (!to) return { ok: false, skipped: "NO_EMAIL_RECIPIENT" };
 
   if (nextMilestone === "out_for_delivery") {
+    await safePush(order?.userId, {
+      title: "Saiu para entrega 🚚",
+      body: "Seu pedido está a caminho e chegará em breve!",
+      url: "/account",
+    });
+
     return safeNotify(
       "order_out_for_delivery",
       async () => {
@@ -150,6 +196,12 @@ async function notifyShipmentMilestoneTransition({
   }
 
   if (nextMilestone === "delivered") {
+    await safePush(order?.userId, {
+      title: "Pedido entregue 🎁",
+      body: "Aproveite! Seu pedido foi entregue com sucesso.",
+      url: "/account",
+    });
+
     return safeNotify(
       "order_delivered",
       async () => {
@@ -169,4 +221,3 @@ module.exports = {
   notifyShipmentMilestoneTransition,
   mapShipmentStatusToMilestone
 };
-

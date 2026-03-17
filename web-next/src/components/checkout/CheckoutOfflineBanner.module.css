@@ -1,0 +1,110 @@
+/* ── Banner sticky (topo do checkout) ── */
+.sticky {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 20px;
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: 0.01em;
+  animation: slideDown 0.25s ease;
+}
+
+.sticky[data-state="offline"] {
+  background: #1a1a1a;
+  color: #fff;
+}
+
+.sticky[data-state="restored"] {
+  background: #1a5c2a;
+  color: #fff;
+}
+
+.stickyIcon {
+  font-size: 15px;
+  line-height: 1;
+}
+
+@keyframes slideDown {
+  from { transform: translateY(-100%); opacity: 0; }
+  to   { transform: translateY(0);     opacity: 1; }
+}
+
+/* ── Tela bloqueante (pagamento offline) ── */
+.blocking {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  background: #fff;
+  display: grid;
+  place-items: center;
+  animation: fadeIn 0.2s ease;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+.blockingInner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  padding: 32px 24px;
+  max-width: 320px;
+  text-align: center;
+}
+
+.blockingIcon {
+  width: 56px;
+  height: 56px;
+  color: #888;
+}
+
+.blockingTitle {
+  font-size: 20px;
+  font-weight: 600;
+  color: #111;
+  margin: 0;
+}
+
+.blockingText {
+  font-size: 14px;
+  color: #555;
+  line-height: 1.6;
+  margin: 0;
+}
+
+.blockingBtn {
+  margin-top: 8px;
+  padding: 12px 28px;
+  background: #111;
+  color: #fff;
+  border: none;
+  border-radius: 2px;
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: opacity 0.2s;
+}
+
+.blockingBtn:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.blockingBtn:not(:disabled):hover {
+  opacity: 0.8;
+}
+
+.blockingHint {
+  font-size: 11px;
+  color: #aaa;
+  margin: 0;
+}

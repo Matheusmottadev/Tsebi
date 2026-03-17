@@ -21,6 +21,9 @@ import type { CreatePaymentIntentPayload, ShippingQuote } from "@/services/order
 import type { CartItem } from "@/types";
 import type { Address } from "@/types";
 import styles from "./CheckoutClient.module.css";
+import { useNetworkStatus } from "@/hooks/useNetworkStatus";
+import { setCached, getCached } from "@/lib/offline-cache";
+import { CheckoutOfflineBanner } from "@/components/checkout/CheckoutOfflineBanner";
 
 type PaymentMethodChoice = "google_pay" | "card" | "boleto";
 type CheckoutStep = "address" | "delivery" | "payment" | "review";
@@ -676,6 +679,7 @@ export function CheckoutClient() {
   const imageBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || "";
 
   const [touchedFields, setTouchedFields] = useState<Partial<Record<RequiredCheckoutField, boolean>>>({});
+  const { isOnline, wasOffline } = useNetworkStatus();
   const requiresGuestEmail = !accountEmail;
   const checkoutEmail = normalizeEmail(accountEmail || form.guestEmail);
   const billingFullName = useMemo(
@@ -897,6 +901,8 @@ export function CheckoutClient() {
         setAccountEmail(normalizedUserEmail);
         const userAddresses = Array.isArray(user?.addresses) ? user.addresses : [];
         setAccountAddresses(userAddresses);
+        // Cacheia perfil para uso offline (TTL 1h)
+        setCached("offline-profile-cache", { email: normalizedUserEmail, addresses: userAddresses }, 60 * 60 * 1000);
         const defaultAddressId = String(user?.defaultAddressId || "").trim();
         const selectedAddressId =
           (defaultAddressId && userAddresses.some((address) => address.id === defaultAddressId) && defaultAddressId) ||
@@ -960,10 +966,18 @@ export function CheckoutClient() {
         });
       } catch {
         if (!isMounted) return;
-        setAccountEmail("");
-        setAccountAddresses([]);
-        setSelectedSavedAddressId("");
-        setSavedAddressFingerprints(new Set());
+        // Tenta usar cache offline se a rede falhar
+        const cached = getCached<{ email: string; addresses: Address[] }>("offline-profile-cache");
+        if (cached) {
+          setAccountEmail(cached.email);
+          setAccountAddresses(cached.addresses);
+          setSelectedSavedAddressId(cached.addresses[0]?.id || "");
+        } else {
+          setAccountEmail("");
+          setAccountAddresses([]);
+          setSelectedSavedAddressId("");
+          setSavedAddressFingerprints(new Set());
+        }
       }
     }
 
@@ -1172,6 +1186,24 @@ export function CheckoutClient() {
 
   async function loadShippingQuotes(destinationZipRaw: string): Promise<ShippingQuote[]> {
     const destinationZip = normalizePostalCode(destinationZipRaw);
+    // Se offline, tenta restaurar cotações cacheadas para o mesmo CEP
+    if (!navigator.onLine) {
+      try {
+        const raw = sessionStorage.getItem("checkout_shipping_quotes_v1");
+        if (raw) {
+          const cached = JSON.parse(raw);
+          const isRecent = Date.now() - (cached.cachedAt ?? 0) < 30 * 60 * 1000; // 30min
+          if (cached.postalCode === destinationZip && isRecent && Array.isArray(cached.quotes) && cached.quotes.length > 0) {
+            setShippingQuotes(cached.quotes);
+            setShippingRecommendationById(cached.recommendationById ?? {});
+            setIsCompanyPaidShipping(cached.companyPaidByStore ?? false);
+            setSelectedShippingQuoteId(String(cached.quotes[0]?.id || ""));
+            markStepCompleted("delivery", false);
+            return cached.quotes;
+          }
+        }
+      } catch { /* silencioso */ }
+    }
     if (destinationZip.length !== 8) {
       setShippingQuotes([]);
       setSelectedShippingQuoteId("");
@@ -1200,6 +1232,16 @@ export function CheckoutClient() {
         if (current && nextQuotes.some((quote) => quote.id === current)) return current;
         return String(nextQuotes[0]?.id || "");
       });
+      // Cacheia cotações para uso offline (TTL 30min)
+      try {
+        sessionStorage.setItem("checkout_shipping_quotes_v1", JSON.stringify({
+          quotes: nextQuotes,
+          recommendationById: curated.recommendationById,
+          companyPaidByStore: curated.companyPaidByStore,
+          postalCode: destinationZip,
+          cachedAt: Date.now(),
+        }));
+      } catch { /* silencioso */ }
       markStepCompleted("delivery", false);
       return nextQuotes;
     } catch (error: unknown) {
@@ -1751,6 +1793,7 @@ export function CheckoutClient() {
 
   return (
     <section className={styles.checkoutShell}>
+      <CheckoutOfflineBanner isOnline={isOnline} wasOffline={wasOffline} />
       <div className={styles.checkoutGrid}>
         <div className={styles.leftColumn}>
           {errorMessage ? <p className={styles.errorBanner}>{errorMessage}</p> : null}
@@ -2066,6 +2109,14 @@ export function CheckoutClient() {
 
           {visualCheckoutStep === "payment" || visualCheckoutStep === "review" ? (
             <section className={activeStep === "payment" ? styles.stepSection : styles.hiddenStepSection} aria-hidden={activeStep !== "payment"}>
+              {activeStep === "payment" && !isOnline ? (
+                <CheckoutOfflineBanner
+                  isOnline={isOnline}
+                  wasOffline={wasOffline}
+                  blocking
+                  onRetry={() => window.location.reload()}
+                />
+              ) : null}
               <div className={styles.stepHeader}>
                 <h2 className={styles.sectionTitle}>Pagamento.</h2>
                 {activeStep !== "payment" ? (
