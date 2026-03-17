@@ -191,6 +191,7 @@ export default function RootLayout({
       className={`${montserrat.variable} ${playfairDisplay.variable} ${cormorant.variable} ${jost.variable}`}
     >
       <head>
+        <link rel="manifest" href="/manifest.webmanifest" />
         {isProduction ? <MetaPixelBase /> : null}
       </head>
       <body
