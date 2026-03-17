@@ -39,13 +39,13 @@
   "screenshots": [
     {
       "src": "/images/screenshot-mobile.png",
-      "sizes": "430x932",
+      "sizes": "430x333",
       "type": "image/png",
       "label": "Tsebi Brasil — página inicial"
     },
     {
       "src": "/images/screenshot-desktop.png",
-      "sizes": "1280x800",
+      "sizes": "1280x853",
       "type": "image/png",
       "form_factor": "wide",
       "label": "Tsebi Brasil — página inicial desktop"
@@ -58,7 +58,7 @@
       "description": "Explorar o catálogo completo",
       "icons": [
         {
-          "src": "/images/pwa-192.png",
+          "src": "/images/pwa-96.png",
           "sizes": "96x96",
           "type": "image/png"
         }
