@@ -79,16 +79,18 @@ export function DrawerEditarCupom({ isOpen, coupon, onClose, onSaved }: DrawerEd
     const couponType: CouponTypeValue =
       coupon.type === "fixed" ? "fixed" : coupon.type === "free_shipping" ? "free_shipping" : "percent";
     setType(couponType);
+    // amountOffCents vem em centavos → exibir em reais
     setDiscountValue(
       couponType === "fixed"
-        ? String(Math.max(0, Number(coupon.amountOffCents || 0)))
+        ? String(Number(coupon.amountOffCents || 0) / 100)
         : couponType === "free_shipping"
           ? "0"
           : String(Math.max(0, Number(coupon.percentOff || 0)))
     );
     setActive(Boolean(coupon.active));
-    setMinSubtotal(String(Math.max(0, Number(coupon.minSubtotalCents || 0) || 0) || ""));
-    setMaxDiscount(String(Math.max(0, Number(coupon.maxDiscountCents || 0) || 0) || ""));
+    // minSubtotalCents e maxDiscountCents em centavos → exibir em reais
+    setMinSubtotal(String(Number(coupon.minSubtotalCents || 0) / 100 || ""));
+    setMaxDiscount(String(Number(coupon.maxDiscountCents || 0) / 100 || ""));
     setMaxUses(String(Math.max(0, Number(coupon.maxUses || 0) || 0)));
     setFirstPurchaseOnly(Boolean(coupon.firstPurchaseOnly));
     setStartsAt(formatDateInput(String(coupon.startsAt || "")));
@@ -116,11 +118,13 @@ export function DrawerEditarCupom({ isOpen, coupon, onClose, onSaved }: DrawerEd
     } else if (type === "percent") {
       valueLabel = `${Math.max(0, Number(discountValue || 0))}% de desconto`;
     } else {
-      valueLabel = `${formatMoney(Math.max(0, Number(discountValue || 0)))} de desconto`;
+      // discountValue agora está em reais; formatMoney espera centavos
+      valueLabel = `${formatMoney(Math.max(0, Number(discountValue || 0)) * 100)} de desconto`;
     }
     const starts = startsAt ? new Date(startsAt).toLocaleDateString("pt-BR") : "agora";
     const ends = expiresAt ? new Date(expiresAt).toLocaleDateString("pt-BR") : "sem expiracao";
-    const min = minSubtotal ? formatMoney(Number(minSubtotal || 0)) : "sem valor minimo";
+    // minSubtotal agora está em reais; formatMoney espera centavos
+    const min = minSubtotal ? formatMoney(Number(minSubtotal || 0) * 100) : "sem valor minimo";
     const usesLine = Number(maxUses || 0) > 0 ? `\nLimite de usos: ${maxUses}` : "";
     const firstLine = firstPurchaseOnly ? "\nApenas primeira compra" : "";
     return `Cupom ${normalizedCode} - ${valueLabel}\nValido de ${starts} ate ${ends}\nPedido minimo: ${min}${usesLine}${firstLine}`;
@@ -137,14 +141,15 @@ export function DrawerEditarCupom({ isOpen, coupon, onClose, onSaved }: DrawerEd
     setError("");
 
     try {
+      // discountValue, minSubtotal e maxDiscount estão em reais → converter para centavos
       const payload = {
         code: normalizeCode(code),
         type,
         percentOff: type === "percent" ? Math.max(0, Number(discountValue || 0)) : 0,
-        amountOffCents: type === "fixed" ? Math.max(0, Number(discountValue || 0)) : 0,
+        amountOffCents: type === "fixed" ? Math.round(Math.max(0, Number(discountValue || 0)) * 100) : 0,
         active,
-        minSubtotalCents: minSubtotal ? Math.max(0, Number(minSubtotal || 0)) : 0,
-        maxDiscountCents: type === "percent" && maxDiscount ? Math.max(0, Number(maxDiscount || 0)) : 0,
+        minSubtotalCents: minSubtotal ? Math.round(Math.max(0, Number(minSubtotal || 0)) * 100) : 0,
+        maxDiscountCents: type === "percent" && maxDiscount ? Math.round(Math.max(0, Number(maxDiscount || 0)) * 100) : 0,
         maxUses: Math.max(0, Math.floor(Number(maxUses || 0))),
         firstPurchaseOnly,
         startsAt: parseDateInput(startsAt),
@@ -212,11 +217,14 @@ export function DrawerEditarCupom({ isOpen, coupon, onClose, onSaved }: DrawerEd
             </div>
             {type !== "free_shipping" ? (
               <div className={form.field}>
-                <label className={form.label}>Valor do desconto</label>
+                <label className={form.label}>
+                  {type === "percent" ? "Valor do desconto (%)" : "Valor do desconto (R$)"}
+                </label>
                 <input
                   className={`${form.input} ${validationErrors.discountValue ? styles.inputError : ""}`}
                   type="number"
                   min={0}
+                  step={type === "percent" ? "1" : "0.01"}
                   value={discountValue}
                   onChange={(event) => setDiscountValue(event.target.value)}
                 />
@@ -239,13 +247,13 @@ export function DrawerEditarCupom({ isOpen, coupon, onClose, onSaved }: DrawerEd
           <h4 className={styles.sectionTitle}>Regras de aplicacao</h4>
           <div className={form.row2}>
             <div className={form.field}>
-              <label className={form.label}>Valor minimo (opcional)</label>
-              <input className={form.input} type="number" min={0} value={minSubtotal} onChange={(event) => setMinSubtotal(event.target.value)} />
+              <label className={form.label}>Valor minimo (R$)</label>
+              <input className={form.input} type="number" min={0} step="0.01" value={minSubtotal} onChange={(event) => setMinSubtotal(event.target.value)} />
             </div>
             {type === "percent" ? (
               <div className={form.field}>
-                <label className={form.label}>Limite maximo de desconto</label>
-                <input className={form.input} type="number" min={0} value={maxDiscount} onChange={(event) => setMaxDiscount(event.target.value)} />
+                <label className={form.label}>Limite maximo de desconto (R$)</label>
+                <input className={form.input} type="number" min={0} step="0.01" value={maxDiscount} onChange={(event) => setMaxDiscount(event.target.value)} />
               </div>
             ) : null}
           </div>

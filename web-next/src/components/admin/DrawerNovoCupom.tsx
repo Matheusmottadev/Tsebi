@@ -6,9 +6,13 @@ import { createCouponAdmin } from "@/services/admin";
 import { Drawer } from "./Drawer";
 import form from "./DrawerForms.module.css";
 
-function parseMoneyToCents(value: string): number {
-  const digits = String(value || "").replace(/\D/g, "");
-  return Number(digits || 0);
+// Interpreta valor digitado em reais e converte para centavos.
+// Ex: "15" → 1500, "15,50" → 1550, "15.50" → 1550
+function parseReaisToCents(value: string): number {
+  const normalized = String(value || "").replace(",", ".").trim();
+  const parsed = parseFloat(normalized);
+  if (!Number.isFinite(parsed) || parsed < 0) return 0;
+  return Math.round(parsed * 100);
 }
 
 function parsePercent(value: string): number {
@@ -53,7 +57,7 @@ export function DrawerNovoCupom({ isOpen, onClose, onSaved }: DrawerNovoCupomPro
     if (trimmedCode.length < 3) return false;
     if (type === "free_shipping") return true;
     if (type === "percent") return parsePercent(discount) > 0;
-    return parseMoneyToCents(discount) > 0;
+    return parseReaisToCents(discount) > 0;
   }, [code, discount, type]);
 
   function validate() {
@@ -69,7 +73,7 @@ export function DrawerNovoCupom({ isOpen, onClose, onSaved }: DrawerNovoCupomPro
         nextErrors.discount = "Use um percentual entre 1 e 100.";
       }
     } else if (type === "fixed") {
-      const cents = parseMoneyToCents(discount);
+      const cents = parseReaisToCents(discount);
       if (cents <= 0) {
         nextErrors.discount = "Informe um valor fixo maior que zero.";
       }
@@ -98,11 +102,11 @@ export function DrawerNovoCupom({ isOpen, onClose, onSaved }: DrawerNovoCupomPro
       if (type === "percent") {
         payload.percentOff = Math.round(parsePercent(discount));
       } else if (type === "fixed") {
-        payload.amountOffCents = parseMoneyToCents(discount);
+        payload.amountOffCents = parseReaisToCents(discount);
       }
 
-      if (minSubtotal.trim()) payload.minSubtotalCents = parseMoneyToCents(minSubtotal);
-      if (maxDiscount.trim()) payload.maxDiscountCents = parseMoneyToCents(maxDiscount);
+      if (minSubtotal.trim()) payload.minSubtotalCents = parseReaisToCents(minSubtotal);
+      if (maxDiscount.trim()) payload.maxDiscountCents = parseReaisToCents(maxDiscount);
       if (maxUses.trim()) payload.maxUses = Math.max(0, Math.floor(Number(maxUses) || 0));
       if (startsAt.trim()) payload.startsAt = startsAt;
       if (expiresAt.trim()) payload.expiresAt = expiresAt;
@@ -191,7 +195,7 @@ export function DrawerNovoCupom({ isOpen, onClose, onSaved }: DrawerNovoCupomPro
                 className={`${form.input} ${errors.discount ? form.inputError : ""}`}
                 value={discount}
                 onChange={(event) => setDiscount(event.target.value)}
-                placeholder={type === "percent" ? "10" : "1500"}
+                placeholder={type === "percent" ? "10" : "50"}
               />
               {errors.discount ? <p className={form.error}>{errors.discount}</p> : null}
             </div>
@@ -222,7 +226,7 @@ export function DrawerNovoCupom({ isOpen, onClose, onSaved }: DrawerNovoCupomPro
               <div className={form.row2}>
                 <div className={form.field}>
                   <label className={form.label} htmlFor="coupon-minSubtotal">
-                    Valor mínimo do pedido
+                    Valor mínimo do pedido (R$)
                   </label>
                   <input
                     id="coupon-minSubtotal"
@@ -230,13 +234,14 @@ export function DrawerNovoCupom({ isOpen, onClose, onSaved }: DrawerNovoCupomPro
                     value={minSubtotal}
                     onChange={(event) => setMinSubtotal(event.target.value)}
                     placeholder="0"
+                    inputMode="decimal"
                   />
                 </div>
 
                 {type !== "free_shipping" ? (
                   <div className={form.field}>
                     <label className={form.label} htmlFor="coupon-maxDiscount">
-                      Limite máximo de desconto
+                      Limite máximo de desconto (R$)
                     </label>
                     <input
                       id="coupon-maxDiscount"
@@ -244,6 +249,7 @@ export function DrawerNovoCupom({ isOpen, onClose, onSaved }: DrawerNovoCupomPro
                       value={maxDiscount}
                       onChange={(event) => setMaxDiscount(event.target.value)}
                       placeholder="0"
+                      inputMode="decimal"
                     />
                   </div>
                 ) : null}
