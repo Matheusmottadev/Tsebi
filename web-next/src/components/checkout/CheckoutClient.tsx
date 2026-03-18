@@ -1731,6 +1731,11 @@ export function CheckoutClient({ initialCoupon = "" }: CheckoutClientProps) {
         setErrorMessage("Preencha os dados obrigatórios antes de revisar o pedido.");
         return;
       }
+    } else if (selectedPaymentMethod === "wallet") {
+      markStepCompleted("review", true);
+      setErrorMessage("");
+      setActiveStep("review");
+      return;
     } else if (!paymentElementState.ready || !paymentElementState.complete) {
       setErrorMessage("Preencha os dados de pagamento antes de revisar o pedido.");
       return;
