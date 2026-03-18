@@ -101,7 +101,8 @@ export function CheckoutPaymentForm({
   const paymentElementOptions = useMemo(
     () => ({
       layout:
-        normalizedPaymentMethodOrder.length === 1 && normalizedPaymentMethodOrder[0] === "google_pay"
+        normalizedPaymentMethodOrder.length === 1 &&
+        ["google_pay", "apple_pay"].includes(normalizedPaymentMethodOrder[0])
           ? ({
               type: "accordion" as const,
               defaultCollapsed: false,

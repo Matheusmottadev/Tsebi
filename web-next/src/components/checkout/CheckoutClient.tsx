@@ -25,7 +25,8 @@ import { useNetworkStatus } from "@/hooks/useNetworkStatus";
 import { setCached, getCached } from "@/lib/offline-cache";
 import { CheckoutOfflineBanner } from "@/components/checkout/CheckoutOfflineBanner";
 
-type PaymentMethodChoice = "google_pay" | "card" | "boleto";
+type PaymentMethodChoice = "wallet" | "card" | "boleto";
+type WalletVariant = "apple_pay" | "google_pay";
 type CheckoutStep = "address" | "delivery" | "payment" | "review";
 type CouponFeedbackTone = "" | "success" | "error";
 type ConfirmationStatus = "success" | "failed" | "processing";
@@ -581,8 +582,26 @@ function buildPayload(
   return payload;
 }
 
-function buildStripePaymentMethodOrder(selectedMethod: PaymentMethodChoice): string[] {
-  const selected = selectedMethod === "google_pay" ? "google_pay" : selectedMethod;
+function detectPreferredWallet(): WalletVariant {
+  if (typeof window === "undefined") return "google_pay";
+
+  const ua = String(window.navigator.userAgent || "");
+  const platform = String(window.navigator.platform || "");
+  const vendor = String(window.navigator.vendor || "");
+  const maxTouchPoints = Number(window.navigator.maxTouchPoints || 0);
+  const hasApplePaySession = typeof (window as Window & { ApplePaySession?: unknown }).ApplePaySession !== "undefined";
+  const isIosDevice = /iPhone|iPad|iPod/i.test(ua) || (platform === "MacIntel" && maxTouchPoints > 1);
+  const isSafari =
+    /Safari/i.test(ua) &&
+    !/CriOS|Chrome|EdgiOS|Edg|FxiOS|Firefox|OPiOS|Opera|SamsungBrowser|Android/i.test(ua) &&
+    /Apple/i.test(vendor);
+
+  if (hasApplePaySession && (isIosDevice || isSafari)) return "apple_pay";
+  return "google_pay";
+}
+
+function buildStripePaymentMethodOrder(selectedMethod: PaymentMethodChoice, walletVariant: WalletVariant): string[] {
+  const selected = selectedMethod === "wallet" ? walletVariant : selectedMethod;
   const ordered = [selected];
   const unique: string[] = [];
   const seen = new Set<string>();
@@ -674,6 +693,7 @@ export function CheckoutClient({ initialCoupon = "" }: CheckoutClientProps) {
   const [isDraftLoaded, setIsDraftLoaded] = useState(false);
   const [hasAutoAttemptedIntent, setHasAutoAttemptedIntent] = useState(false);
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<PaymentMethodChoice>("card");
+  const [walletVariant, setWalletVariant] = useState<WalletVariant>("google_pay");
   const [selectedInstallments, setSelectedInstallments] = useState(1);
   const [discountCents, setDiscountCents] = useState(0);
   const [appliedCouponCode, setAppliedCouponCode] = useState(() => normalizeDiscountCode(initialCoupon));
@@ -737,8 +757,8 @@ export function CheckoutClient({ initialCoupon = "" }: CheckoutClientProps) {
   const totalCents = Math.max(0, subtotal + shippingCents - discountCents);
   const installmentPlan = useMemo(() => resolveInstallmentsByTotal(totalCents), [totalCents]);
   const stripePaymentMethodOrder = useMemo(
-    () => buildStripePaymentMethodOrder(selectedPaymentMethod),
-    [selectedPaymentMethod]
+    () => buildStripePaymentMethodOrder(selectedPaymentMethod, walletVariant),
+    [selectedPaymentMethod, walletVariant]
   );
   const installmentOptions = useMemo(() => {
     const maxInstallments = Math.max(1, Number(installmentPlan.installments || 1));
@@ -775,6 +795,10 @@ export function CheckoutClient({ initialCoupon = "" }: CheckoutClientProps) {
       return current;
     });
   }, [installmentPlan.installments]);
+
+  useEffect(() => {
+    setWalletVariant(detectPreferredWallet());
+  }, []);
 
   useEffect(() => {
     if (selectedPaymentMethod === "card") return;
@@ -2208,8 +2232,8 @@ export function CheckoutClient({ initialCoupon = "" }: CheckoutClientProps) {
                   </button>
                   <button
                     type="button"
-                    className={`${styles.paymentOption} ${selectedPaymentMethod === "google_pay" ? styles.paymentOptionSelected : ""}`}
-                    onClick={() => setSelectedPaymentMethod("google_pay")}
+                    className={`${styles.paymentOption} ${selectedPaymentMethod === "wallet" ? styles.paymentOptionSelected : ""}`}
+                    onClick={() => setSelectedPaymentMethod("wallet")}
                   >
                     <span className={styles.paymentOptionContent}>
                       <span className={styles.paymentOptionIcon} aria-hidden style={{ width: 22, height: 22 }}>
@@ -2232,7 +2256,7 @@ export function CheckoutClient({ initialCoupon = "" }: CheckoutClientProps) {
                           />
                         </svg>
                       </span>
-                      <span className={styles.paymentOptionLabel}>Google Pay</span>
+                      <span className={styles.paymentOptionLabel}>{walletVariant === "apple_pay" ? "Apple Pay" : "Google Pay"}</span>
                     </span>
                   </button>
                 </div>
@@ -2292,9 +2316,11 @@ export function CheckoutClient({ initialCoupon = "" }: CheckoutClientProps) {
                       </>
                     ) : (
                       <>
-                        <p className={styles.paymentMethodInfoTitle}>Google Pay</p>
+                        <p className={styles.paymentMethodInfoTitle}>{walletVariant === "apple_pay" ? "Apple Pay" : "Google Pay"}</p>
                         <p className={styles.paymentMethodInfoText}>
-                          Pagamento a vista pela carteira Google em dispositivos compativeis. A confirmacao ocorre na etapa final.
+                          {walletVariant === "apple_pay"
+                            ? "Pagamento a vista pela carteira Apple em dispositivos compativeis. A confirmacao ocorre na etapa final."
+                            : "Pagamento a vista pela carteira Google em dispositivos compativeis. A confirmacao ocorre na etapa final."}
                         </p>
                       </>
                     )}
@@ -2305,7 +2331,7 @@ export function CheckoutClient({ initialCoupon = "" }: CheckoutClientProps) {
                 {!stripeLoading && !stripeConfigured ? <p className={styles.stepHint}>Pagamento indisponivel no momento.</p> : null}
               </div>
 
-              {selectedPaymentMethod === "google_pay" && intent?.clientSecret && stripePromise ? (
+              {selectedPaymentMethod === "wallet" && intent?.clientSecret && stripePromise ? (
                 <div
                   className={activeStep === "payment" ? styles.securePaymentBox : styles.hiddenPaymentHost}
                   aria-hidden={activeStep !== "payment"}
