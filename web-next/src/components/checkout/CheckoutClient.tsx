@@ -585,18 +585,24 @@ function buildPayload(
 function detectPreferredWallet(): WalletVariant {
   if (typeof window === "undefined") return "google_pay";
 
-  const ua = String(window.navigator.userAgent || "");
-  const platform = String(window.navigator.platform || "");
-  const vendor = String(window.navigator.vendor || "");
-  const maxTouchPoints = Number(window.navigator.maxTouchPoints || 0);
-  const hasApplePaySession = typeof (window as Window & { ApplePaySession?: unknown }).ApplePaySession !== "undefined";
-  const isIosDevice = /iPhone|iPad|iPod/i.test(ua) || (platform === "MacIntel" && maxTouchPoints > 1);
-  const isSafari =
-    /Safari/i.test(ua) &&
-    !/CriOS|Chrome|EdgiOS|Edg|FxiOS|Firefox|OPiOS|Opera|SamsungBrowser|Android/i.test(ua) &&
-    /Apple/i.test(vendor);
+  const applePaySession = (
+    window as Window & {
+      ApplePaySession?: {
+        canMakePayments?: () => boolean;
+      };
+    }
+  ).ApplePaySession;
 
-  if (hasApplePaySession && (isIosDevice || isSafari)) return "apple_pay";
+  if (applePaySession) {
+    try {
+      if (typeof applePaySession.canMakePayments === "function" && applePaySession.canMakePayments()) {
+        return "apple_pay";
+      }
+    } catch {}
+
+    return "apple_pay";
+  }
+
   return "google_pay";
 }
 
@@ -739,6 +745,7 @@ export function CheckoutClient({ initialCoupon = "" }: CheckoutClientProps) {
       ),
     [billingFullName, boletoBillingAddress, checkoutEmail, form.cpf, intent?.clientSecret]
   );
+  const walletDisplayName = walletVariant === "apple_pay" ? "Apple Pay" : "Google Pay";
 
   const fieldErrors = useMemo(
     () => collectRequiredFieldErrors(form, isAddressResolved, requiresGuestEmail),
@@ -1811,10 +1818,10 @@ export function CheckoutClient({ initialCoupon = "" }: CheckoutClientProps) {
       };
     }
     return {
-      line1: "Google Pay",
+      line1: walletDisplayName,
       line2: "Pagamento a vista",
     };
-  }, [selectedInstallmentLabel, selectedPaymentMethod]);
+  }, [selectedInstallmentLabel, selectedPaymentMethod, walletDisplayName]);
   if (gateError && !checkoutEnabled) {
     return (
       <section className={styles.maintenanceBox}>
@@ -2256,7 +2263,7 @@ export function CheckoutClient({ initialCoupon = "" }: CheckoutClientProps) {
                           />
                         </svg>
                       </span>
-                      <span className={styles.paymentOptionLabel}>{walletVariant === "apple_pay" ? "Apple Pay" : "Google Pay"}</span>
+                      <span className={styles.paymentOptionLabel}>{walletDisplayName}</span>
                     </span>
                   </button>
                 </div>
@@ -2316,7 +2323,7 @@ export function CheckoutClient({ initialCoupon = "" }: CheckoutClientProps) {
                       </>
                     ) : (
                       <>
-                        <p className={styles.paymentMethodInfoTitle}>{walletVariant === "apple_pay" ? "Apple Pay" : "Google Pay"}</p>
+                        <p className={styles.paymentMethodInfoTitle}>{walletDisplayName}</p>
                         <p className={styles.paymentMethodInfoText}>
                           {walletVariant === "apple_pay"
                             ? "Pagamento a vista pela carteira Apple em dispositivos compativeis. A confirmacao ocorre na etapa final."

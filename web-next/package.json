@@ -16,8 +16,8 @@
     "@stripe/react-stripe-js": "^5.6.0",
     "@stripe/stripe-js": "^8.8.0",
     "lucide-react": "^0.577.0",
-    "next": "16.1.6",
-    "posthog-js": "^1.357.1",
+    "next": "^16.2.0",
+    "posthog-js": "^1.362.0",
     "react": "19.2.3",
     "react-dom": "19.2.3",
     "zustand": "^5.0.11"
@@ -28,7 +28,7 @@
     "@types/react-dom": "^19",
     "esbuild": "^0.25.0",
     "eslint": "^9",
-    "eslint-config-next": "16.1.6",
+    "eslint-config-next": "^16.2.0",
     "eslint-config-prettier": "^10.1.8",
     "prettier": "^3.6.2",
     "serwist": "^9.5.7",
@@ -36,6 +36,7 @@
     "typescript": "^5"
   },
   "overrides": {
+    "flatted": "^3.4.1",
     "minimatch": "^9.0.0",
     "@typescript-eslint/typescript-estree": {
       "minimatch": "^10.2.3"
