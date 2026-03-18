@@ -377,44 +377,115 @@
   position: absolute;
   inset: 0;
   border: 0;
-  background: rgba(0, 0, 0, 0.45);
+  background: rgba(0, 0, 0, 0.5);
 }
 
 .confirmCard {
   position: relative;
   z-index: 1;
-  width: min(500px, calc(100vw - 30px));
+  width: min(420px, calc(100vw - 32px));
   background: #fff;
-  border: 1px solid #ececec;
-  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.2);
-  padding: 18px;
+  border-top: 3px solid #9b2226;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.28);
+  padding: 28px 28px 22px;
+}
+
+.confirmIconWrap {
+  width: 46px;
+  height: 46px;
+  border-radius: 50%;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #9b2226;
+  margin-bottom: 16px;
 }
 
 .confirmCard h5 {
-  margin: 0;
+  margin: 0 0 6px;
   font-family: var(--font-cormorant), "Cormorant Garamond", Georgia, serif;
-  font-size: 30px;
+  font-size: 26px;
   color: #111;
   font-weight: 400;
+  letter-spacing: -0.01em;
 }
 
 .confirmCard p {
-  margin: 8px 0 0;
+  margin: 0;
   font-family: var(--font-jost), sans-serif;
   font-size: 12px;
-  color: #555;
-  line-height: 1.45;
+  color: #666;
+  line-height: 1.5;
+}
+
+.confirmUserName {
+  font-family: var(--font-jost), sans-serif;
+  font-size: 13px;
+  font-weight: 600;
+  color: #111;
+  margin: 2px 0 10px;
 }
 
 .confirmDangerText {
-  color: #9b2226 !important;
+  margin-top: 10px !important;
+  padding: 10px 12px;
+  background: #fef2f2;
+  border-left: 3px solid #9b2226;
+  font-size: 11px !important;
+  color: #7f1d1d !important;
+  line-height: 1.55 !important;
 }
 
 .confirmActions {
-  margin-top: 14px;
+  margin-top: 20px;
   display: flex;
-  justify-content: flex-end;
   gap: 8px;
+}
+
+.confirmCancelBtn {
+  flex: 1;
+  padding: 10px 14px;
+  font-family: var(--font-jost), sans-serif;
+  font-size: 10px;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  border: 1px solid #e0e0e0;
+  background: transparent;
+  color: #555;
+  cursor: pointer;
+  transition: border-color 0.15s, color 0.15s;
+}
+
+.confirmCancelBtn:hover {
+  border-color: #111;
+  color: #111;
+}
+
+.confirmDeleteBtn {
+  flex: 2;
+  padding: 10px 14px;
+  font-family: var(--font-jost), sans-serif;
+  font-size: 10px;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  border: 1px solid #9b2226;
+  background: #9b2226;
+  color: #fff;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.confirmDeleteBtn:hover {
+  background: #7f1d1d;
+  border-color: #7f1d1d;
+}
+
+.confirmDeleteBtn:disabled,
+.confirmCancelBtn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
 }
 
 @media (max-width: 760px) {

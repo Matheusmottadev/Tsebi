@@ -11,11 +11,18 @@ import styles from "../account.module.css";
 function toOrderStatus(order: Order): OrderStatus {
   if (order.status === "canceled") return "cancelado";
   if (order.status === "failed")   return "falhou";
-  const s = String(order.currentStatus || order.status || "").toUpperCase();
-  if (s === "DELIVERED")                          return "entregue";
-  if (s === "IN_TRANSIT" || s === "OUT_FOR_DELIVERY") return "saiu_para_entregar";
-  if (s === "SHIPPED")                            return "enviado";
-  if (s === "PROCESSING")                         return "confirmado";
+
+  // tracking de envio (currentStatus = SHIPPED, IN_TRANSIT, DELIVERED, etc.)
+  const tracking = String(order.currentStatus || "").toUpperCase();
+  if (tracking === "DELIVERED")                                    return "entregue";
+  if (tracking === "IN_TRANSIT" || tracking === "OUT_FOR_DELIVERY") return "saiu_para_entregar";
+  if (tracking === "SHIPPED")                                      return "enviado";
+
+  // para ORDER_PLACED / PROCESSING / EXCEPTION ou sem tracking, usa status de pagamento
+  const payment = String(order.status || "").toUpperCase();
+  if (payment === "PAID")       return "confirmado";
+  if (payment === "PROCESSING") return "confirmado";
+
   return "recebido";
 }
 
@@ -28,7 +35,10 @@ function getStatusMeta(order: Order): { label: string; cls: string } {
   if (order.status === "failed" || order.status === "canceled") {
     return { label: order.status === "failed" ? "Falhou" : "Cancelado", cls: styles.statusRed };
   }
-  if (order.status === "processing" || order.status === "paid") {
+  if (order.status === "paid") {
+    return { label: "Confirmado", cls: styles.statusGreen };
+  }
+  if (order.status === "processing") {
     return { label: "Processando", cls: styles.statusBlue };
   }
   return { label: "Pendente", cls: styles.statusGray };

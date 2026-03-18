@@ -699,15 +699,20 @@ export function DrawerDetalhesUsuario({
               </>
             ) : (
               <>
+                <div className={styles.confirmIconWrap}>
+                  <Trash2 size={20} strokeWidth={1.5} />
+                </div>
                 <h5>Excluir usuário?</h5>
+                <p>Você está prestes a excluir permanentemente a conta de</p>
+                <p className={styles.confirmUserName}>{detail?.name || user.name || user.email}</p>
                 <p className={styles.confirmDangerText}>
-                  Esta ação é irreversível. Todos os dados do usuário serão excluídos permanentemente.
+                  Esta ação é irreversível. Todos os dados, pedidos e histórico serão apagados definitivamente.
                 </p>
                 <div className={styles.confirmActions}>
-                  <button type="button" className={styles.btnEdit} onClick={() => setConfirmMode(null)}>
+                  <button type="button" className={styles.confirmCancelBtn} onClick={() => setConfirmMode(null)}>
                     Cancelar
                   </button>
-                  <button type="button" className={styles.btnDeleteSolid} onClick={handleExcluir} disabled={actionLoading === "delete"}>
+                  <button type="button" className={styles.confirmDeleteBtn} onClick={handleExcluir} disabled={actionLoading === "delete"}>
                     {actionLoading === "delete" ? "Excluindo..." : "Excluir permanentemente"}
                   </button>
                 </div>
