@@ -252,7 +252,6 @@ export default function LoginPage() {
     const params = new URLSearchParams();
     params.set("email", normalized);
     params.set("cooldown", "60");
-    params.set("flow", "setup");
     router.push(`/recuperar-senha-codigo?${params.toString()}`);
   }
 

@@ -1,7 +1,7 @@
 "use client";
 
-import { PasswordRecoveryFlow } from "@/components/auth/PasswordRecoveryFlow";
+import { PasswordResetFlow } from "@/components/auth/PasswordResetFlow";
 
 export default function RecuperarSenhaPage() {
-  return <PasswordRecoveryFlow />;
+  return <PasswordResetFlow />;
 }

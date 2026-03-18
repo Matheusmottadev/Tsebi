@@ -2,13 +2,12 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type KeyboardEvent } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { BodyClassName } from "@/components/BodyClassName";
 import styles from "@/app/recuperar-senha/recuperar-senha.module.css";
 
-type RecoveryStep = "email" | "codigo" | "nova-senha" | "sucesso";
-type RecoveryIntent = "reset" | "setup";
+type SetupStep = "codigo" | "nova-senha" | "sucesso";
 
 type ApiErrorPayload = {
   error?: string;
@@ -32,7 +31,7 @@ function maskEmail(value: string): string {
 
 function parseCooldown(value: string | null): number {
   const parsed = Number(value || 0);
-  if (!Number.isFinite(parsed)) return 0;
+  if (!Number.isFinite(parsed)) return 60;
   return Math.max(0, Math.min(300, Math.floor(parsed)));
 }
 
@@ -62,37 +61,36 @@ async function readErrorCode(response: Response): Promise<string> {
   }
 }
 
-function resolveIntent(flowParam: string | null): RecoveryIntent {
-  const normalized = String(flowParam || "").trim().toLowerCase();
-  if (normalized === "setup" || normalized === "create" || normalized === "password_setup") return "setup";
-  return "reset";
-}
-
-export function PasswordRecoveryFlow() {
+export function PasswordSetupFlow() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const inputRefs = useRef<Array<HTMLInputElement | null>>([]);
-  const appliedPrefillRef = useRef(false);
-  const [step, setStep] = useState<RecoveryStep>("email");
-  const [email, setEmail] = useState("");
+  const [step, setStep] = useState<SetupStep>("codigo");
   const [digits, setDigits] = useState<string[]>(["", "", "", "", "", ""]);
   const [senha, setSenha] = useState("");
   const [confirmacao, setConfirmacao] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [helperMessage, setHelperMessage] = useState("");
-  const [resendRemaining, setResendRemaining] = useState(0);
+  const [resendRemaining, setResendRemaining] = useState(60);
 
+  const email = useMemo(() => normalizeEmail(searchParams.get("email") || ""), [searchParams]);
+  const cooldown = useMemo(() => parseCooldown(searchParams.get("cooldown")), [searchParams]);
   const codigo = useMemo(() => digits.join(""), [digits]);
-  const normalizedEmail = useMemo(() => normalizeEmail(email), [email]);
-  const intent = useMemo(() => resolveIntent(searchParams.get("flow")), [searchParams]);
-  const prefilledEmail = useMemo(() => normalizeEmail(searchParams.get("email") || ""), [searchParams]);
-  const queryCooldown = useMemo(() => parseCooldown(searchParams.get("cooldown")), [searchParams]);
+  const hasValidEmail = isValidEmail(email);
 
   useEffect(() => {
-    if (step !== "codigo") return;
     inputRefs.current[0]?.focus();
-  }, [step]);
+  }, []);
+
+  useEffect(() => {
+    setResendRemaining(cooldown);
+    if (hasValidEmail) {
+      setHelperMessage(`Enviamos um codigo de 6 digitos para ${maskEmail(email)}.`);
+    } else {
+      setHelperMessage("");
+    }
+  }, [cooldown, email, hasValidEmail]);
 
   useEffect(() => {
     if (step !== "sucesso") return;
@@ -110,89 +108,16 @@ export function PasswordRecoveryFlow() {
     return () => window.clearInterval(timerId);
   }, [resendRemaining]);
 
-  useEffect(() => {
-    if (!isValidEmail(prefilledEmail) || appliedPrefillRef.current) return;
-    appliedPrefillRef.current = true;
-    setEmail(prefilledEmail);
-    setDigits(["", "", "", "", "", ""]);
-    setSenha("");
-    setConfirmacao("");
-    setError("");
-    setStep("codigo");
-    setResendRemaining(queryCooldown || 60);
-    setHelperMessage(
-      intent === "setup"
-        ? `Enviamos um codigo para ${maskEmail(prefilledEmail)} para voce criar sua senha.`
-        : `Enviamos um codigo de recuperacao para ${maskEmail(prefilledEmail)}.`
-    );
-  }, [intent, prefilledEmail, queryCooldown]);
-
-  const copy = useMemo(() => {
-    if (intent === "setup") {
-      return {
-        emailTitle: "Criar senha.",
-        emailSubtitle: "Insira seu e-mail e enviaremos um codigo para definir a senha da sua conta.",
-        codeTitle: "Criacao de senha.",
-        codeSubtitle: `Enviamos um codigo de 6 digitos para ${normalizedEmail ? maskEmail(normalizedEmail) : "seu e-mail"}.`,
-        passwordTitle: "Criar senha.",
-        passwordSubtitle: "Escolha uma senha segura para ativar o acesso da sua conta Tsebi.",
-        successTitle: "Senha criada.",
-        successSubtitle: "Sua senha foi definida com sucesso. Voce ja pode entrar na sua conta.",
-        sendButton: "Enviar codigo",
-        verifyButton: "Verificar codigo",
-        submitButton: "Criar senha",
-      };
-    }
-
-    return {
-      emailTitle: "Recuperar senha.",
-      emailSubtitle: "Insira seu e-mail e enviaremos um codigo para redefinir sua senha.",
-      codeTitle: "Verifique seu e-mail.",
-      codeSubtitle: `Enviamos um codigo de 6 digitos para ${normalizedEmail ? maskEmail(normalizedEmail) : "seu e-mail"}.`,
-      passwordTitle: "Redefinir senha.",
-      passwordSubtitle: "Escolha uma nova senha segura para sua conta Tsebi.",
-      successTitle: "Senha redefinida.",
-      successSubtitle: "Sua senha foi alterada com sucesso. Voce ja pode entrar na sua conta.",
-      sendButton: "Enviar codigo",
-      verifyButton: "Verificar codigo",
-      submitButton: "Redefinir senha",
-    };
-  }, [intent, normalizedEmail]);
-
-  async function requestResetCode(nextEmail: string): Promise<void> {
+  async function requestResetCode(): Promise<void> {
     const response = await fetch("/api/auth/forgot-password", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email: normalizeEmail(nextEmail) }),
+      body: JSON.stringify({ email }),
     });
 
     if (!response.ok) {
       const apiCode = await readErrorCode(response);
       throw new Error(mapApiError(apiCode, "Nao foi possivel enviar o codigo. Tente novamente."));
-    }
-  }
-
-  async function handleEnviarCodigo(): Promise<void> {
-    if (!isValidEmail(normalizedEmail)) {
-      setError("Insira um e-mail valido.");
-      return;
-    }
-
-    setLoading(true);
-    setError("");
-    setHelperMessage("");
-
-    try {
-      await requestResetCode(normalizedEmail);
-      setDigits(["", "", "", "", "", ""]);
-      setStep("codigo");
-      setResendRemaining(60);
-      setHelperMessage(`Codigo enviado para ${maskEmail(normalizedEmail)}.`);
-    } catch (err) {
-      const message = err instanceof Error ? err.message : "Nao foi possivel enviar o codigo. Tente novamente.";
-      setError(message);
-    } finally {
-      setLoading(false);
     }
   }
 
@@ -202,31 +127,35 @@ export function PasswordRecoveryFlow() {
     nextDigits[index] = nextValue;
     setDigits(nextDigits);
     setError("");
-    setHelperMessage("");
 
     if (nextValue && index < nextDigits.length - 1) inputRefs.current[index + 1]?.focus();
   }
 
-  function handleKeyDown(event: React.KeyboardEvent<HTMLInputElement>, index: number): void {
+  function handleKeyDown(event: KeyboardEvent<HTMLInputElement>, index: number): void {
     if (event.key === "Backspace" && !digits[index] && index > 0) inputRefs.current[index - 1]?.focus();
     if (event.key === "ArrowLeft" && index > 0) inputRefs.current[index - 1]?.focus();
     if (event.key === "ArrowRight" && index < digits.length - 1) inputRefs.current[index + 1]?.focus();
   }
 
   function handleVerificarCodigo(): void {
+    if (!hasValidEmail) {
+      setError("Sessao invalida. Volte ao login e tente novamente.");
+      return;
+    }
+
     if (digits.some((digit) => digit === "")) {
       setError("Preencha os 6 digitos do codigo.");
       return;
     }
+
     setError("");
-    setHelperMessage("");
     setStep("nova-senha");
   }
 
   async function handleReenviar(): Promise<void> {
     if (resendRemaining > 0) return;
-    if (!isValidEmail(normalizedEmail)) {
-      setError("Insira um e-mail valido para reenviar.");
+    if (!hasValidEmail) {
+      setError("Sessao invalida. Volte ao login e tente novamente.");
       return;
     }
 
@@ -235,9 +164,9 @@ export function PasswordRecoveryFlow() {
     setHelperMessage("");
 
     try {
-      await requestResetCode(normalizedEmail);
+      await requestResetCode();
       setResendRemaining(60);
-      setHelperMessage("Enviamos um novo codigo para o seu e-mail.");
+      setHelperMessage(`Enviamos um novo codigo para ${maskEmail(email)}.`);
     } catch (err) {
       const message = err instanceof Error ? err.message : "Nao foi possivel reenviar o codigo.";
       setError(message);
@@ -246,16 +175,15 @@ export function PasswordRecoveryFlow() {
     }
   }
 
-  async function handleRedefinir(): Promise<void> {
-    if (codigo.length !== 6) {
-      setError("Preencha o codigo de 6 digitos.");
-      setStep("codigo");
+  async function handleCriarSenha(): Promise<void> {
+    if (!hasValidEmail) {
+      setError("Sessao invalida. Volte ao login e tente novamente.");
       return;
     }
 
-    if (!isValidEmail(normalizedEmail)) {
-      setError("Sessao invalida. Solicite um novo codigo.");
-      setStep("email");
+    if (codigo.length !== 6) {
+      setError("Preencha o codigo de 6 digitos.");
+      setStep("codigo");
       return;
     }
 
@@ -278,7 +206,7 @@ export function PasswordRecoveryFlow() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          email: normalizedEmail,
+          email,
           code: codigo,
           password: senha,
         }),
@@ -286,12 +214,12 @@ export function PasswordRecoveryFlow() {
 
       if (!response.ok) {
         const apiCode = await readErrorCode(response);
-        throw new Error(mapApiError(apiCode, "Nao foi possivel concluir a alteracao de senha. Tente novamente."));
+        throw new Error(mapApiError(apiCode, "Nao foi possivel concluir a criacao da senha. Tente novamente."));
       }
 
       setStep("sucesso");
     } catch (err) {
-      const message = err instanceof Error ? err.message : "Nao foi possivel concluir a alteracao de senha. Tente novamente.";
+      const message = err instanceof Error ? err.message : "Nao foi possivel concluir a criacao da senha. Tente novamente.";
       setError(message);
     } finally {
       setLoading(false);
@@ -324,42 +252,27 @@ export function PasswordRecoveryFlow() {
         <section className={styles.rightPanel}>
           <div className={styles.rightTop}>
             <Link href="/login" className={styles.backLink}>
-              ← Voltar ao login
+              Voltar ao login
             </Link>
           </div>
 
           <div className={styles.formWrap}>
-            {step === "email" ? (
+            {!hasValidEmail ? (
               <section className={styles.step} aria-live="polite">
-                <h1 className={styles.stepTitle}>{copy.emailTitle}</h1>
-                <p className={styles.stepSub}>{copy.emailSubtitle}</p>
-
-                <div className={styles.field}>
-                  <label className={styles.fieldLabel} htmlFor="recuperar-email">
-                    E-mail
-                  </label>
-                  <input
-                    id="recuperar-email"
-                    className={styles.input}
-                    type="email"
-                    value={email}
-                    onChange={(event) => setEmail(event.target.value)}
-                    placeholder="seu@email.com"
-                    autoComplete="email"
-                  />
-                </div>
-
-                {error ? <p className={styles.error}>{error}</p> : null}
-                <button className={styles.btnPrimary} type="button" onClick={() => void handleEnviarCodigo()} disabled={loading}>
-                  {loading ? "Aguarde..." : copy.sendButton}
+                <h1 className={styles.stepTitle}>Criar senha.</h1>
+                <p className={styles.stepSub}>Nao encontramos o e-mail desta sessao. Volte ao login e tente novamente.</p>
+                <button className={styles.btnPrimary} type="button" onClick={() => router.push("/login")}>
+                  Voltar ao login
                 </button>
               </section>
             ) : null}
 
-            {step === "codigo" ? (
+            {hasValidEmail && step === "codigo" ? (
               <section className={styles.step} aria-live="polite">
-                <h1 className={styles.stepTitle}>{copy.codeTitle}</h1>
-                <p className={styles.stepSub}>{copy.codeSubtitle}</p>
+                <h1 className={styles.stepTitle}>Criar senha.</h1>
+                <p className={styles.stepSub}>
+                  Confirme o codigo enviado para {maskEmail(email)} antes de definir sua senha.
+                </p>
 
                 <div className={styles.codeRow}>
                   {digits.map((digit, index) => (
@@ -385,7 +298,7 @@ export function PasswordRecoveryFlow() {
                 {!error && helperMessage ? <p className={styles.helper}>{helperMessage}</p> : null}
 
                 <button className={styles.btnPrimary} type="button" onClick={handleVerificarCodigo} disabled={loading}>
-                  {loading ? "Aguarde..." : copy.verifyButton}
+                  {loading ? "Aguarde..." : "Verificar codigo"}
                 </button>
 
                 <button className={styles.resend} type="button" onClick={() => void handleReenviar()} disabled={loading || resendRemaining > 0}>
@@ -394,17 +307,17 @@ export function PasswordRecoveryFlow() {
               </section>
             ) : null}
 
-            {step === "nova-senha" ? (
+            {hasValidEmail && step === "nova-senha" ? (
               <section className={styles.step} aria-live="polite">
-                <h1 className={styles.stepTitle}>{copy.passwordTitle}</h1>
-                <p className={styles.stepSub}>{copy.passwordSubtitle}</p>
+                <h1 className={styles.stepTitle}>Criar senha.</h1>
+                <p className={styles.stepSub}>Defina a senha principal da sua conta Tsebi.</p>
 
                 <div className={styles.field}>
-                  <label className={styles.fieldLabel} htmlFor="recuperar-senha">
+                  <label className={styles.fieldLabel} htmlFor="setup-senha">
                     Nova senha
                   </label>
                   <input
-                    id="recuperar-senha"
+                    id="setup-senha"
                     className={styles.input}
                     type="password"
                     value={senha}
@@ -415,11 +328,11 @@ export function PasswordRecoveryFlow() {
                 </div>
 
                 <div className={styles.field}>
-                  <label className={styles.fieldLabel} htmlFor="recuperar-confirmacao">
+                  <label className={styles.fieldLabel} htmlFor="setup-confirmacao">
                     Confirmar senha
                   </label>
                   <input
-                    id="recuperar-confirmacao"
+                    id="setup-confirmacao"
                     className={styles.input}
                     type="password"
                     value={confirmacao}
@@ -432,8 +345,8 @@ export function PasswordRecoveryFlow() {
                 {error ? <p className={styles.error}>{error}</p> : null}
                 {!error && helperMessage ? <p className={styles.helper}>{helperMessage}</p> : null}
 
-                <button className={styles.btnPrimary} type="button" onClick={() => void handleRedefinir()} disabled={loading}>
-                  {loading ? "Aguarde..." : copy.submitButton}
+                <button className={styles.btnPrimary} type="button" onClick={() => void handleCriarSenha()} disabled={loading}>
+                  {loading ? "Aguarde..." : "Criar senha"}
                 </button>
 
                 <button className={styles.resend} type="button" onClick={() => void handleReenviar()} disabled={loading || resendRemaining > 0}>
@@ -442,11 +355,11 @@ export function PasswordRecoveryFlow() {
               </section>
             ) : null}
 
-            {step === "sucesso" ? (
+            {hasValidEmail && step === "sucesso" ? (
               <section className={styles.step} aria-live="polite">
                 <Image className={styles.successIcon} src="/images/logo-tsebi.png" alt="Tsebi" width={52} height={52} />
-                <h1 className={styles.stepTitle}>{copy.successTitle}</h1>
-                <p className={styles.stepSub}>{copy.successSubtitle}</p>
+                <h1 className={styles.stepTitle}>Senha criada.</h1>
+                <p className={styles.stepSub}>Sua senha foi definida com sucesso. Voce ja pode entrar na sua conta.</p>
 
                 <button className={styles.btnPrimary} type="button" onClick={() => router.push("/login")}>
                   Entrar na conta
@@ -456,12 +369,12 @@ export function PasswordRecoveryFlow() {
           </div>
 
           <footer className={styles.footer}>
-            <span>© 2025 Tsebi Brasil</span>
-            <span>·</span>
+            <span>(c) 2025 Tsebi Brasil</span>
+            <span>.</span>
             <Link href="/politica-privacidade" className={styles.footerLink}>
               Privacidade
             </Link>
-            <span>·</span>
+            <span>.</span>
             <Link href="/aviso-legal" className={styles.footerLink}>
               Termos
             </Link>
