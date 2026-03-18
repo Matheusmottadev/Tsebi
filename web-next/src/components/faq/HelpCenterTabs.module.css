@@ -2,121 +2,261 @@
   position: sticky;
   top: calc(var(--top-bar-height, 38px) + var(--header-height, 84px) - 8px);
   z-index: 1000;
-  background: #f5f5f5;
-  border-bottom: 0;
+  background: #fff;
+  border-top: 1px solid #e0e0e0;
 }
 
-.inner {
+/* ══════════════════════════════════════════════
+   DESKTOP — horizontal tab bar (original)
+   Shown on > 760px, hidden on mobile
+   ══════════════════════════════════════════════ */
+.desktopBar {
   display: grid;
   grid-template-columns: minmax(180px, auto) 1fr;
-  align-items: center;
+  border-bottom: 1px solid #e0e0e0;
   min-height: 60px;
-  background: #fff;
-  border: 1px solid #e0e0e0;
-  border-left: 0;
-  border-right: 0;
+  align-items: stretch;
 }
 
-.title {
-  margin: 0;
+.desktopTitle {
+  display: flex;
+  align-items: center;
   padding: 0 20px 0 44px;
-  font-size: 15px;
-  font-weight: 300;
-  letter-spacing: 0.06em;
+  font-size: 13px;
+  font-weight: 400;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
   color: #181818;
   white-space: nowrap;
+  margin: 0;
+  border-right: 1px solid #e0e0e0;
 }
 
-.links {
+.desktopLinks {
   display: flex;
+  align-items: stretch;
   justify-content: flex-end;
-  width: 100%;
-  min-width: 0;
+  overflow-x: auto;
 }
 
-.linksList {
-  list-style: none;
+.desktopLinksList {
   display: flex;
-  align-items: center;
+  align-items: stretch;
+  list-style: none;
   margin: 0;
   padding: 0;
+  gap: 0;
 }
 
-.linksList li {
-  position: relative;
-}
-
-.linksList li:not(:first-child)::before {
-  content: "";
-  position: absolute;
-  left: 0;
-  top: 50%;
-  transform: translateY(-50%);
-  width: 1px;
-  height: 26px;
-  background: #d5d5d5;
-}
-
-.link {
+.desktopLink {
   display: inline-flex;
   align-items: center;
-  justify-content: center;
+  padding: 0 22px;
   min-height: 60px;
-  padding: 0 28px;
+  background: transparent;
+  border: 0;
+  border-bottom: 2.5px solid transparent;
+  cursor: pointer;
   font-size: 13px;
   font-weight: 300;
-  letter-spacing: 0.01em;
-  color: #202020;
-  border: 0;
-  border-bottom: 1.5px solid transparent;
-  background: transparent;
-  cursor: pointer;
+  letter-spacing: 0.05em;
+  color: #181818;
   font-family: inherit;
-  text-decoration: none;
-  transition: border-bottom-color 0.18s ease;
   white-space: nowrap;
+  transition: border-color 0.2s ease;
 }
 
-.link:hover,
-.link:focus-visible {
-  border-bottom-color: #111;
+.desktopLink:hover {
+  border-bottom-color: #bbb;
 }
 
-.linkActive {
-  border-bottom-width: 2.5px;
-  border-bottom-color: #111;
+.desktopLinkActive {
+  font-weight: 400;
+  border-bottom-color: #111 !important;
 }
 
+/* ── desktop ≤ 960px: collapse title, compact links ── */
 @media (max-width: 960px) {
-  .inner {
+  .desktopBar {
     grid-template-columns: 1fr;
-    min-height: 58px;
+  }
+
+  .desktopTitle {
+    display: none;
+  }
+
+  .desktopLink {
+    padding: 0 16px;
+    min-height: 52px;
+  }
+}
+
+/* ══════════════════════════════════════════════
+   MOBILE — hide desktop bar, show dropdown
+   Applied at ≤ 760px
+   ══════════════════════════════════════════════ */
+
+/* Hide mobile elements on desktop */
+.bar {
+  display: none;
+}
+
+.dropdown {
+  display: none;
+}
+
+/* ── ≤ 760px: switch to mobile layout ── */
+@media (max-width: 760px) {
+  .desktopBar {
+    display: none !important;
+  }
+
+  /* ── Bar row: active label (left) + Menu button (right) ── */
+  .bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    min-height: 48px;
+    padding: 0 16px;
+    border-bottom: 1px solid #e0e0e0;
   }
 
   .title {
-    display: none;
-  }
-
-  .links {
-    overflow-x: auto;
-    -ms-overflow-style: none;
-    scrollbar-width: none;
-  }
-
-  .links::-webkit-scrollbar {
-    display: none;
-  }
-
-  .linksList {
-    justify-content: flex-end;
-    min-width: max-content;
-  }
-
-  .link {
-    min-height: 58px;
-    padding: 0 18px;
+    margin: 0;
     font-size: 12px;
+    font-weight: 400;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: #181818;
+    white-space: nowrap;
   }
 
+  .menuBtn {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    background: transparent;
+    border: 0;
+    cursor: pointer;
+    font-size: 12px;
+    font-weight: 400;
+    letter-spacing: 0.06em;
+    color: #181818;
+    font-family: inherit;
+    padding: 0;
+    min-height: 48px;
+    flex-shrink: 0;
+  }
+
+  .menuChevron {
+    width: 14px;
+    height: 14px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    transition: transform 0.7s ease;
+  }
+
+  .menuChevronOpen {
+    transform: rotate(180deg);
+  }
+
+  /* ── Dropdown ── */
+  .dropdown {
+    display: block !important;
+    width: 100% !important;
+    overflow: hidden;
+    border-bottom: 1px solid #e0e0e0;
+    text-align: left !important;
+
+    /* closed state */
+    max-height: 0;
+    visibility: hidden;
+    transition:
+      max-height 0.7s ease-in-out,
+      visibility 0s linear 0.7s;
+  }
+
+  .dropdownOpen {
+    /* open state — reveals top → bottom */
+    max-height: 240px;
+    visibility: visible;
+    transition:
+      max-height 0.7s ease-in-out,
+      visibility 0s linear 0s;
+  }
+
+  /* Grid forces each <li> to occupy 100% row width */
+  .dropdownList {
+    display: grid !important;
+    grid-template-columns: 1fr;
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    width: 100% !important;
+  }
+
+  .dropdownList li {
+    display: block !important;
+    width: 100% !important;
+    border-bottom: 1px solid #ebebeb;
+  }
+
+  .dropdownList li:last-child {
+    border-bottom: 0;
+  }
+
+  .dropdownLink {
+    display: flex !important;
+    align-items: center;
+    justify-content: flex-start !important;
+    gap: 8px;
+    width: 100% !important;
+    box-sizing: border-box;
+    padding: 14px 28px;
+    font-size: 13px;
+    font-weight: 300;
+    letter-spacing: 0.03em;
+    color: #202020;
+    border: 0;
+    background: transparent;
+    cursor: pointer;
+    font-family: inherit;
+    text-align: left !important;
+    transition: background 0.15s ease;
+  }
+
+  .dropdownLinkText {
+    display: block;
+    text-align: left !important;
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+
+  .dropdownLink:hover {
+    background: #f7f7f7;
+  }
+
+  .dropdownLinkActive {
+    font-weight: 400;
+    color: #111;
+  }
+
+  /* Underline on active item with side inset via background-image
+     (not clipped by overflow: hidden unlike ::after) */
+  .activeItem {
+    background-image: linear-gradient(#111, #111);
+    background-size: calc(100% - 32px) 1.5px;
+    background-repeat: no-repeat;
+    background-position: bottom center;
+  }
+
+  .dropdownCheck {
+    font-size: 12px;
+    color: #181818;
+    margin-left: auto;
+    flex-shrink: 0;
+  }
 }

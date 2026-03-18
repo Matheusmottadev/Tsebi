@@ -64,16 +64,16 @@ export function HelpCenterContactSection() {
             <div className={styles.actions}>
               <a className={styles.button} href="https://www.instagram.com/tsebiofficial/" target="_blank" rel="noreferrer">
                 <svg className={styles.buttonIcon} viewBox="0 0 24 24" aria-hidden="true">
-                  <rect x="3.5" y="3.5" width="17" height="17" rx="4.5"></rect>
-                  <circle cx="12" cy="12" r="4"></circle>
-                  <circle cx="17.5" cy="6.5" r="1"></circle>
+                  <rect x="2.5" y="2.5" width="19" height="19" rx="5.5"/>
+                  <circle cx="12" cy="12" r="5"/>
+                  <circle cx="17.5" cy="6.5" r="1.5" style={{fill:"currentColor",stroke:"none"}}/>
                 </svg>
                 <span>Direct Instagram</span>
               </a>
               <a className={styles.button} href="https://wa.me/5511918596632" target="_blank" rel="noreferrer">
                 <svg className={styles.buttonIcon} viewBox="0 0 24 24" aria-hidden="true">
-                  <path d="M12 21a8.7 8.7 0 0 1-4.3-1.1L4 21l1.2-3.5A8.8 8.8 0 1 1 12 21z"></path>
-                  <path d="M9.2 8.8c.2-.4.4-.4.6-.4h.5c.2 0 .4.1.5.4l.8 1.8c.1.2.1.4 0 .5l-.4.7c-.1.2-.1.4 0 .6.3.5.8 1.1 1.4 1.6.6.5 1.2.9 1.8 1.1.2.1.4.1.6-.1l.7-.6c.2-.2.4-.2.6-.1l1.7.8c.2.1.4.3.4.5v.5c0 .2 0 .4-.3.6-.4.3-.9.5-1.5.5-.9 0-2-.3-3.2-1-1-.6-1.9-1.4-2.6-2.3-.9-1.1-1.4-2.2-1.4-3.2 0-.6.2-1.2.4-1.5z"></path>
+                  <path d="M3 21l1.65-3.8A9 9 0 1 1 9.5 20.4z" strokeLinejoin="round"/>
+                  <path d="M9 10c.5 3 3 5.5 5.5 5.5l.4-.2a1 1 0 0 0 .6-.6l.2-1.2a.5.5 0 0 0-.4-.5l-1.2-.4a.5.5 0 0 0-.6.2l-.4.4a3 3 0 0 1-2.1-2.1l.4-.4a.5.5 0 0 0 .2-.6l-.4-1.2a.5.5 0 0 0-.5-.4L9.8 9a1 1 0 0 0-.6.6Z" strokeLinejoin="round"/>
                 </svg>
                 <span>WhatsApp</span>
               </a>
@@ -88,8 +88,8 @@ export function HelpCenterContactSection() {
             <div className={styles.actions}>
               <a className={`${styles.button} ${styles.chatButton}`} href="https://wa.me/5511918596632" target="_blank" rel="noreferrer">
                 <svg className={styles.buttonIcon} viewBox="0 0 24 24" aria-hidden="true">
-                  <path d="M12 21a8.7 8.7 0 0 1-4.3-1.1L4 21l1.2-3.5A8.8 8.8 0 1 1 12 21z"></path>
-                  <path d="M9.2 8.8c.2-.4.4-.4.6-.4h.5c.2 0 .4.1.5.4l.8 1.8c.1.2.1.4 0 .5l-.4.7c-.1.2-.1.4 0 .6.3.5.8 1.1 1.4 1.6.6.5 1.2.9 1.8 1.1.2.1.4.1.6-.1l.7-.6c.2-.2.4-.2.6-.1l1.7.8c.2.1.4.3.4.5v.5c0 .2 0 .4-.3.6-.4.3-.9.5-1.5.5-.9 0-2-.3-3.2-1-1-.6-1.9-1.4-2.6-2.3-.9-1.1-1.4-2.2-1.4-3.2 0-.6.2-1.2.4-1.5z"></path>
+                  <path d="M3 21l1.65-3.8A9 9 0 1 1 9.5 20.4z" strokeLinejoin="round"/>
+                  <path d="M9 10c.5 3 3 5.5 5.5 5.5l.4-.2a1 1 0 0 0 .6-.6l.2-1.2a.5.5 0 0 0-.4-.5l-1.2-.4a.5.5 0 0 0-.6.2l-.4.4a3 3 0 0 1-2.1-2.1l.4-.4a.5.5 0 0 0 .2-.6l-.4-1.2a.5.5 0 0 0-.5-.4L9.8 9a1 1 0 0 0-.6.6Z" strokeLinejoin="round"/>
                 </svg>
                 <span>Fale conosco</span>
                 <span className={styles.chatPulse} aria-hidden="true"></span>

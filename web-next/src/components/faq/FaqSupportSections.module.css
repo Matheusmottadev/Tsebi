@@ -92,4 +92,8 @@
   .faqGrid {
     grid-template-columns: 1fr;
   }
+
+  .section {
+    padding-bottom: 20px;
+  }
 }

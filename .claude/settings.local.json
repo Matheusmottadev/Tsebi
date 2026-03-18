@@ -22,7 +22,9 @@
       "Bash(python3 -c \"import sys,json; d=json.load\\(sys.stdin\\); print\\(''''screenshots:'''', bool\\(d.get\\(''''screenshots''''\\)\\)\\); print\\(''''shortcut icons:'''', bool\\(d[''''shortcuts''''][0].get\\(''''icons''''\\) if d.get\\(''''shortcuts''''\\) else False\\)\\)\")",
       "Bash(gh api:*)",
       "Bash(node -e \":*)",
-      "WebFetch(domain:www.tsebi.com.br)"
+      "WebFetch(domain:www.tsebi.com.br)",
+      "Bash(curl -s -X POST https://www.tsebi.com.br/api/shipping/quote -H \"Content-Type: application/json\" -d '{\"\"\"\"destinationZip\"\"\"\":\"\"\"\"01310100\"\"\"\"}')",
+      "Bash(find 'C:\\\\Users\\\\mathe\\\\OneDrive\\\\Área de Trabalho\\\\Curso de JS\\\\tsebi\\\\web-next\\\\src' -name *.tsx)"
     ]
   }
 }

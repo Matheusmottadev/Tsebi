@@ -4,7 +4,6 @@ import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 
 const HERO_VIDEO = "/videos/legacy/hero.mp4";
-const HERO_IMAGE = "/images/legacy/home/hero.jpg";
 
 export function LegacyHero() {
   const [isVideoReady, setIsVideoReady] = useState(false);
@@ -36,7 +35,6 @@ export function LegacyHero() {
         loop
         playsInline
         preload="none"
-        poster={HERO_IMAGE}
         onLoadedData={() => setIsVideoReady(true)}
         onCanPlay={() => setIsVideoReady(true)}
       />

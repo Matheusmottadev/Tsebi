@@ -110,6 +110,16 @@ body.faq-page-body .home-header {
   margin-top: var(--top-bar-height, 38px) !important;
 }
 
+/* FAQ mobile: keep header-row as containing block for the absolute-positioned logo.
+   On regular pages, only .home-header:not(.is-scrolled) .header-row gets position:relative,
+   but on FAQ the header is always static so is-scrolled can drop that rule, causing TSEBI
+   to escape the header and appear mid-page. */
+@media (max-width: 760px) {
+  body.faq-page-body .home-header .header-row {
+    position: relative;
+  }
+}
+
 body.faq-page-body #precisa-de-ajuda {
   scroll-margin-top: calc(var(--top-bar-height, 38px) + var(--header-height, 84px) + 20px) !important;
 }
