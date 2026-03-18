@@ -7,6 +7,8 @@ import { Drawer } from "./Drawer";
 import form from "./DrawerForms.module.css";
 import styles from "./DrawerEditarCupom.module.css";
 
+type CouponTypeValue = "percent" | "fixed" | "free_shipping";
+
 type DrawerEditarCupomProps = {
   isOpen: boolean;
   coupon: Coupon | null;
@@ -57,11 +59,13 @@ function randomCouponCode(): string {
 export function DrawerEditarCupom({ isOpen, coupon, onClose, onSaved }: DrawerEditarCupomProps) {
   const [originalCode, setOriginalCode] = useState("");
   const [code, setCode] = useState("");
-  const [type, setType] = useState<"percent" | "fixed">("percent");
+  const [type, setType] = useState<CouponTypeValue>("percent");
   const [discountValue, setDiscountValue] = useState("0");
   const [active, setActive] = useState(true);
   const [minSubtotal, setMinSubtotal] = useState("");
   const [maxDiscount, setMaxDiscount] = useState("");
+  const [maxUses, setMaxUses] = useState("0");
+  const [firstPurchaseOnly, setFirstPurchaseOnly] = useState(false);
   const [startsAt, setStartsAt] = useState("");
   const [expiresAt, setExpiresAt] = useState("");
   const [description, setDescription] = useState("");
@@ -72,13 +76,21 @@ export function DrawerEditarCupom({ isOpen, coupon, onClose, onSaved }: DrawerEd
     if (!isOpen || !coupon) return;
     setOriginalCode(String(coupon.code || ""));
     setCode(normalizeCode(String(coupon.code || "")));
-    setType(coupon.type === "fixed" ? "fixed" : "percent");
+    const couponType: CouponTypeValue =
+      coupon.type === "fixed" ? "fixed" : coupon.type === "free_shipping" ? "free_shipping" : "percent";
+    setType(couponType);
     setDiscountValue(
-      coupon.type === "fixed" ? String(Math.max(0, Number(coupon.amountOffCents || 0))) : String(Math.max(0, Number(coupon.percentOff || 0)))
+      couponType === "fixed"
+        ? String(Math.max(0, Number(coupon.amountOffCents || 0)))
+        : couponType === "free_shipping"
+          ? "0"
+          : String(Math.max(0, Number(coupon.percentOff || 0)))
     );
     setActive(Boolean(coupon.active));
     setMinSubtotal(String(Math.max(0, Number(coupon.minSubtotalCents || 0) || 0) || ""));
     setMaxDiscount(String(Math.max(0, Number(coupon.maxDiscountCents || 0) || 0) || ""));
+    setMaxUses(String(Math.max(0, Number(coupon.maxUses || 0) || 0)));
+    setFirstPurchaseOnly(Boolean(coupon.firstPurchaseOnly));
     setStartsAt(formatDateInput(String(coupon.startsAt || "")));
     setExpiresAt(formatDateInput(String(coupon.expiresAt || "")));
     setDescription(String(coupon.description || ""));
@@ -88,20 +100,31 @@ export function DrawerEditarCupom({ isOpen, coupon, onClose, onSaved }: DrawerEd
   const validationErrors = useMemo(() => {
     const errors: Record<string, string> = {};
     if (!String(code || "").trim()) errors.code = "Codigo obrigatorio.";
-    if (Number(discountValue || 0) <= 0) errors.discountValue = "Valor do desconto obrigatorio.";
+    if (type !== "free_shipping" && Number(discountValue || 0) <= 0) {
+      errors.discountValue = "Valor do desconto obrigatorio.";
+    }
     return errors;
-  }, [code, discountValue]);
+  }, [code, discountValue, type]);
 
   const hasErrors = Object.keys(validationErrors).length > 0;
 
   const previewText = useMemo(() => {
     const normalizedCode = String(code || "").trim() || "CUPOM";
-    const valueLabel = type === "percent" ? `${Math.max(0, Number(discountValue || 0))}% de desconto` : `${formatMoney(Math.max(0, Number(discountValue || 0)))} de desconto`;
+    let valueLabel: string;
+    if (type === "free_shipping") {
+      valueLabel = "frete grátis";
+    } else if (type === "percent") {
+      valueLabel = `${Math.max(0, Number(discountValue || 0))}% de desconto`;
+    } else {
+      valueLabel = `${formatMoney(Math.max(0, Number(discountValue || 0)))} de desconto`;
+    }
     const starts = startsAt ? new Date(startsAt).toLocaleDateString("pt-BR") : "agora";
     const ends = expiresAt ? new Date(expiresAt).toLocaleDateString("pt-BR") : "sem expiracao";
     const min = minSubtotal ? formatMoney(Number(minSubtotal || 0)) : "sem valor minimo";
-    return `Cupom ${normalizedCode} - ${valueLabel}\nValido de ${starts} ate ${ends}\nPedido minimo: ${min}`;
-  }, [code, discountValue, expiresAt, minSubtotal, startsAt, type]);
+    const usesLine = Number(maxUses || 0) > 0 ? `\nLimite de usos: ${maxUses}` : "";
+    const firstLine = firstPurchaseOnly ? "\nApenas primeira compra" : "";
+    return `Cupom ${normalizedCode} - ${valueLabel}\nValido de ${starts} ate ${ends}\nPedido minimo: ${min}${usesLine}${firstLine}`;
+  }, [code, discountValue, expiresAt, minSubtotal, startsAt, type, maxUses, firstPurchaseOnly]);
 
   async function handleSave() {
     if (!coupon) return;
@@ -122,6 +145,8 @@ export function DrawerEditarCupom({ isOpen, coupon, onClose, onSaved }: DrawerEd
         active,
         minSubtotalCents: minSubtotal ? Math.max(0, Number(minSubtotal || 0)) : 0,
         maxDiscountCents: type === "percent" && maxDiscount ? Math.max(0, Number(maxDiscount || 0)) : 0,
+        maxUses: Math.max(0, Math.floor(Number(maxUses || 0))),
+        firstPurchaseOnly,
         startsAt: parseDateInput(startsAt),
         expiresAt: parseDateInput(expiresAt),
         description: String(description || "").trim(),
@@ -175,22 +200,29 @@ export function DrawerEditarCupom({ isOpen, coupon, onClose, onSaved }: DrawerEd
           <div className={form.row2}>
             <div className={form.field}>
               <label className={form.label}>Tipo de desconto</label>
-              <select className={form.select} value={type} onChange={(event) => setType(event.target.value as "percent" | "fixed")}>
+              <select
+                className={form.select}
+                value={type}
+                onChange={(event) => { setType(event.target.value as CouponTypeValue); setDiscountValue("0"); }}
+              >
                 <option value="percent">Percentual %</option>
                 <option value="fixed">Valor fixo R$</option>
+                <option value="free_shipping">Frete grátis</option>
               </select>
             </div>
-            <div className={form.field}>
-              <label className={form.label}>Valor do desconto</label>
-              <input
-                className={`${form.input} ${validationErrors.discountValue ? styles.inputError : ""}`}
-                type="number"
-                min={0}
-                value={discountValue}
-                onChange={(event) => setDiscountValue(event.target.value)}
-              />
-              {validationErrors.discountValue ? <p className={styles.fieldError}>{validationErrors.discountValue}</p> : null}
-            </div>
+            {type !== "free_shipping" ? (
+              <div className={form.field}>
+                <label className={form.label}>Valor do desconto</label>
+                <input
+                  className={`${form.input} ${validationErrors.discountValue ? styles.inputError : ""}`}
+                  type="number"
+                  min={0}
+                  value={discountValue}
+                  onChange={(event) => setDiscountValue(event.target.value)}
+                />
+                {validationErrors.discountValue ? <p className={styles.fieldError}>{validationErrors.discountValue}</p> : null}
+              </div>
+            ) : null}
           </div>
 
           <div className={styles.switchRow}>
@@ -216,6 +248,32 @@ export function DrawerEditarCupom({ isOpen, coupon, onClose, onSaved }: DrawerEd
                 <input className={form.input} type="number" min={0} value={maxDiscount} onChange={(event) => setMaxDiscount(event.target.value)} />
               </div>
             ) : null}
+          </div>
+
+          <div className={form.row2}>
+            <div className={form.field}>
+              <label className={form.label}>Limite de usos (0 = ilimitado)</label>
+              <input
+                className={form.input}
+                type="number"
+                min={0}
+                step={1}
+                value={maxUses}
+                onChange={(event) => setMaxUses(event.target.value)}
+              />
+            </div>
+
+            <div className={form.field}>
+              <span className={form.label}>Apenas primeira compra</span>
+              <div className={styles.switchRow} style={{ marginTop: 6 }}>
+                <button
+                  type="button"
+                  className={`${styles.switchBtn} ${firstPurchaseOnly ? styles.switchBtnOn : ""}`}
+                  onClick={() => setFirstPurchaseOnly((value) => !value)}
+                />
+                <span style={{ marginLeft: 8, fontSize: 11 }}>{firstPurchaseOnly ? "Sim" : "Não"}</span>
+              </div>
+            </div>
           </div>
 
           <div className={form.row2}>

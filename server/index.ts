@@ -34,7 +34,7 @@ const {
   searchStorefrontSuggestions
 } = require("./lib/product-repository");
 const { checkAvailability, commitStock } = require("./lib/inventory-repository");
-const { evaluateAccessCode } = require("./lib/access-code-repository");
+const { evaluateAccessCode, incrementAccessCodeUsage } = require("./lib/access-code-repository");
 const { withTransaction } = require("./lib/db");
 const { logProductSearchEvent } = require("./lib/search-telemetry-repository");
 const {
@@ -1157,6 +1157,14 @@ async function processWebhookEvent(
       webhookContext.outcome = "order_updated";
       webhookContext.statusFrom = previousStatus;
       webhookContext.statusTo = "paid";
+
+      const orderShipping = (order as any)?.shipping;
+      const discountCodeUsed = orderShipping?.discountCode
+        ? String(orderShipping.discountCode).trim()
+        : "";
+      if (discountCodeUsed) {
+        await incrementAccessCodeUsage(discountCodeUsed).catch(() => null);
+      }
       const paymentIntent = stripeObject || {};
       const webhookMetaEventId = paymentIntentId
         ? `pi_${String(paymentIntentId)}_purchase`
@@ -2178,11 +2186,21 @@ app.post("/api/discount-codes/apply", async (req: any, res: any) => {
 
   if (!code) return res.status(400).json({ ok: false, error: "INVALID_CODE" });
 
+  let hasPreviousOrders = false;
+  const sessionUserId = req.session?.userId ? String(req.session.userId) : "";
+  if (sessionUserId) {
+    try {
+      const userOrders = await listOrdersByUserId(sessionUserId);
+      hasPreviousOrders = Array.isArray(userOrders) && userOrders.some((o: any) => String(o.status || "") === "paid");
+    } catch { /* ignore — non-critical check */ }
+  }
+
   try {
     const result = await evaluateAccessCode({
       code,
       subtotalCents,
-      shippingCents
+      shippingCents,
+      hasPreviousOrders
     });
 
     if (!result.ok) {
@@ -2198,7 +2216,8 @@ app.post("/api/discount-codes/apply", async (req: any, res: any) => {
       totalCents: result.totalCents,
       type: result.entry.type,
       percentOff: result.entry.percentOff,
-      amountOffCents: result.entry.amountOffCents
+      amountOffCents: result.entry.amountOffCents,
+      freeShipping: result.entry.type === "free_shipping"
     });
   } catch {
     return res.status(500).json({ ok: false, error: "ACCESS_CODE_EVALUATION_FAILED" });

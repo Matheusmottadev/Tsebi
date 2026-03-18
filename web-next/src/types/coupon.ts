@@ -1,4 +1,4 @@
-export type CouponType = "percent" | "fixed";
+export type CouponType = "percent" | "fixed" | "free_shipping";
 
 export interface Coupon {
   code: string;
@@ -7,6 +7,9 @@ export interface Coupon {
   amountOffCents: number;
   minSubtotalCents: number;
   maxDiscountCents: number;
+  maxUses: number;
+  usedCount: number;
+  firstPurchaseOnly: boolean;
   active: boolean;
   startsAt: string;
   expiresAt: string;
@@ -25,4 +28,5 @@ export interface CouponEvaluation {
   type: CouponType;
   percentOff: number;
   amountOffCents: number;
+  freeShipping?: boolean;
 }

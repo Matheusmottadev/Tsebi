@@ -294,7 +294,13 @@ export function CouponsManager({ initialCoupons, csrfToken }: CouponsManagerProp
           return (
             <article key={coupon.code} className={styles.item}>
               <div className={styles.itemHeader}>
-                <h4>{coupon.code}</h4>
+                <div>
+                  <h4>{coupon.code}</h4>
+                  <span className={styles.usageCount}>
+                    {coupon.usedCount ?? 0} uso{(coupon.usedCount ?? 0) !== 1 ? "s" : ""}
+                    {(coupon.maxUses ?? 0) > 0 ? ` / ${coupon.maxUses}` : " (ilimitado)"}
+                  </span>
+                </div>
                 <button type="button" className={styles.deleteButton} onClick={() => handleDelete(coupon.code)}>
                   Remover
                 </button>

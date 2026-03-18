@@ -468,6 +468,8 @@ function mapDiscountCodeErrorMessage(raw: string): string {
   if (normalized.includes("CODE_INACTIVE")) return "Código inativo.";
   if (normalized.includes("CODE_NOT_AVAILABLE_NOW")) return "Código fora do período de validade.";
   if (normalized.includes("CODE_NOT_APPLICABLE")) return "Código não aplicável para este carrinho.";
+  if (normalized.includes("CODE_MAX_USES_REACHED")) return "Este cupom atingiu o limite de usos.";
+  if (normalized.includes("FIRST_PURCHASE_ONLY")) return "Este cupom é válido apenas para a primeira compra.";
   return "";
 }
 
@@ -626,7 +628,11 @@ function persistCheckoutConfirmationSnapshot(snapshot: CheckoutConfirmationSnaps
   } catch {}
 }
 
-export function CheckoutClient() {
+type CheckoutClientProps = {
+  initialCoupon?: string;
+};
+
+export function CheckoutClient({ initialCoupon = "" }: CheckoutClientProps) {
   const router = useRouter();
   const checkoutEnabled = isCheckoutEnabled();
   const [stripePromise, setStripePromise] = useState<Promise<Stripe | null> | null>(null);
@@ -638,7 +644,10 @@ export function CheckoutClient() {
   const currency = useCartStore(cartSelectors.currency) || "brl";
   const replaceCartItems = useCartStore((state) => state.replaceItems);
 
-  const [form, setForm] = useState<CheckoutFormState>(INITIAL_FORM);
+  const [form, setForm] = useState<CheckoutFormState>(() => ({
+    ...INITIAL_FORM,
+    couponCode: normalizeDiscountCode(initialCoupon),
+  }));
   const [activeStep, setActiveStep] = useState<CheckoutStep>("address");
   const [completed, setCompleted] = useState<Record<CheckoutStep, boolean>>({
     address: false,
@@ -667,7 +676,7 @@ export function CheckoutClient() {
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<PaymentMethodChoice>("card");
   const [selectedInstallments, setSelectedInstallments] = useState(1);
   const [discountCents, setDiscountCents] = useState(0);
-  const [appliedCouponCode, setAppliedCouponCode] = useState("");
+  const [appliedCouponCode, setAppliedCouponCode] = useState(() => normalizeDiscountCode(initialCoupon));
   const [couponFeedback, setCouponFeedback] = useState("");
   const [couponFeedbackTone, setCouponFeedbackTone] = useState<CouponFeedbackTone>("");
   const [isApplyingCoupon, setIsApplyingCoupon] = useState(false);

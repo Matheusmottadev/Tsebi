@@ -89,6 +89,14 @@
   color: var(--studio-text);
 }
 
+.usageCount {
+  display: block;
+  margin-top: 2px;
+  font-size: 11px;
+  color: var(--studio-text-muted, #888);
+  letter-spacing: 0.02em;
+}
+
 .deleteButton {
   min-height: 34px;
   border-radius: 999px;

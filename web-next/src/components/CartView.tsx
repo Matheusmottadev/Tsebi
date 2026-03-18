@@ -19,8 +19,36 @@ const COUPON_ERROR_MESSAGES: Record<string, string> = {
   CODE_INACTIVE: "Este código está inativo.",
   CODE_NOT_AVAILABLE_NOW: "Código expirado ou ainda não disponível.",
   CODE_NOT_APPLICABLE: "Código não aplicável ao valor atual do carrinho.",
+  CODE_MAX_USES_REACHED: "Este cupom atingiu o limite de usos.",
+  FIRST_PURCHASE_ONLY: "Este cupom é válido apenas para a primeira compra.",
   ACCESS_CODE_EVALUATION_FAILED: "Erro ao validar o código. Tente novamente.",
 };
+
+const CART_COUPON_STORAGE_KEY = "tsebi_cart_coupon";
+
+function saveCouponToStorage(coupon: CouponEvaluation): void {
+  try {
+    sessionStorage.setItem(CART_COUPON_STORAGE_KEY, JSON.stringify(coupon));
+  } catch { /* ignore */ }
+}
+
+function loadCouponFromStorage(): CouponEvaluation | null {
+  try {
+    const raw = sessionStorage.getItem(CART_COUPON_STORAGE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    if (parsed && typeof parsed.code === "string" && typeof parsed.discountCents === "number") {
+      return parsed as CouponEvaluation;
+    }
+  } catch { /* ignore */ }
+  return null;
+}
+
+function clearCouponFromStorage(): void {
+  try {
+    sessionStorage.removeItem(CART_COUPON_STORAGE_KEY);
+  } catch { /* ignore */ }
+}
 
 function getVariantLabel(item: { variant: { variantName: string | null; color: string | null; size: string | null } }) {
   if (item.variant.variantName) return item.variant.variantName;
@@ -53,6 +81,21 @@ export function CartView() {
 
   const imageBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || "";
 
+  // Restore coupon from sessionStorage on first mount
+  useEffect(() => {
+    const saved = loadCouponFromStorage();
+    if (saved) {
+      setAppliedCoupon(saved);
+      setCouponCode(saved.code);
+      setCouponFeedback({
+        type: "success",
+        message: saved.freeShipping
+          ? `Cupom de frete grátis aplicado (${saved.code}).`
+          : `Cupom aplicado! Desconto de R$ ${(saved.discountCents / 100).toFixed(2).replace(".", ",")}.`,
+      });
+    }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
   useEffect(() => {
     let isMounted = true;
 
@@ -81,6 +124,7 @@ export function CartView() {
       prevSubtotalRef.current = subtotal;
       if (appliedCoupon) {
         setAppliedCoupon(null);
+        clearCouponFromStorage();
         setCouponFeedback({ type: "error", message: "Carrinho alterado — reaplique o cupom." });
       }
     }
@@ -97,7 +141,11 @@ export function CartView() {
     try {
       const result = await applyDiscountCode(code, { subtotalCents: subtotal });
       setAppliedCoupon(result);
-      setCouponFeedback({ type: "success", message: `Cupom aplicado! Desconto de R$ ${(result.discountCents / 100).toFixed(2).replace(".", ",")}.` });
+      saveCouponToStorage(result);
+      const successMsg = result.freeShipping
+        ? `Cupom de frete grátis aplicado! O desconto será aplicado no checkout.`
+        : `Cupom aplicado! Desconto de R$ ${(result.discountCents / 100).toFixed(2).replace(".", ",")}.`;
+      setCouponFeedback({ type: "success", message: successMsg });
     } catch (err) {
       setAppliedCoupon(null);
       let errorCode = "UNKNOWN";
@@ -116,6 +164,7 @@ export function CartView() {
     setAppliedCoupon(null);
     setCouponCode("");
     setCouponFeedback(null);
+    clearCouponFromStorage();
   }
 
   if (!hasHydrated) {
@@ -226,18 +275,26 @@ export function CartView() {
         {appliedCoupon ? (
           <div className={styles.summaryLine}>
             <span>Desconto ({appliedCoupon.code})</span>
-            <Price amountCents={-appliedCoupon.discountCents} currency={currency} className={styles.summaryDiscount} />
+            {appliedCoupon.freeShipping ? (
+              <strong className={styles.summaryDiscount}>Frete grátis</strong>
+            ) : (
+              <Price amountCents={-appliedCoupon.discountCents} currency={currency} className={styles.summaryDiscount} />
+            )}
           </div>
         ) : null}
         <div className={styles.summaryLine}>
           <span>Entrega</span>
-          <strong>A calcular</strong>
+          <strong>{appliedCoupon?.freeShipping ? <span className={styles.summaryDiscount}>Grátis</span> : "A calcular"}</strong>
         </div>
         <div className={styles.summaryDivider} />
         <div className={styles.summaryTotal}>
           <span>Total</span>
           <Price
-            amountCents={appliedCoupon ? Math.max(0, subtotal - appliedCoupon.discountCents) : subtotal}
+            amountCents={
+              appliedCoupon && !appliedCoupon.freeShipping
+                ? Math.max(0, subtotal - appliedCoupon.discountCents)
+                : subtotal
+            }
             currency={currency}
             className={styles.summaryTotalValue}
           />
@@ -277,7 +334,10 @@ export function CartView() {
         </div>
 
         {checkoutEnabled ? (
-          <Link href="/checkout" className={styles.primaryAction}>
+          <Link
+            href={appliedCoupon ? `/checkout?coupon=${encodeURIComponent(appliedCoupon.code)}` : "/checkout"}
+            className={styles.primaryAction}
+          >
             Finalizar compra
           </Link>
         ) : (

@@ -225,11 +225,13 @@ export interface ListCouponsAdminResponse {
 
 export interface UpsertCouponAdminPayload {
   code: string;
-  type?: "percent" | "fixed";
+  type?: "percent" | "fixed" | "free_shipping";
   percentOff?: number;
   amountOffCents?: number;
   minSubtotalCents?: number;
   maxDiscountCents?: number;
+  maxUses?: number;
+  firstPurchaseOnly?: boolean;
   active?: boolean;
   startsAt?: string;
   expiresAt?: string;

@@ -16,8 +16,14 @@ export const metadata: Metadata = {
   },
 };
 
-export default function CheckoutPage() {
+export default async function CheckoutPage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
   const checkoutEnabled = isCheckoutEnabled();
+  const resolved = await searchParams;
+  const initialCoupon = String(resolved?.coupon || "").trim().toUpperCase();
 
   if (!checkoutEnabled) {
     return (
@@ -39,7 +45,7 @@ export default function CheckoutPage() {
   return (
     <div className={styles.page}>
       <main className={styles.main}>
-        <CheckoutClient />
+        <CheckoutClient initialCoupon={initialCoupon} />
       </main>
     </div>
   );

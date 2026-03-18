@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { ChevronDown, ChevronUp, RefreshCw } from "lucide-react";
 import { useMemo, useState } from "react";
@@ -22,6 +22,8 @@ function randomCouponCode() {
   return Math.random().toString(36).slice(2, 10).toUpperCase();
 }
 
+type CouponTypeValue = "percent" | "fixed" | "free_shipping";
+
 type DrawerNovoCupomProps = {
   isOpen: boolean;
   onClose: () => void;
@@ -30,13 +32,15 @@ type DrawerNovoCupomProps = {
 
 export function DrawerNovoCupom({ isOpen, onClose, onSaved }: DrawerNovoCupomProps) {
   const [code, setCode] = useState("");
-  const [type, setType] = useState<"percent" | "fixed">("percent");
+  const [type, setType] = useState<CouponTypeValue>("percent");
   const [discount, setDiscount] = useState("");
   const [active, setActive] = useState(true);
 
   const [optionalOpen, setOptionalOpen] = useState(false);
   const [minSubtotal, setMinSubtotal] = useState("");
   const [maxDiscount, setMaxDiscount] = useState("");
+  const [maxUses, setMaxUses] = useState("");
+  const [firstPurchaseOnly, setFirstPurchaseOnly] = useState(false);
   const [startsAt, setStartsAt] = useState("");
   const [expiresAt, setExpiresAt] = useState("");
   const [description, setDescription] = useState("");
@@ -47,6 +51,7 @@ export function DrawerNovoCupom({ isOpen, onClose, onSaved }: DrawerNovoCupomPro
   const requiredValid = useMemo(() => {
     const trimmedCode = code.trim();
     if (trimmedCode.length < 3) return false;
+    if (type === "free_shipping") return true;
     if (type === "percent") return parsePercent(discount) > 0;
     return parseMoneyToCents(discount) > 0;
   }, [code, discount, type]);
@@ -63,7 +68,7 @@ export function DrawerNovoCupom({ isOpen, onClose, onSaved }: DrawerNovoCupomPro
       if (value <= 0 || value > 100) {
         nextErrors.discount = "Use um percentual entre 1 e 100.";
       }
-    } else {
+    } else if (type === "fixed") {
       const cents = parseMoneyToCents(discount);
       if (cents <= 0) {
         nextErrors.discount = "Informe um valor fixo maior que zero.";
@@ -87,16 +92,18 @@ export function DrawerNovoCupom({ isOpen, onClose, onSaved }: DrawerNovoCupomPro
         code: code.trim().toUpperCase(),
         type,
         active,
+        firstPurchaseOnly,
       };
 
       if (type === "percent") {
         payload.percentOff = Math.round(parsePercent(discount));
-      } else {
+      } else if (type === "fixed") {
         payload.amountOffCents = parseMoneyToCents(discount);
       }
 
       if (minSubtotal.trim()) payload.minSubtotalCents = parseMoneyToCents(minSubtotal);
       if (maxDiscount.trim()) payload.maxDiscountCents = parseMoneyToCents(maxDiscount);
+      if (maxUses.trim()) payload.maxUses = Math.max(0, Math.floor(Number(maxUses) || 0));
       if (startsAt.trim()) payload.startsAt = startsAt;
       if (expiresAt.trim()) payload.expiresAt = expiresAt;
       if (description.trim()) payload.description = description.trim();
@@ -112,6 +119,8 @@ export function DrawerNovoCupom({ isOpen, onClose, onSaved }: DrawerNovoCupomPro
       setOptionalOpen(false);
       setMinSubtotal("");
       setMaxDiscount("");
+      setMaxUses("");
+      setFirstPurchaseOnly(false);
       setStartsAt("");
       setExpiresAt("");
       setDescription("");
@@ -164,26 +173,29 @@ export function DrawerNovoCupom({ isOpen, onClose, onSaved }: DrawerNovoCupomPro
               id="coupon-type"
               className={form.select}
               value={type}
-              onChange={(event) => setType(event.target.value as "percent" | "fixed")}
+              onChange={(event) => { setType(event.target.value as CouponTypeValue); setDiscount(""); }}
             >
               <option value="percent">Percentual %</option>
               <option value="fixed">Valor fixo R$</option>
+              <option value="free_shipping">Frete grátis</option>
             </select>
           </div>
 
-          <div className={form.field}>
-            <label className={form.label} htmlFor="coupon-value">
-              Valor do desconto
-            </label>
-            <input
-              id="coupon-value"
-              className={`${form.input} ${errors.discount ? form.inputError : ""}`}
-              value={discount}
-              onChange={(event) => setDiscount(event.target.value)}
-              placeholder={type === "percent" ? "10" : "1500"}
-            />
-            {errors.discount ? <p className={form.error}>{errors.discount}</p> : null}
-          </div>
+          {type !== "free_shipping" ? (
+            <div className={form.field}>
+              <label className={form.label} htmlFor="coupon-value">
+                Valor do desconto
+              </label>
+              <input
+                id="coupon-value"
+                className={`${form.input} ${errors.discount ? form.inputError : ""}`}
+                value={discount}
+                onChange={(event) => setDiscount(event.target.value)}
+                placeholder={type === "percent" ? "10" : "1500"}
+              />
+              {errors.discount ? <p className={form.error}>{errors.discount}</p> : null}
+            </div>
+          ) : null}
         </div>
 
         <div className={form.field}>
@@ -221,17 +233,50 @@ export function DrawerNovoCupom({ isOpen, onClose, onSaved }: DrawerNovoCupomPro
                   />
                 </div>
 
+                {type !== "free_shipping" ? (
+                  <div className={form.field}>
+                    <label className={form.label} htmlFor="coupon-maxDiscount">
+                      Limite máximo de desconto
+                    </label>
+                    <input
+                      id="coupon-maxDiscount"
+                      className={form.input}
+                      value={maxDiscount}
+                      onChange={(event) => setMaxDiscount(event.target.value)}
+                      placeholder="0"
+                    />
+                  </div>
+                ) : null}
+              </div>
+
+              <div className={form.row2}>
                 <div className={form.field}>
-                  <label className={form.label} htmlFor="coupon-maxDiscount">
-                    Limite máximo de desconto
+                  <label className={form.label} htmlFor="coupon-maxUses">
+                    Limite de usos (0 = ilimitado)
                   </label>
                   <input
-                    id="coupon-maxDiscount"
+                    id="coupon-maxUses"
                     className={form.input}
-                    value={maxDiscount}
-                    onChange={(event) => setMaxDiscount(event.target.value)}
+                    type="number"
+                    min={0}
+                    step={1}
+                    value={maxUses}
+                    onChange={(event) => setMaxUses(event.target.value)}
                     placeholder="0"
                   />
+                </div>
+
+                <div className={form.field}>
+                  <span className={form.label}>Apenas primeira compra</span>
+                  <span className={form.switch}>
+                    <button
+                      type="button"
+                      className={firstPurchaseOnly ? form.switchOn : ""}
+                      onClick={() => setFirstPurchaseOnly((current) => !current)}
+                      aria-label="Alternar primeira compra"
+                    />
+                    {firstPurchaseOnly ? "Sim" : "Não"}
+                  </span>
                 </div>
               </div>
 
@@ -282,4 +327,3 @@ export function DrawerNovoCupom({ isOpen, onClose, onSaved }: DrawerNovoCupomPro
     </Drawer>
   );
 }
-
