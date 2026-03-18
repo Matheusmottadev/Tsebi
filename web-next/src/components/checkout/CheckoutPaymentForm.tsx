@@ -2,8 +2,15 @@
 
 import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { CardCvcElement, CardExpiryElement, CardNumberElement, PaymentElement, useElements, useStripe } from "@stripe/react-stripe-js";
-import type { StripeCardCvcElementChangeEvent, StripeCardExpiryElementChangeEvent, StripeCardNumberElementChangeEvent, StripePaymentElementChangeEvent } from "@stripe/stripe-js";
+import { CardCvcElement, CardExpiryElement, CardNumberElement, ExpressCheckoutElement, PaymentElement, useElements, useStripe } from "@stripe/react-stripe-js";
+import type {
+  StripeCardCvcElementChangeEvent,
+  StripeCardExpiryElementChangeEvent,
+  StripeCardNumberElementChangeEvent,
+  StripeExpressCheckoutElementConfirmEvent,
+  StripeExpressCheckoutElementReadyEvent,
+  StripePaymentElementChangeEvent,
+} from "@stripe/stripe-js";
 import { useCartStore } from "@/lib/cart/cartStore";
 import styles from "./CheckoutPaymentForm.module.css";
 
@@ -12,7 +19,7 @@ type CheckoutPaymentFormProps = {
   customerEmail: string;
   clientSecret: string;
   paymentMethodOrder?: string[];
-  mode?: "card" | "payment" | "boleto";
+  mode?: "card" | "payment" | "boleto" | "wallet";
   billingNameDefault?: string;
   billingTaxId?: string;
   billingAddress?: {
@@ -90,6 +97,7 @@ export function CheckoutPaymentForm({
   const submitPaymentRef = useRef<() => Promise<boolean>>(async () => false);
   const isCardMode = mode === "card";
   const isBoletoMode = mode === "boleto";
+  const isWalletMode = mode === "wallet";
   const normalizedPaymentMethodOrder = useMemo(
     () => (Array.isArray(paymentMethodOrder) ? paymentMethodOrder.filter(Boolean) : []),
     [paymentMethodOrder]
@@ -115,6 +123,42 @@ export function CheckoutPaymentForm({
         googlePay: normalizedPaymentMethodOrder.includes("google_pay") ? ("auto" as const) : ("never" as const),
       },
       paymentMethodOrder: normalizedPaymentMethodOrder
+    }),
+    [normalizedPaymentMethodOrder]
+  );
+  const expressCheckoutOptions = useMemo(
+    () => ({
+      buttonHeight: 48,
+      layout: {
+        maxColumns: 1 as const,
+        maxRows: 1 as const,
+        overflow: "never" as const,
+      },
+      buttonTheme: {
+        applePay: "black" as const,
+        googlePay: "black" as const,
+      },
+      buttonType: {
+        applePay: "check-out" as const,
+        googlePay: "checkout" as const,
+      },
+      paymentMethodOrder: normalizedPaymentMethodOrder,
+      paymentMethods: {
+        applePay: normalizedPaymentMethodOrder.includes("apple_pay") ? ("always" as const) : ("never" as const),
+        googlePay: normalizedPaymentMethodOrder.includes("google_pay") ? ("always" as const) : ("never" as const),
+        link: "never" as const,
+        paypal: "never" as const,
+        amazonPay: "never" as const,
+        klarna: "never" as const,
+      },
+      wallets: {
+        applePay: normalizedPaymentMethodOrder.includes("apple_pay") ? ("always" as const) : ("never" as const),
+        googlePay: normalizedPaymentMethodOrder.includes("google_pay") ? ("always" as const) : ("never" as const),
+      },
+      emailRequired: false,
+      phoneNumberRequired: false,
+      shippingAddressRequired: false,
+      billingAddressRequired: false,
     }),
     [normalizedPaymentMethodOrder]
   );
@@ -162,11 +206,15 @@ export function CheckoutPaymentForm({
     ? cardNumberReady && cardExpiryReady && cardCvcReady && Boolean(stripe) && Boolean(elements)
     : isBoletoMode
       ? Boolean(stripe)
+      : isWalletMode
+        ? paymentElementReady && Boolean(stripe) && Boolean(elements)
       : paymentElementReady && Boolean(stripe) && Boolean(elements);
   const paymentComplete = isCardMode
     ? cardNumberComplete && cardExpiryComplete && cardCvcComplete && billingName.trim().length >= 3
     : isBoletoMode
       ? Boolean(String(billingNameDefault || "").trim() && String(customerEmail || "").trim() && String(billingTaxId || "").trim())
+      : isWalletMode
+        ? paymentElementReady
       : paymentElementComplete;
 
   useEffect(() => {
@@ -189,6 +237,24 @@ export function CheckoutPaymentForm({
     if (previousCompleteRef.current !== complete) {
       previousCompleteRef.current = complete;
       console.info("[checkout] PaymentElement completion changed", { complete });
+    }
+  }
+
+  function handleExpressCheckoutReady(event: StripeExpressCheckoutElementReadyEvent) {
+    const preferredWallet = normalizedPaymentMethodOrder[0];
+    const available = event.availablePaymentMethods;
+    const isAvailable =
+      preferredWallet === "apple_pay"
+        ? Boolean(available?.applePay)
+        : preferredWallet === "google_pay"
+          ? Boolean(available?.googlePay)
+          : false;
+
+    setPaymentElementReady(isAvailable);
+    if (!isAvailable) {
+      setErrorMessage("A carteira digital selecionada nao esta disponivel neste dispositivo.");
+    } else {
+      setErrorMessage("");
     }
   }
 
@@ -261,6 +327,15 @@ export function CheckoutPaymentForm({
                 },
               },
             })
+        : isWalletMode
+          ? await stripe.confirmPayment({
+              elements,
+              confirmParams: {
+                return_url: successUrl,
+                receipt_email: customerEmail || undefined,
+              },
+              redirect: "if_required",
+            })
         : await stripe.confirmPayment({
             elements,
             confirmParams: {
@@ -328,6 +403,7 @@ export function CheckoutPaymentForm({
     successPath,
     isCardMode,
     isBoletoMode,
+    isWalletMode,
     paymentComplete,
     paymentReady,
   ]);
@@ -335,12 +411,31 @@ export function CheckoutPaymentForm({
 
   useEffect(() => {
     if (!onSubmitActionChange) return;
+    if (isWalletMode) {
+      onSubmitActionChange(null);
+      return () => {
+        onSubmitActionChange(null);
+      };
+    }
     const registeredAction = () => submitPaymentRef.current();
     onSubmitActionChange({ fn: registeredAction });
     return () => {
       onSubmitActionChange(null);
     };
-  }, [onSubmitActionChange]);
+  }, [isWalletMode, onSubmitActionChange]);
+
+  const handleExpressCheckoutConfirm = useCallback(
+    async (event: StripeExpressCheckoutElementConfirmEvent) => {
+      const confirmed = await submitPaymentRef.current();
+      if (!confirmed) {
+        event.paymentFailed({
+          reason: "fail",
+          message: "Nao foi possivel confirmar o pagamento.",
+        });
+      }
+    },
+    []
+  );
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -396,7 +491,17 @@ export function CheckoutPaymentForm({
               </div>
             </label>
           </div>
-        ) : isBoletoMode ? null : (
+        ) : isBoletoMode ? null : isWalletMode ? (
+          <ExpressCheckoutElement
+            options={expressCheckoutOptions}
+            onReady={handleExpressCheckoutReady}
+            onLoadError={() => {
+              setPaymentElementReady(false);
+              setErrorMessage("Nao foi possivel carregar a carteira digital. Atualize a pagina e tente novamente.");
+            }}
+            onConfirm={handleExpressCheckoutConfirm}
+          />
+        ) : (
           <PaymentElement
             options={paymentElementOptions}
             onReady={() => {

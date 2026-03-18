@@ -1731,6 +1731,9 @@ export function CheckoutClient({ initialCoupon = "" }: CheckoutClientProps) {
         setErrorMessage("Preencha os dados obrigatórios antes de revisar o pedido.");
         return;
       }
+    } else if (selectedPaymentMethod === "wallet") {
+      setErrorMessage("Use o botao da carteira digital para concluir o pagamento.");
+      return;
     } else if (!paymentElementState.ready || !paymentElementState.complete) {
       setErrorMessage("Preencha os dados de pagamento antes de revisar o pedido.");
       return;
@@ -2244,24 +2247,33 @@ export function CheckoutClient({ initialCoupon = "" }: CheckoutClientProps) {
                   >
                     <span className={styles.paymentOptionContent}>
                       <span className={styles.paymentOptionIcon} aria-hidden style={{ width: 22, height: 22 }}>
-                        <svg viewBox="0 0 18 18" width="18" height="18" style={{ display: "block" }}>
-                          <path
-                            style={{ fill: "#4285F4" }}
-                            d="M17.64 9.2045c0-.638-.0573-1.2518-.1636-1.8409H9v3.4818h4.8436c-.2086 1.125-.8427 2.0782-1.7959 2.7164v2.2582h2.9086c1.7023-1.5668 2.6837-3.8741 2.6837-6.6155z"
-                          />
-                          <path
-                            style={{ fill: "#34A853" }}
-                            d="M9 18c2.43 0 4.4673-.8068 5.9564-2.18l-2.9086-2.2582c-.8068.54-1.8409.8591-3.0477.8591-2.3432 0-4.3282-1.5818-5.0364-3.7091H.9573v2.3318C2.4382 15.9832 5.4818 18 9 18z"
-                          />
-                          <path
-                            style={{ fill: "#FBBC05" }}
-                            d="M3.9636 10.7118c-.18-.54-.2836-1.1168-.2836-1.7118s.1036-1.1718.2836-1.7118V4.9564H.9573C.3477 6.1718 0 7.5491 0 9s.3477 2.8282.9573 4.0436l3.0063-2.3318z"
-                          />
-                          <path
-                            style={{ fill: "#EA4335" }}
-                            d="M9 3.5795c1.3214 0 2.5077.4541 3.4405 1.345l2.5814-2.5814C13.4632.8918 11.4264 0 9 0 5.4818 0 2.4382 2.0168.9573 4.9564l3.0063 2.3318C4.6718 5.1618 6.6568 3.5795 9 3.5795z"
-                          />
-                        </svg>
+                        {walletVariant === "apple_pay" ? (
+                          <svg viewBox="0 0 24 24" width="20" height="20" style={{ display: "block" }}>
+                            <path
+                              fill="#111111"
+                              d="M16.365 12.225c-.03-2.33 1.902-3.446 1.99-3.5-1.09-1.593-2.785-1.812-3.39-1.838-1.428-.151-2.815.854-3.543.854-.744 0-1.867-.84-3.074-.816-1.57.024-3.039.932-3.845 2.34-1.668 2.89-.424 7.135 1.176 9.472.8 1.145 1.734 2.422 2.957 2.376 1.197-.05 1.645-.763 3.09-.763 1.431 0 1.852.763 3.1.734 1.284-.02 2.092-1.149 2.864-2.305.924-1.313 1.294-2.608 1.308-2.674-.03-.011-2.498-.954-2.593-3.88Zm-2.323-6.304c.644-.804 1.086-1.896.964-3.008-.933.041-2.1.645-2.772 1.431-.595.69-1.127 1.823-.99 2.892 1.049.078 2.124-.53 2.798-1.315Z"
+                            />
+                          </svg>
+                        ) : (
+                          <svg viewBox="0 0 18 18" width="18" height="18" style={{ display: "block" }}>
+                            <path
+                              style={{ fill: "#4285F4" }}
+                              d="M17.64 9.2045c0-.638-.0573-1.2518-.1636-1.8409H9v3.4818h4.8436c-.2086 1.125-.8427 2.0782-1.7959 2.7164v2.2582h2.9086c1.7023-1.5668 2.6837-3.8741 2.6837-6.6155z"
+                            />
+                            <path
+                              style={{ fill: "#34A853" }}
+                              d="M9 18c2.43 0 4.4673-.8068 5.9564-2.18l-2.9086-2.2582c-.8068.54-1.8409.8591-3.0477.8591-2.3432 0-4.3282-1.5818-5.0364-3.7091H.9573v2.3318C2.4382 15.9832 5.4818 18 9 18z"
+                            />
+                            <path
+                              style={{ fill: "#FBBC05" }}
+                              d="M3.9636 10.7118c-.18-.54-.2836-1.1168-.2836-1.7118s.1036-1.1718.2836-1.7118V4.9564H.9573C.3477 6.1718 0 7.5491 0 9s.3477 2.8282.9573 4.0436l3.0063-2.3318z"
+                            />
+                            <path
+                              style={{ fill: "#EA4335" }}
+                              d="M9 3.5795c1.3214 0 2.5077.4541 3.4405 1.345l2.5814-2.5814C13.4632.8918 11.4264 0 9 0 5.4818 0 2.4382 2.0168.9573 4.9564l3.0063 2.3318C4.6718 5.1618 6.6568 3.5795 9 3.5795z"
+                            />
+                          </svg>
+                        )}
                       </span>
                       <span className={styles.paymentOptionLabel}>{walletDisplayName}</span>
                     </span>
@@ -2349,7 +2361,7 @@ export function CheckoutClient({ initialCoupon = "" }: CheckoutClientProps) {
                       customerEmail={intent.customerEmail || checkoutEmail}
                       clientSecret={intent.clientSecret}
                       paymentMethodOrder={stripePaymentMethodOrder}
-                      mode="payment"
+                      mode="wallet"
                       onElementStateChange={setPaymentElementState}
                       onSubmitActionChange={setSubmitPaymentAction}
                       showSubmitButton={false}
@@ -2358,7 +2370,7 @@ export function CheckoutClient({ initialCoupon = "" }: CheckoutClientProps) {
                 </div>
               ) : null}
 
-              {activeStep === "payment" ? (
+              {activeStep === "payment" && selectedPaymentMethod !== "wallet" ? (
                 <button
                   type="button"
                   className={`${styles.primaryAction} ${styles.paymentPrimaryAction}`}
