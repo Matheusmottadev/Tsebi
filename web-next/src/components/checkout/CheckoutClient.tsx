@@ -1731,9 +1731,6 @@ export function CheckoutClient({ initialCoupon = "" }: CheckoutClientProps) {
         setErrorMessage("Preencha os dados obrigatórios antes de revisar o pedido.");
         return;
       }
-    } else if (selectedPaymentMethod === "wallet") {
-      setErrorMessage("Use o botao da carteira digital para concluir o pagamento.");
-      return;
     } else if (!paymentElementState.ready || !paymentElementState.complete) {
       setErrorMessage("Preencha os dados de pagamento antes de revisar o pedido.");
       return;
@@ -2350,27 +2347,7 @@ export function CheckoutClient({ initialCoupon = "" }: CheckoutClientProps) {
                 {!stripeLoading && !stripeConfigured ? <p className={styles.stepHint}>Pagamento indisponivel no momento.</p> : null}
               </div>
 
-              {selectedPaymentMethod === "wallet" && intent?.clientSecret && stripePromise ? (
-                <div
-                  className={activeStep === "payment" ? styles.securePaymentBox : styles.hiddenPaymentHost}
-                  aria-hidden={activeStep !== "payment"}
-                >
-                  <Elements stripe={stripePromise} options={elementsOptions}>
-                    <CheckoutPaymentForm
-                      orderId={intent.orderId}
-                      customerEmail={intent.customerEmail || checkoutEmail}
-                      clientSecret={intent.clientSecret}
-                      paymentMethodOrder={stripePaymentMethodOrder}
-                      mode="wallet"
-                      onElementStateChange={setPaymentElementState}
-                      onSubmitActionChange={setSubmitPaymentAction}
-                      showSubmitButton={false}
-                    />
-                  </Elements>
-                </div>
-              ) : null}
-
-              {activeStep === "payment" && selectedPaymentMethod !== "wallet" ? (
+              {activeStep === "payment" ? (
                 <button
                   type="button"
                   className={`${styles.primaryAction} ${styles.paymentPrimaryAction}`}
@@ -2429,19 +2406,36 @@ export function CheckoutClient({ initialCoupon = "" }: CheckoutClientProps) {
                 </div>
               </article>
 
-              <button
-                type="button"
-                className={styles.primaryAction}
-                onClick={handleReviewSubmit}
-                disabled={
-                  isCreatingIntent ||
-                  stripeLoading ||
-                  !stripeConfigured ||
-                  (selectedPaymentMethod !== "boleto" && !submitPaymentAction)
-                }
-              >
-                {isCreatingIntent ? "Preparando pagamento..." : "Confirmar pedido"}
-              </button>
+              {selectedPaymentMethod === "wallet" && intent?.clientSecret && stripePromise ? (
+                <div className={styles.securePaymentBox}>
+                  <Elements stripe={stripePromise} options={elementsOptions}>
+                    <CheckoutPaymentForm
+                      orderId={intent.orderId}
+                      customerEmail={intent.customerEmail || checkoutEmail}
+                      clientSecret={intent.clientSecret}
+                      paymentMethodOrder={stripePaymentMethodOrder}
+                      mode="wallet"
+                      onElementStateChange={setPaymentElementState}
+                      onSubmitActionChange={setSubmitPaymentAction}
+                      showSubmitButton={false}
+                    />
+                  </Elements>
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  className={styles.primaryAction}
+                  onClick={handleReviewSubmit}
+                  disabled={
+                    isCreatingIntent ||
+                    stripeLoading ||
+                    !stripeConfigured ||
+                    (selectedPaymentMethod !== "boleto" && !submitPaymentAction)
+                  }
+                >
+                  {isCreatingIntent ? "Preparando pagamento..." : "Confirmar pedido"}
+                </button>
+              )}
 
               <p className={styles.termsText}>
                 Ao confirmar, você concorda com os <a href="/aviso-legal">Termos e condições</a> e com a{" "}
