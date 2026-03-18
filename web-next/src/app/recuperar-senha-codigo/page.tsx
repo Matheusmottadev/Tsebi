@@ -2,6 +2,6 @@
 
 import { PasswordRecoveryFlow } from "@/components/auth/PasswordRecoveryFlow";
 
-export default function RecuperarSenhaPage() {
+export default function RecuperarSenhaCodigoPage() {
   return <PasswordRecoveryFlow />;
 }
