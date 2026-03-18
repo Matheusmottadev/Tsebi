@@ -2412,7 +2412,10 @@ export function CheckoutClient({ initialCoupon = "" }: CheckoutClientProps) {
               </article>
 
               {selectedPaymentMethod === "wallet" && intent?.clientSecret && stripePromise ? (
-                <div className={styles.securePaymentBox}>
+                <div
+                  className={activeStep === "review" ? styles.securePaymentBox : styles.hiddenPaymentHost}
+                  aria-hidden={activeStep !== "review"}
+                >
                   <Elements stripe={stripePromise} options={elementsOptions}>
                     <CheckoutPaymentForm
                       orderId={intent.orderId}
