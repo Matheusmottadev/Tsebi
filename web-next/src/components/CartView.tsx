@@ -1,14 +1,26 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { ProductImage } from "@/components/ProductImage";
 import { Price } from "@/components/Price";
 import { ContinueShoppingLink } from "@/components/ContinueShoppingLink";
 import { cartSelectors, useCartStore } from "@/lib/cart/cartStore";
 import { isCheckoutEnabled } from "@/lib/env";
+import { HttpError } from "@/lib/http";
 import { getMe } from "@/services/auth";
+import { applyDiscountCode } from "@/services/coupons";
+import type { CouponEvaluation } from "@/types";
 import styles from "./CartView.module.css";
+
+const COUPON_ERROR_MESSAGES: Record<string, string> = {
+  INVALID_CODE: "Código inválido.",
+  CODE_NOT_FOUND: "Código não encontrado.",
+  CODE_INACTIVE: "Este código está inativo.",
+  CODE_NOT_AVAILABLE_NOW: "Código expirado ou ainda não disponível.",
+  CODE_NOT_APPLICABLE: "Código não aplicável ao valor atual do carrinho.",
+  ACCESS_CODE_EVALUATION_FAILED: "Erro ao validar o código. Tente novamente.",
+};
 
 function getVariantLabel(item: { variant: { variantName: string | null; color: string | null; size: string | null } }) {
   if (item.variant.variantName) return item.variant.variantName;
@@ -34,6 +46,10 @@ export function CartView() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [accountName, setAccountName] = useState("");
   const [couponCode, setCouponCode] = useState("");
+  const [isApplyingCoupon, setIsApplyingCoupon] = useState(false);
+  const [couponFeedback, setCouponFeedback] = useState<{ type: "success" | "error"; message: string } | null>(null);
+  const [appliedCoupon, setAppliedCoupon] = useState<CouponEvaluation | null>(null);
+  const prevSubtotalRef = useRef(subtotal);
 
   const imageBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || "";
 
@@ -58,6 +74,49 @@ export function CartView() {
       isMounted = false;
     };
   }, []);
+
+  // Limpa cupom aplicado se o subtotal mudar (itens adicionados/removidos)
+  useEffect(() => {
+    if (prevSubtotalRef.current !== subtotal) {
+      prevSubtotalRef.current = subtotal;
+      if (appliedCoupon) {
+        setAppliedCoupon(null);
+        setCouponFeedback({ type: "error", message: "Carrinho alterado — reaplique o cupom." });
+      }
+    }
+  }, [subtotal, appliedCoupon]);
+
+  async function handleApplyCoupon() {
+    const code = couponCode.trim().toUpperCase();
+    if (!code) {
+      setCouponFeedback({ type: "error", message: "Digite um código para aplicar." });
+      return;
+    }
+    setIsApplyingCoupon(true);
+    setCouponFeedback(null);
+    try {
+      const result = await applyDiscountCode(code, { subtotalCents: subtotal });
+      setAppliedCoupon(result);
+      setCouponFeedback({ type: "success", message: `Cupom aplicado! Desconto de R$ ${(result.discountCents / 100).toFixed(2).replace(".", ",")}.` });
+    } catch (err) {
+      setAppliedCoupon(null);
+      let errorCode = "UNKNOWN";
+      if (err instanceof HttpError) {
+        const payload = err.payload as Record<string, unknown> | null;
+        errorCode = String(payload?.error || "UNKNOWN");
+      }
+      const message = COUPON_ERROR_MESSAGES[errorCode] ?? "Não foi possível aplicar o código.";
+      setCouponFeedback({ type: "error", message });
+    } finally {
+      setIsApplyingCoupon(false);
+    }
+  }
+
+  function handleRemoveCoupon() {
+    setAppliedCoupon(null);
+    setCouponCode("");
+    setCouponFeedback(null);
+  }
 
   if (!hasHydrated) {
     return (
@@ -164,6 +223,12 @@ export function CartView() {
           <span>Subtotal</span>
           <Price amountCents={subtotal} currency={currency} className={styles.summaryValue} />
         </div>
+        {appliedCoupon ? (
+          <div className={styles.summaryLine}>
+            <span>Desconto ({appliedCoupon.code})</span>
+            <Price amountCents={-appliedCoupon.discountCents} currency={currency} className={styles.summaryDiscount} />
+          </div>
+        ) : null}
         <div className={styles.summaryLine}>
           <span>Entrega</span>
           <strong>A calcular</strong>
@@ -171,7 +236,11 @@ export function CartView() {
         <div className={styles.summaryDivider} />
         <div className={styles.summaryTotal}>
           <span>Total</span>
-          <Price amountCents={subtotal} currency={currency} className={styles.summaryTotalValue} />
+          <Price
+            amountCents={appliedCoupon ? Math.max(0, subtotal - appliedCoupon.discountCents) : subtotal}
+            currency={currency}
+            className={styles.summaryTotalValue}
+          />
         </div>
 
         <div className={styles.coupon}>
@@ -185,13 +254,26 @@ export function CartView() {
               name="couponCode"
               type="text"
               value={couponCode}
-              onChange={(event) => setCouponCode(event.target.value)}
+              onChange={(e) => { setCouponCode(e.target.value); setCouponFeedback(null); }}
+              onKeyDown={(e) => { if (e.key === "Enter") handleApplyCoupon(); }}
               placeholder="Insira seu código"
+              disabled={isApplyingCoupon || Boolean(appliedCoupon)}
             />
-            <button type="button" className={styles.couponButton}>
-              Aplicar
-            </button>
+            {appliedCoupon ? (
+              <button type="button" className={styles.couponButton} onClick={handleRemoveCoupon}>
+                Remover
+              </button>
+            ) : (
+              <button type="button" className={styles.couponButton} onClick={handleApplyCoupon} disabled={isApplyingCoupon}>
+                {isApplyingCoupon ? "..." : "Aplicar"}
+              </button>
+            )}
           </div>
+          {couponFeedback ? (
+            <p className={couponFeedback.type === "success" ? styles.couponSuccess : styles.couponError}>
+              {couponFeedback.message}
+            </p>
+          ) : null}
         </div>
 
         {checkoutEnabled ? (

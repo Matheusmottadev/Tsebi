@@ -298,6 +298,38 @@
   color: #111;
 }
 
+.couponButton:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.couponInput:disabled {
+  opacity: 0.6;
+}
+
+.couponSuccess {
+  margin: 7px 0 0;
+  font-family: "Jost", sans-serif;
+  font-size: 11px;
+  font-weight: 300;
+  letter-spacing: 0.04em;
+  color: #2a7a4b;
+}
+
+.couponError {
+  margin: 7px 0 0;
+  font-family: "Jost", sans-serif;
+  font-size: 11px;
+  font-weight: 300;
+  letter-spacing: 0.04em;
+  color: #b94040;
+}
+
+.summaryDiscount {
+  color: #2a7a4b;
+  font-size: 13px;
+}
+
 .primaryAction {
   width: 100%;
   display: inline-flex;
