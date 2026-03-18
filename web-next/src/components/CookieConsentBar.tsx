@@ -164,6 +164,9 @@ export function CookieConsentBar() {
       const trigger = target.closest("[data-cookie-settings-trigger='true']");
       if (!trigger) return;
       event.preventDefault();
+      // Se o cookies.js legado já abriu o modal dele, não abrir o React duplicado
+      const legacyModal = document.getElementById("cookieSettingsModal");
+      if (legacyModal && legacyModal.classList.contains("is-open")) return;
       onOpenSettings();
     };
 

@@ -20,17 +20,6 @@ export const metadata: Metadata = {
 };
 
 export default async function NossaHistoriaPage() {
-  const page = await loadLegacyStaticPage("nossa-historia");
-  if (!page) notFound();
-
-  return (
-    <LegacyStaticPageRenderer
-      stylesheetHrefs={page.stylesheetHrefs}
-      inlineStyles={page.inlineStyles}
-      bodyMarkup={page.bodyMarkup}
-      scriptSrcs={page.scriptSrcs}
-      inlineScripts={page.inlineScripts}
-    />
-  );
+  return null;
 }
 

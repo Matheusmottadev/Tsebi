@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { getMe } from "@/services/auth";
 
 type LegacyFooterProps = {
   variant?: "dark" | "light";
@@ -10,7 +11,19 @@ type LegacyFooterProps = {
 export function LegacyFooter({ variant = "dark" }: LegacyFooterProps) {
   const footerClassName = variant === "light" ? "site-footer site-footer--light" : "site-footer";
   const [openSections, setOpenSections] = useState<Record<string, boolean>>({});
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
   const whatsappHref = "https://wa.me/5511918596632?text=Ol%C3%A1%21%20Preciso%20de%20ajuda%20com%20meu%20pedido%20ou%20produto%20da%20Tsebi.";
+  const trackOrderHref = isAuthenticated ? "/account" : "/login";
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const user = await getMe({ cache: "no-store" }).catch(() => null);
+      if (cancelled) return;
+      setIsAuthenticated(Boolean(user));
+    })();
+    return () => { cancelled = true; };
+  }, []);
 
   function toggleSection(section: string) {
     setOpenSections((current) => ({
@@ -108,9 +121,6 @@ export function LegacyFooter({ variant = "dark" }: LegacyFooterProps) {
               </Link>
               <a href="tel:+5511918596632">Fale conosco pelo telefone (11) 91859-6632</a>
               <Link href="/faq">FAQ</Link>
-              <Link href="/" prefetch={false}>
-                Mapa do site
-              </Link>
             </div>
           </div>
         </section>
@@ -128,10 +138,11 @@ export function LegacyFooter({ variant = "dark" }: LegacyFooterProps) {
           <div className="footer-accordion-body">
             <div className="footer-accordion-content">
               <Link href="/processos">Serviços Tsebi</Link>
-              <Link href="/order" data-link-key="track-order">
+              <Link href={trackOrderHref}>
                 Acompanhe seu pedido
               </Link>
-              <Link href="/faq">Devoluções</Link>
+              <Link href="/faq#entrega-e-devolucoes">Entregas e devoluções</Link>
+              <Link href="/faq#servicos-e-reparos">Reparos e cuidados</Link>
             </div>
           </div>
         </section>

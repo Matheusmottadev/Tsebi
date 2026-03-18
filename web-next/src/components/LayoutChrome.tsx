@@ -30,12 +30,15 @@ export function LayoutChrome({ children }: LayoutChromeProps) {
   const shouldHideForLegacyAdminLogin =
     normalizedPath === "/login/admin" || normalizedPath === "/login/admin/login";
   const shouldHideCheckoutConfirmation = normalizedPath === "/checkout/confirmation";
+  const shouldHideForLoadingScreens =
+    normalizedPath === "/loading-careers" || normalizedPath === "/loading-studio";
   const shouldBypassChrome =
     shouldHideForAdmin ||
     shouldHideForLogin ||
     shouldHideForPasswordRecovery ||
     shouldHideForAdminLogin ||
-    shouldHideForLegacyAdminLogin;
+    shouldHideForLegacyAdminLogin ||
+    shouldHideForLoadingScreens;
   const shouldRenderHeader =
     !ROUTES_WITHOUT_GLOBAL_HEADER.has(currentPath) &&
     !shouldHideForStudio &&
