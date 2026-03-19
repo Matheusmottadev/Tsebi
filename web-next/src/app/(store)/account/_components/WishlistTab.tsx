@@ -136,7 +136,9 @@ export function WishlistTab() {
                 onClick={() => handleRemove(item.id)}
                 aria-label="Remover da lista"
               >
-                x
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M12 20.4l-1.16-1.05C6.14 15.09 3 12.24 3 8.75 3 5.98 5.15 4 7.75 4c1.52 0 2.98.72 3.92 1.92A5.05 5.05 0 0 1 15.59 4C18.19 4 20.34 5.98 20.34 8.75c0 3.49-3.14 6.34-7.84 10.6L12 20.4z" />
+                </svg>
               </button>
             </div>
             <p className={styles.wishName}>{item.name}</p>

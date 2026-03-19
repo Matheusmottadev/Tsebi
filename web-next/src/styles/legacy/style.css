@@ -1638,22 +1638,24 @@ body.menu-open::before {
   top: 12px;
   right: 12px;
   z-index: 2;
-  width: 32px;
-  height: 32px;
+  width: 28px;
+  height: 28px;
   border: none;
-  border-radius: 999px;
-  background: rgba(255,255,255,.92);
+  border-radius: 0;
+  background: transparent;
   color: #111;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  transition: background .2s ease, transform .2s ease;
+  padding: 0;
+  transition: opacity .2s ease, transform .2s ease;
 }
 
 .personalized-favorite svg{
-  width: 16px;
-  height: 16px;
+  width: 20px;
+  height: 20px;
+  filter: drop-shadow(0 1px 2px rgba(255,255,255,.45));
 }
 
 .personalized-favorite path{
@@ -1665,12 +1667,13 @@ body.menu-open::before {
 }
 
 .personalized-favorite:hover{
-  background: #fff;
   transform: translateY(-1px);
+  opacity: .88;
 }
 
 .personalized-favorite.is-active path{
-  fill: #111;
+  fill: #c8102e;
+  stroke: #c8102e;
 }
 
 .category-card{
@@ -1863,10 +1866,27 @@ body.menu-open::before {
   border: none;
   background: transparent;
   outline: none;
-  height: 42px;
-  font-size: 18px;
+  height: 38px;
+  font-size: 14px;
+  line-height: 1.2;
+  padding: 0;
   font-family: 'Montserrat', sans-serif;
   color: #fff;
+}
+
+.newsletter-input-row input::placeholder {
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.newsletter-input-row input:-webkit-autofill,
+.newsletter-input-row input:-webkit-autofill:hover,
+.newsletter-input-row input:-webkit-autofill:focus,
+.newsletter-input-row input:-webkit-autofill:active {
+  -webkit-text-fill-color: #fff;
+  -webkit-box-shadow: 0 0 0 1000px transparent inset;
+  box-shadow: 0 0 0 1000px transparent inset;
+  transition: background-color 9999s ease-in-out 0s;
+  caret-color: #fff;
 }
 
 .newsletter-input-row button {
@@ -3893,26 +3913,33 @@ body.newsletter-popup-open{
 
 .product-favorite-btn{
   position: absolute;
-  top: 10px;
-  right: 10px;
-  width: 34px;
-  height: 34px;
-  border: 1px solid #111;
-  border-radius: 50%;
-  background: rgba(255, 255, 255, 0.9);
+  top: 12px;
+  right: 12px;
+  width: 28px;
+  height: 28px;
+  border: none;
+  border-radius: 0;
+  background: transparent;
   color: #111;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  font-size: 19px;
+  font-size: 20px;
   line-height: 1;
   cursor: pointer;
   z-index: 4;
+  padding: 0;
+  transition: opacity .2s ease, transform .2s ease;
+}
+
+.product-favorite-btn:hover{
+  transform: translateY(-1px);
+  opacity: .88;
 }
 
 .product-favorite-btn.is-active{
-  background: #111;
-  color: #fff;
+  background: transparent;
+  color: #c8102e;
 }
 
 @media (max-width: 1180px){
@@ -6792,6 +6819,7 @@ body:not(.home-page) .home-header.product-mode .product-search-trigger svg {
   fill: none;
   stroke: currentColor;
   stroke-width: 1.5;
+  filter: drop-shadow(0 1px 2px rgba(255, 255, 255, 0.45));
 }
 
 .tsebi-search-reco-fav.is-active svg{
