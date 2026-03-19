@@ -34,12 +34,12 @@ function toFavoriteMap(ids: string[]): Record<string, boolean> {
 function ProductsSearchCard({
   item,
   isFavorite,
-  loadingFavorites,
+  isPending,
   onFavoriteClick,
 }: {
   item: ProductsSearchGridItem;
   isFavorite: boolean;
-  loadingFavorites: boolean;
+  isPending: boolean;
   onFavoriteClick: () => void;
 }) {
   const images = item.images.length > 0 ? item.images : [""];
@@ -79,9 +79,7 @@ function ProductsSearchCard({
     touchStartYRef.current = null;
     if (isHorizontalRef.current && Math.abs(deltaX) > 30) {
       isSwipingRef.current = true;
-      setActiveIndex((prev) =>
-        deltaX < 0 ? Math.min(prev + 1, images.length - 1) : Math.max(prev - 1, 0)
-      );
+      setActiveIndex((prev) => (deltaX < 0 ? Math.min(prev + 1, images.length - 1) : Math.max(prev - 1, 0)));
     }
     isHorizontalRef.current = null;
   };
@@ -94,14 +92,12 @@ function ProductsSearchCard({
   };
 
   return (
-    <article
-      className={`${styles.productsTightCard} ${item.isEditorial ? styles.productsTightCardEditorial : ""}`}
-    >
+    <article className={`${styles.productsTightCard} ${item.isEditorial ? styles.productsTightCardEditorial : ""}`}>
       <button
         type="button"
         className={`${styles.productsTightFavorite} ${isFavorite ? styles.productsTightFavoriteActive : ""}`}
         aria-label={isFavorite ? "Remover dos favoritos" : "Adicionar aos favoritos"}
-        disabled={loadingFavorites}
+        aria-busy={isPending}
         onClick={onFavoriteClick}
       >
         <svg viewBox="0 0 24 24" aria-hidden="true">
@@ -154,6 +150,7 @@ export function ProductsSearchGrid({ items }: { items: ProductsSearchGridItem[] 
   const [favoriteMap, setFavoriteMap] = useState<Record<string, boolean>>({});
   const [csrfToken, setCsrfToken] = useState("");
   const [loadingFavorites, setLoadingFavorites] = useState(false);
+  const [pendingFavoriteId, setPendingFavoriteId] = useState("");
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [notice, setNotice] = useState("");
   const [hidingNotice, setHidingNotice] = useState(false);
@@ -213,7 +210,7 @@ export function ProductsSearchGrid({ items }: { items: ProductsSearchGridItem[] 
               key={item.key}
               item={item}
               isFavorite={isFavorite}
-              loadingFavorites={loadingFavorites}
+              isPending={pendingFavoriteId === item.id}
               onFavoriteClick={async () => {
                 if (!isLoggedIn) {
                   setNotice("Voce precisa estar logado para adicionar favoritos.");
@@ -223,7 +220,7 @@ export function ProductsSearchGrid({ items }: { items: ProductsSearchGridItem[] 
                 const previousMap = favoriteMap;
                 const nextMap = { ...favoriteMap, [item.id]: !isFavorite };
                 setFavoriteMap(nextMap);
-                setLoadingFavorites(true);
+                setPendingFavoriteId(item.id);
 
                 try {
                   const nextFavorites = Object.keys(nextMap).filter((id) => Boolean(nextMap[id]));
@@ -250,7 +247,7 @@ export function ProductsSearchGrid({ items }: { items: ProductsSearchGridItem[] 
                     setNotice("Sua sessao expirou. Faca login novamente para favoritar.");
                   }
                 } finally {
-                  setLoadingFavorites(false);
+                  setPendingFavoriteId("");
                 }
               }}
             />

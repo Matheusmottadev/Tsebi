@@ -39,12 +39,12 @@ function toFavoriteMap(ids: string[]): Record<string, boolean> {
 function NovidadesCard({
   tile,
   isFavorite,
-  loadingFavorites,
+  isPending,
   onFavoriteClick,
 }: {
   tile: NovidadesGridTile;
   isFavorite: boolean;
-  loadingFavorites: boolean;
+  isPending: boolean;
   onFavoriteClick: () => void;
 }) {
   const hasMultipleImages = Boolean(tile.secondaryImage && tile.secondaryImage !== tile.image);
@@ -84,9 +84,7 @@ function NovidadesCard({
     touchStartYRef.current = null;
     if (isHorizontalRef.current && Math.abs(deltaX) > 30) {
       isSwipingRef.current = true;
-      setActiveIndex((prev) =>
-        deltaX < 0 ? Math.min(prev + 1, images.length - 1) : Math.max(prev - 1, 0)
-      );
+      setActiveIndex((prev) => (deltaX < 0 ? Math.min(prev + 1, images.length - 1) : Math.max(prev - 1, 0)));
     }
     isHorizontalRef.current = null;
   };
@@ -99,14 +97,12 @@ function NovidadesCard({
   };
 
   return (
-    <article
-      className={`${styles.novidadesCard} ${tile.variant === "large" ? styles.novidadesCardLarge : ""}`}
-    >
+    <article className={`${styles.novidadesCard} ${tile.variant === "large" ? styles.novidadesCardLarge : ""}`}>
       <button
         type="button"
         className={`${styles.novidadesFavoriteBtn} ${isFavorite ? styles.novidadesFavoriteBtnActive : ""}`}
         aria-label={isFavorite ? "Remover dos favoritos" : "Adicionar aos favoritos"}
-        disabled={loadingFavorites}
+        aria-busy={isPending}
         onClick={onFavoriteClick}
       >
         <svg viewBox="0 0 24 24" aria-hidden="true">
@@ -131,11 +127,15 @@ function NovidadesCard({
             height={1200}
             className={`${styles.novidadesImage} ${i === 0 ? styles.novidadesImagePrimary : styles.novidadesImageSecondary} ${i === activeIndex ? styles.novidadesImageActive : ""}`}
             unoptimized
-            onError={i > 0 ? (event) => {
-              const element = event.currentTarget;
-              element.onerror = null;
-              element.src = tile.image || "/images/placeholderreal.webp";
-            } : undefined}
+            onError={
+              i > 0
+                ? (event) => {
+                    const element = event.currentTarget;
+                    element.onerror = null;
+                    element.src = tile.image || "/images/placeholderreal.webp";
+                  }
+                : undefined
+            }
           />
         ))}
 
@@ -163,6 +163,7 @@ export function NovidadesGrid({ tiles }: NovidadesGridProps) {
   const [favoriteMap, setFavoriteMap] = useState<Record<string, boolean>>({});
   const [csrfToken, setCsrfToken] = useState("");
   const [loadingFavorites, setLoadingFavorites] = useState(false);
+  const [pendingFavoriteId, setPendingFavoriteId] = useState("");
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [notice, setNotice] = useState("");
   const [hidingNotice, setHidingNotice] = useState(false);
@@ -222,17 +223,17 @@ export function NovidadesGrid({ tiles }: NovidadesGridProps) {
               key={tile.key}
               tile={tile}
               isFavorite={isFavorite}
-              loadingFavorites={loadingFavorites}
+              isPending={pendingFavoriteId === tile.id}
               onFavoriteClick={async () => {
                 if (!isLoggedIn) {
-                  setNotice("Você precisa estar logado para adicionar favoritos.");
+                  setNotice("Voce precisa estar logado para adicionar favoritos.");
                   return;
                 }
 
                 const previousMap = favoriteMap;
                 const nextMap = { ...favoriteMap, [tile.id]: !isFavorite };
                 setFavoriteMap(nextMap);
-                setLoadingFavorites(true);
+                setPendingFavoriteId(tile.id);
 
                 try {
                   const nextFavorites = Object.keys(nextMap).filter((id) => Boolean(nextMap[id]));
@@ -256,10 +257,10 @@ export function NovidadesGrid({ tiles }: NovidadesGridProps) {
                   setFavoriteMap(previousMap);
                   if (error instanceof HttpError && (error.status === 401 || error.status === 403)) {
                     setIsLoggedIn(false);
-                    setNotice("Sua sessão expirou. Faça login novamente para favoritar.");
+                    setNotice("Sua sessao expirou. Faca login novamente para favoritar.");
                   }
                 } finally {
-                  setLoadingFavorites(false);
+                  setPendingFavoriteId("");
                 }
               }}
             />

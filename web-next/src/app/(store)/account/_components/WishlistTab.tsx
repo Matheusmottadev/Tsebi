@@ -1,8 +1,11 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useState } from "react";
-import { del, get } from "@/lib/http";
 import styles from "../account.module.css";
+import { getFavorites, updateFavorites } from "@/services/auth";
+import { listProducts } from "@/services/products";
+import type { Product } from "@/types";
 
 interface WishlistItem {
   id: string;
@@ -11,11 +14,6 @@ interface WishlistItem {
   price: number;
   imageUrl?: string | null;
   currency?: string;
-}
-
-interface WishlistResponse {
-  items?: WishlistItem[];
-  wishlist?: WishlistItem[];
 }
 
 function formatBRL(cents: number): string {
@@ -37,26 +35,74 @@ function resolveWishlistImageSrc(imageUrl?: string | null): string | null {
   return `/${raw.replace(/^\.?\//, "")}`;
 }
 
+function resolveWishlistItem(product: Product): WishlistItem | null {
+  const id = String(product.sku || product.id || "").trim();
+  if (!id) return null;
+
+  return {
+    id,
+    productId: String(product.id || id).trim(),
+    name: String(product.name || "Produto Tsebi"),
+    price: Number(product.unitAmount || 0),
+    imageUrl: String(product.image || "").trim() || null,
+    currency: String(product.currency || "BRL"),
+  };
+}
+
 export function WishlistTab() {
   const [items, setItems] = useState<WishlistItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
 
   useEffect(() => {
-    get<WishlistResponse>("/api/wishlist")
-      .then((res) => {
-        setItems(res.items ?? res.wishlist ?? []);
-      })
-      .catch(() => setError(true))
-      .finally(() => setLoading(false));
+    let cancelled = false;
+
+    const run = async () => {
+      try {
+        const favoritesResponse = await getFavorites({ cache: "no-store" });
+        const favoriteIds = Array.isArray(favoritesResponse.favorites) ? favoritesResponse.favorites : [];
+
+        if (favoriteIds.length === 0) {
+          if (!cancelled) setItems([]);
+          return;
+        }
+
+        const products = await listProducts({ recentIds: favoriteIds });
+        if (cancelled) return;
+
+        const productMap = new Map<string, WishlistItem>();
+        products.forEach((product) => {
+          const item = resolveWishlistItem(product);
+          if (!item) return;
+          productMap.set(item.id, item);
+        });
+
+        const orderedItems = favoriteIds
+          .map((favoriteId) => productMap.get(String(favoriteId || "").trim()) || null)
+          .filter((item): item is WishlistItem => Boolean(item));
+
+        setItems(orderedItems);
+      } catch {
+        if (!cancelled) setError(true);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    };
+
+    void run();
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const handleRemove = async (id: string) => {
-    setItems((prev) => prev.filter((item) => item.id !== id));
+    const previousItems = items;
+    const nextItems = previousItems.filter((item) => item.id !== id);
+    setItems(nextItems);
     try {
-      await del(`/api/wishlist/${encodeURIComponent(id)}`);
+      await updateFavorites(nextItems.map((item) => item.id));
     } catch {
-      // optimistic update; skip revert for now
+      setItems(previousItems);
     }
   };
 
@@ -65,8 +111,8 @@ export function WishlistTab() {
   if (error || !items.length) {
     return (
       <div className={styles.emptyState}>
-        <p className={styles.emptyTitle}>Sua lista de desejos está vazia</p>
-        <p className={styles.emptyDesc}>Adicione peças favoritas para salvá-las aqui.</p>
+        <p className={styles.emptyTitle}>Sua lista de desejos esta vazia</p>
+        <p className={styles.emptyDesc}>Adicione pecas favoritas para salva-las aqui.</p>
       </div>
     );
   }
@@ -79,7 +125,11 @@ export function WishlistTab() {
         return (
           <div key={item.id} className={styles.wishCard}>
             <div className={styles.wishImgWrap}>
-              {imageSrc ? <img src={imageSrc} alt={item.name} className={styles.recImg} loading="lazy" /> : null}
+              {imageSrc ? (
+                <Link href={`/product/${encodeURIComponent(item.id)}`} aria-label={`Ver ${item.name}`}>
+                  <img src={imageSrc} alt={item.name} className={styles.recImg} loading="lazy" />
+                </Link>
+              ) : null}
               <button
                 type="button"
                 className={styles.wishRemove}
@@ -95,9 +145,9 @@ export function WishlistTab() {
               <button type="button" className={`${styles.btnPill} ${styles.btnPillFilled} ${styles.btnSmall}`}>
                 Adicionar ao carrinho
               </button>
-              <button type="button" className={`${styles.btnPill} ${styles.btnSmall}`}>
+              <Link href={`/product/${encodeURIComponent(item.id)}`} className={`${styles.btnPill} ${styles.btnSmall}`}>
                 Ver produto
-              </button>
+              </Link>
             </div>
           </div>
         );

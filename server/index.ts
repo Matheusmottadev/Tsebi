@@ -1819,7 +1819,13 @@ app.get("/api/products/recent", async (req: any, res: any) => {
     if (!ids.length) return res.json({ products: [] });
 
     const products = await listProducts();
-    const byId = new Map(products.map((item: any) => [String(item.id), item]));
+    const byId = new Map();
+    products.forEach((item: any) => {
+      const productId = String(item?.id || "").trim();
+      const productSku = String(item?.sku || "").trim();
+      if (productId) byId.set(productId, item);
+      if (productSku) byId.set(productSku, item);
+    });
     const unique: any[] = [];
     const seen = new Set();
     ids.forEach((id: any) => {

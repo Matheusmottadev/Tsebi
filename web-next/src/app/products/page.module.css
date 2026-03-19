@@ -327,9 +327,9 @@
   stroke: #111;
 }
 
-.productsTightFavorite:disabled {
-  opacity: 0.5;
-  cursor: wait;
+.productsTightFavorite[aria-busy="true"] {
+  opacity: 0.72;
+  cursor: pointer;
 }
 
 .productsTightMedia {
