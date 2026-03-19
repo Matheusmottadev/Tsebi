@@ -272,9 +272,9 @@ export function DrawerEditarPedido({ isOpen, order, onClose, onSaved }: DrawerEd
 
   const validationErrors = useMemo(() => {
     const errors: Record<string, string> = {};
-    if (!String(fullName || "").trim()) errors.fullName = "Nome obrigatorio.";
-    if (!String(email || "").trim()) errors.email = "E-mail obrigatorio.";
-    if (!String(status || "").trim()) errors.status = "Status obrigatorio.";
+    if (!String(fullName || "").trim()) errors.fullName = "Nome obrigatório.";
+    if (!String(email || "").trim()) errors.email = "E-mail obrigatório.";
+    if (!String(status || "").trim()) errors.status = "Status obrigatório.";
     if (items.length === 0) errors.items = "Pedido precisa ter pelo menos um item.";
     return errors;
   }, [email, fullName, items.length, status]);
@@ -318,7 +318,7 @@ export function DrawerEditarPedido({ isOpen, order, onClose, onSaved }: DrawerEd
   async function handleSave() {
     if (!order) return;
     if (hasErrors) {
-      setError("Revise os campos obrigatorios.");
+      setError("Revise os campos obrigatórios.");
       return;
     }
 

@@ -47,7 +47,7 @@ export default async function StudioVipPage({ searchParams }: StudioVipPageProps
   } catch (error) {
     if (error instanceof HttpError) {
       if (error.status === 500) {
-        errorMessage = "Banco VIP não configurado no backend.";
+        errorMessage = "Não foi possível carregar a lista VIP. Tente novamente.";
       } else {
         errorMessage = error.message || "Falha ao carregar lista VIP.";
       }

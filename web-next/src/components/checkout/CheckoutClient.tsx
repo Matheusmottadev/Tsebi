@@ -433,20 +433,20 @@ function collectRequiredFieldErrors(
   requiresGuestEmail: boolean
 ): CheckoutFieldErrors {
   const errors: CheckoutFieldErrors = {};
-  if (requiresGuestEmail && !isValidEmail(form.guestEmail)) errors.guestEmail = "Email obrigatorio.";
-  if (!String(form.firstName || "").trim()) errors.firstName = "Nome obrigatorio.";
-  if (!String(form.lastName || "").trim()) errors.lastName = "Sobrenome obrigatorio.";
-  if (normalizePhoneDdd(form.phoneDdd).length !== 2) errors.phoneDdd = "DDD obrigatorio.";
-  if (normalizePhoneNumber(form.phoneNumber).length < 8) errors.phoneNumber = "Numero obrigatorio.";
-  if (normalizeCpf(form.cpf).length !== 11) errors.cpf = "CPF obrigatorio.";
-  if (!normalizePostalCode(form.postalCode)) errors.postalCode = "CEP obrigatorio.";
-  if (!addressResolved) errors.postalCode = "Encontre o EndereÃ§o pelo CEP.";
+  if (requiresGuestEmail && !isValidEmail(form.guestEmail)) errors.guestEmail = "E-mail obrigatório.";
+  if (!String(form.firstName || "").trim()) errors.firstName = "Nome obrigatório.";
+  if (!String(form.lastName || "").trim()) errors.lastName = "Sobrenome obrigatório.";
+  if (normalizePhoneDdd(form.phoneDdd).length !== 2) errors.phoneDdd = "DDD obrigatório.";
+  if (normalizePhoneNumber(form.phoneNumber).length < 8) errors.phoneNumber = "Número obrigatório.";
+  if (normalizeCpf(form.cpf).length !== 11) errors.cpf = "CPF obrigatório.";
+  if (!normalizePostalCode(form.postalCode)) errors.postalCode = "CEP obrigatório.";
+  if (!addressResolved) errors.postalCode = "Encontre o endereço pelo CEP.";
   if (addressResolved) {
-    if (!String(form.line1 || "").trim()) errors.line1 = "Rua obrigatoria.";
-    if (!String(form.district || "").trim()) errors.district = "Bairro obrigatorio.";
-    if (!String(form.city || "").trim()) errors.city = "Cidade obrigatoria.";
-    if (!normalizeState(form.state)) errors.state = "UF obrigatoria.";
-    if (!String(form.number || "").trim()) errors.number = "Numero obrigatorio.";
+    if (!String(form.line1 || "").trim()) errors.line1 = "Rua obrigatória.";
+    if (!String(form.district || "").trim()) errors.district = "Bairro obrigatório.";
+    if (!String(form.city || "").trim()) errors.city = "Cidade obrigatória.";
+    if (!normalizeState(form.state)) errors.state = "UF obrigatória.";
+    if (!String(form.number || "").trim()) errors.number = "Número obrigatório.";
   }
   return errors;
 }
@@ -975,7 +975,7 @@ export function CheckoutClient({ initialCoupon = "" }: CheckoutClientProps) {
           prefillCpf = normalizeCpf(String(prefill?.cpf || ""));
           prefillFullName = String(prefill?.fullName || "").trim();
         } catch {
-          // Fallback para dados bÃ¡sicos da conta quando o endpoint de prefill nÃ£o responder.
+          // Fallback para dados básicos da conta quando o endpoint de prefill não responder.
         }
 
         const accountPhone = normalizePhone(String((user as { phone?: string })?.phone || ""));
@@ -1129,7 +1129,7 @@ export function CheckoutClient({ initialCoupon = "" }: CheckoutClientProps) {
 
     try {
       const response = await fetch(`https://viacep.com.br/ws/${cep}/json/`, { method: "GET", cache: "force-cache" });
-      if (!response.ok) throw new Error("NÃ£o foi possÃ­vel consultar o CEP.");
+      if (!response.ok) throw new Error("Não foi possível consultar o CEP.");
       const payload = (await response.json()) as {
         erro?: boolean;
         logradouro?: string;
@@ -1138,7 +1138,7 @@ export function CheckoutClient({ initialCoupon = "" }: CheckoutClientProps) {
         uf?: string;
       };
 
-      if (payload?.erro) throw new Error("CEP nÃ£o encontrado.");
+      if (payload?.erro) throw new Error("CEP não encontrado.");
 
       setForm((current) => ({
         ...current,
@@ -1153,12 +1153,12 @@ export function CheckoutClient({ initialCoupon = "" }: CheckoutClientProps) {
         await loadShippingQuotes(cep);
       } catch (shippingError: unknown) {
         const shippingMessage =
-          shippingError instanceof Error ? shippingError.message : "NÃ£o foi possÃ­vel carregar os fretes.";
-        setErrorMessage(`EndereÃ§o encontrado. ${shippingMessage}`);
+          shippingError instanceof Error ? shippingError.message : "Não foi possível carregar os fretes.";
+        setErrorMessage(`Endereço encontrado. ${shippingMessage}`);
       }
     } catch (error: unknown) {
       setIsAddressResolved(false);
-      const message = error instanceof Error ? error.message : "Erro ao encontrar EndereÃ§o.";
+      const message = error instanceof Error ? error.message : "Não foi possível encontrar o endereço.";
       setErrorMessage(message);
     } finally {
       setIsFindingAddress(false);
@@ -1221,7 +1221,7 @@ export function CheckoutClient({ initialCoupon = "" }: CheckoutClientProps) {
     if (String(quote.serviceCode || "").trim().toLowerCase() === "company_emergency") return "Chegara hoje";
     const days = quote.deadlineDays == null ? null : Math.max(0, Number(quote.deadlineDays || 0));
     if (!days || days <= 0) return "Prazo sob consulta";
-    return days === 1 ? "Entrega estimada em 1 dia util" : `Entrega estimada em ${days} dias Ãºteis`;
+    return days === 1 ? "Entrega estimada em 1 dia útil" : `Entrega estimada em ${days} dias úteis`;
   }
 
   async function loadShippingQuotes(destinationZipRaw: string): Promise<ShippingQuote[]> {
@@ -1316,7 +1316,7 @@ export function CheckoutClient({ initialCoupon = "" }: CheckoutClientProps) {
   function handleUseSavedAddress() {
     const selected = accountAddresses.find((address) => address.id === selectedSavedAddressId);
     if (!selected) {
-      setErrorMessage("Selecione um EndereÃ§o salvo.");
+      setErrorMessage("Selecione um endereço salvo.");
       return;
     }
 
@@ -1333,7 +1333,7 @@ export function CheckoutClient({ initialCoupon = "" }: CheckoutClientProps) {
     setIsAddressResolved(true);
     setErrorMessage("");
     loadShippingQuotes(selected.cep).catch((error: unknown) => {
-      const message = error instanceof Error ? error.message : "NÃ£o foi possÃ­vel carregar os fretes.";
+      const message = error instanceof Error ? error.message : "Não foi possível carregar os fretes.";
       setErrorMessage(message);
     });
   }
@@ -1378,7 +1378,7 @@ export function CheckoutClient({ initialCoupon = "" }: CheckoutClientProps) {
     setIsSavingAddress(true);
     try {
       const result = await addAddress({
-        label: "EndereÃ§o principal",
+        label: "Endereço principal",
         fullName: fullName || "Cliente TSEBI",
         cep: normalizePostalCode(form.postalCode),
         street: String(form.line1 || "").trim(),
@@ -1405,7 +1405,7 @@ export function CheckoutClient({ initialCoupon = "" }: CheckoutClientProps) {
       nextSet.add(nextFingerprint);
       setSavedAddressFingerprints(nextSet);
     } catch {
-      // NÃ£o bloqueia o checkout quando a sincronizaÃ§Ã£o da agenda falha.
+      // Não bloqueia o checkout quando a sincronização da agenda falha.
       setSavedAddressFingerprints((current) => {
         const nextSet = new Set(current);
         nextSet.add(nextFingerprint);
@@ -1437,7 +1437,7 @@ export function CheckoutClient({ initialCoupon = "" }: CheckoutClientProps) {
       if (!nextSelectedQuote) throw new CheckoutValidationError("Selecione um frete para continuar.");
       await persistAddressOnAccountIfNew();
     } catch (error: unknown) {
-      const message = error instanceof Error ? error.message : "NÃ£o foi possÃ­vel confirmar o EndereÃ§o.";
+      const message = error instanceof Error ? error.message : "Não foi possível confirmar o endereço.";
       setErrorMessage(message);
       return;
     }
@@ -1611,7 +1611,7 @@ export function CheckoutClient({ initialCoupon = "" }: CheckoutClientProps) {
 
       if (hasChanges) {
         replaceCartItems(nextItems, currency);
-        const messages: string[] = ["Atualizamos seu carrinho com preÃ§o/estoque atuais."];
+        const messages: string[] = ["Atualizamos seu carrinho com preço/estoque atuais."];
         if (removedOutOfStock) {
           messages.push("Alguns itens foram removidos por falta de estoque.");
         }
@@ -1713,7 +1713,7 @@ export function CheckoutClient({ initialCoupon = "" }: CheckoutClientProps) {
   async function handlePaymentConfirm() {
     if (!completed.address) {
       setActiveStep("address");
-      setErrorMessage("Confirme o EndereÃ§o antes de pagar.");
+      setErrorMessage("Confirme o endereço antes de pagar.");
       return;
     }
     if (!completed.delivery) {
@@ -1876,7 +1876,7 @@ export function CheckoutClient({ initialCoupon = "" }: CheckoutClientProps) {
           {visualCheckoutStep === "delivery" ? (
             <section className={styles.stepSection}>
               <div className={styles.stepHeader}>
-                <h2 className={styles.sectionTitle}>Endereco de entrega.</h2>
+                <h2 className={styles.sectionTitle}>Endereço de entrega.</h2>
                 {activeStep !== "address" ? (
                   <button type="button" className={styles.stepActionLink} onClick={() => setActiveStep("address")}>
                     Editar
@@ -1886,24 +1886,24 @@ export function CheckoutClient({ initialCoupon = "" }: CheckoutClientProps) {
 
               {activeStep === "address" ? (
                 <div className={styles.addressFormWrap}>
-                  <p className={styles.sectionSub}>Selecione seu endereco de entrega ou insira um novo.</p>
+                  <p className={styles.sectionSub}>Selecione seu endereço de entrega ou insira um novo.</p>
                   {accountAddresses.length > 0 ? (
                     <div className={styles.savedAddressBar}>
                       <label className={`${styles.field} ${styles.fieldFull}`}>
-                        <span>Endereco salvo</span>
+                        <span>Endereço salvo</span>
                         <select
                           value={selectedSavedAddressId}
                           onChange={(event) => setSelectedSavedAddressId(String(event.target.value || ""))}
                         >
                           {accountAddresses.map((address) => (
                             <option key={address.id} value={address.id}>
-                              {`${String(address.label || "Endereco").trim() || "Endereco"} - ${String(address.street || "").trim()}, ${String(address.number || "").trim()} - ${String(address.city || "").trim()}`}
+                              {`${String(address.label || "Endereço").trim() || "Endereço"} - ${String(address.street || "").trim()}, ${String(address.number || "").trim()} - ${String(address.city || "").trim()}`}
                             </option>
                           ))}
                         </select>
                       </label>
                       <button type="button" className={styles.secondaryAction} onClick={handleUseSavedAddress}>
-                        Usar endereco salvo
+                        Usar endereço salvo
                       </button>
                     </div>
                   ) : null}

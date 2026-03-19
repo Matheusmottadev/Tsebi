@@ -208,21 +208,21 @@ export async function prepareRepairPhotoPreview(file: File): Promise<PreparedRep
 }
 
 function resolveUploadErrorMessage(error: unknown): string {
-  if (!(error instanceof HttpError)) return "Nao foi possivel enviar as fotos agora. Tente novamente.";
+  if (!(error instanceof HttpError)) return "Não foi possível enviar as fotos agora. Tente novamente.";
   const code =
     error.payload && typeof error.payload === "object" && "error" in error.payload
       ? String((error.payload as { error?: unknown }).error || "").trim().toUpperCase()
       : "";
 
-  if (code === "UNSUPPORTED_IMAGE_TYPE") return "Formato de imagem nao suportado. Use JPG, PNG, WEBP ou GIF.";
-  if (code === "IMAGE_REQUIRED") return "Selecione uma imagem valida para enviar.";
-  if (code === "ENTITY.TOO.LARGE" || error.status === 413) return "A imagem e muito grande. Use arquivos de ate 8 MB.";
-  if (code === "R2_NOT_CONFIGURED") return "O envio de fotos ainda nao esta disponivel neste ambiente.";
-  return "Nao foi possivel enviar as fotos agora. Tente novamente.";
+  if (code === "UNSUPPORTED_IMAGE_TYPE") return "Formato de imagem não suportado. Use JPG, PNG, WEBP ou GIF.";
+  if (code === "IMAGE_REQUIRED") return "Selecione uma imagem válida para enviar.";
+  if (code === "ENTITY.TOO.LARGE" || error.status === 413) return "A imagem é muito grande. Use arquivos de até 8 MB.";
+  if (code === "R2_NOT_CONFIGURED") return "O envio de fotos não está disponível no momento. Tente novamente mais tarde.";
+  return "Não foi possível enviar as fotos agora. Tente novamente.";
 }
 
 function resolveRepairRequestErrorMessage(error: unknown): string {
-  if (!(error instanceof HttpError)) return "Nao foi possivel enviar a solicitacao. Tente novamente.";
+  if (!(error instanceof HttpError)) return "Não foi possível enviar a solicitação. Tente novamente.";
   const code =
     error.payload && typeof error.payload === "object" && "error" in error.payload
       ? String((error.payload as { error?: unknown }).error || "").trim().toUpperCase()
@@ -243,16 +243,16 @@ function resolveRepairRequestErrorMessage(error: unknown): string {
       if (!item || typeof item !== "object") return false;
       return String((item as { path?: unknown }).path || "").trim() === "returnAddress";
     });
-    if (hasReturnAddressIssue) return "Informe um endereco de devolucao mais completo.";
+    if (hasReturnAddressIssue) return "Informe um endereço de devolução mais completo.";
   }
 
   if (code === "EMAIL_PROVIDER_NOT_CONFIGURED") {
-    return "A solicitacao foi bloqueada pelo envio de e-mail no ambiente atual.";
+    return "Não foi possível enviar a solicitação. Tente novamente mais tarde.";
   }
-  if (code === "INVALID_INPUT") return "Revise os dados da solicitacao e tente novamente.";
-  if (code === "ORDER_NOT_DELIVERED") return "So e possivel solicitar reparo para pedidos ja entregues.";
-  if (code === "ORDER_NOT_FOUND" || code === "ORDER_ITEM_NOT_FOUND") return "Nao foi possivel localizar a peca selecionada.";
-  return "Nao foi possivel enviar a solicitacao. Tente novamente.";
+  if (code === "INVALID_INPUT") return "Revise os dados da solicitação e tente novamente.";
+  if (code === "ORDER_NOT_DELIVERED") return "Só é possível solicitar reparo para pedidos já entregues.";
+  if (code === "ORDER_NOT_FOUND" || code === "ORDER_ITEM_NOT_FOUND") return "Não foi possível localizar a peça selecionada.";
+  return "Não foi possível enviar a solicitação. Tente novamente.";
 }
 
 export async function listMyRepairs(): Promise<RepairRequest[]> {

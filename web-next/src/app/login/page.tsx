@@ -650,7 +650,7 @@ export default function LoginPage() {
     clearFeedback();
 
     if (!(window.PublicKeyCredential && navigator.credentials)) {
-      setErrorMessage("Este navegador nao suporta Passkey.");
+      setErrorMessage("Este navegador não suporta Passkey.");
       return;
     }
 

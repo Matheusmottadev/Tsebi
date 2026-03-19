@@ -388,7 +388,7 @@ export function DrawerDetalhesUsuario({
     const cpfDigits = normalizeDigits(draft.cpf);
     const birthDateApi = toApiBirthDate(draft.birthDate);
     if (draft.birthDate.trim() && !birthDateApi) {
-      setErrorMessage("Data de nascimento invalida. Use DD/MM/AAAA.");
+      setErrorMessage("Data de nascimento inválida. Use DD/MM/AAAA.");
       return;
     }
     if (cpfDigits && cpfDigits.length !== 11) {

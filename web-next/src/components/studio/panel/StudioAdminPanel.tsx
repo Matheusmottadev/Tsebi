@@ -590,7 +590,7 @@ export function StudioAdminPanel() {
       try {
         await studioAuthLogout();
       } catch {
-        showToast("Nao foi possivel encerrar a sessao.");
+        showToast("Não foi possível encerrar a sessão.");
       } finally {
         router.replace("/admin/login");
         router.refresh();

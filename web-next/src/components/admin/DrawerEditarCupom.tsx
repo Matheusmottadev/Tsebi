@@ -101,9 +101,9 @@ export function DrawerEditarCupom({ isOpen, coupon, onClose, onSaved }: DrawerEd
 
   const validationErrors = useMemo(() => {
     const errors: Record<string, string> = {};
-    if (!String(code || "").trim()) errors.code = "Codigo obrigatorio.";
+    if (!String(code || "").trim()) errors.code = "Código obrigatório.";
     if (type !== "free_shipping" && Number(discountValue || 0) <= 0) {
-      errors.discountValue = "Valor do desconto obrigatorio.";
+      errors.discountValue = "Valor do desconto obrigatório.";
     }
     return errors;
   }, [code, discountValue, type]);
@@ -122,18 +122,18 @@ export function DrawerEditarCupom({ isOpen, coupon, onClose, onSaved }: DrawerEd
       valueLabel = `${formatMoney(Math.max(0, Number(discountValue || 0)) * 100)} de desconto`;
     }
     const starts = startsAt ? new Date(startsAt).toLocaleDateString("pt-BR") : "agora";
-    const ends = expiresAt ? new Date(expiresAt).toLocaleDateString("pt-BR") : "sem expiracao";
+    const ends = expiresAt ? new Date(expiresAt).toLocaleDateString("pt-BR") : "sem expiração";
     // minSubtotal agora está em reais; formatMoney espera centavos
-    const min = minSubtotal ? formatMoney(Number(minSubtotal || 0) * 100) : "sem valor minimo";
+    const min = minSubtotal ? formatMoney(Number(minSubtotal || 0) * 100) : "sem valor mínimo";
     const usesLine = Number(maxUses || 0) > 0 ? `\nLimite de usos: ${maxUses}` : "";
     const firstLine = firstPurchaseOnly ? "\nApenas primeira compra" : "";
-    return `Cupom ${normalizedCode} - ${valueLabel}\nValido de ${starts} ate ${ends}\nPedido minimo: ${min}${usesLine}${firstLine}`;
+    return `Cupom ${normalizedCode} - ${valueLabel}\nVálido de ${starts} até ${ends}\nPedido mínimo: ${min}${usesLine}${firstLine}`;
   }, [code, discountValue, expiresAt, minSubtotal, startsAt, type, maxUses, firstPurchaseOnly]);
 
   async function handleSave() {
     if (!coupon) return;
     if (hasErrors) {
-      setError("Revise os campos obrigatorios.");
+      setError("Revise os campos obrigatórios.");
       return;
     }
 

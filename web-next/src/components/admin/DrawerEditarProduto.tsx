@@ -369,8 +369,8 @@ export function DrawerEditarProduto({
   const validationErrors = useMemo(() => {
     const next: ValidationErrors = {};
 
-    if (!String(sku || "").trim()) next.sku = "SKU obrigatorio.";
-    if (!String(name || "").trim()) next.name = "Nome obrigatorio.";
+    if (!String(sku || "").trim()) next.sku = "SKU obrigatório.";
+    if (!String(name || "").trim()) next.name = "Nome obrigatório.";
     if (parseMoneyToCents(price) <= 0) next.price = "Preço inválido.";
 
     if (checkedSizes.length === 0) {
@@ -511,7 +511,7 @@ export function DrawerEditarProduto({
   async function handleSave() {
     if (!product) return;
     if (hasErrors) {
-      setError("Revise os campos obrigatorios.");
+      setError("Revise os campos obrigatórios.");
       return;
     }
 

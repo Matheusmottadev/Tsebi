@@ -40,9 +40,9 @@ function mapApiError(code: string, fallback: string): string {
   const normalized = String(code || "").trim().toUpperCase();
   if (!normalized) return fallback;
   if (normalized === "INVALID_INPUT") return "Revise os dados preenchidos e tente novamente.";
-  if (normalized === "INVALID_OR_EXPIRED_CODE") return "Codigo invalido ou expirado. Tente novamente.";
-  if (normalized === "EMAIL_DELIVERY_FAILED") return "Nao foi possivel enviar o codigo agora.";
-  if (normalized === "AUTH_CODE_ISSUE_FAILED") return "Nao foi possivel gerar o codigo agora.";
+  if (normalized === "INVALID_OR_EXPIRED_CODE") return "Código inválido ou expirado. Tente novamente.";
+  if (normalized === "EMAIL_DELIVERY_FAILED") return "Não foi possível enviar o código agora.";
+  if (normalized === "AUTH_CODE_ISSUE_FAILED") return "Não foi possível gerar o código agora.";
   return fallback;
 }
 
@@ -101,13 +101,13 @@ export function PasswordResetFlow() {
 
     if (!response.ok) {
       const apiCode = await readErrorCode(response);
-      throw new Error(mapApiError(apiCode, "Nao foi possivel enviar o codigo. Tente novamente."));
+      throw new Error(mapApiError(apiCode, "Não foi possível enviar o código. Tente novamente."));
     }
   }
 
   async function handleEnviarCodigo(): Promise<void> {
     if (!isValidEmail(normalizedEmail)) {
-      setError("Insira um e-mail valido.");
+      setError("Insira um e-mail válido.");
       return;
     }
 
@@ -120,9 +120,9 @@ export function PasswordResetFlow() {
       setDigits(["", "", "", "", "", ""]);
       setStep("codigo");
       setResendRemaining(60);
-      setHelperMessage(`Codigo enviado para ${maskEmail(normalizedEmail)}.`);
+      setHelperMessage(`Código enviado para ${maskEmail(normalizedEmail)}.`);
     } catch (err) {
-      const message = err instanceof Error ? err.message : "Nao foi possivel enviar o codigo. Tente novamente.";
+      const message = err instanceof Error ? err.message : "Não foi possível enviar o código. Tente novamente.";
       setError(message);
     } finally {
       setLoading(false);
@@ -148,7 +148,7 @@ export function PasswordResetFlow() {
 
   function handleVerificarCodigo(): void {
     if (digits.some((digit) => digit === "")) {
-      setError("Preencha os 6 digitos do codigo.");
+      setError("Preencha os 6 dígitos do código.");
       return;
     }
     setError("");
@@ -159,7 +159,7 @@ export function PasswordResetFlow() {
   async function handleReenviar(): Promise<void> {
     if (resendRemaining > 0) return;
     if (!isValidEmail(normalizedEmail)) {
-      setError("Insira um e-mail valido para reenviar.");
+      setError("Insira um e-mail válido para reenviar.");
       setStep("email");
       return;
     }
@@ -171,9 +171,9 @@ export function PasswordResetFlow() {
     try {
       await requestResetCode(normalizedEmail);
       setResendRemaining(60);
-      setHelperMessage("Enviamos um novo codigo para o seu e-mail.");
+      setHelperMessage("Enviamos um novo código para o seu e-mail.");
     } catch (err) {
-      const message = err instanceof Error ? err.message : "Nao foi possivel reenviar o codigo.";
+      const message = err instanceof Error ? err.message : "Não foi possível reenviar o código.";
       setError(message);
     } finally {
       setLoading(false);
@@ -182,24 +182,24 @@ export function PasswordResetFlow() {
 
   async function handleRedefinir(): Promise<void> {
     if (codigo.length !== 6) {
-      setError("Preencha o codigo de 6 digitos.");
+      setError("Preencha o código de 6 dígitos.");
       setStep("codigo");
       return;
     }
 
     if (!isValidEmail(normalizedEmail)) {
-      setError("Sessao invalida. Solicite um novo codigo.");
+      setError("Sessão inválida. Solicite um novo código.");
       setStep("email");
       return;
     }
 
     if (senha.length < 8) {
-      setError("A senha deve ter no minimo 8 caracteres.");
+      setError("A senha deve ter no mínimo 8 caracteres.");
       return;
     }
 
     if (senha !== confirmacao) {
-      setError("As senhas nao coincidem.");
+      setError("As senhas não coincidem.");
       return;
     }
 
@@ -220,12 +220,12 @@ export function PasswordResetFlow() {
 
       if (!response.ok) {
         const apiCode = await readErrorCode(response);
-        throw new Error(mapApiError(apiCode, "Nao foi possivel concluir a alteracao de senha. Tente novamente."));
+        throw new Error(mapApiError(apiCode, "Não foi possível concluir a alteração de senha. Tente novamente."));
       }
 
       setStep("sucesso");
     } catch (err) {
-      const message = err instanceof Error ? err.message : "Nao foi possivel concluir a alteracao de senha. Tente novamente.";
+      const message = err instanceof Error ? err.message : "Não foi possível concluir a alteração de senha. Tente novamente.";
       setError(message);
     } finally {
       setLoading(false);

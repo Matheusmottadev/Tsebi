@@ -51,7 +51,7 @@ export function NewsletterPopup() {
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!String(email || "").trim()) {
-      setFeedback("Erro: informe um e-mail válido.");
+      setFeedback("Informe um e-mail válido.");
       return;
     }
     setFeedback("Cadastro recebido com sucesso.");

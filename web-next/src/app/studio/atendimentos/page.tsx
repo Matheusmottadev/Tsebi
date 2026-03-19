@@ -47,9 +47,9 @@ export default async function StudioPrivateCarePage({ searchParams }: StudioPriv
     rows = Array.isArray(result.rows) ? result.rows : [];
   } catch (error) {
     if (error instanceof HttpError) {
-      errorMessage = error.message || "Falha ao carregar horarios.";
+      errorMessage = error.message || "Falha ao carregar horários.";
     } else {
-      errorMessage = "Falha ao carregar horarios.";
+      errorMessage = "Falha ao carregar horários.";
     }
   }
 

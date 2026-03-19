@@ -46,9 +46,9 @@ function mapApiError(code: string, fallback: string): string {
   const normalized = String(code || "").trim().toUpperCase();
   if (!normalized) return fallback;
   if (normalized === "INVALID_INPUT") return "Revise os dados preenchidos e tente novamente.";
-  if (normalized === "INVALID_OR_EXPIRED_CODE") return "Codigo invalido ou expirado. Tente novamente.";
-  if (normalized === "EMAIL_DELIVERY_FAILED") return "Nao foi possivel enviar o codigo agora.";
-  if (normalized === "AUTH_CODE_ISSUE_FAILED") return "Nao foi possivel gerar o codigo agora.";
+  if (normalized === "INVALID_OR_EXPIRED_CODE") return "Código inválido ou expirado. Tente novamente.";
+  if (normalized === "EMAIL_DELIVERY_FAILED") return "Não foi possível enviar o código agora.";
+  if (normalized === "AUTH_CODE_ISSUE_FAILED") return "Não foi possível gerar o código agora.";
   return fallback;
 }
 
@@ -86,7 +86,7 @@ export function PasswordSetupFlow() {
   useEffect(() => {
     setResendRemaining(cooldown);
     if (hasValidEmail) {
-      setHelperMessage(`Enviamos um codigo de 6 digitos para ${maskEmail(email)}.`);
+      setHelperMessage(`Enviamos um código de 6 dígitos para ${maskEmail(email)}.`);
     } else {
       setHelperMessage("");
     }
@@ -117,7 +117,7 @@ export function PasswordSetupFlow() {
 
     if (!response.ok) {
       const apiCode = await readErrorCode(response);
-      throw new Error(mapApiError(apiCode, "Nao foi possivel enviar o codigo. Tente novamente."));
+      throw new Error(mapApiError(apiCode, "Não foi possível enviar o código. Tente novamente."));
     }
   }
 
@@ -139,12 +139,12 @@ export function PasswordSetupFlow() {
 
   function handleVerificarCodigo(): void {
     if (!hasValidEmail) {
-      setError("Sessao invalida. Volte ao login e tente novamente.");
+      setError("Sessão inválida. Volte ao login e tente novamente.");
       return;
     }
 
     if (digits.some((digit) => digit === "")) {
-      setError("Preencha os 6 digitos do codigo.");
+      setError("Preencha os 6 dígitos do código.");
       return;
     }
 
@@ -166,9 +166,9 @@ export function PasswordSetupFlow() {
     try {
       await requestResetCode();
       setResendRemaining(60);
-      setHelperMessage(`Enviamos um novo codigo para ${maskEmail(email)}.`);
+      setHelperMessage(`Enviamos um novo código para ${maskEmail(email)}.`);
     } catch (err) {
-      const message = err instanceof Error ? err.message : "Nao foi possivel reenviar o codigo.";
+      const message = err instanceof Error ? err.message : "Não foi possível reenviar o código.";
       setError(message);
     } finally {
       setLoading(false);
@@ -177,23 +177,23 @@ export function PasswordSetupFlow() {
 
   async function handleCriarSenha(): Promise<void> {
     if (!hasValidEmail) {
-      setError("Sessao invalida. Volte ao login e tente novamente.");
+      setError("Sessão inválida. Volte ao login e tente novamente.");
       return;
     }
 
     if (codigo.length !== 6) {
-      setError("Preencha o codigo de 6 digitos.");
+      setError("Preencha o código de 6 dígitos.");
       setStep("codigo");
       return;
     }
 
     if (senha.length < 8) {
-      setError("A senha deve ter no minimo 8 caracteres.");
+      setError("A senha deve ter no mínimo 8 caracteres.");
       return;
     }
 
     if (senha !== confirmacao) {
-      setError("As senhas nao coincidem.");
+      setError("As senhas não coincidem.");
       return;
     }
 
@@ -214,12 +214,12 @@ export function PasswordSetupFlow() {
 
       if (!response.ok) {
         const apiCode = await readErrorCode(response);
-        throw new Error(mapApiError(apiCode, "Nao foi possivel concluir a criacao da senha. Tente novamente."));
+        throw new Error(mapApiError(apiCode, "Não foi possível concluir a criação da senha. Tente novamente."));
       }
 
       setStep("sucesso");
     } catch (err) {
-      const message = err instanceof Error ? err.message : "Nao foi possivel concluir a criacao da senha. Tente novamente.";
+      const message = err instanceof Error ? err.message : "Não foi possível concluir a criação da senha. Tente novamente.";
       setError(message);
     } finally {
       setLoading(false);
@@ -260,7 +260,7 @@ export function PasswordSetupFlow() {
             {!hasValidEmail ? (
               <section className={styles.step} aria-live="polite">
                 <h1 className={styles.stepTitle}>Criar senha.</h1>
-                <p className={styles.stepSub}>Nao encontramos o e-mail desta sessao. Volte ao login e tente novamente.</p>
+                <p className={styles.stepSub}>Não encontramos o e-mail desta sessão. Volte ao login e tente novamente.</p>
                 <button className={styles.btnPrimary} type="button" onClick={() => router.push("/login")}>
                   Voltar ao login
                 </button>

@@ -250,7 +250,7 @@ export function CheckoutPaymentForm({
       setPaymentRequest(isAvailable ? request : null);
       setPaymentElementReady(isAvailable);
       if (!isAvailable) {
-        setErrorMessage("A carteira digital selecionada nao esta disponivel neste dispositivo.");
+        setErrorMessage("A carteira digital selecionada não está disponível neste dispositivo.");
       } else {
         setErrorMessage("");
       }
@@ -270,7 +270,7 @@ export function CheckoutPaymentForm({
 
         if (initialResult.error) {
           event.complete("fail");
-          setErrorMessage(String(initialResult.error.message || "Nao foi possivel confirmar o pagamento."));
+          setErrorMessage(String(initialResult.error.message || "Não foi possível confirmar o pagamento."));
           return;
         }
 
@@ -279,13 +279,13 @@ export function CheckoutPaymentForm({
         if (initialResult.paymentIntent?.status === "requires_action") {
           const actionResult = await stripe.confirmCardPayment(String(clientSecret || "").trim());
           if (actionResult.error) {
-            setErrorMessage(String(actionResult.error.message || "Nao foi possivel confirmar o pagamento."));
+            setErrorMessage(String(actionResult.error.message || "Não foi possível confirmar o pagamento."));
             router.push(
               buildConfirmationPath(
                 "failed",
                 orderId,
                 customerEmail,
-                String(actionResult.error.message || "Nao foi possivel confirmar o pagamento.").trim()
+                String(actionResult.error.message || "Não foi possível confirmar o pagamento.").trim()
               )
             );
             return;
@@ -310,7 +310,7 @@ export function CheckoutPaymentForm({
         router.push(buildConfirmationPath("failed", orderId, customerEmail, status || "Falha ao confirmar pagamento."));
       } catch (error) {
         event.complete("fail");
-        setErrorMessage(error instanceof Error ? error.message : "Nao foi possivel confirmar o pagamento.");
+        setErrorMessage(error instanceof Error ? error.message : "Não foi possível confirmar o pagamento.");
       } finally {
         setIsSubmitting(false);
       }

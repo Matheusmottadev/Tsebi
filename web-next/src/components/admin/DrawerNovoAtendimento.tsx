@@ -59,9 +59,9 @@ function createInitialState(slot?: AdminAppointmentSlot | null): FormState {
 }
 
 function pickErrorMessage(error: unknown): string {
-  if (error instanceof HttpError) return error.message || "Falha ao salvar horario.";
-  if (error instanceof Error) return error.message || "Falha ao salvar horario.";
-  return "Falha ao salvar horario.";
+  if (error instanceof HttpError) return error.message || "Falha ao salvar horário.";
+  if (error instanceof Error) return error.message || "Falha ao salvar horário.";
+  return "Falha ao salvar horário.";
 }
 
 export function DrawerNovoAtendimento({
@@ -127,14 +127,14 @@ export function DrawerNovoAtendimento({
       onSave={handleSave}
       title={isEditing ? "Editar Horário" : "Novo Horário"}
       subtitle="Crie um slot individual com data, faixa de horário e detalhes do atendimento."
-      saveLabel={submitting ? "Salvando..." : isEditing ? "Salvar" : "Criar horario"}
+      saveLabel={submitting ? "Salvando..." : isEditing ? "Salvar" : "Criar horário"}
       disableSave={disableSave || submitting}
       stickyFooter
     >
       <div className={form.stack}>
         <div className={form.row2}>
           <div className={form.field}>
-            <label htmlFor="appointment-starts-at">Inicio</label>
+            <label htmlFor="appointment-starts-at">Início</label>
             <input
               id="appointment-starts-at"
               type="datetime-local"
@@ -219,13 +219,13 @@ export function DrawerNovoAtendimento({
         </div>
 
         <div className={form.field}>
-          <label htmlFor="appointment-admin-note">Observacao interna</label>
+          <label htmlFor="appointment-admin-note">Observação interna</label>
           <textarea
             id="appointment-admin-note"
             rows={4}
             value={formState.adminNote}
             onChange={(event) => setFormState((current) => ({ ...current, adminNote: event.target.value }))}
-            placeholder="Observacoes do admin sobre este horario."
+            placeholder="Observações do admin sobre este horário."
           />
         </div>
 

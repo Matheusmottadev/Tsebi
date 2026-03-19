@@ -110,7 +110,7 @@ function buildAppointmentNotes(modality: string, contactValue: string, notes: st
   const meta = getContactFieldMeta(modality);
   const lines = [`${meta.summaryKey}: ${String(contactValue || "").trim()}`];
   const trimmedNotes = String(notes || "").trim();
-  if (trimmedNotes) lines.push(`Observacoes: ${trimmedNotes}`);
+  if (trimmedNotes) lines.push(`Observações: ${trimmedNotes}`);
   return lines.join("\n");
 }
 

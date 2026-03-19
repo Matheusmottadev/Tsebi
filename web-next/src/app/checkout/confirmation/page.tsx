@@ -466,26 +466,7 @@ export default function CheckoutConfirmationPage() {
   if (status === "failed") {
     return (
       <div className={styles.checkoutConfirmationShell}>
-        <header className={styles.checkoutHeader}>
-          <div className={styles.checkoutHeaderInner}>
-            <Link href="/" className={styles.checkoutBrand}>
-              TSEBI
-            </Link>
-            <nav className={styles.checkoutTabs} aria-label="Etapas do checkout">
-              <Link href="/cart" className={styles.checkoutTab}>
-                Sacola
-              </Link>
-              <Link href="/checkout" className={styles.checkoutTab}>
-                Checkout
-              </Link>
-              <span className={`${styles.checkoutTab} ${styles.checkoutTabActive}`} aria-current="page">
-                Confirmacao
-              </span>
-            </nav>
-          </div>
-        </header>
-
-        <main className={`${styles.page} ${styles.splitScreen} ${styles.splitScreenWithHeader}`}>
+        <main className={`${styles.page} ${styles.splitScreen}`}>
           <section className={`${styles.leftPanel} ${styles.leftFailed}`}>
             <div className={styles.leftTop}>
               <p className={styles.brand}>TSEBI</p>

@@ -267,7 +267,7 @@ export function LoginForm() {
     const normalized = normalizeEmail(email);
     if (!isValidEmail(normalized)) {
       setIsSubmitting(false);
-      setErrorMessage("Informe um e-mail valido.");
+      setErrorMessage("Informe um e-mail válido.");
       return;
     }
 
@@ -314,7 +314,7 @@ export function LoginForm() {
       const normalized = normalizeEmail(activeEmail || email);
       if (!isValidEmail(normalized)) {
         setIsSubmitting(false);
-        setErrorMessage("Informe um e-mail valido.");
+        setErrorMessage("Informe um e-mail válido.");
         setState("email");
         return;
       }
@@ -350,7 +350,7 @@ export function LoginForm() {
       const normalized = normalizeEmail(email);
       if (!isValidEmail(normalized)) {
         setIsSubmitting(false);
-        setErrorMessage("Informe um e-mail valido.");
+        setErrorMessage("Informe um e-mail válido.");
         return;
       }
       if (!password) {
@@ -411,7 +411,7 @@ export function LoginForm() {
     try {
       const normalized = normalizeEmail(activeEmail || email);
       if (!isValidEmail(normalized)) {
-        setErrorMessage("Informe um e-mail valido.");
+        setErrorMessage("Informe um e-mail válido.");
         setState("email");
         return;
       }

@@ -235,7 +235,7 @@ function formatOrderStatus(order: AdminOrderSummary): string {
 
 function pickErrorMessage(error: unknown): string {
   if (error instanceof Error && error.message) return error.message;
-  return "Falha na operacao.";
+  return "Falha na operação.";
 }
 
 function getProductKey(product: Product): string {
@@ -299,7 +299,7 @@ function getDeleteContent(target: ConfirmDeleteTarget): {
   if (target.kind === "coupon") {
     return {
       title: "Confirmar exclusao",
-      text: `Tem certeza que deseja excluir o cupom ${target.label}? Esta acao e irreversivel.`,
+      text: `Tem certeza que deseja excluir o cupom ${target.label}? Esta ação é irreversível.`,
       confirmLabel: "Excluir permanentemente",
     };
   }
@@ -307,7 +307,7 @@ function getDeleteContent(target: ConfirmDeleteTarget): {
   if (target.kind === "appointment_slot") {
     return {
       title: "Confirmar exclusao",
-      text: `Tem certeza que deseja excluir o horario ${target.label}?`,
+      text: `Tem certeza que deseja excluir o horário ${target.label}?`,
       confirmLabel: "Excluir permanentemente",
     };
   }
@@ -1678,7 +1678,7 @@ export function ConnectedPage({
       {page === "cupons" ? (
         <>
           <SearchBar
-            placeholder="Buscar por codigo ou descricao"
+            placeholder="Buscar por código ou descrição"
             value={couponsSearch}
             onChange={setCouponsSearch}
             filters={couponFilterConfigs}
@@ -1705,7 +1705,7 @@ export function ConnectedPage({
                       <td>{coupon.code || "-"}</td>
                       <td>{coupon.type || "-"}</td>
                       <td>{formatCouponRule(coupon)}</td>
-                      <td>{coupon.active ? "sim" : "nao"}</td>
+                      <td>{coupon.active ? "sim" : "não"}</td>
                       <td>{formatDateTime(coupon.expiresAt || null)}</td>
                       <td className={styles.actionCell}>
                         <button className={styles.btnEdit} onClick={() => openCouponDrawer(coupon)}>
@@ -1738,7 +1738,7 @@ export function ConnectedPage({
       {page === "auditoria" ? (
         <>
           <SearchBar
-            placeholder="Buscar por descricao, usuario ou tipo de evento"
+            placeholder="Buscar por descrição, usuário ou tipo de evento"
             value={auditSearch}
             onChange={setAuditSearch}
             filters={auditFilterConfigs}

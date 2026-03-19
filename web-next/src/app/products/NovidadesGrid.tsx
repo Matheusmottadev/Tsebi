@@ -257,7 +257,7 @@ export function NovidadesGrid({ tiles }: NovidadesGridProps) {
                   setFavoriteMap(previousMap);
                   if (error instanceof HttpError && (error.status === 401 || error.status === 403)) {
                     setIsLoggedIn(false);
-                    setNotice("Sua sessao expirou. Faca login novamente para favoritar.");
+                    setNotice("Sua sessão expirou. Faça login novamente para favoritar.");
                   }
                 } finally {
                   setPendingFavoriteId("");
