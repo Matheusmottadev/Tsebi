@@ -255,7 +255,7 @@ function emitStickyBarVisibility(active: boolean): void {
 const MEDIA_SCROLL_DELTA_GAIN = 1.9;
 const MEDIA_SCROLL_EASING = 0.44;
 const MOBILE_TAILORED_LIMIT = 6;
-type DrawerKey = "size-chart" | "details" | "materials" | "contact" | "store";
+type DrawerKey = "size-chart" | "details" | "materials" | "contact";
 
 function buildDescription(product: Product): string {
   return `${product.name} combina design autoral e acabamento premium em ${product.material}. Desenvolvido para um visual elegante com conforto no uso diario.`;
@@ -346,6 +346,7 @@ export function ProductExperience({ product, recommendations, imageBaseUrl }: Pr
   const [showStickyBar, setShowStickyBar] = useState(false);
   const [panelExpanded, setPanelExpanded] = useState(false);
   const [activeMobileImageIndex, setActiveMobileImageIndex] = useState(0);
+  const privateCareHref = "/account#private-care";
   const panelExpandedRef = useRef(false);
   const panelForcedOpenRef = useRef(false);
   const gallerySentinelRef = useRef<HTMLDivElement | null>(null);
@@ -1278,7 +1279,15 @@ export function ProductExperience({ product, recommendations, imageBaseUrl }: Pr
               <button type="button" onClick={() => setOpenDrawer("details")}>Detalhes do produto</button>
               <button type="button" onClick={() => setOpenDrawer("materials")}>Materiais e cuidados</button>
               <button type="button" onClick={() => setOpenDrawer("contact")}>Frete e devolução grátis</button>
-              <button type="button" className={styles.lastServiceOption} onClick={() => setOpenDrawer("store")}>
+              <button
+                type="button"
+                className={styles.lastServiceOption}
+                onClick={() => {
+                  if (typeof window !== "undefined") {
+                    window.location.href = privateCareHref;
+                  }
+                }}
+              >
                 Marque um atendimento com nossa equipe
               </button>
             </div>
@@ -1444,7 +1453,7 @@ export function ProductExperience({ product, recommendations, imageBaseUrl }: Pr
       </Drawer>
 
       <Drawer
-        open={openDrawer === "store"}
+        open={false}
         title="Marque um atendimento com nossa equipe"
         productImage={galleryImages[0] || product.image}
         productName={product.name}

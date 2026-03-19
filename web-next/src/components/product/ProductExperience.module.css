@@ -446,6 +446,17 @@
   font-size: 12px;
   cursor: pointer;
   font-family: "Montserrat", sans-serif;
+  text-decoration: none;
+  background-image: linear-gradient(currentColor, currentColor);
+  background-repeat: no-repeat;
+  background-position: 0 100%;
+  background-size: 0% 1px;
+  transition: background-size 180ms ease, opacity 180ms ease;
+}
+
+.infoRows button:hover,
+.infoRows button:focus-visible {
+  background-size: 100% 1px;
 }
 
 .lastServiceOption {
