@@ -170,8 +170,22 @@ export default function RootLayout({
     "@type": "Organization",
     name: "Tsebi Brasil",
     url: defaultSiteUrl,
-    logo: `${defaultSiteUrl}/images/Gazelalogo.png`,
-    sameAs: [],
+    logo: {
+      "@type": "ImageObject",
+      url: `${defaultSiteUrl}/images/Gazelalogo.png`,
+      width: 256,
+      height: 256,
+    },
+    sameAs: [
+      "https://www.instagram.com/tsebiofficial/",
+    ],
+    contactPoint: {
+      "@type": "ContactPoint",
+      contactType: "customer service",
+      availableLanguage: "Portuguese",
+      email: "contato@tsebi.com.br",
+      areaServed: "BR",
+    },
   };
   const websiteSchema = {
     "@context": "https://schema.org",

@@ -19,22 +19,38 @@ import { ProductsMobileSortPanel } from "./ProductsMobileSortPanel";
 
 export const revalidate = 3600;
 
+const PRODUCTS_DESCRIPTION =
+  "Explore as coleções exclusivas da Tsebi Brasil — moda de luxo contemporâneo com alfaiataria artesanal, tecidos premium e design autoral. Compre online com entrega para todo o Brasil.";
+
 export const metadata: Metadata = {
   title: "Produtos",
-  description: "Produtos Tsebi.",
+  description: PRODUCTS_DESCRIPTION,
+  keywords: [
+    "roupas de luxo",
+    "moda feminina premium",
+    "moda masculina premium",
+    "alfaiataria brasileira",
+    "coleção exclusiva",
+    "roupas de qualidade",
+    "moda autoral",
+    "comprar roupas online",
+    "tsebi produtos",
+  ],
   alternates: {
     canonical: "/products",
   },
   openGraph: {
     title: "Produtos | Tsebi Brasil",
-    description: "Produtos Tsebi.",
+    description: PRODUCTS_DESCRIPTION,
     url: "/products",
     type: "website",
+    images: [{ url: "/images/Gazelalogo.png" }],
   },
   twitter: {
     card: "summary_large_image",
     title: "Produtos | Tsebi Brasil",
-    description: "Produtos Tsebi.",
+    description: PRODUCTS_DESCRIPTION,
+    images: ["/images/Gazelalogo.png"],
   },
 };
 

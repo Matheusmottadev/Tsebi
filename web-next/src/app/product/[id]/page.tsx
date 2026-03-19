@@ -120,7 +120,14 @@ export async function generateMetadata({ params }: ProductPageProps): Promise<Me
     };
   }
 
-  const description = `${product.category} from ${product.collection}. ${product.material}.`;
+  const descParts: string[] = [];
+  if (product.category) descParts.push(product.category);
+  if (product.collection) descParts.push(`Coleção ${product.collection}`);
+  if (product.material) descParts.push(product.material);
+  const description =
+    descParts.length > 0
+      ? `${product.name} — ${descParts.join(" · ")}. Compre na Tsebi Brasil com entrega para todo o Brasil.`
+      : `${product.name} — Tsebi Brasil. Design autoral e acabamento premium.`;
   const ogImage = buildOgImage(product);
   const canonicalPath = `/product/${encodeURIComponent(product.id)}`;
 
@@ -189,10 +196,20 @@ export default async function ProductPage({ params }: ProductPageProps) {
     (!hasKnownAvailabilityStatus && Number(product.stock || 0) <= 0);
   const availability = isOutOfStock ? "https://schema.org/OutOfStock" : "https://schema.org/InStock";
   const offerPrice = Number.isFinite(Number(product.priceValue)) ? Number(product.priceValue) : Number(product.unitAmount || 0) / 100;
+  const productDescParts: string[] = [];
+  if (product.category) productDescParts.push(product.category);
+  if (product.collection) productDescParts.push(`Coleção ${product.collection}`);
+  if (product.material) productDescParts.push(product.material);
+  const productSchemaDescription =
+    productDescParts.length > 0
+      ? `${productDescParts.join(". ")}. Marca Tsebi Brasil.`
+      : "Tsebi Brasil — design autoral e acabamento premium.";
+
   const productSchema = {
     "@context": "https://schema.org",
     "@type": "Product",
     name: product.name,
+    description: productSchemaDescription,
     sku: product.sku || product.id,
     category: product.category || "",
     material: product.material || "",
@@ -207,16 +224,33 @@ export default async function ProductPage({ params }: ProductPageProps) {
       price: offerPrice,
       availability,
       url: productUrl,
+      seller: {
+        "@type": "Organization",
+        name: "Tsebi Brasil",
+        url: baseUrl,
+      },
     },
+  };
+
+  const breadcrumbSchema = {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    itemListElement: [
+      { "@type": "ListItem", position: 1, name: "Início", item: baseUrl },
+      { "@type": "ListItem", position: 2, name: "Produtos", item: `${baseUrl}/products` },
+      { "@type": "ListItem", position: 3, name: product.name, item: productUrl },
+    ],
   };
 
   return (
     <>
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{
-          __html: JSON.stringify(productSchema),
-        }}
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(productSchema) }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbSchema) }}
       />
       <ProductExperience product={product} recommendations={tailoredRecommendations} imageBaseUrl={imageBaseUrl} />
       <div className="product-mobile-footer">

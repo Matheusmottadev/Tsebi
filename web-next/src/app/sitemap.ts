@@ -26,14 +26,15 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const now = new Date().toISOString();
 
   const staticRoutes: MetadataRoute.Sitemap = [
-    { url: `${siteUrl}/`, lastModified: now, changeFrequency: "daily", priority: 1 },
-    { url: `${siteUrl}/products`, lastModified: now, changeFrequency: "daily", priority: 0.9 },
+    { url: `${siteUrl}/`,              lastModified: now, changeFrequency: "daily",   priority: 1.0 },
+    { url: `${siteUrl}/products`,      lastModified: now, changeFrequency: "daily",   priority: 0.9 },
+    { url: `${siteUrl}/faq`,           lastModified: now, changeFrequency: "monthly", priority: 0.7 },
     { url: `${siteUrl}/nossa-historia`, lastModified: now, changeFrequency: "monthly", priority: 0.6 },
-    { url: `${siteUrl}/processos`, lastModified: now, changeFrequency: "monthly", priority: 0.6 },
-    { url: `${siteUrl}/faq`, lastModified: now, changeFrequency: "monthly", priority: 0.5 },
+    { url: `${siteUrl}/processos`,     lastModified: now, changeFrequency: "monthly", priority: 0.5 },
+    { url: `${siteUrl}/carreiras`,     lastModified: now, changeFrequency: "monthly", priority: 0.4 },
     { url: `${siteUrl}/politica-privacidade.html`, lastModified: now, changeFrequency: "yearly", priority: 0.2 },
-    { url: `${siteUrl}/aviso-legal.html`, lastModified: now, changeFrequency: "yearly", priority: 0.2 },
-    { url: `${siteUrl}/cookie-policy.html`, lastModified: now, changeFrequency: "yearly", priority: 0.2 },
+    { url: `${siteUrl}/aviso-legal.html`,          lastModified: now, changeFrequency: "yearly", priority: 0.2 },
+    { url: `${siteUrl}/cookie-policy.html`,        lastModified: now, changeFrequency: "yearly", priority: 0.2 },
   ];
 
   let productRoutes: MetadataRoute.Sitemap = [];

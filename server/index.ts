@@ -187,6 +187,57 @@ const identifyRateLimit = rateLimit({
   message: { error: "TOO_MANY_REQUESTS" }
 });
 
+// Bots de redes sociais (meta-externalagent, facebookexternalhit, Twitterbot, etc.)
+// Limite global por user-agent: 60 req / 15min — suficiente para link previews
+const SOCIAL_BOT_PATTERN = /meta-externalagent|facebookexternalhit|Twitterbot|LinkedInBot|Slackbot|WhatsApp|TelegramBot|Discordbot|Pinterest/i;
+
+// Qualquer outro bot não identificado como social media
+const GENERIC_BOT_PATTERN = /bot|crawler|spider|scraper|curl|wget|python-requests|axios\/|java\/|Go-http-client/i;
+
+// Bots que já estão bloqueados no Vercel — só como fallback no servidor
+const BLOCKED_BOT_PATTERN = /GPTBot|ChatGPT-User|OAI-SearchBot|CCBot|anthropic-ai|Claude-Web|PerplexityBot|YouBot|Bytespider/i;
+
+const socialBotRateLimit = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutos
+  max: 60,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: "TOO_MANY_REQUESTS" },
+  skip: (req: any) => {
+    const ua = String(req.headers["user-agent"] || "");
+    return !SOCIAL_BOT_PATTERN.test(ua);
+  },
+  keyGenerator: (req: any) => {
+    const ua = String(req.headers["user-agent"] || "").slice(0, 80);
+    return `social_bot:${ua}`;
+  }
+});
+
+const genericBotRateLimit = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutos
+  max: 20,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: "TOO_MANY_REQUESTS" },
+  skip: (req: any) => {
+    const ua = String(req.headers["user-agent"] || "");
+    // Só aplica a bots genéricos — não aplica a social bots (têm limite próprio)
+    return SOCIAL_BOT_PATTERN.test(ua) || !GENERIC_BOT_PATTERN.test(ua);
+  },
+  keyGenerator: (req: any) => {
+    const ip = String(req.ip || req.headers["x-forwarded-for"] || "unknown");
+    return `generic_bot:${ip}`;
+  }
+});
+
+const blockedBotGuard = (req: any, res: any, next: any) => {
+  const ua = String(req.headers["user-agent"] || "");
+  if (BLOCKED_BOT_PATTERN.test(ua)) {
+    return res.status(403).json({ error: "FORBIDDEN" });
+  }
+  next();
+};
+
 const newsletterSubscribeSchema = z.object({
   email: z.string().trim().email(),
   phone: z.string().trim().max(32).optional().default(""),
@@ -1528,6 +1579,11 @@ app.use(
 );
 app.use(compression());
 app.use(createSessionMiddleware());
+
+// Proteção global contra bots na API
+app.use("/api", blockedBotGuard);
+app.use("/api", socialBotRateLimit);
+app.use("/api", genericBotRateLimit);
 
 app.post(
   "/api/stripe/webhook",
