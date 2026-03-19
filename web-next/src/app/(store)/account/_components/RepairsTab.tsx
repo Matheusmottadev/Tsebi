@@ -214,6 +214,17 @@ export function RepairsTab({ user }: Props) {
     trimmedDescription.length < 4 ||
     trimmedReturnAddress.length < 8;
 
+  function handleRemovePhoto(photoUrl: string) {
+    setPhotoUploads((current) => {
+      const next = current.filter((item) => {
+        const shouldKeep = item.photo.url !== photoUrl;
+        if (!shouldKeep) URL.revokeObjectURL(item.previewUrl);
+        return shouldKeep;
+      });
+      return next;
+    });
+  }
+
   async function handlePhotoSelection(event: React.ChangeEvent<HTMLInputElement>) {
     const remainingSlots = Math.max(0, 8 - photoUploads.length);
     const files = Array.from(event.target.files || []).slice(0, Math.min(5, remainingSlots));
@@ -451,6 +462,14 @@ export function RepairsTab({ user }: Props) {
                 <div className={styles.repairPhotosGrid}>
                   {photoUploads.map((item) => (
                     <div key={`${item.photo.url}-${item.photo.fileName}`} className={styles.repairPhotoCard}>
+                      <button
+                        type="button"
+                        className={styles.repairPhotoRemove}
+                        onClick={() => handleRemovePhoto(item.photo.url)}
+                        aria-label={`Remover ${item.photo.fileName || "foto"}`}
+                      >
+                        ×
+                      </button>
                       <img
                         src={item.previewUrl}
                         alt={item.photo.fileName || "Foto do reparo"}
