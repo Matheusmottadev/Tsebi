@@ -7058,10 +7058,6 @@ body.product-page .home-header .logo-center-text {
 
   .header-menu-stage {
     min-height: calc(100dvh - 92px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px));
-    overflow-x: clip;
-    overflow-y: auto;
-    overscroll-behavior: contain;
-    -webkit-overflow-scrolling: touch;
   }
 
   .header-menu-main,
@@ -7072,6 +7068,9 @@ body.product-page .home-header .logo-center-text {
 
   .header-menu-main {
     padding-top: 72px;
+    display: flex;
+    flex-direction: column;
+    height: 100%;
   }
 
   .header-menu-nav {
@@ -7085,7 +7084,7 @@ body.product-page .home-header .logo-center-text {
   }
 
   .header-menu-utilities {
-    margin-top: 156px;
+    margin-top: auto;
     gap: 18px;
   }
 
