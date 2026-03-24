@@ -7058,6 +7058,10 @@ body.product-page .home-header .logo-center-text {
 
   .header-menu-stage {
     min-height: calc(100dvh - 92px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px));
+    overflow-x: clip;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
   }
 
   .header-menu-main,

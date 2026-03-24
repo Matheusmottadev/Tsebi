@@ -10,8 +10,8 @@
     },
     {
       "name": "Web (Next.js)",
-      "runtimeExecutable": "npm",
-      "runtimeArgs": ["--prefix", "web-next", "run", "dev"],
+      "runtimeExecutable": "node",
+      "runtimeArgs": ["C:\\Program Files\\nodejs\\node_modules\\npm\\bin\\npm-cli.js", "--prefix", "web-next", "run", "dev"],
       "port": 3000,
       "autoPort": false
     }

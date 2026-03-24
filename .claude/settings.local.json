@@ -26,7 +26,10 @@
       "Bash(curl -s -X POST https://www.tsebi.com.br/api/shipping/quote -H \"Content-Type: application/json\" -d '{\"\"\"\"destinationZip\"\"\"\":\"\"\"\"01310100\"\"\"\"}')",
       "Bash(find 'C:\\\\Users\\\\mathe\\\\OneDrive\\\\Área de Trabalho\\\\Curso de JS\\\\tsebi\\\\web-next\\\\src' -name *.tsx)",
       "Bash(grep -v '^$')",
-      "Bash(npx tsc:*)"
+      "Bash(npx tsc:*)",
+      "Bash(npm --version)",
+      "Bash(cmd /c \"where npm\")",
+      "Bash(powershell -Command \"Get-Command npm | Select-Object -ExpandProperty Source\")"
     ]
   }
 }
