@@ -5,7 +5,7 @@ import { readStudioSession } from "@/lib/studio/server";
 import { listCouponsAdmin } from "@/services/admin";
 import styles from "./page.module.css";
 
-export const revalidate = 30;
+export const revalidate = 0;
 
 export const metadata: Metadata = {
   title: "Studio Coupons",

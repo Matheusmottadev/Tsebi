@@ -29,7 +29,8 @@
       "Bash(npx tsc:*)",
       "Bash(npm --version)",
       "Bash(cmd /c \"where npm\")",
-      "Bash(powershell -Command \"Get-Command npm | Select-Object -ExpandProperty Source\")"
+      "Bash(powershell -Command \"Get-Command npm | Select-Object -ExpandProperty Source\")",
+      "Bash(find /Users/matheusmota/Tsebi/web-next/src/app -name \"page.tsx\" -exec grep -l \"Image\\\\|fetch\\\\|api\" {})"
     ]
   }
 }

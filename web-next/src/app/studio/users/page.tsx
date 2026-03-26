@@ -4,7 +4,7 @@ import { UsersManager } from "@/components/studio/UsersManager";
 import { readStudioSession } from "@/lib/studio/server";
 import { listUsersAdmin } from "@/services/admin";
 
-export const revalidate = 30;
+export const revalidate = 0;
 
 export const metadata: Metadata = {
   title: "Studio Usuarios",

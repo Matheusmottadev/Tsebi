@@ -2,7 +2,7 @@
 import { StudioAdminPanel } from "@/components/studio/panel/StudioAdminPanel";
 import { requireAdminSession } from "@/lib/admin/server";
 
-export const revalidate = 30;
+export const revalidate = 0;
 
 export const metadata: Metadata = {
   title: "Admin | Tsebi",

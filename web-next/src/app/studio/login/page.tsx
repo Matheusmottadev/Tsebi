@@ -6,7 +6,7 @@ import { HttpError } from "@/lib/http";
 import { studioAuthMe } from "@/services/admin";
 import styles from "./page.module.css";
 
-export const revalidate = 30;
+export const revalidate = 0;
 
 type StudioLoginPageProps = {
   searchParams?: Promise<{

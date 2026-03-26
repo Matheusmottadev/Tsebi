@@ -61,6 +61,67 @@ Disallow: /
 User-agent: Diffbot
 Disallow: /
 
+User-agent: cohere-ai
+Disallow: /
+
+User-agent: Timpibot
+Disallow: /
+
+User-agent: Amazonbot
+Disallow: /
+
+# 🚫 Scrapers de SEO — sem benefício para loja BR
+User-agent: AhrefsBot
+Disallow: /
+
+User-agent: SemrushBot
+Disallow: /
+
+User-agent: MJ12bot
+Disallow: /
+
+User-agent: DotBot
+Disallow: /
+
+User-agent: BLEXBot
+Disallow: /
+
+User-agent: DataForSeoBot
+Disallow: /
+
+User-agent: PetalBot
+Disallow: /
+
+User-agent: SerpstatBot
+Disallow: /
+
+User-agent: Rogerbot
+Disallow: /
+
+User-agent: Exabot
+Disallow: /
+
+User-agent: ia_archiver
+Disallow: /
+
+User-agent: Baiduspider
+Disallow: /
+
+User-agent: YandexBot
+Disallow: /
+
+User-agent: 360Spider
+Disallow: /
+
+User-agent: SeznamBot
+Disallow: /
+
+User-agent: Panscient
+Disallow: /
+
+User-agent: Dataprovider
+Disallow: /
+
 # Todos os outros: acesso permitido
 User-agent: *
 Allow: /

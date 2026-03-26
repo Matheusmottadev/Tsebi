@@ -2,7 +2,7 @@
 import { StudioAdminPanel } from "@/components/studio/panel/StudioAdminPanel";
 import { readStudioSession } from "@/lib/studio/server";
 
-export const revalidate = 30;
+export const revalidate = 0;
 
 export const metadata: Metadata = {
   title: "Studio Administrativo",

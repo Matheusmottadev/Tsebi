@@ -4,7 +4,7 @@ import { listNewsletterAdmin } from "@/services/admin";
 import { StudioShell } from "@/components/studio/StudioShell";
 import styles from "./page.module.css";
 
-export const revalidate = 30;
+export const revalidate = 0;
 
 type StudioNewsletterPageProps = {
   searchParams?: Promise<{

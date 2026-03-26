@@ -7,7 +7,7 @@ import { readStudioSession } from "@/lib/studio/server";
 import { getOrderAdmin } from "@/services/admin";
 import styles from "./page.module.css";
 
-export const revalidate = 30;
+export const revalidate = 0;
 
 type StudioOrderDetailPageProps = {
   params: {

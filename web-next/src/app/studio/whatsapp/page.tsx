@@ -4,7 +4,7 @@ import { StudioShell } from "@/components/studio/StudioShell";
 import { listNewsletterAdmin, listVipAdmin } from "@/services/admin";
 import styles from "./page.module.css";
 
-export const revalidate = 30;
+export const revalidate = 0;
 
 export const metadata: Metadata = {
   title: "Studio WhatsApp",

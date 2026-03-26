@@ -6,7 +6,7 @@ import { readStudioSession } from "@/lib/studio/server";
 import { listProductsAdmin } from "@/services/admin";
 import styles from "./page.module.css";
 
-export const revalidate = 30;
+export const revalidate = 0;
 
 type StudioProductsPageProps = {
   searchParams?: Promise<{

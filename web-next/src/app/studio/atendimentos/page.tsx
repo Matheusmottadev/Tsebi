@@ -6,7 +6,7 @@ import { StudioShell } from "@/components/studio/StudioShell";
 import { PrivateCareManager } from "@/components/studio/PrivateCareManager";
 import styles from "./page.module.css";
 
-export const revalidate = 30;
+export const revalidate = 0;
 
 type StudioPrivateCarePageProps = {
   searchParams?: Promise<{
