@@ -25,6 +25,7 @@ const shippingQuoteRateLimit = rateLimit({
 
 const shippingQuoteSchema = z.object({
   orderId: z.string().uuid().optional(),
+  itemsCount: z.coerce.number().int().min(1).max(999).optional().default(1),
   destinationZip: z
     .string()
     .transform((value: any) => String(value || "").replace(/\D/g, "").slice(0, 8))
@@ -265,9 +266,10 @@ shippingRouter.post("/shipping/quote", shippingQuoteRateLimit, async (req: any, 
   const userId = req.session?.userId || null;
   const destinationZip = parsed.data.destinationZip;
   const orderId = parsed.data.orderId || null;
+  const requestedItemsCount = Math.max(1, Number(parsed.data.itemsCount || 1));
 
   try {
-    let itemsCount = 1;
+    let itemsCount = requestedItemsCount;
     if (orderId) {
       const order = await findOrderById(orderId);
       if (!order || String(order.userId || "") !== String(userId || "")) {
