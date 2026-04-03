@@ -38,6 +38,10 @@ function getMelhorEnvioTokenUrl() {
   return `${getMelhorEnvioOrigin()}/oauth/token`;
 }
 
+function getMelhorEnvioAuthorizeUrlBase() {
+  return `${getMelhorEnvioOrigin()}/oauth/authorize`;
+}
+
 function getMelhorEnvioUserAgent() {
   const explicit = readEnv("MELHORENVIO_USER_AGENT", "");
   if (explicit) return explicit;
@@ -50,16 +54,29 @@ function getStaticAccessToken() {
   return readEnv("MELHOR_ENVIO_TOKEN", "");
 }
 
+function getMelhorEnvioRedirectUri() {
+  const configured = readEnv("MELHORENVIO_REDIRECT_URI", "");
+  if (configured) return configured;
+  const appBase = readEnv("APP_BASE_URL", "https://tsebi.com.br").replace(/\/+$/, "");
+  return `${appBase}/api/shipping/melhorenvio/callback`;
+}
+
+function getMelhorEnvioClientId() {
+  const clientIdRaw = readEnv("MELHORENVIO_CLIENT_ID", "");
+  if (!clientIdRaw) return "";
+  return /^\d+$/.test(clientIdRaw) ? Number(clientIdRaw) : clientIdRaw;
+}
+
 function buildTokenRequestPayload({ grantType, refreshToken }: any) {
   const clientIdRaw = readEnv("MELHORENVIO_CLIENT_ID", "");
-  const clientId = /^\d+$/.test(clientIdRaw) ? Number(clientIdRaw) : clientIdRaw;
+  const clientId = getMelhorEnvioClientId();
   const payload: any = {
     grant_type: grantType,
     client_id: clientId || clientIdRaw,
     client_secret: readEnv("MELHORENVIO_CLIENT_SECRET", "")
   };
 
-  const redirectUri = readEnv("MELHORENVIO_REDIRECT_URI", "");
+  const redirectUri = getMelhorEnvioRedirectUri();
   if (redirectUri) payload.redirect_uri = redirectUri;
 
   const authCode = readEnv("MELHORENVIO_AUTH_CODE", "");
@@ -133,6 +150,105 @@ async function requestRefreshedToken(currentRefreshToken: any) {
     expiresAt,
     scope
   });
+}
+
+async function exchangeMelhorEnvioAuthCode(authCode: any) {
+  const normalizedCode = String(authCode || "").trim();
+  if (!normalizedCode) {
+    const error = new Error("MELHORENVIO_AUTH_CODE_MISSING");
+    error.code = "MELHORENVIO_AUTH_CODE_MISSING";
+    error.status = 400;
+    throw error;
+  }
+
+  const payload = buildTokenRequestPayload({
+    grantType: "authorization_code",
+    refreshToken: ""
+  });
+  payload.code = normalizedCode;
+
+  if (!payload.client_id || !payload.client_secret || !payload.code || !payload.redirect_uri) {
+    const error = new Error("MELHORENVIO_OAUTH_NOT_CONFIGURED");
+    error.code = "MELHORENVIO_OAUTH_NOT_CONFIGURED";
+    error.status = 500;
+    throw error;
+  }
+
+  const response = await fetch(getMelhorEnvioTokenUrl(), {
+    method: "POST",
+    headers: {
+      Accept: "application/json",
+      "Content-Type": "application/json",
+      "User-Agent": getMelhorEnvioUserAgent()
+    },
+    body: JSON.stringify(payload)
+  });
+
+  const data = await parseJsonResponse(response);
+
+  if (!response.ok) {
+    const detail = data?.message || data?.error_description || data?.error || "MELHORENVIO_TOKEN_EXCHANGE_FAILED";
+    const error = new Error(String(detail));
+    error.code = "MELHORENVIO_TOKEN_EXCHANGE_FAILED";
+    error.status = response.status;
+    error.payload = data || null;
+    throw error;
+  }
+
+  const accessToken = String(data?.access_token || "").trim();
+  const refreshToken = String(data?.refresh_token || "").trim();
+  const expiresIn = Number(data?.expires_in || 0);
+  const scope = String(data?.scope || "").trim();
+
+  if (!accessToken || !refreshToken || !Number.isFinite(expiresIn) || expiresIn <= 0) {
+    const error = new Error("MELHORENVIO_TOKEN_RESPONSE_INVALID");
+    error.code = "MELHORENVIO_TOKEN_RESPONSE_INVALID";
+    error.status = 500;
+    error.payload = data || null;
+    throw error;
+  }
+
+  const expiresAt = new Date(Date.now() + expiresIn * 1000).toISOString();
+  return saveMelhorEnvioTokens({
+    accessToken,
+    refreshToken,
+    expiresAt,
+    scope
+  });
+}
+
+function buildMelhorEnvioAuthorizeUrl({ state = "" }: any = {}) {
+  const clientId = getMelhorEnvioClientId();
+  const clientSecret = readEnv("MELHORENVIO_CLIENT_SECRET", "");
+  if (!clientId || !clientSecret) {
+    const error = new Error("MELHORENVIO_OAUTH_NOT_CONFIGURED");
+    error.code = "MELHORENVIO_OAUTH_NOT_CONFIGURED";
+    error.status = 500;
+    throw error;
+  }
+
+  const url = new URL(getMelhorEnvioAuthorizeUrlBase());
+  url.searchParams.set("client_id", String(clientId));
+  url.searchParams.set("redirect_uri", getMelhorEnvioRedirectUri());
+  url.searchParams.set("response_type", "code");
+
+  const scope = readEnv("MELHORENVIO_SCOPE", "");
+  if (scope) url.searchParams.set("scope", scope);
+  if (state) url.searchParams.set("state", String(state));
+
+  return url.toString();
+}
+
+async function getMelhorEnvioConnectionStatus() {
+  const tokens = await getMelhorEnvioTokens();
+  return {
+    configured: Boolean(readEnv("MELHORENVIO_CLIENT_ID", "") && readEnv("MELHORENVIO_CLIENT_SECRET", "")),
+    redirectUri: getMelhorEnvioRedirectUri(),
+    hasTokens: Boolean(tokens?.accessToken && tokens?.refreshToken),
+    expiresAt: tokens?.expiresAt || null,
+    updatedAt: tokens?.updatedAt || null,
+    scope: tokens?.scope || readEnv("MELHORENVIO_SCOPE", "")
+  };
 }
 
 function tokenIsExpired(expiresAt: any) {
@@ -222,7 +338,11 @@ async function melhorEnvioApiRequest(path: any, { method = "GET", body, headers 
 }
 
 module.exports = {
+  buildMelhorEnvioAuthorizeUrl,
+  exchangeMelhorEnvioAuthCode,
+  getMelhorEnvioConnectionStatus,
   getMelhorEnvioApiBaseUrl,
+  getMelhorEnvioRedirectUri,
   getMelhorEnvioUserAgent,
   getMelhorEnvioAccessToken,
   melhorEnvioApiRequest
