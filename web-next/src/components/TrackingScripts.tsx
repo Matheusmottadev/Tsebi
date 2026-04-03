@@ -13,7 +13,11 @@ const GOOGLE_ADS_ID = String(process.env.NEXT_PUBLIC_GOOGLE_ADS_ID || "").trim()
 const POSTHOG_KEY = String(process.env.NEXT_PUBLIC_POSTHOG_KEY || "").trim();
 const POSTHOG_HOST = String(process.env.NEXT_PUBLIC_POSTHOG_HOST || "https://us.i.posthog.com").trim();
 
-export function TrackingScripts() {
+type TrackingScriptsProps = {
+  nonce?: string;
+};
+
+export function TrackingScripts({ nonce }: TrackingScriptsProps) {
   const pathname = usePathname();
   const [consent, setConsent] = useState<ConsentState | null>(null);
   const allowAnalytics = Boolean(consent?.analytics);
@@ -84,8 +88,9 @@ export function TrackingScripts() {
             id="gtag-loader"
             src={`https://www.googletagmanager.com/gtag/js?id=${encodeURIComponent(gtagBootstrapId)}`}
             strategy="afterInteractive"
+            nonce={nonce}
           />
-          <Script id="gtag-init" strategy="afterInteractive">
+          <Script id="gtag-init" strategy="afterInteractive" nonce={nonce}>
             {`
               window.dataLayer = window.dataLayer || [];
               function gtag(){window.dataLayer.push(arguments);}
@@ -99,7 +104,7 @@ export function TrackingScripts() {
       ) : null}
 
       {allowAnalytics && GTM_ID ? (
-        <Script id="gtm-loader" strategy="afterInteractive">
+        <Script id="gtm-loader" strategy="afterInteractive" nonce={nonce}>
           {`
             (function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
             new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],

@@ -2,7 +2,11 @@ import Script from "next/script";
 
 const META_PIXEL_ID = String(process.env.NEXT_PUBLIC_META_PIXEL_ID || "").trim();
 
-export function MetaPixelBase() {
+type MetaPixelBaseProps = {
+  nonce?: string;
+};
+
+export function MetaPixelBase({ nonce }: MetaPixelBaseProps) {
   if (!META_PIXEL_ID) {
     if (process.env.NODE_ENV !== "production") {
       console.debug("[meta-pixel] NEXT_PUBLIC_META_PIXEL_ID not set. Pixel base snippet skipped.");
@@ -12,7 +16,7 @@ export function MetaPixelBase() {
 
   return (
     <>
-      <Script id="meta-pixel-base" strategy="afterInteractive">
+      <Script id="meta-pixel-base" strategy="afterInteractive" nonce={nonce}>
         {`
           !function(f,b,e,v,n,t,s)
           {if(f.fbq)return;n=f.fbq=function(){n.callMethod?

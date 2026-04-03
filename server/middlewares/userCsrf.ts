@@ -128,6 +128,16 @@ function generateCsrfToken(): string {
   return nodeCrypto.randomBytes(24).toString("base64url");
 }
 
+// Comparação em tempo constante para evitar timing attacks na validação do token
+function timingSafeEqual(a: string, b: string): boolean {
+  if (!a || !b || a.length !== b.length) return false;
+  try {
+    return nodeCrypto.timingSafeEqual(Buffer.from(a), Buffer.from(b));
+  } catch {
+    return false;
+  }
+}
+
 function setUserCsrfCookie(res: Response, token: string): void {
   res.cookie(userCsrfCookieName, String(token || ""), {
     httpOnly: false,
@@ -242,7 +252,7 @@ function requireUserCsrfForMutations(req: Request, res: Response, next: NextFunc
   if (!headerToken || !cookieToken || !sessionToken) {
     return res.status(403).json({ error: "CSRF_MISSING" });
   }
-  if (headerToken !== cookieToken || headerToken !== sessionToken) {
+  if (!timingSafeEqual(headerToken, cookieToken) || !timingSafeEqual(headerToken, sessionToken)) {
     return res.status(403).json({ error: "CSRF_INVALID" });
   }
 

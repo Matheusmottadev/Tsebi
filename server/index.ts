@@ -121,7 +121,18 @@ function parseAllowedCorsOrigins(): string[] {
   return [];
 }
 
-app.set("trust proxy", 1);
+// Confia apenas em proxies em redes privadas (infraestrutura interna do Railway).
+// Requisições que cheguem com IP público no TCP não terão X-Forwarded-For confiável,
+// o que evita bypass de rate limits por IP spoofing em acesso direto ao Railway.
+app.set("trust proxy", (ip: string) => {
+  if (ip === "127.0.0.1" || ip === "::1") return true;     // loopback
+  if (/^10\./.test(ip)) return true;                        // RFC 1918 10.0.0.0/8
+  if (/^172\.(1[6-9]|2\d|3[01])\./.test(ip)) return true;  // RFC 1918 172.16.0.0/12
+  if (/^192\.168\./.test(ip)) return true;                  // RFC 1918 192.168.0.0/16
+  if (/^fc[0-9a-f]{2}:/i.test(ip)) return true;            // IPv6 ULA fc00::/7
+  if (/^fd[0-9a-f]{2}:/i.test(ip)) return true;            // IPv6 ULA fd00::/8
+  return false;
+});
 app.disable("x-powered-by");
 app.use((req: any, res: any, next: any) => {
   const incoming = String(req.headers["x-request-id"] || "").trim();
@@ -1506,7 +1517,6 @@ app.use(
         frameAncestors: ["'self'"],
         scriptSrc: [
           "'self'",
-          "'unsafe-inline'",
           "https://js.stripe.com",
           "https://m.stripe.network",
           "https://checkout.stripe.com",
@@ -1521,7 +1531,7 @@ app.use(
           "https://accounts.google.com",
           "https://www.google.com/recaptcha/"
         ],
-        styleSrc: ["'self'", "'unsafe-inline'", "https:", "https://fonts.googleapis.com"],
+        styleSrc: ["'self'", "https:", "https://fonts.googleapis.com"],
         imgSrc: [
           "'self'",
           "data:",
@@ -1668,6 +1678,10 @@ app.use(
     immutable: true
   })
 );
+app.use(express.static(path.resolve(process.cwd(), "pages")));
+app.use("/css", express.static(path.resolve(process.cwd(), "css")));
+app.use("/JS", express.static(path.resolve(process.cwd(), "JS")));
+app.use("/assets", express.static(path.resolve(process.cwd(), "assets")));
 
 app.use("/api/auth", attachUserCsrfToken, requireUserCsrfForMutations, authRouter);
 app.use("/api/my", attachUserCsrfToken, requireUserCsrfForMutations, myRouter);

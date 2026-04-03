@@ -2,9 +2,15 @@ import type { SessionOptions, Store } from "express-session";
 
 const session = require("express-session") as typeof import("express-session");
 const pgSessionFactory = require("connect-pg-simple");
+const nodeCrypto = require("node:crypto");
 const { getPool } = require("./lib/db");
+const defaultSessionSecret = "change-this-secret";
 
-const defaultSessionSecret = "dev-change-this-session-secret";
+// Secret efêmero gerado aleatoriamente por processo — usado apenas como fallback
+// quando SESSION_SECRET não está configurado (ambientes de dev sem .env).
+// Sessões criadas com este secret NÃO sobrevivem a reinícios do servidor,
+// o que é aceitável em dev e elimina o risco de um secret previsível vazar para prod.
+const ephemeralSessionSecret: string = nodeCrypto.randomBytes(32).toString("hex");
 
 function parseIntegerEnv(value: string | undefined, fallback: number): number {
   const parsed = Number.parseInt(String(value || "").trim(), 10);
@@ -70,7 +76,7 @@ function createSessionMiddleware() {
     console.warn("[session] using local development fallback secret");
   }
 
-  const effectiveSessionSecret = hasStrongSessionSecret ? sessionSecret : defaultSessionSecret;
+  const effectiveSessionSecret = hasStrongSessionSecret ? sessionSecret : ephemeralSessionSecret;
 
   const cookieConfig: SessionOptions["cookie"] = {
     httpOnly: true,

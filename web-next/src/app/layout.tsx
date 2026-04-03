@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Cormorant_Garamond, Jost, Montserrat, Playfair_Display } from "next/font/google";
+import { headers } from "next/headers";
 import Script from "next/script";
 import { Suspense } from "react";
 import { LayoutChrome } from "@/components/LayoutChrome";
@@ -159,12 +160,13 @@ export const metadata: Metadata = {
   },
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
   const isProduction = process.env.NODE_ENV === "production";
+  const nonce = (await headers()).get("x-nonce") ?? "";
   const organizationSchema = {
     "@context": "https://schema.org",
     "@type": "Organization",
@@ -207,13 +209,13 @@ export default function RootLayout({
     >
       <head>
         <link rel="manifest" href="/manifest.webmanifest" />
-        {isProduction ? <MetaPixelBase /> : null}
+        {isProduction ? <MetaPixelBase nonce={nonce} /> : null}
       </head>
       <body
         suppressHydrationWarning
         style={{ margin: 0, padding: 0 }}
       >
-        <Script id="google-consent-default" strategy="beforeInteractive">
+        <Script id="google-consent-default" strategy="beforeInteractive" nonce={nonce}>
           {`
             window.dataLayer = window.dataLayer || [];
             function gtag(){window.dataLayer.push(arguments);}
@@ -231,7 +233,7 @@ export default function RootLayout({
           `}
         </Script>
         {isProduction ? <MetaPixelPageViewTracker /> : null}
-        {isProduction ? <TrackingScripts /> : null}
+        {isProduction ? <TrackingScripts nonce={nonce} /> : null}
         {isProduction ? <PwaRegistration /> : null}
         <PwaSplashScreen />
         <WhatsAppContactButton />

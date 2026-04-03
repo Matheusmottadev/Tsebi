@@ -41,6 +41,10 @@ function buildAbsoluteUrl(path: string): string {
   if (typeof window !== "undefined" && window.location?.origin) {
     return new URL(path, `${window.location.origin}/`).toString();
   }
+  const serverProxyTarget = String(process.env.API_PROXY_TARGET || "").trim();
+  if (serverProxyTarget) {
+    return new URL(path, `${serverProxyTarget.replace(/\/+$/, "")}/`).toString();
+  }
   const { apiBaseUrl } = readPublicEnv();
   return new URL(path, `${apiBaseUrl}/`).toString();
 }
