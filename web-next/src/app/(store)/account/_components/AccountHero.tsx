@@ -1,5 +1,6 @@
 import type { PublicUser } from "@/types";
 import styles from "../account.module.css";
+import { AvatarUpload } from "./AvatarUpload";
 
 function getInitials(name: string): string {
   const parts = name.trim().split(/\s+/);
@@ -12,7 +13,7 @@ export function AccountHero({ user }: { user: PublicUser }) {
     <>
       <div className={styles.hero} />
       <div className={styles.avatarBlock}>
-        <div className={styles.avatar}>{getInitials(user.name)}</div>
+        <AvatarUpload currentAvatarUrl={user.avatarUrl} initials={getInitials(user.name)} />
         <p className={styles.userRole}>Cliente</p>
         <h1 className={styles.userName}>{user.name}</h1>
       </div>

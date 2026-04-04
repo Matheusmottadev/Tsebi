@@ -83,6 +83,43 @@
   flex-shrink: 0;
 }
 
+.avatarWrapper {
+  position: relative;
+  width: 72px;
+  height: 72px;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.avatarWrapper:hover .avatarCameraIcon {
+  opacity: 1;
+}
+
+.avatarPhoto {
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid var(--border);
+  box-shadow: 0 2px 16px rgba(0, 0, 0, 0.1);
+  display: block;
+}
+
+.avatarCameraIcon {
+  position: absolute;
+  bottom: 0;
+  right: 0;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: var(--black);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0.85;
+  transition: opacity 0.15s;
+}
+
 .userRole {
   font-family: var(--font-montserrat), sans-serif;
   font-size: 10px;

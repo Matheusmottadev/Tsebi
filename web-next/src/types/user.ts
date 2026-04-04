@@ -43,4 +43,5 @@ export interface PublicUser {
   cep: string;
   defaultAddressId: string;
   addresses: Address[];
+  avatarUrl?: string | null;
 }

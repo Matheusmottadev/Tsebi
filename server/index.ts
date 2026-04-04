@@ -2670,6 +2670,10 @@ app.post(
     };
   }
 
+  if (parsed.data.selectedPmId && String(parsed.data.selectedPmId).startsWith("pm_")) {
+    paymentIntentParams.payment_method = parsed.data.selectedPmId;
+  }
+
   // ── Stripe Customer (para cartões salvos) ────────────────────────────────
   let stripeCustomerId: string | null = checkoutUser.stripeCustomerId || null;
   let ephemeralKey: string | null = null;

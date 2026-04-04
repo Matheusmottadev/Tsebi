@@ -49,6 +49,7 @@ type UserRow = JsonRecord & {
   admin_mfa_disabled_at?: string | null;
   password_reset_required?: boolean;
   stripe_customer_id?: string | null;   // Stripe Customer ID para cartões salvos
+  avatar_url?: string | null;
   created_at?: string;
   updated_at?: string;
 };
@@ -94,6 +95,7 @@ type User = {
   adminMfaDisabledAt: string | null;
   passwordResetRequired: boolean;
   stripeCustomerId: string | null;      // Stripe Customer ID para cartões salvos
+  avatarUrl: string | null;
   createdAt: string;
   updatedAt: string;
 };
@@ -123,6 +125,7 @@ type UpdateUserPatch = {
   createdVia?: string;
   passwordResetRequired?: boolean;
   stripeCustomerId?: string | null;
+  avatarUrl?: string | null;
 };
 
 let userSecuritySchemaPromise: Promise<void> | null = null;
@@ -186,7 +189,8 @@ async function ensureUserSecurityColumns(): Promise<void> {
           ADD COLUMN IF NOT EXISTS is_guest BOOLEAN NOT NULL DEFAULT FALSE,
           ADD COLUMN IF NOT EXISTS created_via TEXT,
           ADD COLUMN IF NOT EXISTS last_login_at TIMESTAMPTZ,
-          ADD COLUMN IF NOT EXISTS stripe_customer_id TEXT;
+          ADD COLUMN IF NOT EXISTS stripe_customer_id TEXT,
+          ADD COLUMN IF NOT EXISTS avatar_url TEXT;
       `);
       // Keep identity fields as text to avoid numeric overflow/casting errors on legacy schemas.
       await query(`
@@ -315,6 +319,7 @@ function fromRow(row: UserRow | null | undefined): User | null {
     adminMfaDisabledAt: row.admin_mfa_disabled_at || null,
     passwordResetRequired: Boolean(row.password_reset_required),
     stripeCustomerId: row.stripe_customer_id || null,
+    avatarUrl: (row.avatar_url as string | null) ?? null,
     createdAt: String(row.created_at || ""),
     updatedAt: String(row.updated_at || "")
   };
@@ -333,7 +338,8 @@ function publicUser(user: User) {
     cpf: user.cpf || "",
     cep: user.cep || "",
     defaultAddressId: user.defaultAddressId || "",
-    addresses: user.addresses || []
+    addresses: user.addresses || [],
+    avatarUrl: user.avatarUrl || null
   };
 }
 
@@ -550,7 +556,11 @@ async function updateUser(id: string, patch: UpdateUserPatch): Promise<User | nu
     stripeCustomerId:
       patch.stripeCustomerId !== undefined
         ? patch.stripeCustomerId
-        : current.stripeCustomerId
+        : current.stripeCustomerId,
+    avatarUrl:
+      patch.avatarUrl !== undefined
+        ? patch.avatarUrl
+        : current.avatarUrl
   };
 
   const result = await query(
@@ -569,6 +579,7 @@ async function updateUser(id: string, patch: UpdateUserPatch): Promise<User | nu
       is_guest = $11,
       created_via = NULLIF($12, ''),
       stripe_customer_id = $13,
+      avatar_url = $14,
       updated_at = NOW()
     WHERE id = $1
     RETURNING *
@@ -586,7 +597,8 @@ async function updateUser(id: string, patch: UpdateUserPatch): Promise<User | nu
       Boolean(next.passwordResetRequired),
       Boolean(next.isGuest),
       String(next.createdVia || "").trim(),
-      next.stripeCustomerId || null
+      next.stripeCustomerId || null,
+      next.avatarUrl || null
     ]
   );
 
