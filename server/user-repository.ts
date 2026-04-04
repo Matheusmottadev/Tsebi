@@ -48,6 +48,7 @@ type UserRow = JsonRecord & {
   admin_mfa_enabled_at?: string | null;
   admin_mfa_disabled_at?: string | null;
   password_reset_required?: boolean;
+  stripe_customer_id?: string | null;   // Stripe Customer ID para cartões salvos
   created_at?: string;
   updated_at?: string;
 };
@@ -92,6 +93,7 @@ type User = {
   adminMfaEnabledAt: string | null;
   adminMfaDisabledAt: string | null;
   passwordResetRequired: boolean;
+  stripeCustomerId: string | null;      // Stripe Customer ID para cartões salvos
   createdAt: string;
   updatedAt: string;
 };
@@ -120,6 +122,7 @@ type UpdateUserPatch = {
   isGuest?: boolean;
   createdVia?: string;
   passwordResetRequired?: boolean;
+  stripeCustomerId?: string | null;
 };
 
 let userSecuritySchemaPromise: Promise<void> | null = null;
@@ -182,7 +185,8 @@ async function ensureUserSecurityColumns(): Promise<void> {
           ADD COLUMN IF NOT EXISTS phone TEXT,
           ADD COLUMN IF NOT EXISTS is_guest BOOLEAN NOT NULL DEFAULT FALSE,
           ADD COLUMN IF NOT EXISTS created_via TEXT,
-          ADD COLUMN IF NOT EXISTS last_login_at TIMESTAMPTZ;
+          ADD COLUMN IF NOT EXISTS last_login_at TIMESTAMPTZ,
+          ADD COLUMN IF NOT EXISTS stripe_customer_id TEXT;
       `);
       // Keep identity fields as text to avoid numeric overflow/casting errors on legacy schemas.
       await query(`
@@ -310,6 +314,7 @@ function fromRow(row: UserRow | null | undefined): User | null {
     adminMfaEnabledAt: row.admin_mfa_enabled_at || null,
     adminMfaDisabledAt: row.admin_mfa_disabled_at || null,
     passwordResetRequired: Boolean(row.password_reset_required),
+    stripeCustomerId: row.stripe_customer_id || null,
     createdAt: String(row.created_at || ""),
     updatedAt: String(row.updated_at || "")
   };
@@ -541,7 +546,11 @@ async function updateUser(id: string, patch: UpdateUserPatch): Promise<User | nu
         ? patch.passwordHash
           ? false
           : Boolean(current.passwordResetRequired)
-        : Boolean(patch.passwordResetRequired)
+        : Boolean(patch.passwordResetRequired),
+    stripeCustomerId:
+      patch.stripeCustomerId !== undefined
+        ? patch.stripeCustomerId
+        : current.stripeCustomerId
   };
 
   const result = await query(
@@ -559,6 +568,7 @@ async function updateUser(id: string, patch: UpdateUserPatch): Promise<User | nu
       password_reset_required = $10,
       is_guest = $11,
       created_via = NULLIF($12, ''),
+      stripe_customer_id = $13,
       updated_at = NOW()
     WHERE id = $1
     RETURNING *
@@ -575,7 +585,8 @@ async function updateUser(id: string, patch: UpdateUserPatch): Promise<User | nu
       next.passwordHash,
       Boolean(next.passwordResetRequired),
       Boolean(next.isGuest),
-      String(next.createdVia || "").trim()
+      String(next.createdVia || "").trim(),
+      next.stripeCustomerId || null
     ]
   );
 

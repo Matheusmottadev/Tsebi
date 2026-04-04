@@ -701,6 +701,13 @@ export function CheckoutClient({ initialCoupon = "" }: CheckoutClientProps) {
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<PaymentMethodChoice>("card");
   const [walletVariant, setWalletVariant] = useState<WalletVariant>("google_pay");
   const [selectedInstallments, setSelectedInstallments] = useState(1);
+
+  // ── Cartões salvos ──────────────────────────────────────────────────────────
+  type SavedCard = { id: string; brand: string; last4: string; exp_month: number; exp_year: number };
+  const [savedCards, setSavedCards] = useState<SavedCard[]>([]);
+  const [selectedSavedCardId, setSelectedSavedCardId] = useState<string | null>(null);
+  const [showAllSavedCards, setShowAllSavedCards] = useState(false);
+  const [saveCardForFuture, setSaveCardForFuture] = useState(false);
   const [discountCents, setDiscountCents] = useState(0);
   const [appliedCouponCode, setAppliedCouponCode] = useState(() => normalizeDiscountCode(initialCoupon));
   const [couponFeedback, setCouponFeedback] = useState("");
@@ -941,6 +948,17 @@ export function CheckoutClient({ initialCoupon = "" }: CheckoutClientProps) {
         setAccountEmail(normalizedUserEmail);
         const userAddresses = Array.isArray(user?.addresses) ? user.addresses : [];
         setAccountAddresses(userAddresses);
+
+        // Carrega cartões salvos do Stripe para usuários autenticados
+        try {
+          const pmResp = await fetch("/api/payment-methods", { credentials: "include" });
+          if (pmResp.ok) {
+            const pmData = await pmResp.json();
+            if (isMounted && Array.isArray(pmData.paymentMethods)) {
+              setSavedCards(pmData.paymentMethods);
+            }
+          }
+        } catch { /* silencioso */ }
         // Cacheia perfil para uso offline (TTL 1h)
         setCached("offline-profile-cache", { email: normalizedUserEmail, addresses: userAddresses }, 60 * 60 * 1000);
         const defaultAddressId = String(user?.defaultAddressId || "").trim();
@@ -2172,7 +2190,100 @@ export function CheckoutClient({ initialCoupon = "" }: CheckoutClientProps) {
               </div>
 
               <div className={styles.paymentWrap}>
-                <p className={styles.sectionSub}>Seus dados sao protegidos com criptografia.</p>
+                <p className={styles.sectionSub}>Seus dados são protegidos com criptografia.</p>
+
+                {/* ── Cartões salvos ─────────────────────────────────── */}
+                {savedCards.length > 0 && (
+                  <div className={styles.savedCardsSection}>
+                    <p className={styles.savedCardsLabel}>SEUS CARTÕES</p>
+                    {(showAllSavedCards ? savedCards : savedCards.slice(0, 1)).map((card) => {
+                      const isSelected = selectedSavedCardId === card.id;
+                      const brandDisplay =
+                        card.brand === "visa" ? "VISA" :
+                        card.brand === "mastercard" ? "MC" :
+                        card.brand === "amex" ? "AMEX" :
+                        card.brand === "elo" ? "ELO" :
+                        card.brand.slice(0, 4).toUpperCase();
+                      const expiry = `${String(card.exp_month).padStart(2, "0")}/${String(card.exp_year).slice(-2)}`;
+                      return (
+                        <div
+                          key={card.id}
+                          className={`${styles.savedCardRow} ${isSelected ? styles.savedCardRowSelected : ""}`}
+                          onClick={() => {
+                            setSelectedSavedCardId(isSelected ? null : card.id);
+                          }}
+                        >
+                          <span className={styles.savedCardRadio} aria-hidden>
+                            {isSelected ? "●" : "○"}
+                          </span>
+                          <span className={styles.savedCardBadge} style={{ background: card.brand === "visa" ? "#1A1F71" : card.brand === "mastercard" ? "#EB001B" : card.brand === "elo" ? "#00A4E0" : "#555" }}>
+                            {brandDisplay}
+                          </span>
+                          <span className={styles.savedCardInfo}>
+                            <span className={styles.savedCardNumber}>•••• {card.last4}</span>
+                            <span className={styles.savedCardExpiry}>Val. {expiry}</span>
+                          </span>
+                          <button
+                            type="button"
+                            className={styles.savedCardRemove}
+                            aria-label="Remover cartão"
+                            onClick={async (e) => {
+                              e.stopPropagation();
+                              try {
+                                const r = await fetch(`/api/payment-methods/${card.id}`, { method: "DELETE", credentials: "include" });
+                                if (r.ok) {
+                                  setSavedCards((prev) => prev.filter((c) => c.id !== card.id));
+                                  if (selectedSavedCardId === card.id) setSelectedSavedCardId(null);
+                                }
+                              } catch { /* silencioso */ }
+                            }}
+                          >
+                            ×
+                          </button>
+                        </div>
+                      );
+                    })}
+                    {savedCards.length > 1 && (
+                      <button
+                        type="button"
+                        className={styles.savedCardsToggle}
+                        onClick={() => setShowAllSavedCards((v) => !v)}
+                      >
+                        {showAllSavedCards
+                          ? "Mostrar menos"
+                          : `+ ${savedCards.length - 1} cartão${savedCards.length - 1 > 1 ? "s" : ""}`}
+                      </button>
+                    )}
+                    {selectedSavedCardId && (
+                      <div className={styles.savedCardInstallments}>
+                        <label className={styles.savedCardInstallmentsLabel}>PARCELAMENTO</label>
+                        <select
+                          className={styles.savedCardInstallmentsSelect}
+                          value={selectedInstallments}
+                          onChange={(e) => setSelectedInstallments(Number(e.target.value))}
+                        >
+                          {[1,2,3,4,5,6,7,8,9,10,11,12].map((n) => (
+                            <option key={n} value={n}>{n}x — sem juros</option>
+                          ))}
+                        </select>
+                      </div>
+                    )}
+                    <div className={styles.savedCardsDivider} />
+                  </div>
+                )}
+
+                {/* Toggle salvar novo cartão */}
+                {accountEmail && !selectedSavedCardId && selectedPaymentMethod === "card" && (
+                  <label className={styles.saveCardToggle}>
+                    <input
+                      type="checkbox"
+                      checked={saveCardForFuture}
+                      onChange={(e) => setSaveCardForFuture(e.target.checked)}
+                      className={styles.saveCardCheckbox}
+                    />
+                    <span>Salvar cartão para próximas compras</span>
+                  </label>
+                )}
 
                 <div className={styles.paymentOptions}>
                   <button

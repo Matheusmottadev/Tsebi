@@ -945,3 +945,143 @@
     gap: 18px;
   }
 }
+
+/* ── Cartões salvos ──────────────────────────────────────────────────────── */
+
+.savedCardsSection {
+  margin-bottom: 20px;
+}
+
+.savedCardsLabel {
+  font-size: 9px;
+  letter-spacing: 2px;
+  font-weight: 300;
+  color: #aaa;
+  margin-bottom: 10px;
+  margin-top: 0;
+}
+
+.savedCardRow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 0;
+  border-bottom: 0.5px solid #f0f0f0;
+  cursor: pointer;
+  user-select: none;
+  transition: background 0.12s;
+}
+
+.savedCardRow:hover { background: #fafafa; }
+
+.savedCardRowSelected { background: #f7f6f4; }
+
+.savedCardRadio {
+  font-size: 11px;
+  color: #666;
+  width: 14px;
+  flex-shrink: 0;
+}
+
+.savedCardBadge {
+  font-size: 8px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  color: #fff;
+  padding: 3px 7px;
+  border-radius: 3px;
+  flex-shrink: 0;
+}
+
+.savedCardInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+}
+
+.savedCardNumber {
+  font-size: 13px;
+  font-weight: 300;
+  color: #111;
+}
+
+.savedCardExpiry {
+  font-size: 10px;
+  font-weight: 300;
+  color: #aaa;
+}
+
+.savedCardRemove {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 18px;
+  color: #ccc;
+  line-height: 1;
+  padding: 0 4px;
+  transition: color 0.12s;
+}
+
+.savedCardRemove:hover { color: #888; }
+
+.savedCardsToggle {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 11px;
+  font-weight: 300;
+  color: #888;
+  padding: 10px 0 4px;
+  letter-spacing: 0.3px;
+}
+
+.savedCardInstallments {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 12px 0 4px;
+}
+
+.savedCardInstallmentsLabel {
+  font-size: 8px;
+  letter-spacing: 1.5px;
+  font-weight: 300;
+  color: #aaa;
+}
+
+.savedCardInstallmentsSelect {
+  border: none;
+  border-bottom: 0.5px solid #e0e0e0;
+  font-size: 13px;
+  font-weight: 300;
+  color: #111;
+  padding: 6px 0;
+  background: transparent;
+  outline: none;
+  cursor: pointer;
+}
+
+.savedCardsDivider {
+  height: 0.5px;
+  background: #eee;
+  margin: 16px 0 4px;
+}
+
+.saveCardToggle {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 12px;
+  font-weight: 300;
+  color: #555;
+  cursor: pointer;
+  margin-bottom: 18px;
+}
+
+.saveCardCheckbox {
+  width: 15px;
+  height: 15px;
+  cursor: pointer;
+  accent-color: #111;
+}
