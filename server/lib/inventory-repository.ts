@@ -1,4 +1,5 @@
 export {};
+const STOREFRONT_DEFAULT_PRICE_CENTS = 500;
 type JsonRecord = Record<string, unknown>;
 type ProductRow = JsonRecord & {
   id: string;
@@ -204,7 +205,7 @@ async function checkAvailability(orderItems: unknown): Promise<{ ok: boolean; is
       id: product.sku,
       name: product.name,
       qty: item.qty,
-      unitAmount: Number(product.price_cents || 0),
+      unitAmount: STOREFRONT_DEFAULT_PRICE_CENTS,
       currency: String(product.currency || "brl").toLowerCase(),
       variantColor: item.variantColor || null,
       variantSize: item.variantSize || null,
