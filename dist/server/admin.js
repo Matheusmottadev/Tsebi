@@ -318,11 +318,13 @@ const accessCodeUpsertSchema = z.object({
         .min(3)
         .max(40)
         .transform((value) => normalizeCode(value)),
-    type: z.enum(["percent", "fixed"]).default("percent"),
+    type: z.enum(["percent", "fixed", "free_shipping"]).default("percent"),
     percentOff: z.coerce.number().int().min(0).max(100).optional().default(0),
     amountOffCents: z.coerce.number().int().min(0).max(9_999_999).optional().default(0),
     minSubtotalCents: z.coerce.number().int().min(0).max(9_999_999).optional().default(0),
     maxDiscountCents: z.coerce.number().int().min(0).max(9_999_999).optional().default(0),
+    maxUses: z.coerce.number().int().min(0).optional().default(0),
+    firstPurchaseOnly: z.coerce.boolean().optional().default(false),
     active: z.coerce.boolean().optional().default(true),
     startsAt: z.string().trim().max(40).optional().default(""),
     expiresAt: z.string().trim().max(40).optional().default(""),

@@ -23,7 +23,11 @@ function toSafeMoneyCents(value, max = 9_999_999) {
 }
 function normalizeType(value) {
     const raw = String(value || "").trim().toLowerCase();
-    return raw === "fixed" ? "fixed" : "percent";
+    if (raw === "fixed")
+        return "fixed";
+    if (raw === "free_shipping")
+        return "free_shipping";
+    return "percent";
 }
 function sanitizeAccessCode(raw) {
     const code = normalizeCode(raw?.code || "");
@@ -32,6 +36,9 @@ function sanitizeAccessCode(raw) {
     const amountOffCents = toSafeMoneyCents(raw?.amountOffCents || 0);
     const minSubtotalCents = toSafeMoneyCents(raw?.minSubtotalCents || 0);
     const maxDiscountCents = toSafeMoneyCents(raw?.maxDiscountCents || 0);
+    const maxUses = toSafeMoneyCents(raw?.maxUses || 0);
+    const usedCount = toSafeMoneyCents(raw?.usedCount || 0);
+    const firstPurchaseOnly = raw?.firstPurchaseOnly === true;
     const active = raw?.active !== false;
     const startsAt = String(raw?.startsAt || "").trim();
     const expiresAt = String(raw?.expiresAt || "").trim();
@@ -45,6 +52,9 @@ function sanitizeAccessCode(raw) {
         amountOffCents: type === "fixed" ? amountOffCents : 0,
         minSubtotalCents,
         maxDiscountCents,
+        maxUses,
+        usedCount,
+        firstPurchaseOnly,
         active,
         startsAt,
         expiresAt,
@@ -127,6 +137,7 @@ async function upsertAccessCode(input) {
             const next = {
                 ...previous,
                 ...parsed,
+                usedCount: previous.usedCount || 0,
                 createdAt: previous.createdAt || nowIso,
                 updatedAt: nowIso
             };
@@ -136,6 +147,7 @@ async function upsertAccessCode(input) {
         }
         const next = {
             ...parsed,
+            usedCount: 0,
             createdAt: nowIso,
             updatedAt: nowIso
         };
@@ -159,7 +171,25 @@ async function deleteAccessCode(code) {
         return { ok: true, removed };
     });
 }
-async function evaluateAccessCode({ code, subtotalCents = 0, shippingCents = 0, nowIso = new Date().toISOString() }) {
+async function incrementAccessCodeUsage(code) {
+    const normalized = normalizeCode(code);
+    if (!normalized)
+        return;
+    await enqueueWrite(async () => {
+        const list = await readAllCodes();
+        const idx = list.findIndex((entry) => entry.code === normalized);
+        if (idx < 0)
+            return;
+        const entry = list[idx];
+        list[idx] = {
+            ...entry,
+            usedCount: (entry.usedCount || 0) + 1,
+            updatedAt: new Date().toISOString()
+        };
+        await writeJson(ACCESS_CODES_FILE, list);
+    });
+}
+async function evaluateAccessCode({ code, subtotalCents = 0, shippingCents = 0, nowIso = new Date().toISOString(), hasPreviousOrders = false }) {
     const normalized = normalizeCode(code);
     if (!normalized)
         return { ok: false, error: "INVALID_CODE" };
@@ -171,11 +201,25 @@ async function evaluateAccessCode({ code, subtotalCents = 0, shippingCents = 0, 
         return { ok: false, error: "CODE_INACTIVE" };
     if (!isNowBetween(entry.startsAt, entry.expiresAt, nowIso))
         return { ok: false, error: "CODE_NOT_AVAILABLE_NOW" };
+    if (entry.maxUses > 0 && entry.usedCount >= entry.maxUses)
+        return { ok: false, error: "CODE_MAX_USES_REACHED" };
+    if (entry.firstPurchaseOnly && hasPreviousOrders)
+        return { ok: false, error: "FIRST_PURCHASE_ONLY" };
     const subtotal = toSafeMoneyCents(subtotalCents);
     const shipping = toSafeMoneyCents(shippingCents);
-    const discountCents = computeDiscountCents(entry, subtotal);
-    if (discountCents <= 0)
-        return { ok: false, error: "CODE_NOT_APPLICABLE" };
+    let discountCents;
+    if (entry.type === "free_shipping") {
+        const minSubtotal = toSafeMoneyCents(entry.minSubtotalCents || 0);
+        if (minSubtotal > 0 && subtotal < minSubtotal)
+            return { ok: false, error: "CODE_NOT_APPLICABLE" };
+        // discount equals shipping cost; if shipping not yet known (cart stage), still accept code
+        discountCents = shipping;
+    }
+    else {
+        discountCents = computeDiscountCents(entry, subtotal);
+        if (discountCents <= 0)
+            return { ok: false, error: "CODE_NOT_APPLICABLE" };
+    }
     const totalCents = Math.max(0, subtotal + shipping - discountCents);
     return {
         ok: true,
@@ -191,6 +235,7 @@ module.exports = {
     listAccessCodes,
     upsertAccessCode,
     deleteAccessCode,
-    evaluateAccessCode
+    evaluateAccessCode,
+    incrementAccessCodeUsage
 };
 //# sourceMappingURL=access-code-repository.js.map

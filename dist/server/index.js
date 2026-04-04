@@ -24,9 +24,10 @@ const { findUserById, upsertCheckoutGuestUser, setGuestTempPasswordIfMissing, no
 const { sendGuestCheckoutAccountCreatedEmail, sendEmail } = require("./lib/email-service");
 const { createOrder, updateOrder, findOrderById, listOrdersByUserId } = require("./lib/order-repository");
 const { notifyOrderConfirmed, notifyPaymentApproved } = require("./lib/order-notification-service");
+const { saveSubscription, deleteSubscription } = require("./lib/push-notification-service");
 const { listProducts, getProductByIdentifier, searchStorefrontProducts, searchStorefrontSuggestions } = require("./lib/product-repository");
 const { checkAvailability, commitStock } = require("./lib/inventory-repository");
-const { evaluateAccessCode } = require("./lib/access-code-repository");
+const { evaluateAccessCode, incrementAccessCodeUsage } = require("./lib/access-code-repository");
 const { withTransaction } = require("./lib/db");
 const { logProductSearchEvent } = require("./lib/search-telemetry-repository");
 const { logBehaviorEvent, mergeAnonymousIdentity, getRecommendationsForActor, priceBucketFromCents } = require("./lib/behavior-analytics-repository");
@@ -106,7 +107,32 @@ function parseAllowedCorsOrigins() {
     }
     return [];
 }
-exports.app.set("trust proxy", 1);
+const isProductionRuntime = String(process.env.NODE_ENV || "").trim().toLowerCase() === "production";
+if (isProductionRuntime) {
+    // Production traffic reaches Railway through a reverse proxy chain
+    // (including Vercel rewrites), so we must trust the proxy hop for
+    // secure session cookies and req.secure to work during admin MFA.
+    exports.app.set("trust proxy", 1);
+}
+else {
+    // In local/dev, trust only private-network proxies to avoid accepting
+    // spoofed forwarding headers from direct public requests.
+    exports.app.set("trust proxy", (ip) => {
+        if (ip === "127.0.0.1" || ip === "::1")
+            return true; // loopback
+        if (/^10\./.test(ip))
+            return true; // RFC 1918 10.0.0.0/8
+        if (/^172\.(1[6-9]|2\d|3[01])\./.test(ip))
+            return true; // RFC 1918 172.16.0.0/12
+        if (/^192\.168\./.test(ip))
+            return true; // RFC 1918 192.168.0.0/16
+        if (/^fc[0-9a-f]{2}:/i.test(ip))
+            return true; // IPv6 ULA fc00::/7
+        if (/^fd[0-9a-f]{2}:/i.test(ip))
+            return true; // IPv6 ULA fd00::/8
+        return false;
+    });
+}
 exports.app.disable("x-powered-by");
 exports.app.use((req, res, next) => {
     const incoming = String(req.headers["x-request-id"] || "").trim();
@@ -164,6 +190,51 @@ const identifyRateLimit = rateLimit({
     legacyHeaders: false,
     message: { error: "TOO_MANY_REQUESTS" }
 });
+// Bots de redes sociais (meta-externalagent, facebookexternalhit, Twitterbot, etc.)
+// Limite global por user-agent: 60 req / 15min — suficiente para link previews
+const SOCIAL_BOT_PATTERN = /meta-externalagent|facebookexternalhit|Twitterbot|LinkedInBot|Slackbot|WhatsApp|TelegramBot|Discordbot|Pinterest/i;
+// Qualquer outro bot não identificado como social media
+const GENERIC_BOT_PATTERN = /bot|crawler|spider|scraper|curl|wget|python-requests|axios\/|java\/|Go-http-client/i;
+// Bots que já estão bloqueados no Vercel — só como fallback no servidor
+const BLOCKED_BOT_PATTERN = /GPTBot|ChatGPT-User|OAI-SearchBot|CCBot|anthropic-ai|Claude-Web|PerplexityBot|YouBot|Bytespider/i;
+const socialBotRateLimit = rateLimit({
+    windowMs: 15 * 60 * 1000, // 15 minutos
+    max: 60,
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: { error: "TOO_MANY_REQUESTS" },
+    skip: (req) => {
+        const ua = String(req.headers["user-agent"] || "");
+        return !SOCIAL_BOT_PATTERN.test(ua);
+    },
+    keyGenerator: (req) => {
+        const ua = String(req.headers["user-agent"] || "").slice(0, 80);
+        return `social_bot:${ua}`;
+    }
+});
+const genericBotRateLimit = rateLimit({
+    windowMs: 15 * 60 * 1000, // 15 minutos
+    max: 20,
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: { error: "TOO_MANY_REQUESTS" },
+    skip: (req) => {
+        const ua = String(req.headers["user-agent"] || "");
+        // Só aplica a bots genéricos — não aplica a social bots (têm limite próprio)
+        return SOCIAL_BOT_PATTERN.test(ua) || !GENERIC_BOT_PATTERN.test(ua);
+    },
+    keyGenerator: (req) => {
+        const ip = String(req.ip || req.headers["x-forwarded-for"] || "unknown");
+        return `generic_bot:${ip}`;
+    }
+});
+const blockedBotGuard = (req, res, next) => {
+    const ua = String(req.headers["user-agent"] || "");
+    if (BLOCKED_BOT_PATTERN.test(ua)) {
+        return res.status(403).json({ error: "FORBIDDEN" });
+    }
+    next();
+};
 const newsletterSubscribeSchema = z.object({
     email: z.string().trim().email(),
     phone: z.string().trim().max(32).optional().default(""),
@@ -1014,6 +1085,13 @@ async function processWebhookEvent(event, requestContext = {}) {
             webhookContext.outcome = "order_updated";
             webhookContext.statusFrom = previousStatus;
             webhookContext.statusTo = "paid";
+            const orderShipping = order?.shipping;
+            const discountCodeUsed = orderShipping?.discountCode
+                ? String(orderShipping.discountCode).trim()
+                : "";
+            if (discountCodeUsed) {
+                await incrementAccessCodeUsage(discountCodeUsed).catch(() => null);
+            }
             const paymentIntent = stripeObject || {};
             const webhookMetaEventId = paymentIntentId
                 ? `pi_${String(paymentIntentId)}_purchase`
@@ -1281,7 +1359,6 @@ exports.app.use(helmet({
             frameAncestors: ["'self'"],
             scriptSrc: [
                 "'self'",
-                "'unsafe-inline'",
                 "https://js.stripe.com",
                 "https://m.stripe.network",
                 "https://checkout.stripe.com",
@@ -1296,7 +1373,7 @@ exports.app.use(helmet({
                 "https://accounts.google.com",
                 "https://www.google.com/recaptcha/"
             ],
-            styleSrc: ["'self'", "'unsafe-inline'", "https:", "https://fonts.googleapis.com"],
+            styleSrc: ["'self'", "https:", "https://fonts.googleapis.com"],
             imgSrc: [
                 "'self'",
                 "data:",
@@ -1353,6 +1430,10 @@ exports.app.use(helmet({
 }));
 exports.app.use(compression());
 exports.app.use(createSessionMiddleware());
+// Proteção global contra bots na API
+exports.app.use("/api", blockedBotGuard);
+exports.app.use("/api", socialBotRateLimit);
+exports.app.use("/api", genericBotRateLimit);
 exports.app.post("/api/stripe/webhook", webhookRateLimit, express.raw({ type: "application/json" }), 
 /**
  * @param {import("express").Request} req
@@ -1426,6 +1507,10 @@ exports.app.use("/images", express.static(path.resolve(process.cwd(), "images"),
     maxAge: "30d",
     immutable: true
 }));
+exports.app.use(express.static(path.resolve(process.cwd(), "pages")));
+exports.app.use("/css", express.static(path.resolve(process.cwd(), "css")));
+exports.app.use("/JS", express.static(path.resolve(process.cwd(), "JS")));
+exports.app.use("/assets", express.static(path.resolve(process.cwd(), "assets")));
 exports.app.use("/api/auth", attachUserCsrfToken, requireUserCsrfForMutations, authRouter);
 exports.app.use("/api/my", attachUserCsrfToken, requireUserCsrfForMutations, myRouter);
 exports.app.use("/api/studio-auth", studioAuthRouter);
@@ -1620,7 +1705,15 @@ exports.app.get("/api/products/recent", async (req, res) => {
         if (!ids.length)
             return res.json({ products: [] });
         const products = await listProducts();
-        const byId = new Map(products.map((item) => [String(item.id), item]));
+        const byId = new Map();
+        products.forEach((item) => {
+            const productId = String(item?.id || "").trim();
+            const productSku = String(item?.sku || "").trim();
+            if (productId)
+                byId.set(productId, item);
+            if (productSku)
+                byId.set(productSku, item);
+        });
         const unique = [];
         const seen = new Set();
         ids.forEach((id) => {
@@ -1964,11 +2057,21 @@ exports.app.post("/api/discount-codes/apply", async (req, res) => {
     const shippingCents = Math.max(0, Math.floor(Number(req.body?.shippingCents || 0)));
     if (!code)
         return res.status(400).json({ ok: false, error: "INVALID_CODE" });
+    let hasPreviousOrders = false;
+    const sessionUserId = req.session?.userId ? String(req.session.userId) : "";
+    if (sessionUserId) {
+        try {
+            const userOrders = await listOrdersByUserId(sessionUserId);
+            hasPreviousOrders = Array.isArray(userOrders) && userOrders.some((o) => String(o.status || "") === "paid");
+        }
+        catch { /* ignore — non-critical check */ }
+    }
     try {
         const result = await evaluateAccessCode({
             code,
             subtotalCents,
-            shippingCents
+            shippingCents,
+            hasPreviousOrders
         });
         if (!result.ok) {
             return res.status(400).json({ ok: false, error: result.error || "CODE_NOT_APPLICABLE" });
@@ -1982,7 +2085,8 @@ exports.app.post("/api/discount-codes/apply", async (req, res) => {
             totalCents: result.totalCents,
             type: result.entry.type,
             percentOff: result.entry.percentOff,
-            amountOffCents: result.entry.amountOffCents
+            amountOffCents: result.entry.amountOffCents,
+            freeShipping: result.entry.type === "free_shipping"
         });
     }
     catch {
@@ -2380,6 +2484,45 @@ exports.app.get("/api/orders/:orderId", async (req, res) => {
     }
     catch {
         return res.json(order);
+    }
+});
+// ── Push Notification routes ───────────────────────────────────────────────
+exports.app.get("/api/push/vapid-key", (_req, res) => {
+    const publicKey = process.env.VAPID_PUBLIC_KEY || "";
+    if (!publicKey)
+        return res.status(503).json({ error: "PUSH_NOT_CONFIGURED" });
+    res.json({ publicKey });
+});
+exports.app.post("/api/push/subscribe", attachUserCsrfToken, requireUserCsrfForMutations, async (req, res) => {
+    const userId = req.session?.userId ? String(req.session.userId) : "";
+    if (!userId)
+        return res.status(401).json({ error: "NOT_AUTHENTICATED" });
+    const sub = req.body?.subscription;
+    if (!sub?.endpoint || !sub?.keys?.p256dh || !sub?.keys?.auth) {
+        return res.status(400).json({ error: "INVALID_SUBSCRIPTION" });
+    }
+    try {
+        await saveSubscription(userId, sub, req.headers["user-agent"]);
+        res.json({ ok: true });
+    }
+    catch (err) {
+        // eslint-disable-next-line no-console
+        console.error("[PUSH_SUBSCRIBE_FAILED]", err);
+        res.status(500).json({ error: "SUBSCRIBE_FAILED" });
+    }
+});
+exports.app.delete("/api/push/unsubscribe", attachUserCsrfToken, requireUserCsrfForMutations, async (req, res) => {
+    const endpoint = String(req.body?.endpoint || "").trim();
+    if (!endpoint)
+        return res.status(400).json({ error: "MISSING_ENDPOINT" });
+    try {
+        await deleteSubscription(endpoint);
+        res.json({ ok: true });
+    }
+    catch (err) {
+        // eslint-disable-next-line no-console
+        console.error("[PUSH_UNSUBSCRIBE_FAILED]", err);
+        res.status(500).json({ error: "UNSUBSCRIBE_FAILED" });
     }
 });
 const isMainModule = typeof require !== "undefined" && require.main === module;

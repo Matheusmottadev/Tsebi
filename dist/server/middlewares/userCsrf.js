@@ -123,6 +123,17 @@ function parseCookieHeader(cookieHeader) {
 function generateCsrfToken() {
     return nodeCrypto.randomBytes(24).toString("base64url");
 }
+// Comparação em tempo constante para evitar timing attacks na validação do token
+function timingSafeEqual(a, b) {
+    if (!a || !b || a.length !== b.length)
+        return false;
+    try {
+        return nodeCrypto.timingSafeEqual(Buffer.from(a), Buffer.from(b));
+    }
+    catch {
+        return false;
+    }
+}
 function setUserCsrfCookie(res, token) {
     res.cookie(userCsrfCookieName, String(token || ""), {
         httpOnly: false,
@@ -231,7 +242,7 @@ function requireUserCsrfForMutations(req, res, next) {
     if (!headerToken || !cookieToken || !sessionToken) {
         return res.status(403).json({ error: "CSRF_MISSING" });
     }
-    if (headerToken !== cookieToken || headerToken !== sessionToken) {
+    if (!timingSafeEqual(headerToken, cookieToken) || !timingSafeEqual(headerToken, sessionToken)) {
         return res.status(403).json({ error: "CSRF_INVALID" });
     }
     return next();

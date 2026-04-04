@@ -126,7 +126,7 @@ async function checkAvailability(orderItems) {
             id: product.sku,
             name: product.name,
             qty: item.qty,
-            unitAmount: CHECKOUT_DEFAULT_ITEM_PRICE_CENTS,
+            unitAmount: Number(product.price_cents || 0),
             currency: String(product.currency || "brl").toLowerCase(),
             variantColor: item.variantColor || null,
             variantSize: item.variantSize || null,
