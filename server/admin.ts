@@ -3775,15 +3775,27 @@ async function resolveTargetTokens(params: {
     );
   } else if (target === "wishlist") {
     tokenRows = await query(
-      "SELECT DISTINCT dt.fcm_token FROM device_tokens dt INNER JOIN wishlist_items wi ON wi.user_id = dt.user_id"
+      `SELECT DISTINCT dt.fcm_token
+       FROM device_tokens dt
+       WHERE dt.user_id IS NOT NULL
+         AND EXISTS (
+           SELECT 1 FROM behavior_events be
+           WHERE be.user_id = dt.user_id::text
+             AND be.event_name = 'favorite_toggle'
+         )`
     );
   } else if (target === "wishlist_product" && productSku) {
     tokenRows = await query(
       `SELECT DISTINCT dt.fcm_token
        FROM device_tokens dt
-       INNER JOIN wishlist_items wi ON wi.user_id = dt.user_id
-       INNER JOIN products p ON p.id = wi.product_id
-       WHERE p.sku = $1`,
+       WHERE dt.user_id IS NOT NULL
+         AND EXISTS (
+           SELECT 1 FROM behavior_events be
+           INNER JOIN products p ON p.id::text = be.product_id
+           WHERE be.user_id = dt.user_id::text
+             AND be.event_name = 'favorite_toggle'
+             AND p.sku = $1
+         )`,
       [productSku]
     );
   } else if (target === "inactive" && filterDaysInactive && filterDaysInactive > 0) {

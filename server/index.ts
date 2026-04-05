@@ -35,7 +35,7 @@ const {
 } = require("./lib/product-repository");
 const { checkAvailability, commitStock } = require("./lib/inventory-repository");
 const { evaluateAccessCode, incrementAccessCodeUsage } = require("./lib/access-code-repository");
-const { withTransaction } = require("./lib/db");
+const { withTransaction, query } = require("./lib/db");
 const { logProductSearchEvent } = require("./lib/search-telemetry-repository");
 const {
   logBehaviorEvent,
@@ -52,6 +52,7 @@ const { whatsappRouter } = require("../src/routes/whatsapp.routes");
 const { resolveQuoteForCheckout, selectShippingForOrder } = require("../src/shipping/shipping.service");
 const { syncMelhorEnvioTrackingJob } = require("../src/shipping/order-tracking.service");
 const { sendOrderConfirmedWhatsApp } = require("./lib/whatsapp-service");
+const { startNotificationScheduler } = require("./lib/notification-scheduler");
 
 dotenv.config();
 
@@ -2871,8 +2872,7 @@ app.post("/api/notifications/register-token", async (req: any, res: any) => {
   if (!fcmToken) return res.status(400).json({ error: "MISSING_TOKEN" });
 
   try {
-    const db = req.app.locals.db;
-    await db.none(
+    await query(
       `INSERT INTO device_tokens (user_id, fcm_token, platform, updated_at)
        VALUES ($1, $2, $3, now())
        ON CONFLICT (fcm_token) DO UPDATE SET user_id = $1, platform = $3, updated_at = now()`,
@@ -2882,6 +2882,49 @@ app.post("/api/notifications/register-token", async (req: any, res: any) => {
   } catch (err: unknown) {
     console.error("[REGISTER_TOKEN_FAILED]", err);
     res.status(500).json({ error: "REGISTER_TOKEN_FAILED" });
+  }
+});
+
+// POST /api/cart/save — Salva estado do carrinho para detectar abandono
+app.post("/api/cart/save", async (req: any, res: any) => {
+  const userId = req.session?.userId ? String(req.session.userId) : null;
+  if (!userId) return res.status(401).json({ error: "NOT_AUTHENTICATED" });
+
+  const items = req.body?.items;
+  if (!Array.isArray(items)) return res.status(400).json({ error: "INVALID_ITEMS" });
+
+  const itemCount = items.length;
+  const totalCents = items.reduce((sum: number, item: any) => {
+    return sum + (Number(item?.price_cents || item?.priceCents || 0) * Number(item?.quantity || 1));
+  }, 0);
+
+  try {
+    await query(
+      `INSERT INTO cart_sessions (user_id, items, item_count, total_cents, updated_at)
+       VALUES ($1, $2::jsonb, $3, $4, now())
+       ON CONFLICT (user_id) DO UPDATE SET
+         items = $2::jsonb,
+         item_count = $3,
+         total_cents = $4,
+         updated_at = now()`,
+      [userId, JSON.stringify(items), itemCount, totalCents]
+    );
+    res.json({ ok: true });
+  } catch (err: unknown) {
+    console.error("[CART_SAVE_FAILED]", err);
+    res.status(500).json({ error: "CART_SAVE_FAILED" });
+  }
+});
+
+// DELETE /api/cart/clear — Limpa carrinho após compra concluída
+app.delete("/api/cart/clear", async (req: any, res: any) => {
+  const userId = req.session?.userId ? String(req.session.userId) : null;
+  if (!userId) return res.status(401).json({ error: "NOT_AUTHENTICATED" });
+  try {
+    await query("DELETE FROM cart_sessions WHERE user_id = $1", [userId]);
+    res.json({ ok: true });
+  } catch {
+    res.status(500).json({ error: "CART_CLEAR_FAILED" });
   }
 });
 
@@ -2921,6 +2964,7 @@ app.delete("/api/push/unsubscribe", attachUserCsrfToken, requireUserCsrfForMutat
 const isMainModule = typeof require !== "undefined" && require.main === module;
 if (isMainModule && !isVercelRuntime) {
   startMelhorEnvioSyncScheduler();
+  startNotificationScheduler();
   app.listen(port, () => {
     // eslint-disable-next-line no-console
     console.log(`TSEBI server running on http://localhost:${port}`);
