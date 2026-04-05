@@ -241,6 +241,14 @@ function requireUserCsrfForMutations(req: Request, res: Response, next: NextFunc
 
   const sessionUserId = String(req.session?.userId || "").trim();
   if (!sessionUserId) return next();
+
+  // Requisições sem Origin e sem Referer são de apps nativos (iOS, Android).
+  // Ataques CSRF via browser sempre incluem Origin ou Referer — apps nativos não.
+  // É seguro pular a validação de token nesse caso.
+  const requestOrigin = String(req.get("origin") || "").trim();
+  const referer = String(req.get("referer") || "").trim();
+  if (!requestOrigin && !referer) return next();
+
   if (!isAllowedSameOriginMutation(req)) {
     return res.status(403).json({ error: "CSRF_ORIGIN_INVALID" });
   }
