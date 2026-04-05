@@ -43,10 +43,17 @@ export function AvatarUpload({ currentAvatarUrl, initials }: Props) {
     formData.append("avatar", blob, "avatar.jpg");
 
     try {
+      // Lê o token CSRF do cookie (necessário para mutations no browser)
+      const csrfToken = document.cookie
+        .split("; ")
+        .find((c) => c.startsWith("tsebi.csrf="))
+        ?.split("=")?.[1] ?? "";
+
       const res = await fetch("/api/my/avatar", {
         method: "POST",
         body: formData,
         credentials: "include",
+        headers: csrfToken ? { "x-csrf-token": csrfToken } : {},
       });
       if (!res.ok) throw new Error("Upload falhou");
 
