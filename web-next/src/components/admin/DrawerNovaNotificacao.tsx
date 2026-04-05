@@ -51,7 +51,9 @@ const COLLECTION_OPTIONS = [
 
 function formatScheduledDate(iso: string): string {
   try {
-    return new Date(iso).toLocaleString("pt-BR", {
+    const date = new Date(iso);
+    if (Number.isNaN(date.getTime())) return iso;
+    return date.toLocaleString("pt-BR", {
       day: "2-digit",
       month: "2-digit",
       year: "numeric",
@@ -61,6 +63,15 @@ function formatScheduledDate(iso: string): string {
   } catch {
     return iso;
   }
+}
+
+function asScheduledNotifications(value: unknown): AdminScheduledNotification[] {
+  return Array.isArray(value) ? (value as AdminScheduledNotification[]) : [];
+}
+
+function toLocalDateTimeInputMin(date: Date): string {
+  const localDate = new Date(date.getTime() - date.getTimezoneOffset() * 60_000);
+  return localDate.toISOString().slice(0, 16);
 }
 
 function targetLabel(target: string): string {
@@ -431,7 +442,9 @@ export function DrawerNovaNotificacao({ isOpen, onClose, onSaved }: DrawerNovaNo
   // Load scheduled on open
   useEffect(() => {
     if (!isOpen) return;
-    fetchScheduledNotifications().then((r) => setScheduled(r.rows || [])).catch(() => {});
+    fetchScheduledNotifications()
+      .then((r) => setScheduled(asScheduledNotifications(r?.rows)))
+      .catch(() => setScheduled([]));
   }, [isOpen]);
 
   function reset() {
@@ -468,6 +481,12 @@ export function DrawerNovaNotificacao({ isOpen, onClose, onSaved }: DrawerNovaNo
     setErrorMessage("");
     setSuccessMessage("");
     try {
+      const scheduledDate = scheduleEnabled && scheduledAt ? new Date(scheduledAt) : null;
+      if (scheduledDate && Number.isNaN(scheduledDate.getTime())) {
+        setErrorMessage("Data de agendamento inválida. Escolha outra data e hora.");
+        return;
+      }
+
       const payload: Parameters<typeof sendNotificationAdmin>[0] = {
         title: title.trim(),
         body: body.trim(),
@@ -480,13 +499,15 @@ export function DrawerNovaNotificacao({ isOpen, onClose, onSaved }: DrawerNovaNo
         filterDaysInactive: filterDaysInactive ? Number(filterDaysInactive) : undefined,
         filterCity: filterCity.trim() || undefined,
         filterState: filterState.trim() || undefined,
-        scheduledAt: scheduleEnabled && scheduledAt ? new Date(scheduledAt).toISOString() : undefined,
+        scheduledAt: scheduledDate ? scheduledDate.toISOString() : undefined,
       };
       const result = await sendNotificationAdmin(payload);
 
       if (result.scheduled) {
         setSuccessMessage(`Notificação agendada para ${formatScheduledDate(result.scheduledAt || scheduledAt)}.`);
-        fetchScheduledNotifications().then((r) => setScheduled(r.rows || [])).catch(() => {});
+        fetchScheduledNotifications()
+          .then((r) => setScheduled(asScheduledNotifications(r?.rows)))
+          .catch(() => setScheduled([]));
         // Don't close — let user see confirmation + scheduled list
       } else {
         setSuccessMessage(`Notificação enviada para ${result.sent ?? 0} dispositivo(s).`);
@@ -767,7 +788,7 @@ export function DrawerNovaNotificacao({ isOpen, onClose, onSaved }: DrawerNovaNo
                   type="datetime-local"
                   value={scheduledAt}
                   onChange={(e) => setScheduledAt(e.target.value)}
-                  min={new Date(Date.now() + 60_000).toISOString().slice(0, 16)}
+                  min={toLocalDateTimeInputMin(new Date(Date.now() + 60_000))}
                 />
               </div>
             </div>

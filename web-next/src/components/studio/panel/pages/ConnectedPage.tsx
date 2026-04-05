@@ -67,6 +67,10 @@ function formatDateTime(value: string | null): string {
   return new Intl.DateTimeFormat("pt-BR", { dateStyle: "short", timeStyle: "short" }).format(date);
 }
 
+function asNotificationLogs(value: unknown): AdminNotificationLog[] {
+  return Array.isArray(value) ? (value as AdminNotificationLog[]) : [];
+}
+
 function formatMoneyCents(amountCents: number, currency = "BRL"): string {
   return new Intl.NumberFormat("pt-BR", {
     style: "currency",
@@ -358,8 +362,8 @@ export function ConnectedPage({
     if (page !== "notificacoes") return;
     setNotificationLogsLoading(true);
     fetchNotificationLogs()
-      .then((r) => setNotificationLogs(r.rows || []))
-      .catch(() => {})
+      .then((r) => setNotificationLogs(asNotificationLogs(r?.rows)))
+      .catch(() => setNotificationLogs([]))
       .finally(() => setNotificationLogsLoading(false));
   }, [page, notifLogsRefreshKey]);
 
@@ -1817,32 +1821,32 @@ export function ConnectedPage({
                     Nenhuma notificação enviada ainda. Use o botão acima para enviar.
                   </td>
                 </tr>
-              ) : notificationLogs.map((row) => (
-                <tr key={row.id}>
+              ) : notificationLogs.map((row, index) => (
+                <tr key={String(row.id || `notification-log-${index}`)}>
                   <td>
                     <span style={{ fontSize: 9, letterSpacing: "0.1em", textTransform: "uppercase", color: "#555" }}>
-                      {row.notification_type}
+                      {String(row.notification_type || "-")}
                     </span>
                   </td>
                   <td style={{ fontWeight: 500, maxWidth: 160, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                    {row.title}
+                    {String(row.title || "-")}
                   </td>
                   <td style={{ maxWidth: 220, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", color: "#555" }}>
-                    {row.body}
+                    {String(row.body || "-")}
                   </td>
                   <td>
-                    {row.target}
+                    {String(row.target || "-")}
                     {row.product_sku ? <span style={{ color: "#999", fontSize: 10 }}> · {row.product_sku}</span> : null}
                     {row.filter_city ? <span style={{ color: "#999", fontSize: 10 }}> · {row.filter_city}</span> : null}
                     {row.filter_state ? <span style={{ color: "#999", fontSize: 10 }}> · {row.filter_state}</span> : null}
                     {row.filter_days_inactive ? <span style={{ color: "#999", fontSize: 10 }}> · {row.filter_days_inactive}d inat.</span> : null}
                   </td>
-                  <td style={{ textAlign: "right" }}>{row.sent_count}</td>
+                  <td style={{ textAlign: "right" }}>{Number(row.sent_count || 0)}</td>
                   <td style={{ color: "#777", whiteSpace: "nowrap" }}>
-                    {new Date(row.created_at).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", year: "2-digit", hour: "2-digit", minute: "2-digit" })}
+                    {formatDateTime(row.created_at)}
                   </td>
                   <td style={{ color: "#999", fontSize: 10 }}>
-                    {row.sent_by_email ? row.sent_by_email.split("@")[0] : "—"}
+                    {row.sent_by_email ? String(row.sent_by_email).split("@")[0] : "—"}
                   </td>
                 </tr>
               ))}
