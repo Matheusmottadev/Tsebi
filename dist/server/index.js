@@ -20,7 +20,7 @@ const { studioAuthRouter } = require("./studio-auth");
 const { vipRouter } = require("./vip");
 const { adminRouter } = require("./admin");
 const { readJson, writeJson } = require("./lib/json-store");
-const { findUserById, upsertCheckoutGuestUser, setGuestTempPasswordIfMissing, normalizeEmail } = require("./user-repository");
+const { findUserById, upsertCheckoutGuestUser, setGuestTempPasswordIfMissing, normalizeEmail, updateUser } = require("./user-repository");
 const { sendGuestCheckoutAccountCreatedEmail, sendEmail } = require("./lib/email-service");
 const { createOrder, updateOrder, findOrderById, listOrdersByUserId } = require("./lib/order-repository");
 const { notifyOrderConfirmed, notifyPaymentApproved } = require("./lib/order-notification-service");
@@ -312,7 +312,10 @@ const paymentIntentSchema = z.object({
         state: z.string().trim().max(2).optional().default(""),
         country: z.string().trim().max(2).optional().default("BR")
     })
-        .optional()
+        .optional(),
+    // Cartões salvos
+    saveCard: z.boolean().optional().default(false),
+    selectedPmId: z.string().trim().max(30).optional().nullable().default(null)
 });
 const behaviorEventSchema = z.object({
     eventName: z
@@ -2421,6 +2424,43 @@ async (req, res) => {
                 }
             };
         }
+        if (parsed.data.selectedPmId && String(parsed.data.selectedPmId).startsWith("pm_")) {
+            paymentIntentParams.payment_method = parsed.data.selectedPmId;
+        }
+        // ── Stripe Customer (para cartões salvos) ────────────────────────────────
+        let stripeCustomerId = checkoutUser.stripeCustomerId || null;
+        let ephemeralKey = null;
+        if (sessionUserId && checkoutUser.id) {
+            try {
+                // Cria ou recupera o Stripe Customer vinculado ao usuário
+                if (!stripeCustomerId) {
+                    const customer = await stripe.customers.create({
+                        email: checkoutUser.email || "",
+                        name: checkoutUser.name || "",
+                        metadata: { userId: checkoutUser.id }
+                    });
+                    stripeCustomerId = customer.id;
+                    await updateUser(checkoutUser.id, { stripeCustomerId });
+                }
+                // Associa o customer ao PaymentIntent para cartões salvos
+                paymentIntentParams.customer = stripeCustomerId;
+                // Se o usuário quer salvar o cartão, configura setup_future_usage
+                if (parsed.data.saveCard) {
+                    paymentIntentParams.setup_future_usage = "on_session";
+                }
+                // Se há um cartão salvo selecionado, pré-seleciona no PaymentIntent
+                if (parsed.data.selectedPmId && String(parsed.data.selectedPmId).startsWith("pm_")) {
+                    paymentIntentParams.payment_method = parsed.data.selectedPmId;
+                }
+                // Cria ephemeral key para o app iOS poder gerenciar métodos de pagamento
+                const ek = await stripe.ephemeralKeys.create({ customer: stripeCustomerId }, { apiVersion: "2023-10-16" });
+                ephemeralKey = ek.secret || null;
+            }
+            catch (ekErr) {
+                // Não bloqueia o checkout se der erro na criação do customer/ek
+                ephemeralKey = null;
+            }
+        }
         try {
             const paymentIntent = await stripe.paymentIntents.create(paymentIntentParams);
             const updatedOrder = await updateOrder(order.id, {
@@ -2439,6 +2479,8 @@ async (req, res) => {
                 customerEmail: updatedOrder.userEmail || checkoutUser.email || guest.email || "",
                 clientSecret: paymentIntent.client_secret,
                 paymentIntentClientSecret: paymentIntent.client_secret,
+                customerId: stripeCustomerId,
+                ephemeralKey: ephemeralKey,
                 paymentMethodTypes: Array.isArray(paymentIntent.payment_method_types)
                     ? paymentIntent.payment_method_types.map((entry) => String(entry || "").trim().toLowerCase()).filter(Boolean)
                     : []
@@ -2484,6 +2526,72 @@ exports.app.get("/api/orders/:orderId", async (req, res) => {
     }
     catch {
         return res.json(order);
+    }
+});
+// ── Cartões salvos (Stripe Customer Payment Methods) ──────────────────────
+/**
+ * GET /api/payment-methods
+ * Lista os cartões salvos do usuário autenticado via Stripe Customer API.
+ */
+exports.app.get("/api/payment-methods", async (req, res) => {
+    if (!stripe)
+        return res.status(500).json({ error: "Stripe not configured." });
+    const userId = req.session?.userId ? String(req.session.userId) : "";
+    if (!userId)
+        return res.status(401).json({ error: "NOT_AUTHENTICATED" });
+    try {
+        const user = await findUserById(userId);
+        if (!user)
+            return res.status(404).json({ error: "USER_NOT_FOUND" });
+        if (!user.stripeCustomerId) {
+            return res.json({ paymentMethods: [] });
+        }
+        const pmList = await stripe.paymentMethods.list({
+            customer: user.stripeCustomerId,
+            type: "card"
+        });
+        const paymentMethods = (pmList.data || []).map((pm) => ({
+            id: pm.id,
+            brand: pm.card?.brand || "unknown",
+            last4: pm.card?.last4 || "****",
+            exp_month: pm.card?.exp_month || 0,
+            exp_year: pm.card?.exp_year || 0
+        }));
+        return res.json({ paymentMethods });
+    }
+    catch (err) {
+        return res.status(500).json({ error: err.message || "PAYMENT_METHODS_ERROR" });
+    }
+});
+/**
+ * DELETE /api/payment-methods/:pmId
+ * Desvincula um cartão salvo do cliente Stripe do usuário.
+ */
+exports.app.delete("/api/payment-methods/:pmId", async (req, res) => {
+    if (!stripe)
+        return res.status(500).json({ error: "Stripe not configured." });
+    const userId = req.session?.userId ? String(req.session.userId) : "";
+    if (!userId)
+        return res.status(401).json({ error: "NOT_AUTHENTICATED" });
+    try {
+        const user = await findUserById(userId);
+        if (!user || !user.stripeCustomerId) {
+            return res.status(404).json({ error: "NO_SAVED_CARDS" });
+        }
+        const pmId = String(req.params.pmId || "").trim();
+        if (!pmId.startsWith("pm_")) {
+            return res.status(400).json({ error: "INVALID_PAYMENT_METHOD_ID" });
+        }
+        // Verifica que o PM pertence ao customer deste usuário
+        const pm = await stripe.paymentMethods.retrieve(pmId);
+        if (pm.customer !== user.stripeCustomerId) {
+            return res.status(403).json({ error: "PAYMENT_METHOD_NOT_OWNED" });
+        }
+        await stripe.paymentMethods.detach(pmId);
+        return res.json({ ok: true });
+    }
+    catch (err) {
+        return res.status(500).json({ error: err.message || "DETACH_ERROR" });
     }
 });
 // ── Push Notification routes ───────────────────────────────────────────────

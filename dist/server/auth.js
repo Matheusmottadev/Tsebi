@@ -32,6 +32,24 @@ function getR2Upload() {
     }
     return uploadR2Buffer;
 }
+// ── Cloudinary (avatar + reparos) ────────────────────────────────────────────
+const cloudinary = require("cloudinary").v2;
+cloudinary.config({
+    cloud_name: "dfma1qkwd",
+    api_key: "827159582312997",
+    api_secret: "QYBM9d-y2t_DuDjFScSRUKjKR5I",
+});
+function uploadBufferToCloudinary(buffer, options) {
+    return new Promise((resolve, reject) => {
+        const stream = cloudinary.uploader.upload_stream(options, (err, result) => {
+            if (err)
+                reject(err);
+            else
+                resolve(result);
+        });
+        stream.end(buffer);
+    });
+}
 const REFUND_WINDOW_MS = 10 * 60 * 1000;
 let stripeClient = null;
 function parseBooleanEnv(value, fallback = false) {
@@ -217,6 +235,16 @@ const profileSchema = z.object({
         .transform((value) => String(value || "").replace(/\D/g, ""))
         .refine((value) => /^\d{8}$/.test(value))
         .optional()
+});
+const changePasswordSchema = z
+    .object({
+    currentPassword: z.string().min(1).max(128),
+    newPassword: passwordSchema,
+    confirmPassword: z.string().min(8).max(128)
+})
+    .refine((value) => String(value.newPassword) === String(value.confirmPassword), {
+    message: "PASSWORD_CONFIRMATION_MISMATCH",
+    path: ["confirmPassword"]
 });
 const addressSchema = z.object({
     label: z.string().trim().min(2).max(40),
@@ -1595,6 +1623,35 @@ myRouter.put("/profile", requireAuth, async (req, res) => {
         return res.status(404).json({ error: "USER_NOT_FOUND" });
     return res.json({ user: publicUser(updated) });
 });
+myRouter.put("/password", requireAuth, async (req, res) => {
+    const parsed = changePasswordSchema.safeParse(req.body || {});
+    if (!parsed.success) {
+        return res.status(400).json({ error: "INVALID_INPUT" });
+    }
+    const currentUser = await findUserById(req.session.userId);
+    if (!currentUser)
+        return res.status(404).json({ error: "USER_NOT_FOUND" });
+    const storedHash = String(currentUser.passwordHash || "").trim();
+    if (!storedHash) {
+        return res.status(409).json({ error: "PASSWORD_NOT_SET" });
+    }
+    const currentPassword = String(parsed.data.currentPassword || "");
+    const nextPassword = String(parsed.data.newPassword || "");
+    const passwordCheck = await verifyPassword(currentPassword, storedHash);
+    if (!passwordCheck?.ok) {
+        return res.status(400).json({ error: "INVALID_CURRENT_PASSWORD" });
+    }
+    if (currentPassword === nextPassword) {
+        return res.status(400).json({ error: "SAME_PASSWORD" });
+    }
+    const updated = await updateUser(req.session.userId, {
+        passwordHash: await hashPassword(nextPassword),
+        passwordResetRequired: false
+    });
+    if (!updated)
+        return res.status(404).json({ error: "USER_NOT_FOUND" });
+    return res.json({ ok: true });
+});
 myRouter.get("/checkout-prefill", requireAuth, async (req, res) => {
     const user = await findUserById(req.session.userId);
     if (!user)
@@ -1961,8 +2018,6 @@ myRouter.post("/repairs/photos", requireAuth, express.raw({
         const fileNameRaw = String(req.query.name || req.headers["x-file-name"] || "").trim();
         const contentTypeExtension = contentType.split("/")[1] || "jpg";
         const fileName = fileNameRaw.replace(/[^\w.\- ]+/g, "").slice(0, 120) || `reparo.${contentTypeExtension}`;
-        const folder = String(process.env.R2_REPAIRS_FOLDER || process.env.R2_FOLDER || "tsebi/repairs").trim() ||
-            "tsebi/repairs";
         const publicId = `repair_${userId}_${Date.now()}_${crypto.randomUUID().slice(0, 8)}`;
         logServerEvent("info", {
             event: "repair_photo_upload_started",
@@ -1970,55 +2025,25 @@ myRouter.post("/repairs/photos", requireAuth, express.raw({
             ...requestContext,
             fileName,
             contentType,
-            storage: "r2",
+            storage: "cloudinary",
         });
-        const uploaded = await getR2Upload()(req.body, { folder, publicId });
-        const url = String(uploaded?.secure_url || uploaded?.url || "").trim();
-        if (!url)
-            return res.status(500).json({ error: "IMAGE_UPLOAD_FAILED" });
+        const uploaded = await uploadBufferToCloudinary(req.body, {
+            folder: "repairs",
+            public_id: publicId,
+        });
+        const url = uploaded.secure_url;
         logServerEvent("info", {
             event: "repair_photo_upload_succeeded",
             message: "Repair photo upload finished successfully.",
             ...requestContext,
             fileName,
             contentType,
-            storage: "r2",
+            storage: "cloudinary",
             publicId,
         });
-        return res.status(201).json({
-            ok: true,
-            photo: {
-                url,
-                fileName,
-                contentType
-            }
-        });
+        return res.status(201).json({ ok: true, photo: { url, fileName, contentType } });
     }
     catch (error) {
-        const fallbackUrl = buildInlineImageDataUrl(req.body, contentType);
-        if (fallbackUrl) {
-            const fileNameRaw = String(req.query.name || req.headers["x-file-name"] || "").trim();
-            const contentTypeExtension = contentType.split("/")[1] || "jpg";
-            const fileName = fileNameRaw.replace(/[^\w.\- ]+/g, "").slice(0, 120) || `reparo.${contentTypeExtension}`;
-            logServerEvent("warn", {
-                event: "repair_photo_upload_fallback_inline",
-                message: "Repair photo upload fell back to inline storage.",
-                ...requestContext,
-                fileName,
-                contentType,
-                storage: "inline",
-                ...toErrorMeta(error),
-            });
-            return res.status(201).json({
-                ok: true,
-                photo: {
-                    url: fallbackUrl,
-                    fileName,
-                    contentType
-                },
-                storage: "inline"
-            });
-        }
         logServerEvent("error", {
             event: "repair_photo_upload_failed",
             message: "Repair photo upload failed.",
@@ -2156,6 +2181,39 @@ myRouter.post("/repairs", requireAuth, async (req, res) => {
     WHERE id = $1
     `, [req.session.userId, JSON.stringify(history)]);
     return res.status(201).json({ repair: entry, history });
+});
+// ── Avatar upload ────────────────────────────────────────────────────────────
+const multer = require("multer");
+const avatarUpload = multer({
+    storage: multer.memoryStorage(),
+    limits: { fileSize: 5 * 1024 * 1024 }, // 5 MB
+    fileFilter: (_req, file, cb) => {
+        if (file.mimetype.startsWith("image/"))
+            cb(null, true);
+        else
+            cb(new Error("INVALID_FILE_TYPE"));
+    },
+});
+myRouter.post("/avatar", requireAuth, avatarUpload.single("avatar"), async (req, res) => {
+    if (!req.file)
+        return res.status(400).json({ error: "NO_FILE" });
+    try {
+        const result = await uploadBufferToCloudinary(req.file.buffer, {
+            folder: "avatars",
+            public_id: `user_${req.session.userId}`,
+            transformation: [{ width: 400, height: 400, crop: "fill", gravity: "face" }],
+        });
+        const avatarUrl = result.secure_url;
+        // Salva URL no banco
+        const updated = await updateUser(req.session.userId, { avatarUrl });
+        if (!updated)
+            return res.status(404).json({ error: "USER_NOT_FOUND" });
+        return res.json({ avatarUrl });
+    }
+    catch (err) {
+        console.error("Avatar upload error:", err);
+        return res.status(500).json({ error: "UPLOAD_FAILED" });
+    }
 });
 module.exports = {
     authRouter,

@@ -60,7 +60,9 @@ async function ensureUserSecurityColumns() {
           ADD COLUMN IF NOT EXISTS phone TEXT,
           ADD COLUMN IF NOT EXISTS is_guest BOOLEAN NOT NULL DEFAULT FALSE,
           ADD COLUMN IF NOT EXISTS created_via TEXT,
-          ADD COLUMN IF NOT EXISTS last_login_at TIMESTAMPTZ;
+          ADD COLUMN IF NOT EXISTS last_login_at TIMESTAMPTZ,
+          ADD COLUMN IF NOT EXISTS stripe_customer_id TEXT,
+          ADD COLUMN IF NOT EXISTS avatar_url TEXT;
       `);
             // Keep identity fields as text to avoid numeric overflow/casting errors on legacy schemas.
             await query(`
@@ -177,6 +179,8 @@ function fromRow(row) {
         adminMfaEnabledAt: row.admin_mfa_enabled_at || null,
         adminMfaDisabledAt: row.admin_mfa_disabled_at || null,
         passwordResetRequired: Boolean(row.password_reset_required),
+        stripeCustomerId: row.stripe_customer_id || null,
+        avatarUrl: row.avatar_url ?? null,
         createdAt: String(row.created_at || ""),
         updatedAt: String(row.updated_at || "")
     };
@@ -194,7 +198,8 @@ function publicUser(user) {
         cpf: user.cpf || "",
         cep: user.cep || "",
         defaultAddressId: user.defaultAddressId || "",
-        addresses: user.addresses || []
+        addresses: user.addresses || [],
+        avatarUrl: user.avatarUrl || null
     };
 }
 /**
@@ -372,7 +377,13 @@ async function updateUser(id, patch) {
             ? patch.passwordHash
                 ? false
                 : Boolean(current.passwordResetRequired)
-            : Boolean(patch.passwordResetRequired)
+            : Boolean(patch.passwordResetRequired),
+        stripeCustomerId: patch.stripeCustomerId !== undefined
+            ? patch.stripeCustomerId
+            : current.stripeCustomerId,
+        avatarUrl: patch.avatarUrl !== undefined
+            ? patch.avatarUrl
+            : current.avatarUrl
     };
     const result = await query(`
     UPDATE users
@@ -388,6 +399,8 @@ async function updateUser(id, patch) {
       password_reset_required = $10,
       is_guest = $11,
       created_via = NULLIF($12, ''),
+      stripe_customer_id = $13,
+      avatar_url = $14,
       updated_at = NOW()
     WHERE id = $1
     RETURNING *
@@ -403,7 +416,9 @@ async function updateUser(id, patch) {
         next.passwordHash,
         Boolean(next.passwordResetRequired),
         Boolean(next.isGuest),
-        String(next.createdVia || "").trim()
+        String(next.createdVia || "").trim(),
+        next.stripeCustomerId || null,
+        next.avatarUrl || null
     ]);
     return fromRow(result.rows[0] || null);
 }
