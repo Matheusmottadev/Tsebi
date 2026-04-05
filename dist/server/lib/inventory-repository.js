@@ -1,5 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
+const STOREFRONT_DEFAULT_PRICE_CENTS = 500;
 const CHECKOUT_DEFAULT_ITEM_PRICE_CENTS = 500;
 const { query, withTransaction } = require("./db");
 function normalizeOption(value) {
@@ -126,7 +127,7 @@ async function checkAvailability(orderItems) {
             id: product.sku,
             name: product.name,
             qty: item.qty,
-            unitAmount: Number(product.price_cents || 0),
+            unitAmount: STOREFRONT_DEFAULT_PRICE_CENTS,
             currency: String(product.currency || "brl").toLowerCase(),
             variantColor: item.variantColor || null,
             variantSize: item.variantSize || null,
