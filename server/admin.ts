@@ -3697,17 +3697,15 @@ adminRouter.post("/notifications/send", async (req: any, res: any) => {
   }
 
   try {
-    const db = req.app.locals.db;
-
     let tokenRows: { fcm_token: string }[] = [];
     if (target === "all" || !target) {
-      tokenRows = await db.any("SELECT fcm_token FROM device_tokens");
+      tokenRows = await query("SELECT fcm_token FROM device_tokens");
     } else if (target === "orders") {
-      tokenRows = await db.any(
+      tokenRows = await query(
         "SELECT DISTINCT dt.fcm_token FROM device_tokens dt INNER JOIN orders o ON o.user_id = dt.user_id"
       );
     } else if (target === "wishlist") {
-      tokenRows = await db.any(
+      tokenRows = await query(
         "SELECT DISTINCT dt.fcm_token FROM device_tokens dt INNER JOIN wishlist_items wi ON wi.user_id = dt.user_id"
       );
     }
@@ -3738,7 +3736,7 @@ adminRouter.post("/notifications/send", async (req: any, res: any) => {
       }
     }
 
-    await db.none(
+    await query(
       "INSERT INTO notification_logs (title, body, target, sent_count) VALUES ($1, $2, $3, $4)",
       [String(title).trim(), String(body).trim(), target || "all", sent]
     );
