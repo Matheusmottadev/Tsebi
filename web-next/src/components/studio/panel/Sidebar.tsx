@@ -1,6 +1,7 @@
 ﻿"use client";
 
 import {
+  Bell,
   FileText,
   LayoutGrid,
   Mail,
@@ -61,6 +62,7 @@ export function Sidebar({ activePage, onChangePage, pendingOrders, openCare, pen
       items: [
         { key: "cupons", label: "Cupons", icon: Tag },
         { key: "auditoria", label: "Auditoria", icon: FileText },
+        { key: "notificacoes", label: "Notificações", icon: Bell },
       ],
     },
   ];

@@ -1777,6 +1777,29 @@ export function ConnectedPage({
         </>
       ) : null}
 
+      {page === "notificacoes" ? (
+        <div className={styles.tableWrap}>
+          <table className={styles.table}>
+            <thead>
+              <tr>
+                <th>Título</th>
+                <th>Mensagem</th>
+                <th>Destinatários</th>
+                <th>Enviados</th>
+                <th>Enviado em</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td colSpan={5} className={styles.noResults}>
+                  Nenhuma notificação enviada ainda. Use o botão acima para enviar.
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      ) : null}
+
       {page === "usuarios" ? (
         <DrawerDetalhesUsuario
           isOpen={isUserDrawerOpen}

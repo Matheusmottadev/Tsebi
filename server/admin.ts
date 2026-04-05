@@ -3689,6 +3689,67 @@ adminRouter.delete("/vip/subscribers/:id", async (req: any, res: any) => {
   }
 });
 
+// POST /admin/notifications/send
+adminRouter.post("/notifications/send", async (req: any, res: any) => {
+  const { title, body, target } = req.body || {};
+  if (!String(title || "").trim() || !String(body || "").trim()) {
+    return res.status(400).json({ error: "MISSING_FIELDS" });
+  }
+
+  try {
+    const db = req.app.locals.db;
+
+    let tokenRows: { fcm_token: string }[] = [];
+    if (target === "all" || !target) {
+      tokenRows = await db.any("SELECT fcm_token FROM device_tokens");
+    } else if (target === "orders") {
+      tokenRows = await db.any(
+        "SELECT DISTINCT dt.fcm_token FROM device_tokens dt INNER JOIN orders o ON o.user_id = dt.user_id"
+      );
+    } else if (target === "wishlist") {
+      tokenRows = await db.any(
+        "SELECT DISTINCT dt.fcm_token FROM device_tokens dt INNER JOIN wishlist_items wi ON wi.user_id = dt.user_id"
+      );
+    }
+
+    const tokens: string[] = tokenRows.map((r: any) => r.fcm_token).filter(Boolean);
+
+    // Firebase Admin send (requires FIREBASE_SERVICE_ACCOUNT env var)
+    let sent = 0;
+    const serviceAccountRaw = process.env.FIREBASE_SERVICE_ACCOUNT;
+    if (serviceAccountRaw && tokens.length > 0) {
+      try {
+        const admin = require("firebase-admin");
+        if (!admin.apps.length) {
+          admin.initializeApp({ credential: admin.credential.cert(JSON.parse(serviceAccountRaw)) });
+        }
+        const messaging = admin.messaging();
+        const batchSize = 500;
+        for (let i = 0; i < tokens.length; i += batchSize) {
+          const batch = tokens.slice(i, i + batchSize);
+          const response = await messaging.sendEachForMulticast({
+            tokens: batch,
+            notification: { title: String(title).trim(), body: String(body).trim() },
+          });
+          sent += response.successCount;
+        }
+      } catch (firebaseError: any) {
+        console.error("[notifications] Firebase send error:", firebaseError?.message);
+      }
+    }
+
+    await db.none(
+      "INSERT INTO notification_logs (title, body, target, sent_count) VALUES ($1, $2, $3, $4)",
+      [String(title).trim(), String(body).trim(), target || "all", sent]
+    );
+
+    return res.json({ ok: true, sent, total: tokens.length });
+  } catch (error: any) {
+    console.error("[notifications] send error:", error);
+    return res.status(500).json({ error: "NOTIFICATION_SEND_FAILED" });
+  }
+});
+
 module.exports = {
   adminRouter
 };

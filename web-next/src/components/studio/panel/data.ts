@@ -11,4 +11,5 @@ export const PAGE_TITLES: Record<AdminPageKey, string> = {
   newsletter: "Newsletter",
   cupons: "Cupons",
   auditoria: "Auditoria",
+  notificacoes: "Notificações",
 };

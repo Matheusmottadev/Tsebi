@@ -19,6 +19,7 @@ import {
   type AdminOrderSummary,
 } from "@/services/admin";
 import { DrawerAuditoria } from "@/components/admin/DrawerAuditoria";
+import { DrawerNovaNotificacao } from "@/components/admin/DrawerNovaNotificacao";
 import { DrawerNewsletter } from "@/components/admin/DrawerNewsletter";
 import { DrawerNovoAtendimento } from "@/components/admin/DrawerNovoAtendimento";
 import { DrawerNovoCadastroVIP } from "@/components/admin/DrawerNovoCadastroVIP";
@@ -282,6 +283,7 @@ const TOPBAR_BUTTONS: Record<AdminPageKey, { label: string }> = {
   newsletter: { label: "Editar" },
   cupons: { label: "+ Novo Cupom" },
   auditoria: { label: "Exportar" },
+  notificacoes: { label: "+ Nova Notificação" },
 };
 
 export function StudioAdminPanel() {
@@ -770,6 +772,9 @@ export function StudioAdminPanel() {
       ) : null}
       {activeDrawer === "auditoria" ? (
         <DrawerAuditoria isOpen={true} onClose={closeDrawer} rows={connectedData.audit} onSaved={() => handleSaved(false)} />
+      ) : null}
+      {activeDrawer === "notificacoes" ? (
+        <DrawerNovaNotificacao isOpen={true} onClose={closeDrawer} onSaved={() => handleSaved(false)} />
       ) : null}
       <Toast message={toastMessage} visible={toastVisible} />
     </div>

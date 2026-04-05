@@ -1446,3 +1446,32 @@ export async function bootstrapAdminCsrfToken(options?: HttpRequestOptions): Pro
   }
   return token;
 }
+
+
+/**
+ * POST /api/admin/notifications/send
+ * Auth: admin session required + CSRF header.
+ */
+export async function sendNotificationAdmin(
+  payload: { title: string; body: string; target: string },
+  csrfToken?: string,
+  options?: HttpRequestOptions
+): Promise<{ sent: number }> {
+  const token = await resolveCsrfToken(csrfToken, options);
+  return post<{ sent: number }>(
+    "/api/admin/notifications/send",
+    payload,
+    mergeOptionsWithHeaders(options, buildCsrfHeader(token))
+  );
+}
+
+/**
+ * POST /api/notifications/register-token
+ * Auth: user session (called from iOS app).
+ */
+export async function registerDeviceToken(
+  fcmToken: string,
+  options?: HttpRequestOptions
+): Promise<{ ok: boolean }> {
+  return post<{ ok: boolean }>("/api/notifications/register-token", { fcmToken, platform: "ios" }, options);
+}

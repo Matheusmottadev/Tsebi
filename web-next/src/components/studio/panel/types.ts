@@ -8,7 +8,8 @@
   | "lista_vip"
   | "newsletter"
   | "cupons"
-  | "auditoria";
+  | "auditoria"
+  | "notificacoes";
 
 export type KpiTone = "positive" | "negative";
 

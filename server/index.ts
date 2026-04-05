@@ -2863,6 +2863,28 @@ app.get("/api/push/vapid-key", (_req: any, res: any) => {
   res.json({ publicKey });
 });
 
+app.post("/api/notifications/register-token", async (req: any, res: any) => {
+  const fcmToken = String(req.body?.fcmToken || "").trim();
+  const platform = String(req.body?.platform || "ios").trim();
+  const userId = req.session?.userId ? String(req.session.userId) : null;
+
+  if (!fcmToken) return res.status(400).json({ error: "MISSING_TOKEN" });
+
+  try {
+    const db = req.app.locals.db;
+    await db.none(
+      `INSERT INTO device_tokens (user_id, fcm_token, platform, updated_at)
+       VALUES ($1, $2, $3, now())
+       ON CONFLICT (fcm_token) DO UPDATE SET user_id = $1, platform = $3, updated_at = now()`,
+      [userId, fcmToken, platform]
+    );
+    res.json({ ok: true });
+  } catch (err: unknown) {
+    console.error("[REGISTER_TOKEN_FAILED]", err);
+    res.status(500).json({ error: "REGISTER_TOKEN_FAILED" });
+  }
+});
+
 app.post("/api/push/subscribe", attachUserCsrfToken, requireUserCsrfForMutations, async (req: any, res: any) => {
   const userId = req.session?.userId ? String(req.session.userId) : "";
   if (!userId) return res.status(401).json({ error: "NOT_AUTHENTICATED" });
