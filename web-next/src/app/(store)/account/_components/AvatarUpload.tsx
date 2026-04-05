@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useState, useTransition, useEffect, useCallback } from "react";
+import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import styles from "../account.module.css";
 
@@ -33,6 +34,8 @@ export function AvatarUpload({ currentAvatarUrl, initials }: Props) {
 
   async function handleCropConfirm(blob: Blob) {
     setCropSrc(null);
+
+    // Mostra preview local imediatamente enquanto faz upload
     const objectUrl = URL.createObjectURL(blob);
     setPreview(objectUrl);
 
@@ -46,6 +49,23 @@ export function AvatarUpload({ currentAvatarUrl, initials }: Props) {
         credentials: "include",
       });
       if (!res.ok) throw new Error("Upload falhou");
+
+      const json = await res.json();
+      const cloudinaryUrl: string = json.avatarUrl;
+
+      // Pré-carrega a imagem do Cloudinary antes de trocar o preview
+      // Evita piscar: só troca quando a imagem já está em cache no browser
+      await new Promise<void>((resolve) => {
+        const img = new window.Image();
+        img.onload = () => resolve();
+        img.onerror = () => resolve();
+        img.src = cloudinaryUrl;
+      });
+
+      URL.revokeObjectURL(objectUrl);
+      setPreview(cloudinaryUrl); // troca para URL definitiva (já em cache)
+
+      // Atualiza o servidor em background — preview já está estável
       startTransition(() => router.refresh());
     } catch {
       setPreview(null);
@@ -94,13 +114,14 @@ export function AvatarUpload({ currentAvatarUrl, initials }: Props) {
         />
       </div>
 
-      {cropSrc && (
+      {cropSrc && typeof document !== "undefined" && createPortal(
         <CropModal
           src={cropSrc}
           cropSize={CROP_SIZE}
           onConfirm={handleCropConfirm}
           onCancel={handleCropCancel}
-        />
+        />,
+        document.body
       )}
     </>
   );
