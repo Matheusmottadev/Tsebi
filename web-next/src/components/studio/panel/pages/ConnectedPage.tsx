@@ -14,11 +14,13 @@ import {
   deleteAppointmentSlotAdmin,
   deleteCouponAdmin,
   deleteNewsletterAdmin,
+  fetchNotificationLogs,
   updateAppointmentSlotAdmin,
   type AdminAppointmentSlot,
   deleteVipAdmin,
   type AdminAuditLog,
   type AdminNewsletterRow,
+  type AdminNotificationLog,
   type AdminOrderSummary,
   type AdminUserRow,
   type AdminVipRow,
@@ -49,6 +51,7 @@ type ConnectedPageProps = {
   onOpenCreateAppointment?: () => void;
   globalSearchTarget?: GlobalSearchTarget | null;
   onGlobalSearchTargetHandled?: () => void;
+  notifLogsRefreshKey?: number;
 };
 
 type ConfirmDeleteTarget =
@@ -337,6 +340,7 @@ export function ConnectedPage({
   onOpenCreateAppointment,
   globalSearchTarget,
   onGlobalSearchTargetHandled,
+  notifLogsRefreshKey,
 }: ConnectedPageProps) {
   const [ordersRows, setOrdersRows] = useState<AdminOrderSummary[]>(data.orders || []);
   const [productsRows, setProductsRows] = useState<Product[]>(data.products || []);
@@ -347,6 +351,17 @@ export function ConnectedPage({
   const [newsletterRows, setNewsletterRows] = useState<AdminNewsletterRow[]>(data.newsletter || []);
   const [couponsRows, setCouponsRows] = useState<Coupon[]>(data.coupons || []);
   const [auditRows, setAuditRows] = useState<AdminAuditLog[]>(data.audit || []);
+  const [notificationLogs, setNotificationLogs] = useState<AdminNotificationLog[]>([]);
+  const [notificationLogsLoading, setNotificationLogsLoading] = useState(false);
+
+  useEffect(() => {
+    if (page !== "notificacoes") return;
+    setNotificationLogsLoading(true);
+    fetchNotificationLogs()
+      .then((r) => setNotificationLogs(r.rows || []))
+      .catch(() => {})
+      .finally(() => setNotificationLogsLoading(false));
+  }, [page, notifLogsRefreshKey]);
 
   const [ordersSearch, setOrdersSearch] = useState("");
   const [ordersStatusFilter, setOrdersStatusFilter] = useState("todos");
@@ -1782,19 +1797,55 @@ export function ConnectedPage({
           <table className={styles.table}>
             <thead>
               <tr>
+                <th>Tipo</th>
                 <th>Título</th>
                 <th>Mensagem</th>
                 <th>Destinatários</th>
                 <th>Enviados</th>
                 <th>Enviado em</th>
+                <th>Por</th>
               </tr>
             </thead>
             <tbody>
-              <tr>
-                <td colSpan={5} className={styles.noResults}>
-                  Nenhuma notificação enviada ainda. Use o botão acima para enviar.
-                </td>
-              </tr>
+              {notificationLogsLoading ? (
+                <tr>
+                  <td colSpan={7} className={styles.noResults}>Carregando…</td>
+                </tr>
+              ) : notificationLogs.length === 0 ? (
+                <tr>
+                  <td colSpan={7} className={styles.noResults}>
+                    Nenhuma notificação enviada ainda. Use o botão acima para enviar.
+                  </td>
+                </tr>
+              ) : notificationLogs.map((row) => (
+                <tr key={row.id}>
+                  <td>
+                    <span style={{ fontSize: 9, letterSpacing: "0.1em", textTransform: "uppercase", color: "#555" }}>
+                      {row.notification_type}
+                    </span>
+                  </td>
+                  <td style={{ fontWeight: 500, maxWidth: 160, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                    {row.title}
+                  </td>
+                  <td style={{ maxWidth: 220, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", color: "#555" }}>
+                    {row.body}
+                  </td>
+                  <td>
+                    {row.target}
+                    {row.product_sku ? <span style={{ color: "#999", fontSize: 10 }}> · {row.product_sku}</span> : null}
+                    {row.filter_city ? <span style={{ color: "#999", fontSize: 10 }}> · {row.filter_city}</span> : null}
+                    {row.filter_state ? <span style={{ color: "#999", fontSize: 10 }}> · {row.filter_state}</span> : null}
+                    {row.filter_days_inactive ? <span style={{ color: "#999", fontSize: 10 }}> · {row.filter_days_inactive}d inat.</span> : null}
+                  </td>
+                  <td style={{ textAlign: "right" }}>{row.sent_count}</td>
+                  <td style={{ color: "#777", whiteSpace: "nowrap" }}>
+                    {new Date(row.created_at).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", year: "2-digit", hour: "2-digit", minute: "2-digit" })}
+                  </td>
+                  <td style={{ color: "#999", fontSize: 10 }}>
+                    {row.sent_by_email ? row.sent_by_email.split("@")[0] : "—"}
+                  </td>
+                </tr>
+              ))}
             </tbody>
           </table>
         </div>

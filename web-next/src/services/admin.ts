@@ -1448,19 +1448,130 @@ export async function bootstrapAdminCsrfToken(options?: HttpRequestOptions): Pro
 }
 
 
+// ─── Notification types ───────────────────────────────────────────────────────
+
+export type NotificationType = "custom" | "colecao" | "promocao" | "reparo" | "wishlist" | "pedido" | "atendimento";
+
+export type NotificationTarget =
+  | "all"
+  | "orders"
+  | "wishlist"
+  | "wishlist_product"
+  | "inactive"
+  | "city"
+  | "state";
+
+export type SendNotificationPayload = {
+  title: string;
+  body: string;
+  target: NotificationTarget;
+  notificationType?: NotificationType;
+  imageUrl?: string;
+  deepLink?: string;
+  productSku?: string;
+  collectionName?: string;
+  filterDaysInactive?: number;
+  filterCity?: string;
+  filterState?: string;
+  scheduledAt?: string; // ISO string
+};
+
+export type SendNotificationResult = {
+  ok: boolean;
+  sent?: number;
+  total?: number;
+  logId?: string;
+  scheduled?: boolean;
+  scheduledAt?: string;
+};
+
+export type AdminNotificationLog = {
+  id: string;
+  title: string;
+  body: string;
+  target: string;
+  notification_type: string;
+  image_url: string | null;
+  deep_link: string | null;
+  product_sku: string | null;
+  collection_name: string | null;
+  filter_days_inactive: number | null;
+  filter_city: string | null;
+  filter_state: string | null;
+  sent_count: number;
+  status: string;
+  created_at: string;
+  sent_by_email: string | null;
+};
+
+export type AdminScheduledNotification = {
+  id: string;
+  title: string;
+  body: string;
+  target: string;
+  notification_type: string;
+  image_url: string | null;
+  deep_link: string | null;
+  product_sku: string | null;
+  collection_name: string | null;
+  filter_days_inactive: number | null;
+  filter_city: string | null;
+  filter_state: string | null;
+  scheduled_at: string;
+  status: string;
+  created_at: string;
+  created_by_email: string | null;
+};
+
 /**
  * POST /api/admin/notifications/send
  * Auth: admin session required + CSRF header.
  */
 export async function sendNotificationAdmin(
-  payload: { title: string; body: string; target: string },
+  payload: SendNotificationPayload,
   csrfToken?: string,
   options?: HttpRequestOptions
-): Promise<{ sent: number }> {
+): Promise<SendNotificationResult> {
   const token = await resolveCsrfToken(csrfToken, options);
-  return post<{ sent: number }>(
+  return post<SendNotificationResult>(
     "/api/admin/notifications/send",
     payload,
+    mergeOptionsWithHeaders(options, buildCsrfHeader(token))
+  );
+}
+
+/**
+ * GET /api/admin/notifications/logs
+ * Auth: admin session required.
+ */
+export async function fetchNotificationLogs(
+  options?: HttpRequestOptions
+): Promise<{ rows: AdminNotificationLog[] }> {
+  return get<{ rows: AdminNotificationLog[] }>("/api/admin/notifications/logs", options);
+}
+
+/**
+ * GET /api/admin/notifications/scheduled
+ * Auth: admin session required.
+ */
+export async function fetchScheduledNotifications(
+  options?: HttpRequestOptions
+): Promise<{ rows: AdminScheduledNotification[] }> {
+  return get<{ rows: AdminScheduledNotification[] }>("/api/admin/notifications/scheduled", options);
+}
+
+/**
+ * DELETE /api/admin/notifications/scheduled/:id
+ * Auth: admin session required + CSRF header.
+ */
+export async function cancelScheduledNotification(
+  id: string,
+  csrfToken?: string,
+  options?: HttpRequestOptions
+): Promise<{ ok: boolean }> {
+  const token = await resolveCsrfToken(csrfToken, options);
+  return del<{ ok: boolean }>(
+    `/api/admin/notifications/scheduled/${id}`,
     mergeOptionsWithHeaders(options, buildCsrfHeader(token))
   );
 }

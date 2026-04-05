@@ -3689,59 +3689,265 @@ adminRouter.delete("/vip/subscribers/:id", async (req: any, res: any) => {
   }
 });
 
+// ─── Shared Firebase helper ──────────────────────────────────────────────────
+function getFirebaseMessaging(): any | null {
+  const serviceAccountRaw = process.env.FIREBASE_SERVICE_ACCOUNT;
+  if (!serviceAccountRaw) return null;
+  try {
+    const admin = require("firebase-admin");
+    if (!admin.apps.length) {
+      admin.initializeApp({ credential: admin.credential.cert(JSON.parse(serviceAccountRaw)) });
+    }
+    return admin.messaging();
+  } catch (e: any) {
+    console.error("[notifications] Firebase init error:", e?.message);
+    return null;
+  }
+}
+
+async function sendFirebaseToTokens(
+  tokens: string[],
+  payload: {
+    title: string;
+    body: string;
+    imageUrl?: string;
+    deepLink?: string;
+    notificationType?: string;
+    collectionName?: string;
+    productSku?: string;
+  }
+): Promise<number> {
+  const messaging = getFirebaseMessaging();
+  if (!messaging || tokens.length === 0) return 0;
+
+  const notification: any = { title: payload.title, body: payload.body };
+  if (payload.imageUrl) notification.imageUrl = payload.imageUrl;
+
+  const data: Record<string, string> = {};
+  if (payload.deepLink) data.deepLink = payload.deepLink;
+  if (payload.notificationType) data.notificationType = payload.notificationType;
+  if (payload.collectionName) data.collectionName = payload.collectionName;
+  if (payload.productSku) data.productSku = payload.productSku;
+
+  let sent = 0;
+  const batchSize = 500;
+  for (let i = 0; i < tokens.length; i += batchSize) {
+    const batch = tokens.slice(i, i + batchSize);
+    try {
+      const msg: any = { tokens: batch, notification };
+      if (Object.keys(data).length > 0) msg.data = data;
+      const response = await messaging.sendEachForMulticast(msg);
+      sent += response.successCount;
+      // Clean up stale tokens (410 = expired/unregistered)
+      if (response.responses) {
+        const stale: string[] = [];
+        response.responses.forEach((r: any, idx: number) => {
+          if (!r.success && (r.error?.code === "messaging/registration-token-not-registered" || r.error?.code === "messaging/invalid-registration-token")) {
+            stale.push(batch[idx]);
+          }
+        });
+        if (stale.length > 0) {
+          await query("DELETE FROM device_tokens WHERE fcm_token = ANY($1)", [stale]).catch(() => {});
+        }
+      }
+    } catch (err: any) {
+      console.error("[notifications] Firebase batch error:", err?.message);
+    }
+  }
+  return sent;
+}
+
+async function resolveTargetTokens(params: {
+  target: string;
+  productSku?: string;
+  filterDaysInactive?: number;
+  filterCity?: string;
+  filterState?: string;
+}): Promise<string[]> {
+  const { target, productSku, filterDaysInactive, filterCity, filterState } = params;
+  let tokenRows: { fcm_token: string }[] = [];
+
+  if (target === "all" || !target) {
+    tokenRows = await query("SELECT fcm_token FROM device_tokens");
+  } else if (target === "orders") {
+    tokenRows = await query(
+      "SELECT DISTINCT dt.fcm_token FROM device_tokens dt INNER JOIN orders o ON o.user_id = dt.user_id"
+    );
+  } else if (target === "wishlist") {
+    tokenRows = await query(
+      "SELECT DISTINCT dt.fcm_token FROM device_tokens dt INNER JOIN wishlist_items wi ON wi.user_id = dt.user_id"
+    );
+  } else if (target === "wishlist_product" && productSku) {
+    tokenRows = await query(
+      `SELECT DISTINCT dt.fcm_token
+       FROM device_tokens dt
+       INNER JOIN wishlist_items wi ON wi.user_id = dt.user_id
+       INNER JOIN products p ON p.id = wi.product_id
+       WHERE p.sku = $1`,
+      [productSku]
+    );
+  } else if (target === "inactive" && filterDaysInactive && filterDaysInactive > 0) {
+    tokenRows = await query(
+      `SELECT DISTINCT dt.fcm_token
+       FROM device_tokens dt
+       WHERE dt.user_id IS NOT NULL
+         AND dt.user_id NOT IN (
+           SELECT DISTINCT user_id FROM orders
+           WHERE created_at >= now() - ($1 || ' days')::INTERVAL
+             AND user_id IS NOT NULL
+         )`,
+      [String(filterDaysInactive)]
+    );
+  } else if (target === "city" && filterCity) {
+    tokenRows = await query(
+      `SELECT DISTINCT dt.fcm_token
+       FROM device_tokens dt
+       INNER JOIN orders o ON o.user_id = dt.user_id
+       WHERE lower(o.shipping_json->>'city') = lower($1)`,
+      [filterCity]
+    );
+  } else if (target === "state" && filterState) {
+    tokenRows = await query(
+      `SELECT DISTINCT dt.fcm_token
+       FROM device_tokens dt
+       INNER JOIN orders o ON o.user_id = dt.user_id
+       WHERE lower(o.shipping_json->>'state') = lower($1)`,
+      [filterState]
+    );
+  }
+
+  return tokenRows.map((r: any) => r.fcm_token).filter(Boolean);
+}
+
+// GET /admin/notifications/logs
+adminRouter.get("/notifications/logs", async (req: any, res: any) => {
+  try {
+    const rows = await query(
+      `SELECT nl.id, nl.title, nl.body, nl.target, nl.notification_type, nl.image_url, nl.deep_link,
+              nl.product_sku, nl.collection_name, nl.filter_days_inactive, nl.filter_city, nl.filter_state,
+              nl.sent_count, nl.status, nl.created_at,
+              u.email AS sent_by_email
+       FROM notification_logs nl
+       LEFT JOIN users u ON u.id = nl.sent_by
+       ORDER BY nl.created_at DESC
+       LIMIT 100`
+    );
+    return res.json({ rows });
+  } catch (error: any) {
+    console.error("[notifications] logs error:", error);
+    return res.status(500).json({ error: "NOTIFICATION_LOGS_FAILED" });
+  }
+});
+
+// GET /admin/notifications/scheduled
+adminRouter.get("/notifications/scheduled", async (req: any, res: any) => {
+  try {
+    const rows = await query(
+      `SELECT sn.*, u.email AS created_by_email
+       FROM scheduled_notifications sn
+       LEFT JOIN users u ON u.id = sn.created_by
+       WHERE sn.status = 'pending'
+       ORDER BY sn.scheduled_at ASC
+       LIMIT 50`
+    );
+    return res.json({ rows });
+  } catch (error: any) {
+    console.error("[notifications] scheduled error:", error);
+    return res.status(500).json({ error: "NOTIFICATION_SCHEDULED_FAILED" });
+  }
+});
+
+// DELETE /admin/notifications/scheduled/:id
+adminRouter.delete("/notifications/scheduled/:id", async (req: any, res: any) => {
+  try {
+    await query(
+      "UPDATE scheduled_notifications SET status = 'cancelled' WHERE id = $1 AND status = 'pending'",
+      [req.params.id]
+    );
+    return res.json({ ok: true });
+  } catch (error: any) {
+    return res.status(500).json({ error: "NOTIFICATION_CANCEL_FAILED" });
+  }
+});
+
 // POST /admin/notifications/send
 adminRouter.post("/notifications/send", async (req: any, res: any) => {
-  const { title, body, target } = req.body || {};
+  const {
+    title, body, target,
+    notificationType, imageUrl, deepLink, productSku, collectionName,
+    filterDaysInactive, filterCity, filterState,
+    scheduledAt,
+  } = req.body || {};
+
   if (!String(title || "").trim() || !String(body || "").trim()) {
     return res.status(400).json({ error: "MISSING_FIELDS" });
   }
 
+  const adminUserId = req.session?.userId || null;
+  const cleanTitle = String(title).trim();
+  const cleanBody = String(body).trim();
+  const cleanTarget = String(target || "all").trim();
+
   try {
-    let tokenRows: { fcm_token: string }[] = [];
-    if (target === "all" || !target) {
-      tokenRows = await query("SELECT fcm_token FROM device_tokens");
-    } else if (target === "orders") {
-      tokenRows = await query(
-        "SELECT DISTINCT dt.fcm_token FROM device_tokens dt INNER JOIN orders o ON o.user_id = dt.user_id"
-      );
-    } else if (target === "wishlist") {
-      tokenRows = await query(
-        "SELECT DISTINCT dt.fcm_token FROM device_tokens dt INNER JOIN wishlist_items wi ON wi.user_id = dt.user_id"
-      );
-    }
-
-    const tokens: string[] = tokenRows.map((r: any) => r.fcm_token).filter(Boolean);
-
-    // Firebase Admin send (requires FIREBASE_SERVICE_ACCOUNT env var)
-    let sent = 0;
-    const serviceAccountRaw = process.env.FIREBASE_SERVICE_ACCOUNT;
-    if (serviceAccountRaw && tokens.length > 0) {
-      try {
-        const admin = require("firebase-admin");
-        if (!admin.apps.length) {
-          admin.initializeApp({ credential: admin.credential.cert(JSON.parse(serviceAccountRaw)) });
-        }
-        const messaging = admin.messaging();
-        const batchSize = 500;
-        for (let i = 0; i < tokens.length; i += batchSize) {
-          const batch = tokens.slice(i, i + batchSize);
-          const response = await messaging.sendEachForMulticast({
-            tokens: batch,
-            notification: { title: String(title).trim(), body: String(body).trim() },
-          });
-          sent += response.successCount;
-        }
-      } catch (firebaseError: any) {
-        console.error("[notifications] Firebase send error:", firebaseError?.message);
+    // If scheduled for the future — save to queue and return
+    if (scheduledAt) {
+      const scheduledDate = new Date(scheduledAt);
+      if (isNaN(scheduledDate.getTime()) || scheduledDate <= new Date()) {
+        return res.status(400).json({ error: "INVALID_SCHEDULED_AT" });
       }
+      await query(
+        `INSERT INTO scheduled_notifications
+          (title, body, target, notification_type, image_url, deep_link, product_sku, collection_name,
+           filter_days_inactive, filter_city, filter_state, scheduled_at, created_by)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)`,
+        [
+          cleanTitle, cleanBody, cleanTarget,
+          String(notificationType || "custom"),
+          imageUrl || null, deepLink || null, productSku || null, collectionName || null,
+          filterDaysInactive ? Number(filterDaysInactive) : null,
+          filterCity || null, filterState || null,
+          scheduledDate.toISOString(),
+          adminUserId,
+        ]
+      );
+      return res.json({ ok: true, scheduled: true, scheduledAt: scheduledDate.toISOString() });
     }
 
-    await query(
-      "INSERT INTO notification_logs (title, body, target, sent_count) VALUES ($1, $2, $3, $4)",
-      [String(title).trim(), String(body).trim(), target || "all", sent]
+    // Resolve target tokens
+    const tokens = await resolveTargetTokens({
+      target: cleanTarget, productSku, filterDaysInactive: filterDaysInactive ? Number(filterDaysInactive) : undefined,
+      filterCity, filterState,
+    });
+
+    // Send via Firebase
+    const sent = await sendFirebaseToTokens(tokens, {
+      title: cleanTitle, body: cleanBody,
+      imageUrl: imageUrl || undefined,
+      deepLink: deepLink || undefined,
+      notificationType: notificationType || "custom",
+      collectionName: collectionName || undefined,
+      productSku: productSku || undefined,
+    });
+
+    // Log
+    const logResult = await query(
+      `INSERT INTO notification_logs
+        (title, body, target, notification_type, image_url, deep_link, product_sku, collection_name,
+         filter_days_inactive, filter_city, filter_state, sent_count, status, sent_by)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,'sent',$13)
+       RETURNING id`,
+      [
+        cleanTitle, cleanBody, cleanTarget,
+        String(notificationType || "custom"),
+        imageUrl || null, deepLink || null, productSku || null, collectionName || null,
+        filterDaysInactive ? Number(filterDaysInactive) : null,
+        filterCity || null, filterState || null,
+        sent,
+        adminUserId,
+      ]
     );
 
-    return res.json({ ok: true, sent, total: tokens.length });
+    return res.json({ ok: true, sent, total: tokens.length, logId: logResult[0]?.id });
   } catch (error: any) {
     console.error("[notifications] send error:", error);
     return res.status(500).json({ error: "NOTIFICATION_SEND_FAILED" });

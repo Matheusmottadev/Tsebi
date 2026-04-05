@@ -6,10 +6,20 @@ const {
   sendOrderOutForDeliveryEmail,
   sendOrderDeliveredEmail
 } = require("./email-service");
-const { sendPushToUser } = require("./push-notification-service");
+const { query } = require("../lib/db");
 
-const PUSH_ICON = "/images/pwa-192.png";
-const PUSH_BADGE = "/images/pwa-maskable-192.png";
+// ─── Firebase FCM helper ─────────────────────────────────────────────────────
+function getFirebaseMessaging(): any | null {
+  const raw = process.env.FIREBASE_SERVICE_ACCOUNT;
+  if (!raw) return null;
+  try {
+    const admin = require("firebase-admin");
+    if (!admin.apps.length) {
+      admin.initializeApp({ credential: admin.credential.cert(JSON.parse(raw)) });
+    }
+    return admin.messaging();
+  } catch { return null; }
+}
 
 type OrderLike = {
   id?: string;
@@ -86,10 +96,23 @@ async function safeNotify(kind: string, handler: () => Promise<void>, context: {
   }
 }
 
-async function safePush(userId: string | undefined, payload: { title: string; body: string; url: string }): Promise<void> {
+async function safePush(userId: string | undefined, payload: { title: string; body: string; notificationType?: string }): Promise<void> {
   if (!userId) return;
   try {
-    await sendPushToUser(userId, { ...payload, icon: PUSH_ICON, badge: PUSH_BADGE });
+    const messaging = getFirebaseMessaging();
+    if (!messaging) return;
+    const tokenRows: { fcm_token: string }[] = await query(
+      "SELECT fcm_token FROM device_tokens WHERE user_id = $1",
+      [userId]
+    );
+    const tokens: string[] = tokenRows.map((r: any) => r.fcm_token).filter(Boolean);
+    if (tokens.length === 0) return;
+    const msg: any = {
+      tokens,
+      notification: { title: payload.title, body: payload.body },
+      data: { deepLink: "/account", notificationType: payload.notificationType || "pedido" },
+    };
+    await messaging.sendEachForMulticast(msg);
   } catch (err: unknown) {
     // eslint-disable-next-line no-console
     console.error("[ORDER_PUSH_FAILED]", { userId, title: payload.title, message: String(err) });
@@ -103,7 +126,7 @@ async function notifyOrderConfirmed(order: OrderLike | null | undefined): Promis
   await safePush(order?.userId, {
     title: "Pedido recebido! 🎉",
     body: num ? `Seu pedido #${num} foi confirmado.` : "Seu pedido foi confirmado.",
-    url: "/account",
+    notificationType: "pedido",
   });
 
   if (!to) return { ok: false, skipped: "NO_EMAIL_RECIPIENT" };
@@ -124,7 +147,7 @@ async function notifyPaymentApproved(order: OrderLike | null | undefined): Promi
   await safePush(order?.userId, {
     title: "Pagamento aprovado ✅",
     body: num ? `Pagamento do pedido #${num} aprovado.` : "Seu pagamento foi aprovado.",
-    url: "/account",
+    notificationType: "pedido",
   });
 
   if (!to) return { ok: false, skipped: "NO_EMAIL_RECIPIENT" };
@@ -145,7 +168,7 @@ async function notifyOrderShipped(order: OrderLike | null | undefined, shipment:
   await safePush(order?.userId, {
     title: "Pedido enviado 📦",
     body: trackingCode ? `Código de rastreio: ${trackingCode}` : "Seu pedido está a caminho!",
-    url: "/account",
+    notificationType: "pedido",
   });
 
   if (!to) return { ok: false, skipped: "NO_EMAIL_RECIPIENT" };
@@ -183,7 +206,7 @@ async function notifyShipmentMilestoneTransition({
     await safePush(order?.userId, {
       title: "Saiu para entrega 🚚",
       body: "Seu pedido está a caminho e chegará em breve!",
-      url: "/account",
+      notificationType: "pedido",
     });
 
     return safeNotify(
@@ -199,7 +222,7 @@ async function notifyShipmentMilestoneTransition({
     await safePush(order?.userId, {
       title: "Pedido entregue 🎁",
       body: "Aproveite! Seu pedido foi entregue com sucesso.",
-      url: "/account",
+      notificationType: "pedido",
     });
 
     return safeNotify(

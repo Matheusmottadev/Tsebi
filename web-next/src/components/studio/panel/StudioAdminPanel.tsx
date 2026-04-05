@@ -295,6 +295,7 @@ export function StudioAdminPanel() {
   const [csrfToken, setCsrfToken] = useState("");
   const [refreshIndex, setRefreshIndex] = useState(0);
   const [activeDrawer, setActiveDrawer] = useState<string | null>(null);
+  const [notifLogsKey, setNotifLogsKey] = useState(0);
   const [toastMessage, setToastMessage] = useState("");
   const [toastVisible, setToastVisible] = useState(false);
   const [isGlobalSearchOpen, setIsGlobalSearchOpen] = useState(false);
@@ -690,6 +691,7 @@ export function StudioAdminPanel() {
               onOpenCreateAppointment={activePage === "atendimentos" ? () => openDrawer("atendimentos") : undefined}
               globalSearchTarget={globalSearchTarget}
               onGlobalSearchTargetHandled={handleGlobalSearchTargetHandled}
+              notifLogsRefreshKey={notifLogsKey}
             />
           )}
         </section>
@@ -774,7 +776,11 @@ export function StudioAdminPanel() {
         <DrawerAuditoria isOpen={true} onClose={closeDrawer} rows={connectedData.audit} onSaved={() => handleSaved(false)} />
       ) : null}
       {activeDrawer === "notificacoes" ? (
-        <DrawerNovaNotificacao isOpen={true} onClose={closeDrawer} onSaved={() => handleSaved(false)} />
+        <DrawerNovaNotificacao
+          isOpen={true}
+          onClose={closeDrawer}
+          onSaved={() => { setNotifLogsKey((k) => k + 1); handleSaved(false); }}
+        />
       ) : null}
       <Toast message={toastMessage} visible={toastVisible} />
     </div>
