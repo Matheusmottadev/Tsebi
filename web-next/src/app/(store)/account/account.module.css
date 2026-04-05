@@ -120,6 +120,97 @@
   transition: opacity 0.15s;
 }
 
+/* ─── Crop Modal ─────────────────────────────────── */
+.cropOverlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  background: #000;
+  display: flex;
+  flex-direction: column;
+}
+
+.cropContainer {
+  position: relative;
+  flex: 1;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Overlay escuro com buraco circular no centro */
+.cropDimmer {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: radial-gradient(
+    circle var(--crop-size) at 50% 50%,
+    transparent calc(var(--crop-size) / 2),
+    rgba(0, 0, 0, 0.62) calc(var(--crop-size) / 2)
+  );
+}
+
+.cropCircleBorder {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  border: 1.5px solid rgba(255, 255, 255, 0.75);
+  pointer-events: none;
+}
+
+.cropHint {
+  position: absolute;
+  bottom: 16px;
+  left: 0;
+  right: 0;
+  text-align: center;
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.45);
+  pointer-events: none;
+  letter-spacing: 0.04em;
+}
+
+.cropActions {
+  display: flex;
+  gap: 12px;
+  padding: 20px 28px 36px;
+  background: #000;
+}
+
+.cropCancel {
+  flex: 1;
+  padding: 14px;
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  border-radius: 100px;
+  color: rgba(255, 255, 255, 0.65);
+  font-size: 15px;
+  cursor: pointer;
+  transition: border-color 0.15s;
+}
+.cropCancel:hover {
+  border-color: rgba(255, 255, 255, 0.5);
+}
+
+.cropConfirm {
+  flex: 1;
+  padding: 14px;
+  background: #fff;
+  border: none;
+  border-radius: 100px;
+  color: #000;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 0.15s;
+}
+.cropConfirm:hover {
+  opacity: 0.88;
+}
+
 .userRole {
   font-family: var(--font-montserrat), sans-serif;
   font-size: 10px;
