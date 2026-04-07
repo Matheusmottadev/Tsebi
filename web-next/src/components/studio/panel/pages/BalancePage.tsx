@@ -34,6 +34,10 @@ function formatReason(reason: BalanceRequestRow["reason"]): string {
   return labels[reason] || reason;
 }
 
+function formatOperationLabel(type: BalanceRequestRow["type"] | "credit" | "debit"): string {
+  return type === "debit" ? "Remover saldo" : "Adicionar saldo";
+}
+
 function StatusBadge({ status }: { status: BalanceRequestRow["status"] }) {
   const palette =
     status === "approved"
@@ -153,8 +157,26 @@ export function BalancePage({ csrfToken, refreshKey = 0 }: { csrfToken?: string;
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
-      <div style={{ display: "grid", gap: 20, gridTemplateColumns: "1.05fr 0.95fr" }}>
-        <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+      <div
+        style={{
+          border: "1px solid #d8dee8",
+          borderRadius: 20,
+          background: "linear-gradient(180deg, #ffffff 0%, #f6f9fc 100%)",
+          padding: 20,
+          display: "grid",
+          gap: 18,
+        }}
+      >
+        <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+          <div style={{ fontSize: 11, letterSpacing: "0.18em", textTransform: "uppercase", color: "#5f6b7a" }}>Passo 1</div>
+          <h3 style={{ margin: 0, fontSize: 24, fontWeight: 500, color: "#111827" }}>Escolha o cliente primeiro</h3>
+          <p style={{ margin: 0, color: "#4b5563", fontSize: 14, lineHeight: 1.6 }}>
+            Use a busca abaixo e clique em um resultado para abrir o formulário de alteração de saldo.
+          </p>
+        </div>
+
+        <div style={{ display: "grid", gap: 20, gridTemplateColumns: "1.05fr 0.95fr" }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
           <SearchBar
             placeholder="Buscar cliente por nome, e-mail ou ID"
             value={query}
@@ -166,134 +188,181 @@ export function BalancePage({ csrfToken, refreshKey = 0 }: { csrfToken?: string;
             }}
           />
 
-          {results.length > 0 ? (
-            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+            {selectedCustomer ? (
+              <div
+                style={{
+                  border: "1px solid #cbd5e1",
+                  borderRadius: 16,
+                  background: "#eef6ff",
+                  padding: "14px 16px",
+                  color: "#0f172a",
+                }}
+              >
+                <div style={{ fontSize: 11, letterSpacing: "0.16em", textTransform: "uppercase", color: "#47617c" }}>Cliente selecionado</div>
+                <div style={{ marginTop: 8, fontSize: 16, fontWeight: 600 }}>{selectedCustomer.name || "Cliente"}</div>
+                <div style={{ marginTop: 4, fontSize: 13, color: "#47617c" }}>{selectedCustomer.email}</div>
+              </div>
+            ) : (
+              <div
+                style={{
+                  border: "1px dashed #cbd5e1",
+                  borderRadius: 16,
+                  background: "#f8fbff",
+                  padding: "18px 16px",
+                  color: "#4b5563",
+                }}
+              >
+                Digite pelo menos 2 letras e clique em um cliente da lista para continuar.
+              </div>
+            )}
+
+            {results.length > 0 ? (
+              <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
               {results.map((customer) => (
                 <button
                   key={customer.id}
                   type="button"
                   onClick={() => handleSelectCustomer(customer.id)}
                   style={{
-                    border: "1px solid #ece7df",
+                    border: selectedCustomer?.id === customer.id ? "1px solid #2563eb" : "1px solid #d7dee8",
                     borderRadius: 14,
-                    background: selectedCustomer?.id === customer.id ? "#f8f1e7" : "#fff",
-                    padding: "14px 16px",
+                    background: selectedCustomer?.id === customer.id ? "#eff6ff" : "#fff",
+                    padding: "15px 16px",
                     textAlign: "left",
                     cursor: "pointer",
+                    boxShadow: selectedCustomer?.id === customer.id ? "0 0 0 1px rgba(37,99,235,0.06)" : "none",
                   }}
                 >
                   <div style={{ display: "flex", justifyContent: "space-between", gap: 12 }}>
                     <div>
                       <strong style={{ display: "block", fontSize: 14 }}>{customer.name || "Cliente"}</strong>
-                      <span style={{ display: "block", marginTop: 4, color: "#786b5d", fontSize: 12 }}>{customer.email}</span>
+                      <span style={{ display: "block", marginTop: 4, color: "#64748b", fontSize: 12 }}>{customer.email}</span>
                     </div>
                     <div style={{ fontSize: 12, color: "#111", fontWeight: 600 }}>{formatMoney(customer.walletCents)}</div>
                   </div>
                 </button>
               ))}
-            </div>
-          ) : query.trim().length >= 2 ? (
-            <p className={styles.noResults}>Nenhum cliente encontrado para essa busca.</p>
-          ) : null}
-        </div>
-
-        <div
-          style={{
-            border: "1px solid #ece7df",
-            borderRadius: 16,
-            background: "#fff",
-            padding: 22,
-            display: "flex",
-            flexDirection: "column",
-            gap: 14,
-          }}
-        >
-          <div>
-            <div style={{ fontSize: 11, letterSpacing: "0.18em", textTransform: "uppercase", color: "#8d7f70" }}>Cliente</div>
-            <h3 style={{ margin: "8px 0 4px", fontSize: 22, fontWeight: 500 }}>
-              {selectedCustomer?.name || "Selecione um cliente"}
-            </h3>
-            <p style={{ margin: 0, color: "#6a5d50", fontSize: 13 }}>{selectedCustomer?.email || "Busque por nome, e-mail ou ID para continuar."}</p>
+              </div>
+            ) : query.trim().length >= 2 ? (
+              <p className={styles.noResults}>Nenhum cliente encontrado para essa busca.</p>
+            ) : null}
           </div>
 
-          <div style={{ padding: "14px 16px", borderRadius: 12, background: "#faf6f1" }}>
-            <div style={{ fontSize: 11, letterSpacing: "0.16em", textTransform: "uppercase", color: "#8d7f70" }}>Saldo atual</div>
-            <div style={{ marginTop: 8, fontSize: 28, fontWeight: 500 }}>{formatMoney(selectedCustomer?.walletCents || 0)}</div>
-          </div>
-
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0,1fr))", gap: 10 }}>
-            <button
-              type="button"
-              onClick={() => setType("credit")}
-              style={{
-                borderRadius: 12,
-                border: "1px solid #d9d0c3",
-                padding: "12px 14px",
-                cursor: "pointer",
-                background: type === "credit" ? "#111" : "#fff",
-                color: type === "credit" ? "#fff" : "#111",
-              }}
-            >
-              Crédito
-            </button>
-            <button
-              type="button"
-              onClick={() => setType("debit")}
-              style={{
-                borderRadius: 12,
-                border: "1px solid #d9d0c3",
-                padding: "12px 14px",
-                cursor: "pointer",
-                background: type === "debit" ? "#111" : "#fff",
-                color: type === "debit" ? "#fff" : "#111",
-              }}
-            >
-              Débito
-            </button>
-          </div>
-
-          <input value={amount} onChange={(event) => setAmount(event.target.value)} placeholder="Valor (ex.: 150 ou 150,50)" style={{ border: "1px solid #e0d8cc", borderRadius: 12, padding: "12px 14px" }} />
-          <select value={reason} onChange={(event) => setReason(event.target.value as BalanceRequestRow["reason"])} style={{ border: "1px solid #e0d8cc", borderRadius: 12, padding: "12px 14px" }}>
-            <option value="product_return">Devolução de produto</option>
-            <option value="billing_error">Erro de cobrança</option>
-            <option value="courtesy">Cortesia</option>
-            <option value="manual_adjustment">Ajuste manual</option>
-            <option value="other">Outro</option>
-          </select>
-          {reason === "other" ? (
-            <textarea value={reasonDetail} onChange={(event) => setReasonDetail(event.target.value)} placeholder="Explique o motivo" rows={3} style={{ border: "1px solid #e0d8cc", borderRadius: 12, padding: "12px 14px", resize: "vertical" }} />
-          ) : null}
-          <input value={relatedOrderId} onChange={(event) => setRelatedOrderId(event.target.value)} placeholder="ID do pedido relacionado (opcional)" style={{ border: "1px solid #e0d8cc", borderRadius: 12, padding: "12px 14px" }} />
-          <textarea value={internalNote} onChange={(event) => setInternalNote(event.target.value)} placeholder="Observação interna (opcional)" rows={3} style={{ border: "1px solid #e0d8cc", borderRadius: 12, padding: "12px 14px", resize: "vertical" }} />
-
-          {message ? (
-            <div style={{ fontSize: 13, color: message.includes("aprovação") ? "#245b33" : "#8d2727" }}>{message}</div>
-          ) : null}
-
-          <button
-            type="button"
-            onClick={handleSubmit}
-            disabled={!canSubmit || submitting}
+          <div
             style={{
-              border: 0,
-              borderRadius: 12,
-              padding: "14px 18px",
-              background: "#111",
-              color: "#fff",
-              cursor: canSubmit && !submitting ? "pointer" : "not-allowed",
-              opacity: canSubmit && !submitting ? 1 : 0.5,
+              border: "1px solid #d7dee8",
+              borderRadius: 18,
+              background: "#fff",
+              padding: 22,
+              display: "flex",
+              flexDirection: "column",
+              gap: 16,
+              boxShadow: "0 18px 40px rgba(15,23,42,0.04)",
             }}
           >
-            {submitting ? "Enviando..." : "Enviar para aprovação"}
-          </button>
+            <div>
+              <div style={{ fontSize: 11, letterSpacing: "0.18em", textTransform: "uppercase", color: "#5f6b7a" }}>Passo 2</div>
+              <h3 style={{ margin: "8px 0 4px", fontSize: 22, fontWeight: 500, color: "#111827" }}>
+                {selectedCustomer?.name || "Defina a alteração de saldo"}
+              </h3>
+              <p style={{ margin: 0, color: "#4b5563", fontSize: 13 }}>
+                {selectedCustomer?.email || "Assim que um cliente for selecionado, você poderá preencher a solicitação."}
+              </p>
+            </div>
+
+            <div style={{ padding: "15px 16px", borderRadius: 14, background: "#0f172a", color: "#fff" }}>
+              <div style={{ fontSize: 11, letterSpacing: "0.16em", textTransform: "uppercase", color: "#93c5fd" }}>Saldo atual</div>
+              <div style={{ marginTop: 8, fontSize: 28, fontWeight: 500 }}>{formatMoney(selectedCustomer?.walletCents || 0)}</div>
+            </div>
+
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0,1fr))", gap: 10 }}>
+              <button
+                type="button"
+                onClick={() => setType("credit")}
+                style={{
+                  borderRadius: 12,
+                  border: type === "credit" ? "1px solid #2563eb" : "1px solid #cbd5e1",
+                  padding: "12px 14px",
+                  cursor: "pointer",
+                  background: type === "credit" ? "#2563eb" : "#fff",
+                  color: type === "credit" ? "#fff" : "#0f172a",
+                  fontWeight: 600,
+                }}
+              >
+                Adicionar saldo
+              </button>
+              <button
+                type="button"
+                onClick={() => setType("debit")}
+                style={{
+                  borderRadius: 12,
+                  border: type === "debit" ? "1px solid #dc2626" : "1px solid #cbd5e1",
+                  padding: "12px 14px",
+                  cursor: "pointer",
+                  background: type === "debit" ? "#dc2626" : "#fff",
+                  color: type === "debit" ? "#fff" : "#0f172a",
+                  fontWeight: 600,
+                }}
+              >
+                Remover saldo
+              </button>
+            </div>
+
+            <input value={amount} onChange={(event) => setAmount(event.target.value)} placeholder="Valor da alteração (ex.: 150 ou 150,50)" style={{ border: "1px solid #cbd5e1", borderRadius: 12, padding: "12px 14px", background: "#fff", color: "#111827" }} />
+            <select value={reason} onChange={(event) => setReason(event.target.value as BalanceRequestRow["reason"])} style={{ border: "1px solid #cbd5e1", borderRadius: 12, padding: "12px 14px", background: "#fff", color: "#111827" }}>
+              <option value="product_return">Devolução de produto</option>
+              <option value="billing_error">Erro de cobrança</option>
+              <option value="courtesy">Cortesia</option>
+              <option value="manual_adjustment">Ajuste manual</option>
+              <option value="other">Outro motivo</option>
+            </select>
+            {reason === "other" ? (
+              <textarea value={reasonDetail} onChange={(event) => setReasonDetail(event.target.value)} placeholder="Explique o motivo da alteração" rows={3} style={{ border: "1px solid #cbd5e1", borderRadius: 12, padding: "12px 14px", resize: "vertical", background: "#fff", color: "#111827" }} />
+            ) : null}
+            <input value={relatedOrderId} onChange={(event) => setRelatedOrderId(event.target.value)} placeholder="ID do pedido relacionado (opcional)" style={{ border: "1px solid #cbd5e1", borderRadius: 12, padding: "12px 14px", background: "#fff", color: "#111827" }} />
+            <textarea value={internalNote} onChange={(event) => setInternalNote(event.target.value)} placeholder="Observação interna para a equipe (opcional)" rows={3} style={{ border: "1px solid #cbd5e1", borderRadius: 12, padding: "12px 14px", resize: "vertical", background: "#fff", color: "#111827" }} />
+
+            {message ? (
+              <div
+                style={{
+                  fontSize: 13,
+                  color: message.includes("aprovação") ? "#166534" : "#991b1b",
+                  background: message.includes("aprovação") ? "#ecfdf5" : "#fef2f2",
+                  border: `1px solid ${message.includes("aprovação") ? "#bbf7d0" : "#fecaca"}`,
+                  borderRadius: 12,
+                  padding: "12px 14px",
+                }}
+              >
+                {message}
+              </div>
+            ) : null}
+
+            <button
+              type="button"
+              onClick={handleSubmit}
+              disabled={!canSubmit || submitting}
+              style={{
+                border: 0,
+                borderRadius: 12,
+                padding: "14px 18px",
+                background: "#111827",
+                color: "#fff",
+                cursor: canSubmit && !submitting ? "pointer" : "not-allowed",
+                opacity: canSubmit && !submitting ? 1 : 0.45,
+                fontWeight: 600,
+              }}
+            >
+              {submitting ? "Enviando..." : `${formatOperationLabel(type)} e enviar para aprovação`}
+            </button>
+          </div>
         </div>
       </div>
 
-      <div style={{ border: "1px solid #ece7df", borderRadius: 16, background: "#fff", padding: 22 }}>
+      <div style={{ border: "1px solid #d7dee8", borderRadius: 18, background: "#fff", padding: 22 }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
           <div>
-            <div style={{ fontSize: 11, letterSpacing: "0.18em", textTransform: "uppercase", color: "#8d7f70" }}>Minhas solicitações</div>
-            <h3 style={{ margin: "8px 0 0", fontSize: 22, fontWeight: 500 }}>Acompanhamento</h3>
+            <div style={{ fontSize: 11, letterSpacing: "0.18em", textTransform: "uppercase", color: "#5f6b7a" }}>Minhas solicitações</div>
+            <h3 style={{ margin: "8px 0 0", fontSize: 22, fontWeight: 500, color: "#111827" }}>Acompanhamento</h3>
           </div>
           {latestRequest ? <StatusBadge status={latestRequest.status} /> : null}
         </div>
@@ -319,7 +388,7 @@ export function BalancePage({ csrfToken, refreshKey = 0 }: { csrfToken?: string;
                   <tr key={request.id}>
                     <td>{formatDate(request.createdAt)}</td>
                     <td>{request.customerName || request.customerEmail || "-"}</td>
-                    <td>{request.type === "debit" ? "Débito" : "Crédito"}</td>
+                    <td>{formatOperationLabel(request.type)}</td>
                     <td>{formatMoney(Math.round(Number(request.amount || 0) * 100))}</td>
                     <td>{formatReason(request.reason)}</td>
                     <td><StatusBadge status={request.status} /></td>

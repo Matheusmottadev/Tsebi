@@ -26,6 +26,12 @@ const MODULES: Array<{ key: "balance" | "orders" | "users" | "products"; label: 
   { key: "products", label: "Produtos" },
 ];
 
+function formatRoleLabel(role: "admin" | "director" | "superadmin" | string): string {
+  if (role === "superadmin") return "Diretoria";
+  if (role === "director") return "Gerente";
+  return "Admin";
+}
+
 function formatMoney(cents: number): string {
   return new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format((Number(cents || 0) || 0) / 100);
 }
@@ -35,6 +41,17 @@ function formatDate(value: string | null): string {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return "-";
   return new Intl.DateTimeFormat("pt-BR", { dateStyle: "short", timeStyle: "short" }).format(date);
+}
+
+function formatAdminMutationError(error: any, fallback: string): string {
+  const raw = String(error?.message || "").trim();
+  if (!raw) return fallback;
+  if (raw.includes("INVALID_INPUT")) return "Preencha um e-mail válido para continuar.";
+  if (raw.includes("SUPERADMIN_CREATE_FORBIDDEN")) return "Apenas a Diretoria pode criar outro perfil de Diretoria.";
+  if (raw.includes("ADMIN_CREATE_FAILED")) return "Não foi possível cadastrar este admin agora. Tente novamente em alguns segundos.";
+  if (raw.includes("ADMIN_STATUS_UPDATE_FAILED")) return "Não foi possível alterar o status deste admin agora.";
+  if (raw.includes("ADMIN_PERMISSIONS_UPDATE_FAILED")) return "Não foi possível salvar as permissões agora.";
+  return raw;
 }
 
 function statusBadge(status: BalanceRequestRow["status"]) {
@@ -125,17 +142,20 @@ export function DiretoriaPage({ csrfToken, refreshKey = 0 }: { csrfToken?: strin
   }, [tab, requestStatusFilter, requestDateFrom, requestDateTo, requesterFilter, auditActionFilter, auditDateFrom, auditDateTo, refreshKey]);
 
   async function handleCreateAdmin() {
-    if (!createEmail.trim()) return;
+    if (!createEmail.trim()) {
+      setMessage("Digite o e-mail do admin antes de criar.");
+      return;
+    }
     setSavingAdmin(true);
     setMessage("");
     try {
       await createDirectoriaAdmin({ email: createEmail.trim(), role: createRole }, csrfToken, { cache: "no-store" });
       setCreateEmail("");
       setCreateRole("admin");
-      setMessage("Admin criado com sucesso.");
+      setMessage("Admin cadastrado com sucesso.");
       await loadAdmins();
     } catch (error: any) {
-      setMessage(String(error?.message || "Não foi possível criar o admin."));
+      setMessage(formatAdminMutationError(error, "Não foi possível criar o admin."));
     } finally {
       setSavingAdmin(false);
     }
@@ -146,7 +166,7 @@ export function DiretoriaPage({ csrfToken, refreshKey = 0 }: { csrfToken?: strin
       await updateDirectoriaAdminStatus(row.id, { isActive: !row.isActive }, csrfToken, { cache: "no-store" });
       await loadAdmins();
     } catch (error: any) {
-      setMessage(String(error?.message || "Não foi possível atualizar o status."));
+      setMessage(formatAdminMutationError(error, "Não foi possível atualizar o status."));
     }
   }
 
@@ -162,7 +182,7 @@ export function DiretoriaPage({ csrfToken, refreshKey = 0 }: { csrfToken?: strin
       setPermissionDraft([]);
       await loadAdmins();
     } catch (error: any) {
-      setMessage(String(error?.message || "Não foi possível salvar as permissões."));
+      setMessage(formatAdminMutationError(error, "Não foi possível salvar as permissões."));
     }
   }
 
@@ -297,8 +317,8 @@ export function DiretoriaPage({ csrfToken, refreshKey = 0 }: { csrfToken?: strin
             <input value={createEmail} onChange={(event) => setCreateEmail(event.target.value)} placeholder="E-mail do admin" style={{ border: "1px solid #e0d8cc", borderRadius: 12, padding: "12px 14px" }} />
             <select value={createRole} onChange={(event) => setCreateRole(event.target.value as "admin" | "director" | "superadmin")} style={{ border: "1px solid #e0d8cc", borderRadius: 12, padding: "12px 14px" }}>
               <option value="admin">Admin</option>
-              <option value="director">Director</option>
-              <option value="superadmin">Superadmin</option>
+              <option value="director">Gerente</option>
+              <option value="superadmin">Diretoria</option>
             </select>
             <button type="button" onClick={handleCreateAdmin} disabled={savingAdmin} style={{ border: 0, borderRadius: 12, padding: "12px 16px", background: "#111", color: "#fff", cursor: "pointer" }}>
               {savingAdmin ? "Criando..." : "Criar admin"}
@@ -311,7 +331,7 @@ export function DiretoriaPage({ csrfToken, refreshKey = 0 }: { csrfToken?: strin
                 <tr>
                   <th>Nome</th>
                   <th>Email</th>
-                  <th>Role</th>
+                  <th>Cargo</th>
                   <th>Status</th>
                   <th>Criado por</th>
                   <th>Criado em</th>
@@ -323,33 +343,53 @@ export function DiretoriaPage({ csrfToken, refreshKey = 0 }: { csrfToken?: strin
                   <tr key={row.id}>
                     <td>{row.name || row.nickname || "-"}</td>
                     <td>{row.email}</td>
-                    <td>{row.role}</td>
+                    <td>{formatRoleLabel(row.role)}</td>
                     <td>{row.isActive ? "ativo" : "inativo"}</td>
                     <td>{row.createdByName || row.createdByEmail || "-"}</td>
                     <td>{formatDate(row.createdAt || null)}</td>
                     <td className={styles.actionCell}>
                       <div style={{ display: "flex", gap: 8, justifyContent: "flex-end", flexWrap: "wrap" }}>
-                        <button
-                          type="button"
-                          disabled={row.role === "superadmin"}
-                          title={row.role === "superadmin" ? "protegido" : "Editar permissões"}
-                          onClick={() => {
-                            setPermissionDraftId(row.id === permissionDraftId ? "" : row.id);
-                            setPermissionDraft(row.permissions || []);
-                          }}
-                          className={styles.btnEdit}
-                        >
-                          Permissões
-                        </button>
-                        <button
-                          type="button"
-                          disabled={row.role === "superadmin"}
-                          title={row.role === "superadmin" ? "protegido" : row.isActive ? "Desativar" : "Ativar"}
-                          onClick={() => handleToggleStatus(row)}
-                          className={row.isActive ? styles.btnDelete : styles.btnDetalhes}
-                        >
-                          {row.isActive ? "Desativar" : "Ativar"}
-                        </button>
+                        {row.role === "superadmin" ? (
+                          <span
+                            title="Perfis de Diretoria são protegidos e não podem ser alterados por esta tela."
+                            style={{
+                              display: "inline-flex",
+                              alignItems: "center",
+                              borderRadius: 999,
+                              padding: "8px 12px",
+                              background: "#eef2ff",
+                              color: "#4338ca",
+                              fontSize: 11,
+                              fontWeight: 600,
+                              letterSpacing: "0.08em",
+                              textTransform: "uppercase",
+                            }}
+                          >
+                            Protegido
+                          </span>
+                        ) : (
+                          <>
+                            <button
+                              type="button"
+                              title="Editar permissões"
+                              onClick={() => {
+                                setPermissionDraftId(row.id === permissionDraftId ? "" : row.id);
+                                setPermissionDraft(row.permissions || []);
+                              }}
+                              className={styles.btnEdit}
+                            >
+                              Permissões
+                            </button>
+                            <button
+                              type="button"
+                              title={row.isActive ? "Desativar" : "Ativar"}
+                              onClick={() => handleToggleStatus(row)}
+                              className={row.isActive ? styles.btnDelete : styles.btnDetalhes}
+                            >
+                              {row.isActive ? "Desativar" : "Ativar"}
+                            </button>
+                          </>
+                        )}
                       </div>
                       {permissionDraftId === row.id ? (
                         <div style={{ marginTop: 12, display: "flex", flexDirection: "column", gap: 10, alignItems: "flex-end" }}>
