@@ -12,6 +12,7 @@ import type { GiftCard, GiftCardTransaction } from "@/types";
 import styles from "./DrawerForms.module.css";
 
 interface Props {
+  isOpen: boolean;
   giftCard: GiftCard | null; // null = create mode
   csrfToken: string;
   onClose: () => void;
@@ -38,7 +39,7 @@ function formatReason(reason: string): string {
   return map[reason] || reason;
 }
 
-export function DrawerGiftCard({ giftCard, csrfToken, onClose, onSaved }: Props) {
+export function DrawerGiftCard({ isOpen, giftCard, csrfToken, onClose, onSaved }: Props) {
   const isEdit = giftCard !== null;
 
   // Create mode state
@@ -129,6 +130,7 @@ export function DrawerGiftCard({ giftCard, csrfToken, onClose, onSaved }: Props)
 
   return (
     <Drawer
+      isOpen={isOpen}
       title={isEdit ? "Editar Gift Card" : "Novo Gift Card"}
       subtitle={isEdit ? giftCard!.code : "Criar novo gift card"}
       onClose={onClose}

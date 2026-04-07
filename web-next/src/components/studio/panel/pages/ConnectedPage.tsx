@@ -1833,6 +1833,7 @@ export function ConnectedPage({
 
           {editingGiftCard !== undefined && csrfToken && (
             <DrawerGiftCard
+              isOpen={editingGiftCard !== undefined}
               giftCard={editingGiftCard}
               csrfToken={csrfToken}
               onClose={() => setEditingGiftCard(undefined)}
