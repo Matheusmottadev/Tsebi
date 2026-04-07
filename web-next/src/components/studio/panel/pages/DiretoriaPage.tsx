@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { Drawer } from "@/components/admin/Drawer";
+import { useAdminAccess } from "@/components/studio/panel/access-control";
 import { SearchBar, type FilterConfig } from "@/components/studio/panel/SearchBar";
 import type { AdminModulePermission } from "@/types";
 import {
@@ -103,6 +104,7 @@ function formatApprovalActionError(error: any, fallback: string) {
 }
 
 export function DiretoriaPage({ csrfToken, refreshKey = 0 }: { csrfToken?: string; refreshKey?: number }) {
+  const adminAccess = useAdminAccess();
   const [tab, setTab] = useState<"admins" | "approvals" | "audit">("admins");
   const [admins, setAdmins] = useState<AdminAccessRow[]>([]);
   const [requests, setRequests] = useState<BalanceRequestRow[]>([]);
@@ -369,6 +371,11 @@ export function DiretoriaPage({ csrfToken, refreshKey = 0 }: { csrfToken?: strin
   ];
 
   const selectedBadge = selectedRequest ? statusBadge(selectedRequest.status) : null;
+  const isOwnSelectedRequest = Boolean(
+    selectedRequest?.requestedBy &&
+      adminAccess?.id &&
+      String(selectedRequest.requestedBy) === String(adminAccess.id)
+  );
 
   function exportAudit() {
     const query = new URLSearchParams();
@@ -768,9 +775,9 @@ export function DiretoriaPage({ csrfToken, refreshKey = 0 }: { csrfToken?: strin
               type="button"
               className={styles.btnEdit}
               onClick={handleApproveSelected}
-              disabled={!selectedRequest || selectedRequest.status !== "pending" || requestActionLoading !== null}
+              disabled={!selectedRequest || selectedRequest.status !== "pending" || requestActionLoading !== null || isOwnSelectedRequest}
             >
-              {requestActionLoading === "approve" ? "Aprovando..." : "Aprovar"}
+              {isOwnSelectedRequest ? "Autoaprovação bloqueada" : requestActionLoading === "approve" ? "Aprovando..." : "Aprovar"}
             </button>
           </div>
         }
@@ -903,6 +910,22 @@ export function DiretoriaPage({ csrfToken, refreshKey = 0 }: { csrfToken?: strin
                 }}
               />
             </div>
+
+            {isOwnSelectedRequest ? (
+              <div
+                style={{
+                  border: "1px solid #dbe4f0",
+                  borderRadius: 12,
+                  padding: "12px 14px",
+                  background: "#f8fbff",
+                  color: "#315ea8",
+                  fontSize: 13,
+                  lineHeight: 1.6,
+                }}
+              >
+                Esta solicitação foi criada pela sua própria conta. Por segurança, ela precisa ser aprovada por outro gerente ou pela diretoria.
+              </div>
+            ) : null}
           </div>
         ) : null}
       </Drawer>
