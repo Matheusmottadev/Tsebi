@@ -63,6 +63,13 @@ const {
   normalizeCode
 } = require("./lib/access-code-repository");
 const {
+  createGiftCard,
+  findGiftCardById,
+  listGiftCards,
+  updateGiftCard,
+  getGiftCardTransactions,
+} = require("./lib/gift-card-repository");
+const {
   listAdminAppointmentSlots,
   createAdminAppointmentSlot,
   updateAdminAppointmentSlot,
@@ -411,6 +418,20 @@ const accessCodeUpsertSchema = z.object({
   startsAt: z.string().trim().max(40).optional().default(""),
   expiresAt: z.string().trim().max(40).optional().default(""),
   description: z.string().trim().max(180).optional().default("")
+});
+
+const giftCardCreateSchema = z.object({
+  code: z.string().trim().max(40).optional(),
+  initialBalanceCents: z.coerce.number().int().min(100).max(9_999_999),
+  expiresAt: z.string().trim().max(40).optional().nullable().default(null),
+  note: z.string().trim().max(200).optional().default(""),
+  active: z.coerce.boolean().optional().default(true),
+});
+
+const giftCardPatchSchema = z.object({
+  active: z.coerce.boolean().optional(),
+  expiresAt: z.string().trim().max(40).optional().nullable(),
+  note: z.string().trim().max(200).optional(),
 });
 
 function maskCpfForList(cpf: any) {
@@ -3963,6 +3984,74 @@ adminRouter.post("/notifications/send", async (req: any, res: any) => {
   } catch (error: any) {
     console.error("[notifications] send error:", error);
     return res.status(500).json({ error: "NOTIFICATION_SEND_FAILED" });
+  }
+});
+
+// MARK: - Gift Cards Admin
+
+adminRouter.get("/gift-cards", async (req, res) => {
+  try {
+    const search = String(req.query.query || "").trim();
+    const page = Number(req.query.page || 1);
+    const pageSize = Number(req.query.pageSize || 50);
+    const status = String(req.query.status || "all");
+    const result = await listGiftCards({ query: search, status, page, pageSize });
+    return res.json({ rows: result.rows, total: result.total, page: result.page, pageSize: result.pageSize });
+  } catch {
+    return res.status(500).json({ error: "ADMIN_GIFT_CARDS_LIST_FAILED" });
+  }
+});
+
+adminRouter.post("/gift-cards", async (req, res) => {
+  const parsed = giftCardCreateSchema.safeParse(req.body || {});
+  if (!parsed.success) return res.status(400).json({ error: "INVALID_INPUT" });
+  try {
+    const card = await createGiftCard(parsed.data);
+    return res.status(201).json({ ok: true, giftCard: card });
+  } catch (err) {
+    const msg = String((err as any)?.message || "");
+    if (msg.includes("unique") || msg.includes("duplicate")) {
+      return res.status(409).json({ error: "GC_CODE_ALREADY_EXISTS" });
+    }
+    return res.status(500).json({ error: "ADMIN_GIFT_CARD_CREATE_FAILED" });
+  }
+});
+
+adminRouter.get("/gift-cards/:id", async (req, res) => {
+  const id = String(req.params.id || "").trim();
+  if (!id) return res.status(400).json({ error: "INVALID_ID" });
+  try {
+    const card = await findGiftCardById(id);
+    if (!card) return res.status(404).json({ error: "NOT_FOUND" });
+    const transactions = await getGiftCardTransactions(id);
+    return res.json({ giftCard: card, transactions });
+  } catch {
+    return res.status(500).json({ error: "ADMIN_GIFT_CARD_GET_FAILED" });
+  }
+});
+
+adminRouter.patch("/gift-cards/:id", async (req, res) => {
+  const id = String(req.params.id || "").trim();
+  if (!id) return res.status(400).json({ error: "INVALID_ID" });
+  const parsed = giftCardPatchSchema.safeParse(req.body || {});
+  if (!parsed.success) return res.status(400).json({ error: "INVALID_INPUT" });
+  try {
+    const card = await updateGiftCard(id, parsed.data);
+    if (!card) return res.status(404).json({ error: "NOT_FOUND" });
+    return res.json({ ok: true, giftCard: card });
+  } catch {
+    return res.status(500).json({ error: "ADMIN_GIFT_CARD_UPDATE_FAILED" });
+  }
+});
+
+adminRouter.get("/gift-cards/:id/transactions", async (req, res) => {
+  const id = String(req.params.id || "").trim();
+  if (!id) return res.status(400).json({ error: "INVALID_ID" });
+  try {
+    const transactions = await getGiftCardTransactions(id);
+    return res.json({ transactions });
+  } catch {
+    return res.status(500).json({ error: "ADMIN_GIFT_CARD_TXN_FAILED" });
   }
 });
 

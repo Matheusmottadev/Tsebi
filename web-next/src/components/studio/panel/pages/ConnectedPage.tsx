@@ -3,6 +3,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { ConfirmModal } from "@/components/admin/ConfirmModal";
 import { DrawerDetalhesUsuario } from "@/components/admin/DrawerDetalhesUsuario";
 import { DrawerEditarCupom } from "@/components/admin/DrawerEditarCupom";
+import { DrawerGiftCard } from "@/components/admin/DrawerGiftCard";
 import { DrawerEditarPedido } from "@/components/admin/DrawerEditarPedido";
 import { DrawerEditarProduto } from "@/components/admin/DrawerEditarProduto";
 import { DrawerNovoAtendimento } from "@/components/admin/DrawerNovoAtendimento";
@@ -25,7 +26,7 @@ import {
   type AdminUserRow,
   type AdminVipRow,
 } from "@/services/admin";
-import type { Coupon, Order, Product, RepairRequest } from "@/types";
+import type { Coupon, GiftCard, Order, Product, RepairRequest } from "@/types";
 import type { AdminPageKey, GlobalSearchTarget } from "../types";
 import styles from "./ConnectedPage.module.css";
 
@@ -38,6 +39,7 @@ export interface ConnectedPanelData {
   vip: AdminVipRow[];
   newsletter: AdminNewsletterRow[];
   coupons: Coupon[];
+  giftCards: GiftCard[];
   audit: AdminAuditLog[];
 }
 
@@ -354,6 +356,7 @@ export function ConnectedPage({
   const [vipRows, setVipRows] = useState<AdminVipRow[]>(data.vip || []);
   const [newsletterRows, setNewsletterRows] = useState<AdminNewsletterRow[]>(data.newsletter || []);
   const [couponsRows, setCouponsRows] = useState<Coupon[]>(data.coupons || []);
+  const [giftCardsRows, setGiftCardsRows] = useState<GiftCard[]>(data.giftCards || []);
   const [auditRows, setAuditRows] = useState<AdminAuditLog[]>(data.audit || []);
   const [notificationLogs, setNotificationLogs] = useState<AdminNotificationLog[]>([]);
   const [notificationLogsLoading, setNotificationLogsLoading] = useState(false);
@@ -392,6 +395,10 @@ export function ConnectedPage({
   const [couponsTypeFilter, setCouponsTypeFilter] = useState("todos");
   const [couponsValidityFilter, setCouponsValidityFilter] = useState("todos");
   const [couponsSort, setCouponsSort] = useState("mais_recente");
+
+  const [giftCardsSearch, setGiftCardsSearch] = useState("");
+
+  const [editingGiftCard, setEditingGiftCard] = useState<GiftCard | null | undefined>(undefined);
 
   const [careSearch, setCareSearch] = useState("");
   const [careStatusFilter, setCareStatusFilter] = useState("todos");
@@ -464,6 +471,10 @@ export function ConnectedPage({
   useEffect(() => {
     setCouponsRows(data.coupons || []);
   }, [data.coupons]);
+
+  useEffect(() => {
+    setGiftCardsRows(data.giftCards || []);
+  }, [data.giftCards]);
 
   useEffect(() => {
     setAuditRows(data.audit || []);
@@ -791,6 +802,16 @@ export function ConnectedPage({
     });
     return nextRows;
   }, [couponsRows, couponsSearch, couponsSort, couponsStatusFilter, couponsTypeFilter, couponsValidityFilter]);
+
+  const filteredGiftCards = useMemo(() => {
+    const search = normalizeTextForCompare(giftCardsSearch);
+    if (!search) return giftCardsRows || [];
+    return (giftCardsRows || []).filter(
+      (c) =>
+        normalizeTextForCompare(c.code).includes(search) ||
+        normalizeTextForCompare(c.note).includes(search)
+    );
+  }, [giftCardsRows, giftCardsSearch]);
 
   const filteredAudit = useMemo(() => {
     const query = normalizeTextForCompare(auditSearch);
@@ -1750,6 +1771,85 @@ export function ConnectedPage({
             </div>
           ) : (
             <p className={styles.noResults}>{buildNoResultsText(couponsSearch)}</p>
+          )}
+        </>
+      ) : null}
+
+      {page === "gift_cards" ? (
+        <>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+            <SearchBar
+              placeholder="Buscar por código ou nota"
+              value={giftCardsSearch}
+              onChange={setGiftCardsSearch}
+              filters={[]}
+              sortOptions={[]}
+              resultsCount={filteredGiftCards.length}
+              onClear={() => setGiftCardsSearch("")}
+            />
+            <button
+              className={styles.btnCreate}
+              onClick={() => setEditingGiftCard(null)}
+            >
+              + Novo Gift Card
+            </button>
+          </div>
+          {filteredGiftCards.length ? (
+            <div className={styles.tableWrap}>
+              <table className={styles.table}>
+                <thead>
+                  <tr>
+                    <th>Código</th>
+                    <th>Saldo</th>
+                    <th>Valor inicial</th>
+                    <th>Ativo</th>
+                    <th>Expira em</th>
+                    <th>Nota</th>
+                    <th></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredGiftCards.slice(0, 200).map((card) => (
+                    <tr key={card.id}>
+                      <td style={{ fontFamily: "monospace", fontSize: 12 }}>{card.code}</td>
+                      <td style={{ fontWeight: 600 }}>{formatMoneyCents(card.balanceCents)}</td>
+                      <td>{formatMoneyCents(card.initialBalanceCents)}</td>
+                      <td>{card.active ? "sim" : "não"}</td>
+                      <td>{formatDateTime(card.expiresAt)}</td>
+                      <td style={{ color: "#999", maxWidth: 160, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{card.note || "-"}</td>
+                      <td className={styles.actionCell}>
+                        <button className={styles.btnEdit} onClick={() => setEditingGiftCard(card)}>
+                          <PencilLine size={12} /> Editar
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <p className={styles.noResults}>Nenhum gift card encontrado.</p>
+          )}
+
+          {editingGiftCard !== undefined && csrfToken && (
+            <DrawerGiftCard
+              giftCard={editingGiftCard}
+              csrfToken={csrfToken}
+              onClose={() => setEditingGiftCard(undefined)}
+              onSaved={(card) => {
+                setGiftCardsRows((current) => {
+                  const idx = current.findIndex((r) => r.id === card.id);
+                  if (idx >= 0) {
+                    const next = [...current];
+                    next[idx] = card;
+                    return next;
+                  }
+                  return [card, ...current];
+                });
+                setEditingGiftCard(undefined);
+                onRequestRefresh?.();
+              }}
+            />
           )}
         </>
       ) : null}

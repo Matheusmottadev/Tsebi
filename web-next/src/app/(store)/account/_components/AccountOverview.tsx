@@ -58,6 +58,13 @@ const CARDS: CardDef[] = [
     btnLabel: "Solicitar reparo",
     linkLabel: "Como funciona",
   },
+  {
+    key: "gift_cards",
+    title: "Gift Cards",
+    desc: () => "Consulte o saldo dos seus gift cards e adicione novos.",
+    btnLabel: "Ver gift cards",
+    linkLabel: "Adicionar gift card",
+  },
 ];
 
 type Props = {

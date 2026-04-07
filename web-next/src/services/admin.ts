@@ -1,6 +1,6 @@
 import { del, get, HttpError, patch, post } from "@/lib/http";
 import type { HttpRequestOptions } from "@/lib/http";
-import type { AdminMeResponse, Coupon, Order, Product, PublicUser, RepairRequest } from "@/types";
+import type { AdminMeResponse, Coupon, GiftCard, GiftCardTransaction, Order, Product, PublicUser, RepairRequest } from "@/types";
 import type { ProductAvailabilityStatus } from "@/types";
 
 /*
@@ -913,6 +913,105 @@ export async function deleteCouponAdmin(
     `/api/admin/coupons/${encodeURIComponent(code)}`,
     mergeOptionsWithHeaders(options, buildCsrfHeader(token))
   );
+}
+
+// ─── Gift Cards ───────────────────────────────────────────────────────────────
+
+export interface ListGiftCardsAdminParams {
+  query?: string;
+  status?: "all" | "active" | "inactive";
+  page?: number;
+  pageSize?: number;
+}
+
+export interface ListGiftCardsAdminResponse {
+  rows: GiftCard[];
+  total: number;
+  page: number;
+  pageSize: number;
+}
+
+export interface CreateGiftCardAdminPayload {
+  code?: string;
+  initialBalanceCents: number;
+  expiresAt?: string | null;
+  note?: string;
+  active?: boolean;
+}
+
+export interface PatchGiftCardAdminPayload {
+  active?: boolean;
+  expiresAt?: string | null;
+  note?: string;
+}
+
+export interface GiftCardMutationResponse {
+  ok: true;
+  giftCard: GiftCard;
+}
+
+export interface GiftCardDetailResponse {
+  giftCard: GiftCard;
+  transactions: GiftCardTransaction[];
+}
+
+/**
+ * GET /api/admin/gift-cards
+ */
+export async function listGiftCardsAdmin(
+  params: ListGiftCardsAdminParams = {},
+  options?: HttpRequestOptions
+): Promise<ListGiftCardsAdminResponse> {
+  const query = buildQuery({
+    query: params.query,
+    status: params.status,
+    page: params.page,
+    pageSize: params.pageSize,
+  });
+  return get<ListGiftCardsAdminResponse>(`/api/admin/gift-cards${query}`, options);
+}
+
+/**
+ * POST /api/admin/gift-cards
+ */
+export async function createGiftCardAdmin(
+  payload: CreateGiftCardAdminPayload,
+  csrfToken?: string,
+  options?: HttpRequestOptions
+): Promise<GiftCardMutationResponse> {
+  const token = await resolveCsrfToken(csrfToken, options);
+  return post<GiftCardMutationResponse>(
+    "/api/admin/gift-cards",
+    payload,
+    mergeOptionsWithHeaders(options, buildCsrfHeader(token))
+  );
+}
+
+/**
+ * PATCH /api/admin/gift-cards/:id
+ */
+export async function updateGiftCardAdmin(
+  id: string,
+  payload: PatchGiftCardAdminPayload,
+  csrfToken?: string,
+  options?: HttpRequestOptions
+): Promise<GiftCardMutationResponse> {
+  const token = await resolveCsrfToken(csrfToken, options);
+  return patch<GiftCardMutationResponse>(
+    `/api/admin/gift-cards/${encodeURIComponent(id)}`,
+    payload,
+    mergeOptionsWithHeaders(options, buildCsrfHeader(token))
+  );
+}
+
+/**
+ * GET /api/admin/gift-cards/:id/transactions
+ */
+export async function getGiftCardTransactionsAdmin(
+  id: string,
+  options?: HttpRequestOptions
+): Promise<GiftCardDetailResponse> {
+  return get<GiftCardDetailResponse>(`/api/admin/gift-cards/${encodeURIComponent(id)}/transactions`, options);
 }
 
 /**

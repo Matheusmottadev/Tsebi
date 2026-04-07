@@ -3,6 +3,7 @@
 import {
   Bell,
   FileText,
+  Gift,
   LayoutGrid,
   Mail,
   MessageCircle,
@@ -61,6 +62,7 @@ export function Sidebar({ activePage, onChangePage, pendingOrders, openCare, pen
       label: "Comercial",
       items: [
         { key: "cupons", label: "Cupons", icon: Tag },
+        { key: "gift_cards", label: "Gift Cards", icon: Gift },
         { key: "auditoria", label: "Auditoria", icon: FileText },
         { key: "notificacoes", label: "Notificações", icon: Bell },
       ],

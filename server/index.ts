@@ -35,6 +35,12 @@ const {
 } = require("./lib/product-repository");
 const { checkAvailability, commitStock } = require("./lib/inventory-repository");
 const { evaluateAccessCode, incrementAccessCodeUsage } = require("./lib/access-code-repository");
+const {
+  validateGiftCard,
+  debitGiftCard,
+  linkGiftCardToUser,
+  listUserGiftCards,
+} = require("./lib/gift-card-repository");
 const { withTransaction, query } = require("./lib/db");
 const { logProductSearchEvent } = require("./lib/search-telemetry-repository");
 const {
@@ -342,6 +348,7 @@ const paymentIntentSchema = z.object({
     .optional(),
   // Cartões salvos
   saveCard:      z.boolean().optional().default(false),
+  giftCardCode: z.string().trim().max(40).optional().default(""),
   selectedPmId:  z.string().trim().max(30).optional().nullable().default(null)
 });
 
@@ -2267,6 +2274,48 @@ app.get("/api/config", (req: any, res: any) => {
   });
 });
 
+// MARK: - Gift Cards (storefront)
+
+const giftCardRateLimit = rateLimit({ windowMs: 60_000, max: 20, standardHeaders: true, legacyHeaders: false });
+
+app.post("/api/gift-cards/validate", giftCardRateLimit, async (req: any, res: any) => {
+  const code = String(req.body?.code || "").trim().toUpperCase();
+  const requiredCents = Math.max(0, Math.floor(Number(req.body?.requiredCents || 0)));
+  if (!code) return res.status(400).json({ ok: false, error: "INVALID_CODE" });
+  try {
+    const result = await validateGiftCard(code, requiredCents);
+    if (!result.ok) {
+      return res.status(400).json({ ok: false, error: result.error, balanceCents: (result as any).balanceCents ?? 0 });
+    }
+    return res.json({ ok: true, code: result.giftCard.code, balanceCents: result.giftCard.balanceCents });
+  } catch {
+    return res.status(500).json({ ok: false, error: "GIFT_CARD_VALIDATE_FAILED" });
+  }
+});
+
+app.post("/api/gift-cards/link", requireUserAuth, requireUserCsrfForMutations, async (req: any, res: any) => {
+  const userId = String(req.session?.userId || "").trim();
+  const code = String(req.body?.code || "").trim().toUpperCase();
+  if (!code) return res.status(400).json({ ok: false, error: "INVALID_CODE" });
+  try {
+    const result = await linkGiftCardToUser(userId, code);
+    if (!result.ok) return res.status(400).json({ ok: false, error: result.error });
+    return res.json({ ok: true, giftCard: result.giftCard });
+  } catch {
+    return res.status(500).json({ ok: false, error: "GIFT_CARD_LINK_FAILED" });
+  }
+});
+
+app.get("/api/gift-cards/mine", requireUserAuth, async (req: any, res: any) => {
+  const userId = String(req.session?.userId || "").trim();
+  try {
+    const giftCards = await listUserGiftCards(userId);
+    return res.json({ giftCards });
+  } catch {
+    return res.status(500).json({ ok: false, error: "GIFT_CARD_LIST_FAILED" });
+  }
+});
+
 app.post("/api/discount-codes/apply", async (req: any, res: any) => {
   const code = String(req.body?.code || "").trim();
   const subtotalCents = Math.max(0, Math.floor(Number(req.body?.subtotalCents || 0)));
@@ -2496,6 +2545,94 @@ app.post(
     companyPaidByStore = true;
     companyPaidShippingCents = 0;
     shippingAmount = 0;
+  }
+
+  // Gift card checkout — bypass Stripe entirely
+  const requestedGiftCardCode = String(parsed.data.giftCardCode || "").trim().toUpperCase();
+  if (requestedGiftCardCode) {
+    const gcValidation = await validateGiftCard(requestedGiftCardCode, 0); // just check it exists + active
+    if (!gcValidation.ok) {
+      return res.status(400).json({ error: gcValidation.error });
+    }
+    // Apply discount code if also present
+    let gcDiscountAmount = 0;
+    if (requestedDiscountCode) {
+      const discountResult = await evaluateAccessCode({
+        code: requestedDiscountCode,
+        subtotalCents: itemsAmount,
+        shippingCents: shippingAmount,
+      });
+      if (discountResult.ok) {
+        gcDiscountAmount = Math.max(0, Number(discountResult.discountCents || 0));
+      }
+    }
+    const gcOrderAmount = Math.max(0, itemsAmount + shippingAmount - gcDiscountAmount);
+
+    // Check balance covers the order
+    const gcCheck = await validateGiftCard(requestedGiftCardCode, gcOrderAmount);
+    if (!gcCheck.ok) {
+      return res.status(400).json({ error: gcCheck.error, balanceCents: (gcCheck as any).balanceCents ?? 0 });
+    }
+
+    // Create order with paid status
+    const newOrder = await createOrder({
+      userId: checkoutUser.id,
+      items: availability.resolvedItems,
+      itemsAmount,
+      shippingAmount,
+      discountAmount: gcDiscountAmount,
+      discountCode: requestedDiscountCode || null,
+      totalAmount: gcOrderAmount,
+      paymentMethod: "gift_card",
+      status: "paid",
+      shippingAddress: shipping ? {
+        cep: shipping.cep,
+        street: shipping.street,
+        number: shipping.number,
+        complement: shipping.complement,
+        district: shipping.district,
+        city: shipping.city,
+        state: shipping.state,
+      } : null,
+      customerEmail: checkoutUser.email || "",
+      customerName: checkoutUser.name || "",
+      customerPhone: checkoutUser.phone || "",
+      customerCpf: checkoutUser.cpf || "",
+      shippingMethod: shipping?.shippingMethod || "",
+      shippingEstimate: shipping?.shippingEstimate || "",
+      companyPaidShipping: companyPaidByStore,
+      companyPaidShippingCents: companyPaidShippingCents,
+    });
+
+    if (!newOrder?.id) {
+      return res.status(500).json({ error: "ORDER_CREATE_FAILED" });
+    }
+
+    // Debit gift card
+    await debitGiftCard({
+      code: requestedGiftCardCode,
+      amountCents: gcOrderAmount,
+      orderId: newOrder.id,
+      userId: checkoutUser.id,
+      reason: "purchase",
+    });
+
+    // Commit stock
+    await commitStock(availability.resolvedItems, newOrder.id).catch(() => {});
+
+    // Increment discount code usage if applied
+    if (requestedDiscountCode && gcDiscountAmount > 0) {
+      await incrementAccessCodeUsage(requestedDiscountCode).catch(() => {});
+    }
+
+    // Notify
+    notifyOrderConfirmed({ order: newOrder, user: checkoutUser }).catch(() => {});
+
+    return res.json({
+      ok: true,
+      orderNumber: String(newOrder.id || ""),
+      orderStatus: "paid",
+    });
   }
 
   let discountAmount = 0;

@@ -8,6 +8,7 @@ import {
   listAuditLogsAdmin,
   listAppointmentSlotsAdmin,
   listCouponsAdmin,
+  listGiftCardsAdmin,
   listNewsletterAdmin,
   listOrdersAdmin,
   listProductsAdmin,
@@ -45,6 +46,7 @@ const EMPTY_CONNECTED_DATA: ConnectedPanelData = {
   vip: [],
   newsletter: [],
   coupons: [],
+  giftCards: [],
   audit: [],
 };
 
@@ -282,6 +284,7 @@ const TOPBAR_BUTTONS: Record<AdminPageKey, { label: string }> = {
   lista_vip: { label: "+ Novo Cadastro" },
   newsletter: { label: "Editar" },
   cupons: { label: "+ Novo Cupom" },
+  gift_cards: { label: "+ Novo Gift Card" },
   auditoria: { label: "Exportar" },
   notificacoes: { label: "+ Nova Notificação" },
 };
@@ -375,6 +378,7 @@ export function StudioAdminPanel() {
         listVipAdmin({ page: 1, pageSize: 200 }, { cache: "no-store" }),
         listNewsletterAdmin({ page: 1, pageSize: 200 }, { cache: "no-store" }),
         listCouponsAdmin({ page: 1, pageSize: 200 }, { cache: "no-store" }),
+        listGiftCardsAdmin({ page: 1, pageSize: 500 }, { cache: "no-store" }),
         listAuditLogsAdmin({ limit: 200, offset: 0 }, { cache: "no-store" }),
       ]);
 
@@ -389,6 +393,7 @@ export function StudioAdminPanel() {
         vip: [],
         newsletter: [],
         coupons: [],
+        giftCards: [],
         audit: [],
       };
       const failures: string[] = [];
@@ -466,7 +471,14 @@ export function StudioAdminPanel() {
         failures.push("Cupons indisponíveis");
       }
 
-      const auditResult = results[9];
+      const giftCardsResult = results[9];
+      if (giftCardsResult.status === "fulfilled") {
+        next.giftCards = Array.isArray(giftCardsResult.value.rows) ? giftCardsResult.value.rows : [];
+      } else {
+        failures.push("Gift cards indisponíveis");
+      }
+
+      const auditResult = results[10];
       if (auditResult.status === "fulfilled") {
         next.audit = Array.isArray(auditResult.value.logs) ? auditResult.value.logs : [];
       } else {

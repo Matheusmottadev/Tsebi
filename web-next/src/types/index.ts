@@ -8,3 +8,4 @@ export * from "./product";
 export * from "./repair";
 export * from "./session";
 export * from "./user";
+export * from "./gift-card";

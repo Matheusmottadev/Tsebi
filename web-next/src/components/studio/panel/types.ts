@@ -8,6 +8,7 @@
   | "lista_vip"
   | "newsletter"
   | "cupons"
+  | "gift_cards"
   | "auditoria"
   | "notificacoes";
 
