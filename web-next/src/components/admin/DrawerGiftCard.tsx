@@ -133,7 +133,6 @@ export function DrawerGiftCard({ giftCard, csrfToken, onClose, onSaved }: Props)
       subtitle={isEdit ? giftCard!.code : "Criar novo gift card"}
       onClose={onClose}
       onSave={handleSave}
-      saving={saving}
       disableSave={saving}
     >
       {isEdit && (
