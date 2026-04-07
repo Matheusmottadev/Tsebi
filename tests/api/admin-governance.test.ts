@@ -369,15 +369,37 @@ describe("admin governance router", () => {
     expect(response.body.error).toBe("SUPERADMIN_PROTECTED");
   });
 
-  it("blocks self-approval on balance review", async () => {
-    mocked.findBalanceRequestById.mockResolvedValue(makeBalanceRequest());
-    mocked.approveBalanceRequest.mockResolvedValue({ ok: false, error: "SELF_APPROVAL_FORBIDDEN" });
+  it("allows self-approval on balance review", async () => {
+    const before = makeBalanceRequest({
+      requestedBy: "director-1",
+      requesterEmail: "director@tsebi.com.br",
+      requesterName: "Diretoria",
+    });
+    const after = makeBalanceRequest({
+      requestedBy: "director-1",
+      requesterEmail: "director@tsebi.com.br",
+      requesterName: "Diretoria",
+      status: "approved",
+      reviewedBy: "director-1",
+      reviewerEmail: "director@tsebi.com.br",
+      reviewerName: "Diretoria",
+      reviewedAt: "2026-04-07T11:00:00.000Z",
+    });
+    mocked.findBalanceRequestById.mockResolvedValue(before);
+    mocked.approveBalanceRequest.mockResolvedValue({
+      ok: true,
+      request: after,
+      beforeBalanceCents: 0,
+      afterBalanceCents: 50000,
+      deltaCents: 50000,
+    });
     const app = buildApp();
 
     const response = await request(app).post("/api/admin/diretoria/balance/requests/req-1/approve");
 
-    expect(response.status).toBe(403);
-    expect(response.body.error).toBe("SELF_APPROVAL_FORBIDDEN");
+    expect(response.status).toBe(200);
+    expect(response.body.ok).toBe(true);
+    expect(response.body.request.status).toBe("approved");
   });
 
   it("approves a request and notifies the requester", async () => {

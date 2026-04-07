@@ -451,9 +451,6 @@ async function approveBalanceRequest(requestId: string, reviewerAdminId: string)
     if (normalizeRequestStatus(currentRequest.status) !== "pending") {
       return { ok: false as const, error: "REQUEST_ALREADY_REVIEWED" };
     }
-    if (String(currentRequest.requested_by || "") === String(reviewerAdminId || "")) {
-      return { ok: false as const, error: "SELF_APPROVAL_FORBIDDEN" };
-    }
 
     const amountCents = toCents(currentRequest.amount);
     const customerResult = await client.query<{ wallet_cents?: number }>(

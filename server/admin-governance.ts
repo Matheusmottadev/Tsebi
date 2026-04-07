@@ -445,7 +445,6 @@ adminGovernanceRouter.post(
     const result = await approveBalanceRequest(String(req.params.id || "").trim(), req.admin?.id || "");
     if (!result.ok) {
       if (result.error === "NOT_FOUND") return res.status(404).json({ error: result.error });
-      if (result.error === "SELF_APPROVAL_FORBIDDEN") return res.status(403).json({ error: result.error });
       if (result.error === "INSUFFICIENT_CUSTOMER_BALANCE") return res.status(409).json({ error: result.error });
       if (result.error === "REQUEST_ALREADY_REVIEWED") return res.status(409).json({ error: result.error });
       return res.status(400).json({ error: result.error });
