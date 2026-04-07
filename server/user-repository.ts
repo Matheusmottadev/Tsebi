@@ -443,7 +443,7 @@ async function searchUsersAdmin({
   if (normalizedQuery) {
     values.push(`%${normalizedQuery}%`);
     const idx = values.length;
-    where.push(`(lower(name) LIKE $${idx} OR lower(email) LIKE $${idx})`);
+    where.push(`(lower(name) LIKE $${idx} OR lower(email) LIKE $${idx} OR CAST(id AS text) ILIKE $${idx})`);
   }
 
   const normalizedStatus = String(status || "").trim().toLowerCase();
@@ -1382,4 +1382,3 @@ module.exports = {
   upsertCheckoutGuestUser,
   setGuestTempPasswordIfMissing
 };
-

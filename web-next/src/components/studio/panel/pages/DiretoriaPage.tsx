@@ -76,7 +76,7 @@ function arraysEqual(a: string[], b: string[]) {
 function statusBadge(status: BalanceRequestRow["status"]) {
   if (status === "approved") return { background: "#ebf6ef", color: "#245b33", label: "Aprovada" };
   if (status === "rejected") return { background: "#fbecec", color: "#8d2727", label: "Rejeitada" };
-  return { background: "#f7f0e5", color: "#7a5d28", label: "Pendente" };
+  return { background: "#eef4ff", color: "#315ea8", label: "Pendente" };
 }
 
 function formatApprovalReason(reason: BalanceRequestRow["reason"]) {
@@ -758,18 +758,18 @@ export function DiretoriaPage({ csrfToken, refreshKey = 0 }: { csrfToken?: strin
                 <div
                   key={item.label}
                   style={{
-                    border: "1px solid #ebe6df",
+                    border: "1px solid #dbe4f0",
                     borderRadius: 14,
                     padding: "14px 16px",
-                    background: "#fcfbf9",
+                    background: "#f8fbff",
                     display: "grid",
                     gap: 6,
                   }}
                 >
-                  <div style={{ fontSize: 11, letterSpacing: "0.14em", textTransform: "uppercase", color: "#8a7b69" }}>
+                  <div style={{ fontSize: 11, letterSpacing: "0.14em", textTransform: "uppercase", color: "#64748b" }}>
                     {item.label}
                   </div>
-                  <div style={{ fontSize: 15, lineHeight: 1.5, color: "#2b2118", wordBreak: "break-word" }}>
+                  <div style={{ fontSize: 15, lineHeight: 1.5, color: "#0f172a", wordBreak: "break-word" }}>
                     {item.value}
                   </div>
                 </div>
@@ -779,18 +779,18 @@ export function DiretoriaPage({ csrfToken, refreshKey = 0 }: { csrfToken?: strin
             {selectedRequest.relatedOrderId ? (
               <div
                 style={{
-                  border: "1px solid #ebe6df",
+                  border: "1px solid #dbe4f0",
                   borderRadius: 14,
                   padding: "14px 16px",
-                  background: "#ffffff",
+                  background: "#f8fbff",
                   display: "grid",
                   gap: 6,
                 }}
               >
-                <div style={{ fontSize: 11, letterSpacing: "0.14em", textTransform: "uppercase", color: "#8a7b69" }}>
+                <div style={{ fontSize: 11, letterSpacing: "0.14em", textTransform: "uppercase", color: "#64748b" }}>
                   Pedido relacionado
                 </div>
-                <div style={{ fontSize: 14, lineHeight: 1.6, color: "#2b2118", wordBreak: "break-word" }}>
+                <div style={{ fontSize: 14, lineHeight: 1.6, color: "#0f172a", wordBreak: "break-word" }}>
                   {selectedRequest.relatedOrderId}
                 </div>
               </div>
@@ -799,18 +799,18 @@ export function DiretoriaPage({ csrfToken, refreshKey = 0 }: { csrfToken?: strin
             {selectedRequest.reasonDetail ? (
               <div
                 style={{
-                  border: "1px solid #ebe6df",
+                  border: "1px solid #dbe4f0",
                   borderRadius: 14,
                   padding: "14px 16px",
-                  background: "#ffffff",
+                  background: "#f8fbff",
                   display: "grid",
                   gap: 6,
                 }}
               >
-                <div style={{ fontSize: 11, letterSpacing: "0.14em", textTransform: "uppercase", color: "#8a7b69" }}>
+                <div style={{ fontSize: 11, letterSpacing: "0.14em", textTransform: "uppercase", color: "#64748b" }}>
                   Detalhe do motivo
                 </div>
-                <div style={{ fontSize: 14, lineHeight: 1.6, color: "#2b2118", whiteSpace: "pre-wrap" }}>
+                <div style={{ fontSize: 14, lineHeight: 1.6, color: "#0f172a", whiteSpace: "pre-wrap" }}>
                   {selectedRequest.reasonDetail}
                 </div>
               </div>
@@ -819,25 +819,25 @@ export function DiretoriaPage({ csrfToken, refreshKey = 0 }: { csrfToken?: strin
             {selectedRequest.internalNote ? (
               <div
                 style={{
-                  border: "1px solid #ebe6df",
+                  border: "1px solid #dbe4f0",
                   borderRadius: 14,
                   padding: "14px 16px",
-                  background: "#ffffff",
+                  background: "#f8fbff",
                   display: "grid",
                   gap: 6,
                 }}
               >
-                <div style={{ fontSize: 11, letterSpacing: "0.14em", textTransform: "uppercase", color: "#8a7b69" }}>
+                <div style={{ fontSize: 11, letterSpacing: "0.14em", textTransform: "uppercase", color: "#64748b" }}>
                   Observação interna
                 </div>
-                <div style={{ fontSize: 14, lineHeight: 1.6, color: "#2b2118", whiteSpace: "pre-wrap" }}>
+                <div style={{ fontSize: 14, lineHeight: 1.6, color: "#0f172a", whiteSpace: "pre-wrap" }}>
                   {selectedRequest.internalNote}
                 </div>
               </div>
             ) : null}
 
             <div style={{ display: "grid", gap: 8 }}>
-              <div style={{ fontSize: 11, letterSpacing: "0.14em", textTransform: "uppercase", color: "#8a7b69" }}>
+              <div style={{ fontSize: 11, letterSpacing: "0.14em", textTransform: "uppercase", color: "#64748b" }}>
                 Motivo da rejeição
               </div>
               <textarea
@@ -846,11 +846,13 @@ export function DiretoriaPage({ csrfToken, refreshKey = 0 }: { csrfToken?: strin
                 placeholder="Explique por que esta solicitação não deve ser aprovada"
                 rows={5}
                 style={{
-                  border: "1px solid #e0d8cc",
+                  border: "1px solid #d8e1ec",
                   borderRadius: 12,
                   padding: "12px 14px",
                   resize: "vertical",
                   lineHeight: 1.6,
+                  background: "#ffffff",
+                  color: "#0f172a",
                 }}
               />
             </div>
