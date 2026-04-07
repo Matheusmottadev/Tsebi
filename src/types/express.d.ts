@@ -29,6 +29,16 @@ export type PublicUserLike = {
   [key: string]: unknown;
 };
 
+export type AdminRequestAccess = {
+  id: string;
+  email: string;
+  role: "admin" | "director" | "superadmin";
+  isActive: boolean;
+  permissions: Array<"balance" | "orders" | "users" | "products">;
+  createdAt?: string | null;
+  updatedAt?: string | null;
+};
+
 declare module "express-session" {
   interface SessionData {
     userId?: string;
@@ -44,6 +54,7 @@ declare global {
       user?: PublicUserLike;
       adminUser?: PublicUserLike;
       adminSession?: AdminAuthSession;
+      admin?: AdminRequestAccess;
       adminProfile?: Record<string, unknown> | null;
       rawBody?: Buffer;
       requestId?: string;

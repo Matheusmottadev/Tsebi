@@ -21,7 +21,7 @@ const {
   csrfCookieName,
   getAdminIdleTimeoutMs,
   parseCookieHeader,
-  readAdminEmailSet,
+  findAdminAccessEntry,
   encryptMfaSecret,
   decryptMfaSecret,
   generateTotpSecret,
@@ -106,18 +106,28 @@ async function getSessionAdminUser(req: any, res: any) {
     return { auth: null, user: null };
   }
 
-  const adminEmails = readAdminEmailSet();
-  if (!adminEmails.size) {
-    clearAdminAuthSession(req, res);
-    return { auth: null, user: null, error: "ADMIN_NOT_CONFIGURED" };
-  }
-
-  if (!adminEmails.has(normalizeEmail(user.email))) {
+  const adminAccess = await findAdminAccessEntry(user.email);
+  if (!adminAccess?.id) {
     clearAdminAuthSession(req, res);
     return { auth: null, user: null, error: "FORBIDDEN" };
   }
+  if (!adminAccess.isActive) {
+    clearAdminAuthSession(req, res);
+    return { auth: null, user: null, error: "ADMIN_INACTIVE" };
+  }
 
-  return { auth, user };
+  return { auth, user, adminAccess };
+}
+
+function buildAdminAccessPayload(adminAccess: any) {
+  if (!adminAccess?.id) return undefined;
+  return {
+    id: String(adminAccess.id || ""),
+    email: String(adminAccess.email || ""),
+    role: String(adminAccess.role || "admin"),
+    isActive: Boolean(adminAccess.isActive),
+    permissions: Array.isArray(adminAccess.permissions) ? adminAccess.permissions : [],
+  };
 }
 
 function isStudioCsrfValid(req: any) {
@@ -155,7 +165,7 @@ studioAuthRouter.get("/me", async (req: any, res: any) => {
   if (state.error) {
     return res.status(403).json({ error: state.error, stage: "password_required" });
   }
-  if (!state.user || !state.auth) {
+  if (!state.user || !state.auth || !state.adminAccess) {
     return res.status(401).json({ error: "ADMIN_UNAUTHORIZED", stage: "password_required" });
   }
 
@@ -175,7 +185,8 @@ studioAuthRouter.get("/me", async (req: any, res: any) => {
     return res.json({
       authenticated: false,
       stage: "mfa_setup_required",
-      admin: publicUser(user)
+      admin: publicUser(user),
+      access: buildAdminAccessPayload(state.adminAccess),
     });
   }
 
@@ -183,7 +194,8 @@ studioAuthRouter.get("/me", async (req: any, res: any) => {
     return res.json({
       authenticated: false,
       stage: "mfa_required",
-      admin: publicUser(user)
+      admin: publicUser(user),
+      access: buildAdminAccessPayload(state.adminAccess),
     });
   }
 
@@ -211,6 +223,7 @@ studioAuthRouter.get("/me", async (req: any, res: any) => {
     authenticated: true,
     stage: "authenticated",
     admin: publicUser(user),
+    access: buildAdminAccessPayload(state.adminAccess),
     csrfToken,
     idleTimeoutMs: timeoutMs
   });
@@ -230,13 +243,6 @@ studioAuthRouter.post("/login", adminLoginLimiter, async (req: any, res: any) =>
         userAgent: String(req.headers["user-agent"] || "")
       }).catch(() => {});
       return res.status(401).json({ error: "INVALID_CREDENTIALS" });
-    }
-
-    failStage = "read_admin_emails";
-    const adminEmails = readAdminEmailSet();
-    if (!adminEmails.size) {
-      clearAdminAuthSession(req, res);
-      return res.status(403).json({ error: "ADMIN_NOT_CONFIGURED" });
     }
 
     failStage = "load_user";
@@ -281,7 +287,8 @@ studioAuthRouter.post("/login", adminLoginLimiter, async (req: any, res: any) =>
     user = passwordCheck.user;
 
     failStage = "check_admin_allowlist";
-    if (!adminEmails.has(email)) {
+    const adminAccess = await findAdminAccessEntry(email);
+    if (!adminAccess?.id) {
       clearAdminAuthSession(req, res);
       insertAdminLoginEvent({
         adminId: null,
@@ -291,6 +298,17 @@ studioAuthRouter.post("/login", adminLoginLimiter, async (req: any, res: any) =>
         userAgent: String(req.headers["user-agent"] || "")
       }).catch(() => {});
       return res.status(403).json({ error: "FORBIDDEN" });
+    }
+    if (!adminAccess.isActive) {
+      clearAdminAuthSession(req, res);
+      insertAdminLoginEvent({
+        adminId: adminAccess.id || null,
+        userId: user.id || null,
+        success: false,
+        ip: req.ip || "",
+        userAgent: String(req.headers["user-agent"] || "")
+      }).catch(() => {});
+      return res.status(403).json({ error: "ADMIN_INACTIVE" });
     }
 
     failStage = "session_assign";
@@ -316,7 +334,8 @@ studioAuthRouter.post("/login", adminLoginLimiter, async (req: any, res: any) =>
       ok: true,
       stage: user.adminMfaEnabled ? "mfa_required" : "mfa_setup_required",
       mfaEnabled: Boolean(user.adminMfaEnabled),
-      admin: publicUser(user)
+      admin: publicUser(user),
+      access: buildAdminAccessPayload(adminAccess)
     });
   } catch {
     insertAdminLoginEvent({
@@ -379,11 +398,16 @@ studioAuthRouter.post("/mfa/verify", mfaRateLimit, async (req: any, res: any) =>
 
   const state = await getSessionAdminUser(req, res);
   if (state.error) return res.status(403).json({ error: state.error });
-  if (!state.user || !state.auth) {
+  if (!state.user || !state.auth || !state.adminAccess) {
     return res.status(401).json({ error: "ADMIN_UNAUTHORIZED" });
   }
   if (state.auth.mfaVerified) {
-    return res.json({ ok: true, stage: "authenticated", admin: publicUser(state.user) });
+    return res.json({
+      ok: true,
+      stage: "authenticated",
+      admin: publicUser(state.user),
+      access: buildAdminAccessPayload(state.adminAccess)
+    });
   }
 
   const token = String(parsed.data.token || "").trim();
@@ -417,6 +441,7 @@ studioAuthRouter.post("/mfa/verify", mfaRateLimit, async (req: any, res: any) =>
         ok: true,
         stage: "authenticated",
         admin: publicUser(persisted || state.user),
+        access: buildAdminAccessPayload(state.adminAccess),
         recoveryCodes
       });
     }
@@ -468,7 +493,8 @@ studioAuthRouter.post("/mfa/verify", mfaRateLimit, async (req: any, res: any) =>
       ok: true,
       stage: "authenticated",
       recoveryUsed,
-      admin: publicUser(state.user)
+      admin: publicUser(state.user),
+      access: buildAdminAccessPayload(state.adminAccess)
     });
   } catch (error: any) {
     return res.status(500).json({ error: String(error?.code || "ADMIN_SECURITY_ERROR") });

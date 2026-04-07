@@ -211,6 +211,18 @@ const bcryptMock = {
   hash: vi.fn(async () => "hash-generated"),
 };
 
+const passwordHashMock = {
+  hashPassword: vi.fn(async (rawPassword: string) => `hashed:${rawPassword}`),
+  verifyPassword: vi.fn(async (rawPassword: string, storedHash: string) => {
+    const ok = rawPassword === "correct-password" && storedHash === "hash";
+    return {
+      ok,
+      valid: ok,
+      needsRehash: false,
+    };
+  }),
+};
+
 const stripeConstructorMock = vi.fn(function StripeMock() {
   return {
     paymentIntents: {
@@ -253,6 +265,7 @@ const originalLoad = moduleLib._load;
 moduleLib._load = function mockedLoad(request: string, parent: unknown, isMain: boolean) {
   if (request === "bcrypt") return bcryptMock;
   if (request === "stripe") return stripeConstructorMock;
+  if (request === "./lib/password-hash") return passwordHashMock;
   return originalLoad.apply(this, [request, parent, isMain]);
 };
 

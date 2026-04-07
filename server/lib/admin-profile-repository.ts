@@ -1,13 +1,11 @@
 export {};
-const { query } = require("./db");
-const { normalizeEmail } = require("../user-repository");
 
 const DEFAULT_THEME = "system";
 const DEFAULT_ACCENT = "emerald";
-const DEFAULT_ROLE = "owner";
+const DEFAULT_ROLE = "admin";
 type Theme = "system" | "light" | "dark";
 type Accent = "emerald" | "blue" | "violet" | "amber" | "rose" | "slate";
-type Role = "owner" | "manager" | "editor" | "viewer";
+type Role = "admin" | "director" | "superadmin";
 type AdminRow = {
   id?: string;
   user_id?: string | null;
@@ -32,33 +30,28 @@ type AdminProfile = {
   createdAt: string | null;
   updatedAt: string | null;
 };
+
+type JsonRecord = Record<string, unknown>;
+type QueryResult<TRow extends JsonRecord> = { rows: TRow[]; rowCount: number };
+type QueryFn = <TRow extends JsonRecord = JsonRecord>(text: string, params?: unknown[]) => Promise<QueryResult<TRow>>;
+
+const { query } = require("./db") as { query: QueryFn };
+const { normalizeEmail } = require("../user-repository") as {
+  normalizeEmail: (value: string) => string;
+};
+const { ensureAdminAccessSchema, syncAdminIdentityForUser } = require("./admin-access-repository") as {
+  ensureAdminAccessSchema: () => Promise<void>;
+  syncAdminIdentityForUser: (payload: {
+    userId?: string | null;
+    email?: string;
+    fallbackName?: string;
+  }) => Promise<{ id?: string | null } | null>;
+};
 let adminSchemaPromise: Promise<void> | null = null;
 
 async function ensureAdminSchema(): Promise<void> {
   if (!adminSchemaPromise) {
-    adminSchemaPromise = (async () => {
-      await query(`
-        CREATE TABLE IF NOT EXISTS admins (
-          id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-          user_id UUID UNIQUE REFERENCES users(id) ON DELETE CASCADE,
-          email TEXT NOT NULL,
-          nickname TEXT,
-          avatar_url TEXT,
-          theme TEXT NOT NULL DEFAULT 'system',
-          accent TEXT NOT NULL DEFAULT 'emerald',
-          role TEXT NOT NULL DEFAULT 'owner',
-          created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-          updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-          CHECK (theme IN ('system', 'light', 'dark')),
-          CHECK (length(role) >= 3)
-        );
-      `);
-
-      await query(`
-        CREATE UNIQUE INDEX IF NOT EXISTS admins_email_unique_idx
-          ON admins ((lower(email)));
-      `);
-    })().catch((error: unknown) => {
+    adminSchemaPromise = ensureAdminAccessSchema().catch((error: unknown) => {
       adminSchemaPromise = null;
       throw error;
     });
@@ -81,7 +74,7 @@ function sanitizeAccent(value: unknown): Accent {
 
 function sanitizeRole(value: unknown): Role {
   const role = String(value || "").trim().toLowerCase();
-  const allowed = ["owner", "manager", "editor", "viewer"];
+  const allowed = ["admin", "director", "superadmin"];
   return allowed.includes(role) ? (role as Role) : DEFAULT_ROLE;
 }
 
@@ -134,25 +127,11 @@ async function findAdminProfileByEmail(email: string): Promise<AdminProfile | nu
 
 async function ensureAdminProfile({ userId, email, fallbackName = "" }: { userId?: string | null; email?: string; fallbackName?: string }): Promise<AdminProfile | null> {
   await ensureAdminSchema();
-  const normalizedEmail = normalizeEmail(email);
-  if (!normalizedEmail) return null;
-
-  const nickname = String(fallbackName || "").trim().split(/\s+/)[0] || "Admin";
-  const result = await query(
-    `
-    INSERT INTO admins (user_id, email, nickname, theme, accent, role)
-    VALUES ($1, $2, $3, $4, $5, $6)
-    ON CONFLICT (user_id) DO UPDATE
-    SET
-      email = EXCLUDED.email,
-      nickname = COALESCE(NULLIF(admins.nickname, ''), EXCLUDED.nickname),
-      updated_at = NOW()
-    RETURNING *
-    `,
-    [userId || null, normalizedEmail, nickname, DEFAULT_THEME, DEFAULT_ACCENT, DEFAULT_ROLE]
-  );
-
-  return mapAdminRow(result.rows[0] || null);
+  const synced = await syncAdminIdentityForUser({ userId, email, fallbackName });
+  if (!synced?.id) return null;
+  const byUser = await findAdminProfileByUserId(String(userId || "").trim());
+  if (byUser) return byUser;
+  return findAdminProfileByEmail(email || "");
 }
 
 async function updateAdminProfile(userId: string, patch: { nickname?: string; avatarUrl?: string; theme?: string; accent?: string } = {}): Promise<AdminProfile | null> {
@@ -193,4 +172,3 @@ module.exports = {
   ensureAdminProfile,
   updateAdminProfile
 };
-

@@ -17,6 +17,7 @@ import {
   listVipAdmin,
   studioAuthLogout,
   studioAuthMe,
+  type AdminAccessRow,
   type AdminOrderSummary,
 } from "@/services/admin";
 import { DrawerAuditoria } from "@/components/admin/DrawerAuditoria";
@@ -31,9 +32,13 @@ import { DrawerNovoProduto } from "@/components/admin/DrawerNovoProduto";
 import { DrawerNovoUsuario } from "@/components/admin/DrawerNovoUsuario";
 import { Toast } from "@/components/admin/Toast";
 import { PAGE_TITLES } from "./data";
+import { AdminNotificationBell } from "./AdminNotificationBell";
 import { Sidebar } from "./Sidebar";
 import { Topbar } from "./Topbar";
+import { AdminAccessProvider, RequirePermission, RequireRole } from "./access-control";
 import type { ActivityItem, AdminPageKey, GlobalSearchTarget, KpiData, RecentOrder } from "./types";
+import { BalancePage } from "./pages/BalancePage";
+import { DiretoriaPage } from "./pages/DiretoriaPage";
 import { InicioPage } from "./pages/InicioPage";
 import { ConnectedPage, type ConnectedPanelData } from "./pages/ConnectedPage";
 import styles from "./StudioAdminPanel.module.css";
@@ -286,6 +291,8 @@ const TOPBAR_BUTTONS: Record<AdminPageKey, { label: string }> = {
   newsletter: { label: "Editar" },
   cupons: { label: "+ Novo Cupom" },
   gift_cards: { label: "+ Novo Gift Card" },
+  saldo_clientes: { label: "Atualizar" },
+  diretoria: { label: "Atualizar" },
   auditoria: { label: "Exportar" },
   notificacoes: { label: "+ Nova Notificação" },
 };
@@ -297,6 +304,7 @@ export function StudioAdminPanel() {
   const [errorMessage, setErrorMessage] = useState("");
   const [connectedData, setConnectedData] = useState<ConnectedPanelData>(EMPTY_CONNECTED_DATA);
   const [csrfToken, setCsrfToken] = useState("");
+  const [adminAccess, setAdminAccess] = useState<AdminAccessRow | null>(null);
   const [refreshIndex, setRefreshIndex] = useState(0);
   const [activeDrawer, setActiveDrawer] = useState<string | null>(null);
   const [notifLogsKey, setNotifLogsKey] = useState(0);
@@ -368,22 +376,7 @@ export function StudioAdminPanel() {
     async function loadConnectedData() {
       setIsLoading(true);
       setErrorMessage("");
-
-      const results = await Promise.allSettled([
-        studioAuthMe({ cache: "no-store" }),
-        listOrdersAdmin({ page: 1, pageSize: 200 }, { cache: "no-store" }),
-        listProductsAdmin({ page: 1, pageSize: 200 }, { cache: "no-store" }),
-        listUsersAdmin({ page: 1, pageSize: 200 }, { cache: "no-store" }),
-        listAppointmentSlotsAdmin({ includePast: true }, { cache: "no-store" }),
-        listRepairsAdmin({ page: 1, pageSize: 200 }, { cache: "no-store" }),
-        listVipAdmin({ page: 1, pageSize: 200 }, { cache: "no-store" }),
-        listNewsletterAdmin({ page: 1, pageSize: 200 }, { cache: "no-store" }),
-        listCouponsAdmin({ page: 1, pageSize: 200 }, { cache: "no-store" }),
-        listGiftCardsAdmin({ page: 1, pageSize: 500 }, { cache: "no-store" }),
-        listAuditLogsAdmin({ limit: 200, offset: 0 }, { cache: "no-store" }),
-      ]);
-
-      if (cancelled) return;
+      setAdminAccess(null);
 
       const next: ConnectedPanelData = {
         orders: [],
@@ -399,87 +392,118 @@ export function StudioAdminPanel() {
       };
       const failures: string[] = [];
 
-      const authResult = results[0];
-      if (authResult.status === "fulfilled") {
-        if (!authResult.value.authenticated) {
+      const canReadModule = (access: AdminAccessRow | null, moduleName: "orders" | "users" | "products") => {
+        if (!access) return false;
+        if (access.role === "director" || access.role === "superadmin") return true;
+        return Array.isArray(access.permissions) && access.permissions.includes(moduleName);
+      };
+
+      let authValue: Awaited<ReturnType<typeof studioAuthMe>> | null = null;
+      try {
+        authValue = await studioAuthMe({ cache: "no-store" });
+        if (!authValue.authenticated) {
           failures.push("Sessão admin não autenticada. Faça login em /admin/login.");
         } else {
-          setCsrfToken(String(authResult.value.csrfToken || ""));
+          setCsrfToken(String(authValue.csrfToken || ""));
+          setAdminAccess((authValue.access as AdminAccessRow) || null);
         }
-      } else if (authResult.reason instanceof HttpError) {
-        if (authResult.reason.status === 401 || authResult.reason.status === 403) {
+      } catch (error) {
+        if (error instanceof HttpError && (error.status === 401 || error.status === 403)) {
           failures.push("Sessão admin expirada. Faça login em /admin/login.");
         } else {
           failures.push("Falha ao validar sessão admin.");
         }
-      } else {
-        failures.push("Falha ao validar sessão admin.");
       }
 
-      const ordersResult = results[1];
+      const access = (authValue?.access as AdminAccessRow) || null;
+      if (!authValue?.authenticated) {
+        if (!cancelled) {
+          setConnectedData(next);
+          setErrorMessage(failures.length > 0 ? failures.join(". ") : "");
+          setIsLoading(false);
+        }
+        return;
+      }
+
+      const results = await Promise.allSettled([
+        canReadModule(access, "orders") ? listOrdersAdmin({ page: 1, pageSize: 200 }, { cache: "no-store" }) : Promise.resolve({ orders: [] }),
+        canReadModule(access, "products") ? listProductsAdmin({ page: 1, pageSize: 200 }, { cache: "no-store" }) : Promise.resolve({ rows: [] }),
+        canReadModule(access, "users") ? listUsersAdmin({ page: 1, pageSize: 200 }, { cache: "no-store" }) : Promise.resolve({ users: [] }),
+        listAppointmentSlotsAdmin({ includePast: true }, { cache: "no-store" }),
+        listRepairsAdmin({ page: 1, pageSize: 200 }, { cache: "no-store" }),
+        listVipAdmin({ page: 1, pageSize: 200 }, { cache: "no-store" }),
+        listNewsletterAdmin({ page: 1, pageSize: 200 }, { cache: "no-store" }),
+        listCouponsAdmin({ page: 1, pageSize: 200 }, { cache: "no-store" }),
+        listGiftCardsAdmin({ page: 1, pageSize: 500 }, { cache: "no-store" }),
+        listAuditLogsAdmin({ limit: 200, offset: 0 }, { cache: "no-store" }),
+      ]);
+
+      if (cancelled) return;
+
+      const ordersResult = results[0];
       if (ordersResult.status === "fulfilled") {
         next.orders = Array.isArray(ordersResult.value.orders) ? ordersResult.value.orders : [];
-      } else {
+      } else if (canReadModule(access, "orders")) {
         failures.push("Pedidos indisponíveis");
       }
 
-      const productsResult = results[2];
+      const productsResult = results[1];
       if (productsResult.status === "fulfilled") {
         next.products = Array.isArray(productsResult.value.rows) ? productsResult.value.rows : [];
-      } else {
+      } else if (canReadModule(access, "products")) {
         failures.push("Produtos indisponíveis");
       }
 
-      const usersResult = results[3];
+      const usersResult = results[2];
       if (usersResult.status === "fulfilled") {
         next.users = Array.isArray(usersResult.value.users) ? usersResult.value.users : [];
-      } else {
+      } else if (canReadModule(access, "users")) {
         failures.push("Usuários indisponíveis");
       }
 
-      const appointmentSlotsResult = results[4];
+      const appointmentSlotsResult = results[3];
       if (appointmentSlotsResult.status === "fulfilled") {
         next.appointmentSlots = Array.isArray(appointmentSlotsResult.value.rows) ? appointmentSlotsResult.value.rows : [];
       } else {
         failures.push("Atendimentos indisponíveis");
       }
 
-      const repairsResult = results[5];
+      const repairsResult = results[4];
       if (repairsResult.status === "fulfilled") {
         next.repairs = Array.isArray(repairsResult.value.rows) ? repairsResult.value.rows : [];
       } else {
         failures.push("Reparos indisponíveis");
       }
 
-      const vipResult = results[6];
+      const vipResult = results[5];
       if (vipResult.status === "fulfilled") {
         next.vip = Array.isArray(vipResult.value.rows) ? vipResult.value.rows : [];
       } else {
         failures.push("Lista VIP indisponível");
       }
 
-      const newsletterResult = results[7];
+      const newsletterResult = results[6];
       if (newsletterResult.status === "fulfilled") {
         next.newsletter = Array.isArray(newsletterResult.value.rows) ? newsletterResult.value.rows : [];
       } else {
         failures.push("Newsletter indisponível");
       }
 
-      const couponsResult = results[8];
+      const couponsResult = results[7];
       if (couponsResult.status === "fulfilled") {
         next.coupons = Array.isArray(couponsResult.value.rows) ? couponsResult.value.rows : [];
       } else {
         failures.push("Cupons indisponíveis");
       }
 
-      const giftCardsResult = results[9];
+      const giftCardsResult = results[8];
       if (giftCardsResult.status === "fulfilled") {
         next.giftCards = Array.isArray(giftCardsResult.value.rows) ? giftCardsResult.value.rows : [];
       } else {
         failures.push("Gift cards indisponíveis");
       }
 
-      const auditResult = results[10];
+      const auditResult = results[9];
       if (auditResult.status === "fulfilled") {
         next.audit = Array.isArray(auditResult.value.logs) ? auditResult.value.logs : [];
       } else {
@@ -617,6 +641,10 @@ export function StudioAdminPanel() {
       setRefreshIndex((current) => current + 1);
       return;
     }
+    if (activePage === "saldo_clientes" || activePage === "diretoria") {
+      setRefreshIndex((current) => current + 1);
+      return;
+    }
     openDrawer(activePage);
   };
 
@@ -638,77 +666,103 @@ export function StudioAdminPanel() {
     showToast("Salvo com sucesso");
   }
 
-  return (
-    <div
-      className={styles.app}
-      style={{
-        display: "flex",
-        minHeight: "100vh",
-        width: "100%",
-        background: "#f7f7f7",
-        color: "#333",
-        overflowX: "hidden",
-      }}
-    >
-      <Sidebar
-        activePage={activePage}
-        onChangePage={setActivePage}
-        pendingOrders={pendingOrders}
-        openCare={openCare}
-        pendingRepairs={pendingRepairs}
-      />
+  const connectedPageProps = {
+    data: connectedData,
+    loading: isLoading,
+    errorMessage,
+    csrfToken,
+    onRequestRefresh: () => setRefreshIndex((current) => current + 1),
+    onOpenCreateAppointment: activePage === "atendimentos" ? () => openDrawer("atendimentos") : undefined,
+    globalSearchTarget,
+    onGlobalSearchTargetHandled: handleGlobalSearchTargetHandled,
+    notifLogsRefreshKey: notifLogsKey,
+  } as const;
 
-      <main
-        className={styles.main}
+  const content =
+    activePage === "inicio" ? (
+      <InicioPage
+        kpis={kpis}
+        recentOrders={recentOrders}
+        activities={activity}
+        loading={isLoading}
+        errorMessage={errorMessage}
+        onViewAllOrders={() => setActivePage("pedidos")}
+      />
+    ) : activePage === "saldo_clientes" ? (
+      <RequirePermission module="balance">
+        <BalancePage csrfToken={csrfToken} refreshKey={refreshIndex} />
+      </RequirePermission>
+    ) : activePage === "diretoria" ? (
+      <RequireRole roles={["director", "superadmin"]}>
+        <DiretoriaPage csrfToken={csrfToken} refreshKey={refreshIndex} />
+      </RequireRole>
+    ) : activePage === "pedidos" ? (
+      <RequirePermission module="orders">
+        <ConnectedPage page="pedidos" {...connectedPageProps} />
+      </RequirePermission>
+    ) : activePage === "produtos" ? (
+      <RequirePermission module="products">
+        <ConnectedPage page="produtos" {...connectedPageProps} />
+      </RequirePermission>
+    ) : activePage === "usuarios" ? (
+      <RequirePermission module="users">
+        <ConnectedPage page="usuarios" {...connectedPageProps} />
+      </RequirePermission>
+    ) : (
+      <ConnectedPage page={activePage as Exclude<AdminPageKey, "inicio" | "saldo_clientes" | "diretoria">} {...connectedPageProps} />
+    );
+
+  return (
+    <AdminAccessProvider value={adminAccess}>
+      <div
+        className={styles.app}
         style={{
-          marginLeft: 220,
-          flex: 1,
-          minWidth: 0,
-          width: "calc(100% - 220px)",
+          display: "flex",
           minHeight: "100vh",
+          width: "100%",
           background: "#f7f7f7",
+          color: "#333",
+          overflowX: "hidden",
         }}
       >
-        <Topbar
-          title={pageTitle}
-          actionLabel={topbarActionLabel}
-          onAction={handleTopbarButton}
-          onOpenGlobalSearch={() => setIsGlobalSearchOpen(true)}
+        <Sidebar
+          activePage={activePage}
+          onChangePage={setActivePage}
+          pendingOrders={pendingOrders}
+          openCare={openCare}
+          pendingRepairs={pendingRepairs}
         />
 
-        <section
-          className={styles.content}
+        <main
+          className={styles.main}
           style={{
-            padding: "36px 40px",
-            width: "100%",
+            marginLeft: 220,
+            flex: 1,
             minWidth: 0,
+            width: "calc(100% - 220px)",
+            minHeight: "100vh",
+            background: "#f7f7f7",
           }}
         >
-          {activePage === "inicio" ? (
-            <InicioPage
-              kpis={kpis}
-              recentOrders={recentOrders}
-              activities={activity}
-              loading={isLoading}
-              errorMessage={errorMessage}
-              onViewAllOrders={() => setActivePage("pedidos")}
-            />
-          ) : (
-            <ConnectedPage
-              page={activePage}
-              data={connectedData}
-              loading={isLoading}
-              errorMessage={errorMessage}
-              csrfToken={csrfToken}
-              onRequestRefresh={() => setRefreshIndex((current) => current + 1)}
-              onOpenCreateAppointment={activePage === "atendimentos" ? () => openDrawer("atendimentos") : undefined}
-              globalSearchTarget={globalSearchTarget}
-              onGlobalSearchTargetHandled={handleGlobalSearchTargetHandled}
-              notifLogsRefreshKey={notifLogsKey}
-            />
-          )}
-        </section>
-      </main>
+          <Topbar
+            title={pageTitle}
+            actionLabel={topbarActionLabel}
+            onAction={handleTopbarButton}
+            onOpenGlobalSearch={() => setIsGlobalSearchOpen(true)}
+            notificationsSlot={<AdminNotificationBell csrfToken={csrfToken} onNavigate={setActivePage} />}
+          />
+
+          <section
+            className={styles.content}
+            style={{
+              padding: "36px 40px",
+              width: "100%",
+              minWidth: 0,
+            }}
+          >
+            {content}
+          </section>
+        </main>
 
       {isGlobalSearchOpen ? (
         <>
@@ -808,7 +862,8 @@ export function StudioAdminPanel() {
           onSaved={() => { setNotifLogsKey((k) => k + 1); handleSaved(false); }}
         />
       ) : null}
-      <Toast message={toastMessage} visible={toastVisible} />
-    </div>
+        <Toast message={toastMessage} visible={toastVisible} />
+      </div>
+    </AdminAccessProvider>
   );
 }

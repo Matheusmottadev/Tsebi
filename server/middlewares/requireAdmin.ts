@@ -4,7 +4,7 @@ const {
   csrfCookieName,
   getAdminIdleTimeoutMs,
   parseCookieHeader,
-  readAdminEmailSet,
+  findAdminAccessEntry,
   generateCsrfToken,
   setAdminCsrfCookie,
   clearAdminCsrfCookie
@@ -24,21 +24,20 @@ async function requireAdmin(req: Request, res: Response, next: NextFunction) {
     return res.status(401).json({ error: "ADMIN_UNAUTHORIZED" });
   }
 
-  const adminEmails = readAdminEmailSet();
-  if (!adminEmails.size) {
-    clearAdminSession(req, res);
-    return res.status(403).json({ error: "ADMIN_NOT_CONFIGURED" });
-  }
-
   const user = await findUserById(adminAuth.userId);
   if (!user) {
     clearAdminSession(req, res);
     return res.status(401).json({ error: "ADMIN_UNAUTHORIZED" });
   }
 
-  if (!adminEmails.has(normalizeEmail(user.email))) {
+  const adminAccess = await findAdminAccessEntry(user.email);
+  if (!adminAccess?.id) {
     clearAdminSession(req, res);
     return res.status(403).json({ error: "FORBIDDEN" });
+  }
+  if (!adminAccess.isActive) {
+    clearAdminSession(req, res);
+    return res.status(403).json({ error: "ADMIN_INACTIVE" });
   }
 
   if (!user.adminMfaEnabled) {
@@ -78,6 +77,15 @@ async function requireAdmin(req: Request, res: Response, next: NextFunction) {
 
   req.adminUser = publicUser(user);
   req.adminSession = currentSession.adminAuth;
+  req.admin = {
+    id: adminAccess.id,
+    email: adminAccess.email,
+    role: adminAccess.role,
+    isActive: adminAccess.isActive,
+    permissions: adminAccess.permissions,
+    createdAt: adminAccess.createdAt,
+    updatedAt: adminAccess.updatedAt,
+  };
   return next();
 }
 

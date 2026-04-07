@@ -2,7 +2,8 @@ import type { PublicUser } from "./user";
 
 export type AdminTheme = "system" | "light" | "dark";
 export type AdminAccent = "emerald" | "blue" | "violet" | "amber" | "rose" | "slate";
-export type AdminRole = "owner" | "manager" | "editor" | "viewer";
+export type AdminRole = "admin" | "director" | "superadmin";
+export type AdminModulePermission = "balance" | "orders" | "users" | "products";
 
 export interface AdminProfile {
   id: string;
@@ -19,7 +20,18 @@ export interface AdminProfile {
 
 export type AdminUser = PublicUser;
 
+export interface AdminAccess {
+  id: string;
+  email: string;
+  role: AdminRole;
+  isActive: boolean;
+  permissions: AdminModulePermission[];
+  createdAt?: string | null;
+  updatedAt?: string | null;
+}
+
 export interface AdminMeResponse {
   admin: AdminUser;
   profile: AdminProfile | null;
+  access?: AdminAccess | null;
 }

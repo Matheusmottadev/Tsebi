@@ -4,6 +4,7 @@ const bcrypt = require("bcrypt");
 const OTPAuth = require("otpauth");
 const QRCode = require("qrcode");
 const { normalizeEmail } = require("../user-repository");
+const { findAdminAccessByEmail } = require("./admin-access-repository");
 
 const isProduction = process.env.NODE_ENV === "production";
 function sanitizeCookieName(value: unknown, fallback = "tsebi.admin.csrf"): string {
@@ -41,6 +42,17 @@ function isAdminEmail(email: string): boolean {
   const adminEmails = readAdminEmailSet();
   if (!adminEmails.size) return false;
   return adminEmails.has(normalizeEmail(email));
+}
+
+async function findAdminAccessEntry(email: string) {
+  const normalized = normalizeEmail(email);
+  if (!normalized) return null;
+  return findAdminAccessByEmail(normalized);
+}
+
+async function isActiveAdminEmail(email: string): Promise<boolean> {
+  const admin = await findAdminAccessEntry(email);
+  return Boolean(admin?.id && admin.isActive);
 }
 
 function ensureMfaEncryptionKey(): Buffer {
@@ -200,6 +212,8 @@ module.exports = {
   getAdminIdleTimeoutMs,
   readAdminEmailSet,
   isAdminEmail,
+  findAdminAccessEntry,
+  isActiveAdminEmail,
   encryptMfaSecret,
   decryptMfaSecret,
   generateTotpSecret,
@@ -214,4 +228,3 @@ module.exports = {
   setAdminCsrfCookie,
   clearAdminCsrfCookie
 };
-

@@ -1,6 +1,17 @@
 import { del, get, HttpError, patch, post } from "@/lib/http";
 import type { HttpRequestOptions } from "@/lib/http";
-import type { AdminMeResponse, Coupon, GiftCard, GiftCardTransaction, Order, Product, PublicUser, RepairRequest } from "@/types";
+import type {
+  AdminAccess,
+  AdminMeResponse,
+  AdminModulePermission,
+  Coupon,
+  GiftCard,
+  GiftCardTransaction,
+  Order,
+  Product,
+  PublicUser,
+  RepairRequest,
+} from "@/types";
 import type { ProductAvailabilityStatus } from "@/types";
 
 /*
@@ -548,6 +559,7 @@ export interface StudioAuthMeResponse {
   authenticated: boolean;
   stage: string;
   admin?: PublicUser;
+  access?: AdminAccess;
   csrfToken?: string;
   idleTimeoutMs?: number;
 }
@@ -562,6 +574,7 @@ export interface StudioAuthLoginResponse {
   stage: string;
   mfaEnabled: boolean;
   admin: PublicUser;
+  access?: AdminAccess;
 }
 
 export interface StudioAuthMfaSetupInitResponse {
@@ -580,8 +593,144 @@ export interface StudioAuthMfaVerifyResponse {
   ok: true;
   stage: string;
   admin: PublicUser;
+  access?: AdminAccess;
   recoveryCodes?: string[];
   recoveryUsed?: boolean;
+}
+
+export interface AdminAccessRow extends AdminAccess {
+  userId?: string | null;
+  name?: string;
+  nickname?: string;
+  createdBy?: string | null;
+  createdByEmail?: string | null;
+  createdByName?: string | null;
+}
+
+export interface ListDirectoriaAdminsResponse {
+  rows: AdminAccessRow[];
+}
+
+export interface CreateDirectoriaAdminPayload {
+  email: string;
+  role: "admin" | "director" | "superadmin";
+}
+
+export interface UpdateDirectoriaAdminPermissionsPayload {
+  modules: AdminModulePermission[];
+}
+
+export interface UpdateDirectoriaAdminStatusPayload {
+  isActive: boolean;
+}
+
+export interface DirectoriaAdminMutationResponse {
+  ok: true;
+  admin: AdminAccessRow | null;
+  permissions?: AdminModulePermission[];
+}
+
+export interface BalanceCustomer {
+  id: string;
+  name: string;
+  email: string;
+  phone: string;
+  walletCents: number;
+  createdAt: string | null;
+}
+
+export interface BalanceRequestRow {
+  id: string;
+  requestedBy: string;
+  requesterEmail: string | null;
+  requesterName: string | null;
+  customerId: string;
+  customerEmail: string | null;
+  customerName: string | null;
+  customerWalletCents: number;
+  type: "credit" | "debit";
+  amount: number;
+  reason: "product_return" | "billing_error" | "courtesy" | "manual_adjustment" | "other";
+  reasonDetail: string | null;
+  relatedOrderId: string | null;
+  internalNote: string | null;
+  status: "pending" | "approved" | "rejected";
+  reviewedBy: string | null;
+  reviewerEmail: string | null;
+  reviewerName: string | null;
+  reviewedAt: string | null;
+  rejectionReason: string | null;
+  createdAt: string | null;
+  resultingBalanceCents: number;
+}
+
+export interface CreateBalanceRequestPayload {
+  customerId: string;
+  type: "credit" | "debit";
+  amount: number;
+  reason: "product_return" | "billing_error" | "courtesy" | "manual_adjustment" | "other";
+  reasonDetail?: string;
+  relatedOrderId?: string;
+  internalNote?: string;
+}
+
+export interface ListBalanceCustomersResponse {
+  rows: BalanceCustomer[];
+}
+
+export interface GetBalanceCustomerResponse {
+  customer: BalanceCustomer;
+}
+
+export interface BalanceRequestMutationResponse {
+  ok: true;
+  request: BalanceRequestRow | null;
+  beforeBalanceCents?: number;
+  afterBalanceCents?: number;
+}
+
+export interface ListBalanceRequestsResponse {
+  rows: BalanceRequestRow[];
+  total?: number;
+  page?: number;
+  limit?: number;
+}
+
+export interface AdminBellNotification {
+  id: string;
+  adminId: string;
+  type: string;
+  title: string;
+  message: string;
+  referenceId: string | null;
+  read: boolean;
+  createdAt: string | null;
+}
+
+export interface ListAdminBellNotificationsResponse {
+  rows: AdminBellNotification[];
+  unreadCount: number;
+}
+
+export interface OpsAuditLogRow {
+  id: string;
+  action: string;
+  performedBy: string;
+  performerEmail: string | null;
+  performerName: string | null;
+  targetType: string | null;
+  targetId: string | null;
+  beforeState: unknown | null;
+  afterState: unknown | null;
+  metadata: Record<string, unknown>;
+  createdAt: string | null;
+}
+
+export interface ListOpsAuditLogsResponse {
+  rows: OpsAuditLogRow[];
+  total: number;
+  page: number;
+  limit: number;
 }
 
 export interface StudioAuthLogoutResponse {
@@ -1698,6 +1847,177 @@ export async function cancelScheduledNotification(
     `/api/admin/notifications/scheduled/${id}`,
     mergeOptionsWithHeaders(options, buildCsrfHeader(token))
   );
+}
+
+export async function listDirectoriaAdmins(options?: HttpRequestOptions): Promise<ListDirectoriaAdminsResponse> {
+  return get<ListDirectoriaAdminsResponse>("/api/admin/diretoria/admins", options);
+}
+
+export async function createDirectoriaAdmin(
+  payload: CreateDirectoriaAdminPayload,
+  csrfToken?: string,
+  options?: HttpRequestOptions
+): Promise<DirectoriaAdminMutationResponse> {
+  const token = await resolveCsrfToken(csrfToken, options);
+  return post<DirectoriaAdminMutationResponse>(
+    "/api/admin/diretoria/admins",
+    payload,
+    mergeOptionsWithHeaders(options, buildCsrfHeader(token))
+  );
+}
+
+export async function updateDirectoriaAdminPermissions(
+  id: string,
+  payload: UpdateDirectoriaAdminPermissionsPayload,
+  csrfToken?: string,
+  options?: HttpRequestOptions
+): Promise<DirectoriaAdminMutationResponse> {
+  const token = await resolveCsrfToken(csrfToken, options);
+  return patch<DirectoriaAdminMutationResponse>(
+    `/api/admin/diretoria/admins/${encodeURIComponent(String(id || "").trim())}/permissions`,
+    payload,
+    mergeOptionsWithHeaders(options, buildCsrfHeader(token))
+  );
+}
+
+export async function updateDirectoriaAdminStatus(
+  id: string,
+  payload: UpdateDirectoriaAdminStatusPayload,
+  csrfToken?: string,
+  options?: HttpRequestOptions
+): Promise<DirectoriaAdminMutationResponse> {
+  const token = await resolveCsrfToken(csrfToken, options);
+  return patch<DirectoriaAdminMutationResponse>(
+    `/api/admin/diretoria/admins/${encodeURIComponent(String(id || "").trim())}/status`,
+    payload,
+    mergeOptionsWithHeaders(options, buildCsrfHeader(token))
+  );
+}
+
+export async function searchBalanceCustomersAdmin(
+  queryText: string,
+  options?: HttpRequestOptions
+): Promise<ListBalanceCustomersResponse> {
+  const query = buildQuery({ query: queryText, limit: 20 });
+  return get<ListBalanceCustomersResponse>(`/api/admin/balance/customers${query}`, options);
+}
+
+export async function getBalanceCustomerAdmin(
+  id: string,
+  options?: HttpRequestOptions
+): Promise<GetBalanceCustomerResponse> {
+  return get<GetBalanceCustomerResponse>(`/api/admin/balance/customers/${encodeURIComponent(String(id || "").trim())}`, options);
+}
+
+export async function createBalanceRequestAdmin(
+  payload: CreateBalanceRequestPayload,
+  csrfToken?: string,
+  options?: HttpRequestOptions
+): Promise<BalanceRequestMutationResponse> {
+  const token = await resolveCsrfToken(csrfToken, options);
+  return post<BalanceRequestMutationResponse>(
+    "/api/admin/balance/requests",
+    payload,
+    mergeOptionsWithHeaders(options, buildCsrfHeader(token))
+  );
+}
+
+export async function listMyBalanceRequestsAdmin(options?: HttpRequestOptions): Promise<{ rows: BalanceRequestRow[] }> {
+  return get<{ rows: BalanceRequestRow[] }>("/api/admin/balance/requests/mine", options);
+}
+
+export async function listDirectoriaBalanceRequests(
+  params: { status?: string; requestedBy?: string; dateFrom?: string; dateTo?: string; page?: number; limit?: number } = {},
+  options?: HttpRequestOptions
+): Promise<ListBalanceRequestsResponse> {
+  const query = buildQuery({
+    status: params.status,
+    requested_by: params.requestedBy,
+    date_from: params.dateFrom,
+    date_to: params.dateTo,
+    page: params.page,
+    limit: params.limit,
+  });
+  return get<ListBalanceRequestsResponse>(`/api/admin/diretoria/balance/requests${query}`, options);
+}
+
+export async function getDirectoriaBalanceRequest(
+  id: string,
+  options?: HttpRequestOptions
+): Promise<{ request: BalanceRequestRow }> {
+  return get<{ request: BalanceRequestRow }>(`/api/admin/diretoria/balance/requests/${encodeURIComponent(String(id || "").trim())}`, options);
+}
+
+export async function approveBalanceRequestAdmin(
+  id: string,
+  csrfToken?: string,
+  options?: HttpRequestOptions
+): Promise<BalanceRequestMutationResponse> {
+  const token = await resolveCsrfToken(csrfToken, options);
+  return post<BalanceRequestMutationResponse>(
+    `/api/admin/diretoria/balance/requests/${encodeURIComponent(String(id || "").trim())}/approve`,
+    {},
+    mergeOptionsWithHeaders(options, buildCsrfHeader(token))
+  );
+}
+
+export async function rejectBalanceRequestAdmin(
+  id: string,
+  rejectionReason: string,
+  csrfToken?: string,
+  options?: HttpRequestOptions
+): Promise<BalanceRequestMutationResponse> {
+  const token = await resolveCsrfToken(csrfToken, options);
+  return post<BalanceRequestMutationResponse>(
+    `/api/admin/diretoria/balance/requests/${encodeURIComponent(String(id || "").trim())}/reject`,
+    { rejectionReason },
+    mergeOptionsWithHeaders(options, buildCsrfHeader(token))
+  );
+}
+
+export async function listAdminBellNotifications(options?: HttpRequestOptions): Promise<ListAdminBellNotificationsResponse> {
+  return get<ListAdminBellNotificationsResponse>("/api/admin/notifications", options);
+}
+
+export async function markAdminBellNotificationRead(
+  id: string,
+  csrfToken?: string,
+  options?: HttpRequestOptions
+): Promise<{ ok: true; notification: AdminBellNotification }> {
+  const token = await resolveCsrfToken(csrfToken, options);
+  return patch<{ ok: true; notification: AdminBellNotification }>(
+    `/api/admin/notifications/${encodeURIComponent(String(id || "").trim())}/read`,
+    {},
+    mergeOptionsWithHeaders(options, buildCsrfHeader(token))
+  );
+}
+
+export async function markAllAdminBellNotificationsRead(
+  csrfToken?: string,
+  options?: HttpRequestOptions
+): Promise<{ ok: true; count: number }> {
+  const token = await resolveCsrfToken(csrfToken, options);
+  return patch<{ ok: true; count: number }>(
+    "/api/admin/notifications/read-all",
+    {},
+    mergeOptionsWithHeaders(options, buildCsrfHeader(token))
+  );
+}
+
+export async function listDirectoriaAuditLogs(
+  params: { action?: string; performedBy?: string; targetType?: string; dateFrom?: string; dateTo?: string; page?: number; limit?: number } = {},
+  options?: HttpRequestOptions
+): Promise<ListOpsAuditLogsResponse> {
+  const query = buildQuery({
+    action: params.action,
+    performed_by: params.performedBy,
+    target_type: params.targetType,
+    date_from: params.dateFrom,
+    date_to: params.dateTo,
+    page: params.page,
+    limit: params.limit,
+  });
+  return get<ListOpsAuditLogsResponse>(`/api/admin/diretoria/audit-logs${query}`, options);
 }
 
 /**

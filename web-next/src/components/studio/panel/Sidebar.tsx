@@ -2,6 +2,7 @@
 
 import {
   Bell,
+  BriefcaseBusiness,
   FileText,
   Gift,
   LayoutGrid,
@@ -16,6 +17,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import type { AdminPageKey } from "./types";
+import { useAdminAccess, useAdminPermission } from "./access-control";
 import styles from "./Sidebar.module.css";
 
 type SidebarProps = {
@@ -39,14 +41,20 @@ type NavGroup = {
 };
 
 export function Sidebar({ activePage, onChangePage, pendingOrders, openCare, pendingRepairs }: SidebarProps) {
+  const access = useAdminAccess();
+  const canOrders = useAdminPermission("orders");
+  const canUsers = useAdminPermission("users");
+  const canBalance = useAdminPermission("balance");
+  const canProducts = useAdminPermission("products");
+  const isDirectoria = access?.role === "director" || access?.role === "superadmin";
   const groups: NavGroup[] = [
     {
       label: "Geral",
       items: [
         { key: "inicio", label: "Início", icon: LayoutGrid },
-        { key: "pedidos", label: "Pedidos", icon: Package, badge: pendingOrders },
-        { key: "produtos", label: "Produtos", icon: ShoppingBag },
-        { key: "usuarios", label: "Usuários", icon: Users },
+        ...(canOrders ? [{ key: "pedidos" as const, label: "Pedidos", icon: Package, badge: pendingOrders }] : []),
+        ...(canProducts ? [{ key: "produtos" as const, label: "Produtos", icon: ShoppingBag }] : []),
+        ...(canUsers ? [{ key: "usuarios" as const, label: "Usuários", icon: Users }] : []),
       ],
     },
     {
@@ -63,10 +71,19 @@ export function Sidebar({ activePage, onChangePage, pendingOrders, openCare, pen
       items: [
         { key: "cupons", label: "Cupons", icon: Tag },
         { key: "gift_cards", label: "Gift Cards", icon: Gift },
+        ...(canBalance ? [{ key: "saldo_clientes" as const, label: "Saldo de Clientes", icon: BriefcaseBusiness }] : []),
         { key: "auditoria", label: "Auditoria", icon: FileText },
         { key: "notificacoes", label: "Notificações", icon: Bell },
       ],
     },
+    ...(isDirectoria
+      ? [
+          {
+            label: "Diretoria",
+            items: [{ key: "diretoria" as const, label: "Diretoria", icon: BriefcaseBusiness }],
+          },
+        ]
+      : []),
   ];
 
   return (
@@ -195,4 +212,3 @@ export function Sidebar({ activePage, onChangePage, pendingOrders, openCare, pen
     </aside>
   );
 }
-

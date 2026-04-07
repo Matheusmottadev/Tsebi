@@ -20,6 +20,7 @@
     "typecheck:web": "npm --prefix web-next run typecheck",
     "build:web": "npm --prefix web-next run build",
     "migrate": "node scripts/run-migrations.js",
+    "seed:admins": "node scripts/seed-admin-allowlist.js",
     "migrate:json": "node scripts/migrate-json-to-db.js",
     "backfill:sensitive": "tsx scripts/backfill-sensitive-data.ts",
     "launch:prelaunch": "node scripts/set-launch-mode.js prelaunch",

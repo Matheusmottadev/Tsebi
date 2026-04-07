@@ -1,6 +1,11 @@
 export {};
 const webpush = require("web-push");
-const { query } = require("./db");
+
+type JsonRecord = Record<string, unknown>;
+type QueryResult<TRow extends JsonRecord> = { rows: TRow[]; rowCount: number };
+type QueryFn = <TRow extends JsonRecord = JsonRecord>(text: string, params?: unknown[]) => Promise<QueryResult<TRow>>;
+
+const { query } = require("./db") as { query: QueryFn };
 
 // Configura VAPID uma vez ao carregar o módulo
 if (process.env.VAPID_PUBLIC_KEY && process.env.VAPID_PRIVATE_KEY && process.env.VAPID_EMAIL) {

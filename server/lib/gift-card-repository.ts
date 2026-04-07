@@ -1,4 +1,4 @@
-const crypto = require("node:crypto");
+const nodeCrypto = require("node:crypto");
 const { query, withTransaction } = require("./db");
 
 type DbClient = {
@@ -9,7 +9,7 @@ type DbClient = {
 const CODE_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
 
 function generateGiftCardCode(): string {
-  const bytes = crypto.randomBytes(12);
+  const bytes = nodeCrypto.randomBytes(12);
   let result = "";
   for (let i = 0; i < 12; i++) {
     result += CODE_ALPHABET[bytes[i] % CODE_ALPHABET.length];

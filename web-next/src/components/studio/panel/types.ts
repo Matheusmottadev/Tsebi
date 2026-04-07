@@ -9,6 +9,8 @@
   | "newsletter"
   | "cupons"
   | "gift_cards"
+  | "saldo_clientes"
+  | "diretoria"
   | "auditoria"
   | "notificacoes";
 
@@ -48,4 +50,3 @@ export type GlobalSearchTarget = {
   kind: GlobalSearchTargetKind;
   id: string;
 };
-

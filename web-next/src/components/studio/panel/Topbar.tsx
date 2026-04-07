@@ -1,7 +1,8 @@
 ﻿"use client";
 
-import { Bell, Search } from "lucide-react";
+import { Search } from "lucide-react";
 import { useMemo } from "react";
+import type { ReactNode } from "react";
 import styles from "./Topbar.module.css";
 
 type TopbarProps = {
@@ -9,9 +10,10 @@ type TopbarProps = {
   actionLabel: string;
   onAction: () => void;
   onOpenGlobalSearch: () => void;
+  notificationsSlot?: ReactNode;
 };
 
-export function Topbar({ title, actionLabel, onAction, onOpenGlobalSearch }: TopbarProps) {
+export function Topbar({ title, actionLabel, onAction, onOpenGlobalSearch, notificationsSlot }: TopbarProps) {
   const formattedDate = useMemo(
     () =>
       new Intl.DateTimeFormat("pt-BR", {
@@ -54,10 +56,7 @@ export function Topbar({ title, actionLabel, onAction, onOpenGlobalSearch }: Top
         <button type="button" className={styles.searchBtn} aria-label="Pesquisa global" onClick={onOpenGlobalSearch}>
           <Search size={16} strokeWidth={1.7} aria-hidden="true" />
         </button>
-        <button type="button" className={styles.bellBtn} aria-label="Notificações">
-          <Bell size={16} strokeWidth={1.7} aria-hidden="true" />
-          <span className={styles.dot} aria-hidden="true" />
-        </button>
+        <div className={styles.bellBtn}>{notificationsSlot}</div>
         <button type="button" className={styles.newBtn} onClick={onAction}>
           {actionLabel}
         </button>

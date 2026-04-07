@@ -85,6 +85,7 @@ const {
 } = require("./lib/repairs-repository");
 const { logServerEvent, buildRequestLogContext, toErrorMeta } = require("./lib/observability-log");
 const { query, withTransaction } = require("./lib/db");
+const { adminGovernanceRouter } = require("./admin-governance");
 // Lazy load R2 upload module to avoid build-time errors
 let uploadR2Buffer: any = null;
 function getR2Upload() {
@@ -104,6 +105,7 @@ const {
 } = require("../src/shipping/melhorenvio-status");
 const { getVipDatabaseUrl } = require("./lib/vip-db");
 const { requireAdmin, requireAdminCsrfForMutations } = require("./middlewares/requireAdmin");
+const { requirePermission } = require("./middlewares/requirePermission");
 const newsletterDataFile = path.resolve(__dirname, "..", "data", "newsletter-subscribers.json");
 
 let stripeClient: any = null;
@@ -140,6 +142,10 @@ adminRouter.use(async (req: any, _res: any, next: any) => {
   }
   return next();
 });
+adminRouter.use("/users", requirePermission("users"));
+adminRouter.use("/orders", requirePermission("orders"));
+adminRouter.use("/products", requirePermission("products"));
+adminRouter.use(adminGovernanceRouter);
 
 const sensitiveAdminRateLimit = rateLimit({
   windowMs: 15 * 60 * 1000,
@@ -1175,7 +1181,7 @@ async function applyAuditReverseOperation(log: any) {
 }
 
 adminRouter.get("/me", (req: any, res: any) => {
-  return res.json({ admin: req.adminUser, profile: req.adminProfile || null });
+  return res.json({ admin: req.adminUser, profile: req.adminProfile || null, access: req.admin || null });
 });
 
 adminRouter.patch("/me", async (req: any, res: any) => {
@@ -3990,7 +3996,7 @@ adminRouter.post("/notifications/send", async (req: any, res: any) => {
 
 // MARK: - Gift Cards Admin
 
-adminRouter.get("/gift-cards", async (req, res) => {
+adminRouter.get("/gift-cards", async (req: any, res: any) => {
   try {
     const search = String(req.query.query || "").trim();
     const page = Number(req.query.page || 1);
@@ -4003,7 +4009,7 @@ adminRouter.get("/gift-cards", async (req, res) => {
   }
 });
 
-adminRouter.post("/gift-cards", async (req, res) => {
+adminRouter.post("/gift-cards", async (req: any, res: any) => {
   const parsed = giftCardCreateSchema.safeParse(req.body || {});
   if (!parsed.success) return res.status(400).json({ error: "INVALID_INPUT" });
   try {
@@ -4018,7 +4024,7 @@ adminRouter.post("/gift-cards", async (req, res) => {
   }
 });
 
-adminRouter.get("/gift-cards/:id", async (req, res) => {
+adminRouter.get("/gift-cards/:id", async (req: any, res: any) => {
   const id = String(req.params.id || "").trim();
   if (!id) return res.status(400).json({ error: "INVALID_ID" });
   try {
@@ -4031,7 +4037,7 @@ adminRouter.get("/gift-cards/:id", async (req, res) => {
   }
 });
 
-adminRouter.patch("/gift-cards/:id", async (req, res) => {
+adminRouter.patch("/gift-cards/:id", async (req: any, res: any) => {
   const id = String(req.params.id || "").trim();
   if (!id) return res.status(400).json({ error: "INVALID_ID" });
   const parsed = giftCardPatchSchema.safeParse(req.body || {});
@@ -4045,7 +4051,7 @@ adminRouter.patch("/gift-cards/:id", async (req, res) => {
   }
 });
 
-adminRouter.delete("/gift-cards/:id", async (req, res) => {
+adminRouter.delete("/gift-cards/:id", async (req: any, res: any) => {
   const id = String(req.params.id || "").trim();
   if (!id) return res.status(400).json({ error: "INVALID_ID" });
   try {
@@ -4066,7 +4072,7 @@ adminRouter.delete("/gift-cards/:id", async (req, res) => {
   }
 });
 
-adminRouter.get("/gift-cards/:id/transactions", async (req, res) => {
+adminRouter.get("/gift-cards/:id/transactions", async (req: any, res: any) => {
   const id = String(req.params.id || "").trim();
   if (!id) return res.status(400).json({ error: "INVALID_ID" });
   try {
