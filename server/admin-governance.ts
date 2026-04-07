@@ -111,11 +111,25 @@ function mapAdminRowForUi(admin: any) {
 
 function mapBalanceRequestForUi(row: any) {
   const amount = Number(row.amount || 0);
-  const customerWalletCents = Number(row.customerWalletCents || 0);
+  const rawCustomerWalletCents = Number(row.customerWalletCents || 0);
   const amountCents = Math.round(amount * 100);
-  const resultingBalanceCents = row.type === "debit"
-    ? customerWalletCents - amountCents
-    : customerWalletCents + amountCents;
+  const normalizedStatus = String(row.status || "pending").trim().toLowerCase();
+  const isDebit = row.type === "debit";
+
+  let customerWalletCents = rawCustomerWalletCents;
+  let resultingBalanceCents = isDebit
+    ? rawCustomerWalletCents - amountCents
+    : rawCustomerWalletCents + amountCents;
+
+  // After approval, `customerWalletCents` coming from the DB already reflects the
+  // applied balance. For the review UI we keep showing the historical "before -> after"
+  // snapshot so the row does not look like the request could be applied twice.
+  if (normalizedStatus === "approved") {
+    customerWalletCents = isDebit
+      ? rawCustomerWalletCents + amountCents
+      : rawCustomerWalletCents - amountCents;
+    resultingBalanceCents = rawCustomerWalletCents;
+  }
 
   return {
     id: String(row.id || ""),
