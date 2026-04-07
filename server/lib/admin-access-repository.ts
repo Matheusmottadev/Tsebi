@@ -394,6 +394,24 @@ async function setAdminAccessStatus(adminId: string, isActive: boolean): Promise
   return findAdminAccessById(normalizedId);
 }
 
+async function setAdminAccessRole(adminId: string, role: unknown): Promise<AdminAccess | null> {
+  await ensureAdminAccessSchema();
+  const normalizedId = String(adminId || "").trim();
+  if (!normalizedId) return null;
+  const nextRole = normalizeAdminRole(role, "admin");
+  await query(
+    `
+    UPDATE admins
+    SET
+      role = $2,
+      updated_at = NOW()
+    WHERE id = $1
+    `,
+    [normalizedId, nextRole]
+  );
+  return findAdminAccessById(normalizedId);
+}
+
 async function replaceAdminPermissions(adminId: string, modules: unknown[], grantedBy: string): Promise<AdminModule[]> {
   await ensureAdminAccessSchema();
   const normalizedAdminId = String(adminId || "").trim();
@@ -510,6 +528,7 @@ module.exports = {
   listAdminAccess,
   listPrivilegedAdmins,
   createAdminAccess,
+  setAdminAccessRole,
   setAdminAccessStatus,
   replaceAdminPermissions,
   syncAdminIdentityForUser,

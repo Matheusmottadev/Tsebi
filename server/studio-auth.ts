@@ -34,6 +34,11 @@ const {
   setAdminCsrfCookie,
   clearAdminCsrfCookie
 } = require("./lib/admin-security");
+const {
+  grantAdminStepUp,
+  persistAdminStepUpSession,
+  recordAdminSecurityAlert,
+} = require("./lib/admin-step-up");
 
 const studioAuthRouter = express.Router();
 
@@ -60,6 +65,15 @@ const mfaSensitiveSchema = z.object({
   token: z.string().trim().min(6).max(12)
 });
 
+const stepUpPasswordSchema = z.object({
+  password: z.string().min(1).max(128),
+});
+
+const stepUpMfaSchema = z.object({
+  token: z.string().trim().min(6).max(12).optional().default(""),
+  recoveryCode: z.string().trim().optional().default(""),
+});
+
 function clearAdminAuthSession(req: any, res: any) {
   if (req.session?.adminAuth) {
     delete req.session.adminAuth;
@@ -82,6 +96,12 @@ async function persistSession(req: any): Promise<boolean> {
       return resolve(true);
     });
   });
+}
+
+async function persistAdminSessionState(req: any): Promise<boolean> {
+  const stepUpSaved = await persistAdminStepUpSession(req).catch(() => false);
+  if (stepUpSaved) return true;
+  return persistSession(req);
 }
 
 async function verifyAndUpgradePassword(user: any, rawPassword: string): Promise<{ ok: boolean; user: any }> {
@@ -572,6 +592,101 @@ studioAuthRouter.post("/mfa/disable", mfaRateLimit, async (req: any, res: any) =
   } catch (error: any) {
     return res.status(500).json({ error: String(error?.code || "ADMIN_SECURITY_ERROR") });
   }
+});
+
+studioAuthRouter.post("/step-up/password", mfaRateLimit, async (req: any, res: any) => {
+  const parsed = stepUpPasswordSchema.safeParse(req.body || {});
+  if (!parsed.success) return res.status(400).json({ error: "INVALID_INPUT" });
+  if (!isStudioCsrfValid(req)) return res.status(403).json({ error: "CSRF_INVALID" });
+
+  const state = await getSessionAdminUser(req, res);
+  if (state.error) return res.status(403).json({ error: state.error });
+  if (!state.user || !state.auth || !state.adminAccess || !state.auth.mfaVerified) {
+    return res.status(401).json({ error: "ADMIN_UNAUTHORIZED" });
+  }
+
+  const passwordCheck = await verifyAndUpgradePassword(state.user, parsed.data.password);
+  if (!passwordCheck.ok) {
+    await recordAdminSecurityAlert({
+      req,
+      performedBy: state.adminAccess.id,
+      title: "Senha incorreta em ação sensível do admin",
+      message: `O admin ${state.adminAccess.email} errou a senha ao confirmar uma ação sensível.`,
+      action: "ADMIN_SUSPICIOUS_ACCESS",
+      targetType: "admin_security",
+      metadata: {
+        reason: "invalid_step_up_password",
+        stepUpType: "password",
+      },
+      excludeAdminIds: [state.adminAccess.id],
+    });
+    return res.status(401).json({ error: "INVALID_CREDENTIALS" });
+  }
+
+  req.admin = { id: state.adminAccess.id, email: state.adminAccess.email, role: state.adminAccess.role };
+  req.adminUser = state.user;
+  grantAdminStepUp(req, "password");
+  if (!(await persistAdminSessionState(req))) {
+    return res.status(500).json({ error: "SESSION_SAVE_FAILED" });
+  }
+
+  return res.json({ ok: true, stepUpType: "password" });
+});
+
+studioAuthRouter.post("/step-up/mfa", mfaRateLimit, async (req: any, res: any) => {
+  const parsed = stepUpMfaSchema.safeParse(req.body || {});
+  if (!parsed.success) return res.status(400).json({ error: "INVALID_INPUT" });
+  if (!isStudioCsrfValid(req)) return res.status(403).json({ error: "CSRF_INVALID" });
+
+  const state = await getSessionAdminUser(req, res);
+  if (state.error) return res.status(403).json({ error: state.error });
+  if (!state.user || !state.auth || !state.adminAccess || !state.auth.mfaVerified) {
+    return res.status(401).json({ error: "ADMIN_UNAUTHORIZED" });
+  }
+
+  const token = String(parsed.data.token || "").trim();
+  const recoveryCode = normalizeRecoveryCode(parsed.data.recoveryCode || "");
+  let verified = false;
+
+  try {
+    if (recoveryCode) {
+      const consumeResult = await consumeAdminRecoveryCode(state.user.id, recoveryCode);
+      verified = consumeResult.ok;
+    } else {
+      const secretEnc = String(state.user.adminMfaSecretEnc || "").trim();
+      if (!secretEnc) return res.status(500).json({ error: "ADMIN_MFA_STATE_INVALID" });
+      const secret = decryptMfaSecret(secretEnc);
+      verified = verifyTotpToken(secret, state.user.email, token);
+    }
+  } catch (error: any) {
+    return res.status(500).json({ error: String(error?.code || "ADMIN_SECURITY_ERROR") });
+  }
+
+  if (!verified) {
+    await recordAdminSecurityAlert({
+      req,
+      performedBy: state.adminAccess.id,
+      title: "MFA inválido em ação sensível do admin",
+      message: `O admin ${state.adminAccess.email} informou um MFA inválido ao confirmar uma ação sensível.`,
+      action: "ADMIN_SUSPICIOUS_ACCESS",
+      targetType: "admin_security",
+      metadata: {
+        reason: "invalid_step_up_mfa",
+        stepUpType: "mfa",
+      },
+      excludeAdminIds: [state.adminAccess.id],
+    });
+    return res.status(401).json({ error: "INVALID_MFA_CODE" });
+  }
+
+  req.admin = { id: state.adminAccess.id, email: state.adminAccess.email, role: state.adminAccess.role };
+  req.adminUser = state.user;
+  grantAdminStepUp(req, "mfa");
+  if (!(await persistAdminSessionState(req))) {
+    return res.status(500).json({ error: "SESSION_SAVE_FAILED" });
+  }
+
+  return res.json({ ok: true, stepUpType: "mfa" });
 });
 
 studioAuthRouter.post("/logout", (req: any, res: any) => {

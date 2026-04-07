@@ -142,6 +142,7 @@ async function listOpsAuditLogs({
   action = "",
   performedBy = "",
   targetType = "",
+  excludedActions = [],
   dateFrom = "",
   dateTo = "",
   page = 1,
@@ -150,6 +151,7 @@ async function listOpsAuditLogs({
   action?: string;
   performedBy?: string;
   targetType?: string;
+  excludedActions?: string[];
   dateFrom?: string;
   dateTo?: string;
   page?: number;
@@ -173,6 +175,17 @@ async function listOpsAuditLogs({
   if (String(targetType || "").trim()) {
     values.push(String(targetType).trim());
     where.push(`l.target_type = $${values.length}`);
+  }
+  const normalizedExcludedActions = Array.from(
+    new Set(
+      (Array.isArray(excludedActions) ? excludedActions : [])
+        .map((entry) => String(entry || "").trim())
+        .filter(Boolean)
+    )
+  );
+  if (normalizedExcludedActions.length > 0) {
+    values.push(normalizedExcludedActions);
+    where.push(`NOT (l.action = ANY($${values.length}::text[]))`);
   }
   if (String(dateFrom || "").trim()) {
     values.push(String(dateFrom).trim());

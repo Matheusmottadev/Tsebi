@@ -2,10 +2,12 @@ const express = require("express");
 const { z } = require("zod");
 const { requireRole } = require("./middlewares/requireRole");
 const { requirePermission } = require("./middlewares/requirePermission");
+const { requireAdminStepUp } = require("./middlewares/requireAdminStepUp");
 const {
   listAdminAccess,
   findAdminAccessById,
   createAdminAccess,
+  setAdminAccessRole,
   replaceAdminPermissions,
   setAdminAccessStatus,
   listPrivilegedAdmins,
@@ -30,6 +32,7 @@ const {
   insertOpsAuditLog,
   listOpsAuditLogs,
 } = require("./lib/ops-audit-repository");
+const { listOrdersByUserId } = require("./lib/order-repository");
 
 const adminGovernanceRouter = express.Router();
 
@@ -40,6 +43,10 @@ const adminPermissionsSchema = z.object({
 const adminCreateSchema = z.object({
   email: z.string().trim().email(),
   role: adminRoleSchema.default("admin"),
+  modules: z.array(z.enum(["balance", "orders", "users", "products"])).max(10).optional().default([]),
+});
+const adminRoleUpdateSchema = z.object({
+  role: adminRoleSchema,
 });
 const adminStatusSchema = z.object({
   isActive: z.coerce.boolean(),
@@ -165,7 +172,7 @@ adminGovernanceRouter.get("/diretoria/admins", requireRole(["director", "superad
   }
 });
 
-adminGovernanceRouter.post("/diretoria/admins", requireRole(["director", "superadmin"]), async (req: any, res: any) => {
+adminGovernanceRouter.post("/diretoria/admins", requireRole(["director", "superadmin"]), requireAdminStepUp("mfa", "admin_create"), async (req: any, res: any) => {
   const parsed = adminCreateSchema.safeParse(req.body || {});
   if (!parsed.success) return res.status(400).json({ error: "INVALID_INPUT" });
 
@@ -182,22 +189,62 @@ adminGovernanceRouter.post("/diretoria/admins", requireRole(["director", "supera
       createdBy: req.admin?.id || null,
     });
     if (!created) return res.status(500).json({ error: "ADMIN_CREATE_FAILED" });
+    const permissions = await replaceAdminPermissions(created.id, parsed.data.modules || [], req.admin?.id || "");
+    const after = await findAdminAccessById(created.id);
 
     await recordGovernanceAudit(req, {
       action: "ADMIN_CREATED",
       targetType: "admin",
       targetId: created.id,
       beforeState: null,
-      afterState: mapAdminRowForUi(created),
+      afterState: {
+        ...mapAdminRowForUi(after || created),
+        permissions,
+      },
     });
 
-    return res.status(201).json({ ok: true, admin: mapAdminRowForUi(created) });
+    return res.status(201).json({ ok: true, admin: mapAdminRowForUi(after || created), permissions });
   } catch {
     return res.status(500).json({ error: "ADMIN_CREATE_FAILED" });
   }
 });
 
-adminGovernanceRouter.patch("/diretoria/admins/:id/permissions", requireRole(["director", "superadmin"]), async (req: any, res: any) => {
+adminGovernanceRouter.patch("/diretoria/admins/:id/role", requireRole(["director", "superadmin"]), requireAdminStepUp("mfa", "admin_role_update"), async (req: any, res: any) => {
+  const parsed = adminRoleUpdateSchema.safeParse(req.body || {});
+  if (!parsed.success) return res.status(400).json({ error: "INVALID_INPUT" });
+
+  try {
+    const before = await findAdminAccessById(String(req.params.id || "").trim());
+    if (!before) return res.status(404).json({ error: "NOT_FOUND" });
+    if (before.role === "superadmin") {
+      return res.status(403).json({ error: "SUPERADMIN_PROTECTED" });
+    }
+
+    const actorRole = String(req.admin?.role || "admin");
+    if (parsed.data.role === "superadmin" && actorRole !== "superadmin") {
+      return res.status(403).json({ error: "SUPERADMIN_CREATE_FORBIDDEN" });
+    }
+    if (before.id === req.admin?.id && parsed.data.role !== before.role) {
+      return res.status(403).json({ error: "SELF_ROLE_CHANGE_FORBIDDEN" });
+    }
+
+    const after = await setAdminAccessRole(before.id, parsed.data.role);
+
+    await recordGovernanceAudit(req, {
+      action: "ADMIN_ROLE_UPDATED",
+      targetType: "admin",
+      targetId: before.id,
+      beforeState: { role: before.role },
+      afterState: { role: after?.role ?? parsed.data.role },
+    });
+
+    return res.json({ ok: true, admin: after ? mapAdminRowForUi(after) : null });
+  } catch {
+    return res.status(500).json({ error: "ADMIN_ROLE_UPDATE_FAILED" });
+  }
+});
+
+adminGovernanceRouter.patch("/diretoria/admins/:id/permissions", requireRole(["director", "superadmin"]), requireAdminStepUp("mfa", "admin_permissions_update"), async (req: any, res: any) => {
   const parsed = adminPermissionsSchema.safeParse(req.body || {});
   if (!parsed.success) return res.status(400).json({ error: "INVALID_INPUT" });
 
@@ -270,6 +317,30 @@ adminGovernanceRouter.get("/balance/customers/:id", requirePermission("balance")
     return res.json({ customer });
   } catch {
     return res.status(500).json({ error: "BALANCE_CUSTOMER_FETCH_FAILED" });
+  }
+});
+
+adminGovernanceRouter.get("/balance/customers/:id/orders", requirePermission("balance"), async (req: any, res: any) => {
+  try {
+    const customerId = String(req.params.id || "").trim();
+    const customer = await getBalanceCustomerById(customerId);
+    if (!customer) return res.status(404).json({ error: "NOT_FOUND" });
+    const orders = await listOrdersByUserId(customerId);
+    return res.json({
+      orders: orders.map((order: any) => ({
+        id: String(order.id || ""),
+        orderNumber: String(order.orderNumber || ""),
+        createdAt: order.createdAt || null,
+        status: String(order.status || ""),
+        currency: String(order.currency || "brl"),
+        amount: Number(order.amount || 0),
+        userId: String(order.userId || ""),
+        productName: String(order.items?.[0]?.name || order.shippingSelectedService || "Pedido sem item").trim(),
+      })),
+      count: orders.length,
+    });
+  } catch {
+    return res.status(500).json({ error: "BALANCE_CUSTOMER_ORDERS_FETCH_FAILED" });
   }
 });
 
@@ -358,7 +429,17 @@ adminGovernanceRouter.get("/diretoria/balance/requests/:id", requireRole(["direc
   }
 });
 
-adminGovernanceRouter.post("/diretoria/balance/requests/:id/approve", requireRole(["director", "superadmin"]), async (req: any, res: any) => {
+adminGovernanceRouter.post(
+  "/diretoria/balance/requests/:id/approve",
+  requireRole(["director", "superadmin"]),
+  requireAdminStepUp(async (req: any) => {
+    const requestRow = await findBalanceRequestById(String(req.params.id || "").trim());
+    if (!requestRow) return "mfa";
+    const amount = Number(requestRow.amount || 0);
+    if (amount > 1000 || requestRow.relatedOrderId) return "mfa";
+    return null;
+  }, "balance_approve"),
+  async (req: any, res: any) => {
   try {
     const before = await findBalanceRequestById(String(req.params.id || "").trim());
     const result = await approveBalanceRequest(String(req.params.id || "").trim(), req.admin?.id || "");
@@ -472,10 +553,14 @@ adminGovernanceRouter.patch("/notifications/read-all", async (req: any, res: any
 
 adminGovernanceRouter.get("/diretoria/audit-logs", requireRole(["director", "superadmin"]), async (req: any, res: any) => {
   try {
+    const excludedActions = String(req.admin?.role || "") === "superadmin"
+      ? []
+      : ["ADMIN_SUSPICIOUS_LOGIN", "ADMIN_SUSPICIOUS_ACCESS"];
     const result = await listOpsAuditLogs({
       action: String(req.query.action || ""),
       performedBy: String(req.query.performed_by || ""),
       targetType: String(req.query.target_type || ""),
+      excludedActions,
       dateFrom: String(req.query.date_from || ""),
       dateTo: String(req.query.date_to || ""),
       page: Number(req.query.page || 1),

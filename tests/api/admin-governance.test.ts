@@ -18,6 +18,7 @@ const mocked = vi.hoisted(() => ({
   listAdminAccess: vi.fn(),
   findAdminAccessById: vi.fn(),
   createAdminAccess: vi.fn(),
+  setAdminAccessRole: vi.fn(),
   replaceAdminPermissions: vi.fn(),
   setAdminAccessStatus: vi.fn(),
   listPrivilegedAdmins: vi.fn(),
@@ -41,6 +42,7 @@ vi.mock("../../server/lib/admin-access-repository", () => ({
   listAdminAccess: mocked.listAdminAccess,
   findAdminAccessById: mocked.findAdminAccessById,
   createAdminAccess: mocked.createAdminAccess,
+  setAdminAccessRole: mocked.setAdminAccessRole,
   replaceAdminPermissions: mocked.replaceAdminPermissions,
   setAdminAccessStatus: mocked.setAdminAccessStatus,
   listPrivilegedAdmins: mocked.listPrivilegedAdmins,
@@ -144,11 +146,18 @@ function buildApp() {
 
 beforeAll(() => {
   moduleLib._load = function patchedLoad(request: string, parent: { filename?: string } | undefined, isMain: boolean) {
+    if (request === "./middlewares/requireAdminStepUp") {
+      return {
+        requireAdminStepUp: () => (_req: any, _res: any, next: any) => next(),
+      };
+    }
+
     if (request === "./lib/admin-access-repository") {
       return {
         listAdminAccess: mocked.listAdminAccess,
         findAdminAccessById: mocked.findAdminAccessById,
         createAdminAccess: mocked.createAdminAccess,
+        setAdminAccessRole: mocked.setAdminAccessRole,
         replaceAdminPermissions: mocked.replaceAdminPermissions,
         setAdminAccessStatus: mocked.setAdminAccessStatus,
         listPrivilegedAdmins: mocked.listPrivilegedAdmins,
@@ -200,6 +209,7 @@ beforeEach(() => {
   mocked.listAdminAccess.mockReset();
   mocked.findAdminAccessById.mockReset();
   mocked.createAdminAccess.mockReset();
+  mocked.setAdminAccessRole.mockReset();
   mocked.replaceAdminPermissions.mockReset();
   mocked.setAdminAccessStatus.mockReset();
   mocked.listPrivilegedAdmins.mockReset();
@@ -321,6 +331,28 @@ describe("admin governance router", () => {
     );
   });
 
+  it("updates an admin role for directors", async () => {
+    mocked.findAdminAccessById
+      .mockResolvedValueOnce(makeAdminRow({ id: "admin-2", role: "admin" }))
+      .mockResolvedValueOnce(makeAdminRow({ id: "admin-2", role: "director" }));
+    mocked.setAdminAccessRole.mockResolvedValue(makeAdminRow({ id: "admin-2", role: "director" }));
+    const app = buildApp();
+
+    const response = await request(app)
+      .patch("/api/admin/diretoria/admins/admin-2/role")
+      .send({ role: "director" });
+
+    expect(response.status).toBe(200);
+    expect(response.body.ok).toBe(true);
+    expect(mocked.setAdminAccessRole).toHaveBeenCalledWith("admin-2", "director");
+    expect(mocked.insertOpsAuditLog).toHaveBeenCalledWith(
+      expect.objectContaining({
+        action: "ADMIN_ROLE_UPDATED",
+        targetId: "admin-2",
+      })
+    );
+  });
+
   it("protects superadmin status updates", async () => {
     mocked.findAdminAccessById.mockResolvedValue(makeAdminRow({
       id: "superadmin-1",
@@ -436,8 +468,33 @@ describe("admin governance router", () => {
     const response = await request(app).get("/api/admin/diretoria/audit-logs?export=csv");
 
     expect(response.status).toBe(200);
+    expect(mocked.listOpsAuditLogs).toHaveBeenCalledWith(
+      expect.objectContaining({
+        excludedActions: ["ADMIN_SUSPICIOUS_LOGIN", "ADMIN_SUSPICIOUS_ACCESS"],
+      })
+    );
     expect(String(response.headers["content-type"] || "")).toContain("text/csv");
     expect(response.text).toContain("timestamp,admin,action,target_type,target_id,before_state,after_state");
     expect(response.text).toContain("BALANCE_REQUESTED");
+  });
+
+  it("keeps suspicious security events visible for superadmins", async () => {
+    mocked.currentAdmin = makeAdmin({ id: "superadmin-1", email: "owner@tsebi.com.br", role: "superadmin" });
+    mocked.listOpsAuditLogs.mockResolvedValue({
+      rows: [],
+      total: 0,
+      page: 1,
+      limit: 50,
+    });
+    const app = buildApp();
+
+    const response = await request(app).get("/api/admin/diretoria/audit-logs");
+
+    expect(response.status).toBe(200);
+    expect(mocked.listOpsAuditLogs).toHaveBeenCalledWith(
+      expect.objectContaining({
+        excludedActions: [],
+      })
+    );
   });
 });

@@ -614,10 +614,15 @@ export interface ListDirectoriaAdminsResponse {
 export interface CreateDirectoriaAdminPayload {
   email: string;
   role: "admin" | "director" | "superadmin";
+  modules?: AdminModulePermission[];
 }
 
 export interface UpdateDirectoriaAdminPermissionsPayload {
   modules: AdminModulePermission[];
+}
+
+export interface UpdateDirectoriaAdminRolePayload {
+  role: "admin" | "director" | "superadmin";
 }
 
 export interface UpdateDirectoriaAdminStatusPayload {
@@ -1880,6 +1885,20 @@ export async function updateDirectoriaAdminPermissions(
   );
 }
 
+export async function updateDirectoriaAdminRole(
+  id: string,
+  payload: UpdateDirectoriaAdminRolePayload,
+  csrfToken?: string,
+  options?: HttpRequestOptions
+): Promise<DirectoriaAdminMutationResponse> {
+  const token = await resolveCsrfToken(csrfToken, options);
+  return patch<DirectoriaAdminMutationResponse>(
+    `/api/admin/diretoria/admins/${encodeURIComponent(String(id || "").trim())}/role`,
+    payload,
+    mergeOptionsWithHeaders(options, buildCsrfHeader(token))
+  );
+}
+
 export async function updateDirectoriaAdminStatus(
   id: string,
   payload: UpdateDirectoriaAdminStatusPayload,
@@ -1907,6 +1926,17 @@ export async function getBalanceCustomerAdmin(
   options?: HttpRequestOptions
 ): Promise<GetBalanceCustomerResponse> {
   return get<GetBalanceCustomerResponse>(`/api/admin/balance/customers/${encodeURIComponent(String(id || "").trim())}`, options);
+}
+
+export async function listBalanceCustomerOrdersAdmin(
+  id: string,
+  options?: HttpRequestOptions
+): Promise<AdminUserOrderRow[]> {
+  const response = await get<{ orders: AdminUserOrderRow[] }>(
+    `/api/admin/balance/customers/${encodeURIComponent(String(id || "").trim())}/orders`,
+    options
+  );
+  return Array.isArray(response.orders) ? response.orders : [];
 }
 
 export async function createBalanceRequestAdmin(

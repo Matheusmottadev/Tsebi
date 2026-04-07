@@ -32,6 +32,7 @@ import { DrawerNovoProduto } from "@/components/admin/DrawerNovoProduto";
 import { DrawerNovoUsuario } from "@/components/admin/DrawerNovoUsuario";
 import { Toast } from "@/components/admin/Toast";
 import { PAGE_TITLES } from "./data";
+import { AdminStepUpModal } from "./AdminStepUpModal";
 import { AdminNotificationBell } from "./AdminNotificationBell";
 import { Sidebar } from "./Sidebar";
 import { Topbar } from "./Topbar";
@@ -397,6 +398,10 @@ export function StudioAdminPanel() {
         if (access.role === "director" || access.role === "superadmin") return true;
         return Array.isArray(access.permissions) && access.permissions.includes(moduleName);
       };
+      const canReadAudit = (access: AdminAccessRow | null) => {
+        if (!access) return false;
+        return access.role === "director" || access.role === "superadmin";
+      };
 
       let authValue: Awaited<ReturnType<typeof studioAuthMe>> | null = null;
       try {
@@ -435,7 +440,7 @@ export function StudioAdminPanel() {
         listNewsletterAdmin({ page: 1, pageSize: 200 }, { cache: "no-store" }),
         listCouponsAdmin({ page: 1, pageSize: 200 }, { cache: "no-store" }),
         listGiftCardsAdmin({ page: 1, pageSize: 500 }, { cache: "no-store" }),
-        listAuditLogsAdmin({ limit: 200, offset: 0 }, { cache: "no-store" }),
+        canReadAudit(access) ? listAuditLogsAdmin({ limit: 200, offset: 0 }, { cache: "no-store" }) : Promise.resolve({ logs: [] }),
       ]);
 
       if (cancelled) return;
@@ -506,7 +511,7 @@ export function StudioAdminPanel() {
       const auditResult = results[9];
       if (auditResult.status === "fulfilled") {
         next.audit = Array.isArray(auditResult.value.logs) ? auditResult.value.logs : [];
-      } else {
+      } else if (canReadAudit(access)) {
         failures.push("Auditoria indisponível");
       }
 
@@ -696,6 +701,10 @@ export function StudioAdminPanel() {
       <RequireRole roles={["director", "superadmin"]}>
         <DiretoriaPage csrfToken={csrfToken} refreshKey={refreshIndex} />
       </RequireRole>
+    ) : activePage === "auditoria" ? (
+      <RequireRole roles={["director", "superadmin"]}>
+        <ConnectedPage page="auditoria" {...connectedPageProps} />
+      </RequireRole>
     ) : activePage === "pedidos" ? (
       <RequirePermission module="orders">
         <ConnectedPage page="pedidos" {...connectedPageProps} />
@@ -709,7 +718,7 @@ export function StudioAdminPanel() {
         <ConnectedPage page="usuarios" {...connectedPageProps} />
       </RequirePermission>
     ) : (
-      <ConnectedPage page={activePage as Exclude<AdminPageKey, "inicio" | "saldo_clientes" | "diretoria">} {...connectedPageProps} />
+      <ConnectedPage page={activePage as Exclude<AdminPageKey, "inicio" | "saldo_clientes" | "diretoria" | "auditoria">} {...connectedPageProps} />
     );
 
   return (
@@ -863,6 +872,7 @@ export function StudioAdminPanel() {
         />
       ) : null}
         <Toast message={toastMessage} visible={toastVisible} />
+        <AdminStepUpModal />
       </div>
     </AdminAccessProvider>
   );

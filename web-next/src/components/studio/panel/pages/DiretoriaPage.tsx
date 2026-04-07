@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Drawer } from "@/components/admin/Drawer";
 import { SearchBar, type FilterConfig } from "@/components/studio/panel/SearchBar";
+import type { AdminModulePermission } from "@/types";
 import {
   approveBalanceRequestAdmin,
   createDirectoriaAdmin,
@@ -11,6 +12,7 @@ import {
   listDirectoriaAuditLogs,
   listDirectoriaBalanceRequests,
   updateDirectoriaAdminPermissions,
+  updateDirectoriaAdminRole,
   updateDirectoriaAdminStatus,
   rejectBalanceRequestAdmin,
   type AdminAccessRow,
@@ -49,9 +51,18 @@ function formatAdminMutationError(error: any, fallback: string): string {
   if (raw.includes("INVALID_INPUT")) return "Preencha um e-mail válido para continuar.";
   if (raw.includes("SUPERADMIN_CREATE_FORBIDDEN")) return "Apenas a Diretoria pode criar outro perfil de Diretoria.";
   if (raw.includes("ADMIN_CREATE_FAILED")) return "Não foi possível cadastrar este admin agora. Tente novamente em alguns segundos.";
+  if (raw.includes("ADMIN_ROLE_UPDATE_FAILED")) return "Não foi possível atualizar o cargo deste admin agora.";
   if (raw.includes("ADMIN_STATUS_UPDATE_FAILED")) return "Não foi possível alterar o status deste admin agora.";
   if (raw.includes("ADMIN_PERMISSIONS_UPDATE_FAILED")) return "Não foi possível salvar as permissões agora.";
+  if (raw.includes("SELF_ROLE_CHANGE_FORBIDDEN")) return "Por segurança, você não pode alterar o seu próprio cargo por esta tela.";
   return raw;
+}
+
+function arraysEqual(a: string[], b: string[]) {
+  const left = [...a].sort();
+  const right = [...b].sort();
+  if (left.length !== right.length) return false;
+  return left.every((value, index) => value === right[index]);
 }
 
 function statusBadge(status: BalanceRequestRow["status"]) {
@@ -65,12 +76,15 @@ export function DiretoriaPage({ csrfToken, refreshKey = 0 }: { csrfToken?: strin
   const [admins, setAdmins] = useState<AdminAccessRow[]>([]);
   const [requests, setRequests] = useState<BalanceRequestRow[]>([]);
   const [auditRows, setAuditRows] = useState<OpsAuditLogRow[]>([]);
-  const [createEmail, setCreateEmail] = useState("");
-  const [createRole, setCreateRole] = useState<"admin" | "director" | "superadmin">("admin");
+  const [adminSearch, setAdminSearch] = useState("");
   const [savingAdmin, setSavingAdmin] = useState(false);
+  const [accessDrawerMode, setAccessDrawerMode] = useState<"create" | "edit" | null>(null);
+  const [editingAdmin, setEditingAdmin] = useState<AdminAccessRow | null>(null);
+  const [formEmail, setFormEmail] = useState("");
+  const [formRole, setFormRole] = useState<"admin" | "director" | "superadmin">("admin");
+  const [formModules, setFormModules] = useState<AdminModulePermission[]>([]);
+  const [formIsActive, setFormIsActive] = useState(true);
   const [message, setMessage] = useState("");
-  const [permissionDraftId, setPermissionDraftId] = useState<string>("");
-  const [permissionDraft, setPermissionDraft] = useState<string[]>([]);
   const [requestStatusFilter, setRequestStatusFilter] = useState("todos");
   const [requestSearch, setRequestSearch] = useState("");
   const [requestDateFrom, setRequestDateFrom] = useState("");
@@ -142,47 +156,75 @@ export function DiretoriaPage({ csrfToken, refreshKey = 0 }: { csrfToken?: strin
   }, [tab, requestStatusFilter, requestDateFrom, requestDateTo, requesterFilter, auditActionFilter, auditDateFrom, auditDateTo, refreshKey]);
 
   async function handleCreateAdmin() {
-    if (!createEmail.trim()) {
+    if (!formEmail.trim()) {
       setMessage("Digite o e-mail do admin antes de criar.");
       return;
     }
     setSavingAdmin(true);
     setMessage("");
     try {
-      await createDirectoriaAdmin({ email: createEmail.trim(), role: createRole }, csrfToken, { cache: "no-store" });
-      setCreateEmail("");
-      setCreateRole("admin");
-      setMessage("Admin cadastrado com sucesso.");
+      if (accessDrawerMode === "create") {
+        await createDirectoriaAdmin(
+          { email: formEmail.trim(), role: formRole, modules: formModules },
+          csrfToken,
+          { cache: "no-store" }
+        );
+        setMessage("Admin cadastrado com sucesso.");
+      } else if (editingAdmin) {
+        const tasks: Promise<unknown>[] = [];
+        if (formRole !== editingAdmin.role) {
+          tasks.push(updateDirectoriaAdminRole(editingAdmin.id, { role: formRole }, csrfToken, { cache: "no-store" }));
+        }
+        if (!arraysEqual(formModules, Array.isArray(editingAdmin.permissions) ? editingAdmin.permissions : [])) {
+          tasks.push(updateDirectoriaAdminPermissions(editingAdmin.id, { modules: formModules }, csrfToken, { cache: "no-store" }));
+        }
+        if (formIsActive !== Boolean(editingAdmin.isActive)) {
+          tasks.push(updateDirectoriaAdminStatus(editingAdmin.id, { isActive: formIsActive }, csrfToken, { cache: "no-store" }));
+        }
+        await Promise.all(tasks);
+        setMessage("Acesso do admin atualizado com sucesso.");
+      }
+      setAccessDrawerMode(null);
+      setEditingAdmin(null);
+      setFormEmail("");
+      setFormRole("admin");
+      setFormModules([]);
+      setFormIsActive(true);
       await loadAdmins();
     } catch (error: any) {
-      setMessage(formatAdminMutationError(error, "Não foi possível criar o admin."));
+      setMessage(formatAdminMutationError(error, accessDrawerMode === "create" ? "Não foi possível criar o admin." : "Não foi possível atualizar o admin."));
     } finally {
       setSavingAdmin(false);
     }
   }
 
+  function openCreateDrawer() {
+    setEditingAdmin(null);
+    setAccessDrawerMode("create");
+    setFormEmail("");
+    setFormRole("admin");
+    setFormModules([]);
+    setFormIsActive(true);
+    setMessage("");
+  }
+
+  function openEditDrawer(row: AdminAccessRow) {
+    setEditingAdmin(row);
+    setAccessDrawerMode("edit");
+    setFormEmail(row.email || "");
+    setFormRole((row.role || "admin") as "admin" | "director" | "superadmin");
+    setFormModules(Array.isArray(row.permissions) ? row.permissions : []);
+    setFormIsActive(Boolean(row.isActive));
+    setMessage("");
+  }
+
   async function handleToggleStatus(row: AdminAccessRow) {
     try {
       await updateDirectoriaAdminStatus(row.id, { isActive: !row.isActive }, csrfToken, { cache: "no-store" });
+      setMessage(row.isActive ? "Admin desativado com sucesso." : "Admin reativado com sucesso.");
       await loadAdmins();
     } catch (error: any) {
       setMessage(formatAdminMutationError(error, "Não foi possível atualizar o status."));
-    }
-  }
-
-  async function handleSavePermissions(adminId: string) {
-    try {
-      await updateDirectoriaAdminPermissions(
-        adminId,
-        { modules: permissionDraft as Array<"balance" | "orders" | "users" | "products"> },
-        csrfToken,
-        { cache: "no-store" }
-      );
-      setPermissionDraftId("");
-      setPermissionDraft([]);
-      await loadAdmins();
-    } catch (error: any) {
-      setMessage(formatAdminMutationError(error, "Não foi possível salvar as permissões."));
     }
   }
 
@@ -252,6 +294,17 @@ export function DiretoriaPage({ csrfToken, refreshKey = 0 }: { csrfToken?: strin
     );
   }, [requestSearch, requests]);
 
+  const filteredAdmins = useMemo(() => {
+    const normalizedQuery = String(adminSearch || "").trim().toLowerCase();
+    if (!normalizedQuery) return admins;
+    return admins.filter((row) =>
+      [row.name, row.nickname, row.email, formatRoleLabel(row.role), row.createdByName, row.createdByEmail]
+        .join(" ")
+        .toLowerCase()
+        .includes(normalizedQuery)
+    );
+  }, [adminSearch, admins]);
+
   const requestFilters: FilterConfig[] = [
     {
       key: "status_aprovacao",
@@ -313,17 +366,29 @@ export function DiretoriaPage({ csrfToken, refreshKey = 0 }: { csrfToken?: strin
 
       {tab === "admins" ? (
         <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
-          <div style={{ display: "grid", gridTemplateColumns: "1.2fr 0.6fr auto", gap: 10, alignItems: "end" }}>
-            <input value={createEmail} onChange={(event) => setCreateEmail(event.target.value)} placeholder="E-mail do admin" style={{ border: "1px solid #e0d8cc", borderRadius: 12, padding: "12px 14px" }} />
-            <select value={createRole} onChange={(event) => setCreateRole(event.target.value as "admin" | "director" | "superadmin")} style={{ border: "1px solid #e0d8cc", borderRadius: 12, padding: "12px 14px" }}>
-              <option value="admin">Admin</option>
-              <option value="director">Gerente</option>
-              <option value="superadmin">Diretoria</option>
-            </select>
-            <button type="button" onClick={handleCreateAdmin} disabled={savingAdmin} style={{ border: 0, borderRadius: 12, padding: "12px 16px", background: "#111", color: "#fff", cursor: "pointer" }}>
-              {savingAdmin ? "Criando..." : "Criar admin"}
+          <div style={{ display: "flex", justifyContent: "space-between", gap: 16, alignItems: "flex-start", flexWrap: "wrap" }}>
+            <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+              <div style={{ fontSize: 11, letterSpacing: "0.18em", textTransform: "uppercase", color: "#7a6b5c" }}>Equipe administrativa</div>
+              <div style={{ color: "#5f5245", fontSize: 14, maxWidth: 640 }}>
+                Use a busca só para encontrar um admin já cadastrado. Para criar ou ajustar cargo e permissões, abra o painel de acesso.
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={openCreateDrawer}
+              style={{ border: 0, borderRadius: 12, padding: "12px 16px", background: "#111", color: "#fff", cursor: "pointer", whiteSpace: "nowrap" }}
+            >
+              Novo admin
             </button>
           </div>
+
+          <SearchBar
+            placeholder="Buscar admin ou funcionário por nome, e-mail ou cargo"
+            value={adminSearch}
+            onChange={setAdminSearch}
+            resultsCount={filteredAdmins.length}
+            onClear={() => setAdminSearch("")}
+          />
 
           <div className={styles.tableWrap}>
             <table className={styles.table}>
@@ -339,7 +404,7 @@ export function DiretoriaPage({ csrfToken, refreshKey = 0 }: { csrfToken?: strin
                 </tr>
               </thead>
               <tbody>
-                {admins.map((row) => (
+                {filteredAdmins.map((row) => (
                   <tr key={row.id}>
                     <td>{row.name || row.nickname || "-"}</td>
                     <td>{row.email}</td>
@@ -371,14 +436,11 @@ export function DiretoriaPage({ csrfToken, refreshKey = 0 }: { csrfToken?: strin
                           <>
                             <button
                               type="button"
-                              title="Editar permissões"
-                              onClick={() => {
-                                setPermissionDraftId(row.id === permissionDraftId ? "" : row.id);
-                                setPermissionDraft(row.permissions || []);
-                              }}
+                              title="Editar cargo e permissões"
+                              onClick={() => openEditDrawer(row)}
                               className={styles.btnEdit}
                             >
-                              Permissões
+                              Editar acesso
                             </button>
                             <button
                               type="button"
@@ -391,37 +453,13 @@ export function DiretoriaPage({ csrfToken, refreshKey = 0 }: { csrfToken?: strin
                           </>
                         )}
                       </div>
-                      {permissionDraftId === row.id ? (
-                        <div style={{ marginTop: 12, display: "flex", flexDirection: "column", gap: 10, alignItems: "flex-end" }}>
-                          <div style={{ display: "flex", gap: 10, flexWrap: "wrap", justifyContent: "flex-end" }}>
-                            {MODULES.map((moduleItem) => (
-                              <label key={moduleItem.key} style={{ display: "inline-flex", alignItems: "center", gap: 6, fontSize: 12 }}>
-                                <input
-                                  type="checkbox"
-                                  checked={permissionDraft.includes(moduleItem.key)}
-                                  onChange={(event) =>
-                                    setPermissionDraft((current) =>
-                                      event.target.checked
-                                        ? Array.from(new Set([...current, moduleItem.key]))
-                                        : current.filter((entry) => entry !== moduleItem.key)
-                                    )
-                                  }
-                                />
-                                {moduleItem.label}
-                              </label>
-                            ))}
-                          </div>
-                          <button type="button" onClick={() => handleSavePermissions(row.id)} className={styles.btnEdit}>
-                            Salvar permissões
-                          </button>
-                        </div>
-                      ) : null}
                     </td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
+          {!filteredAdmins.length ? <p className={styles.noResults}>Nenhum admin encontrado para essa busca.</p> : null}
         </div>
       ) : null}
 
@@ -523,6 +561,120 @@ export function DiretoriaPage({ csrfToken, refreshKey = 0 }: { csrfToken?: strin
           </div>
         </div>
       ) : null}
+
+      <Drawer
+        isOpen={Boolean(accessDrawerMode)}
+        onClose={() => {
+          setAccessDrawerMode(null);
+          setEditingAdmin(null);
+        }}
+        title={accessDrawerMode === "create" ? "Novo admin" : "Acesso do admin"}
+        subtitle={accessDrawerMode === "create" ? "Cadastre o acesso administrativo com cargo e permissões." : editingAdmin?.email || ""}
+        saveLabel={savingAdmin ? "Salvando..." : accessDrawerMode === "create" ? "Criar admin" : "Salvar alterações"}
+        disableSave={
+          savingAdmin ||
+          !formEmail.trim() ||
+          (accessDrawerMode === "edit" && editingAdmin?.role === "superadmin")
+        }
+        onSave={handleCreateAdmin}
+      >
+        <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
+          <div style={{ display: "grid", gap: 8 }}>
+            <div style={{ fontSize: 11, letterSpacing: "0.18em", textTransform: "uppercase", color: "#7a6b5c" }}>E-mail</div>
+            <input
+              value={formEmail}
+              onChange={(event) => setFormEmail(event.target.value)}
+              disabled={accessDrawerMode === "edit"}
+              placeholder="funcionario@tsebi.com.br"
+              style={{ border: "1px solid #e0d8cc", borderRadius: 12, padding: "12px 14px", background: accessDrawerMode === "edit" ? "#f7f3ee" : "#fff" }}
+            />
+            <div style={{ fontSize: 12, color: "#7a6b5c" }}>
+              {accessDrawerMode === "create"
+                ? "Cadastre aqui o e-mail do funcionário para liberar o acesso administrativo."
+                : "O vínculo do admin continua sendo pelo e-mail já cadastrado."}
+            </div>
+          </div>
+
+          <div style={{ display: "grid", gap: 8 }}>
+            <div style={{ fontSize: 11, letterSpacing: "0.18em", textTransform: "uppercase", color: "#7a6b5c" }}>Cargo</div>
+            <select
+              value={formRole}
+              onChange={(event) => setFormRole(event.target.value as "admin" | "director" | "superadmin")}
+              disabled={editingAdmin?.role === "superadmin"}
+              style={{ border: "1px solid #e0d8cc", borderRadius: 12, padding: "12px 14px", background: editingAdmin?.role === "superadmin" ? "#f7f3ee" : "#fff" }}
+            >
+              <option value="admin">Admin</option>
+              <option value="director">Gerente</option>
+              <option value="superadmin">Diretoria</option>
+            </select>
+            <div style={{ fontSize: 12, color: "#7a6b5c", lineHeight: 1.6 }}>
+              {formRole === "superadmin"
+                ? "Diretoria tem acesso total e protegido."
+                : formRole === "director"
+                  ? "Gerente pode acessar Diretoria e aprovações."
+                  : "Admin opera apenas nos módulos liberados abaixo."}
+            </div>
+          </div>
+
+          <div style={{ display: "grid", gap: 12 }}>
+            <div style={{ fontSize: 11, letterSpacing: "0.18em", textTransform: "uppercase", color: "#7a6b5c" }}>Permissões</div>
+            <div style={{ display: "grid", gap: 10 }}>
+              {MODULES.map((moduleItem) => (
+                <label
+                  key={moduleItem.key}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    gap: 12,
+                    border: "1px solid #e7ddd1",
+                    borderRadius: 14,
+                    padding: "12px 14px",
+                    background: "#fff",
+                  }}
+                >
+                  <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                    <strong style={{ fontSize: 14, fontWeight: 500 }}>{moduleItem.label}</strong>
+                    <span style={{ fontSize: 12, color: "#7a6b5c" }}>Libera o módulo {moduleItem.label.toLowerCase()} para este admin.</span>
+                  </div>
+                  <input
+                    type="checkbox"
+                    checked={formModules.includes(moduleItem.key)}
+                    disabled={formRole !== "admin" || editingAdmin?.role === "superadmin"}
+                    onChange={(event) =>
+                      setFormModules((current) =>
+                        event.target.checked
+                          ? Array.from(new Set([...current, moduleItem.key]))
+                          : current.filter((entry) => entry !== moduleItem.key)
+                      )
+                    }
+                  />
+                </label>
+              ))}
+            </div>
+            {formRole !== "admin" ? (
+              <div style={{ fontSize: 12, color: "#7a6b5c" }}>
+                Para Gerente e Diretoria, as permissões por módulo deixam de limitar o acesso principal.
+              </div>
+            ) : null}
+          </div>
+
+          {accessDrawerMode === "edit" ? (
+            <div style={{ display: "grid", gap: 8 }}>
+              <div style={{ fontSize: 11, letterSpacing: "0.18em", textTransform: "uppercase", color: "#7a6b5c" }}>Status</div>
+              <select
+                value={formIsActive ? "active" : "inactive"}
+                onChange={(event) => setFormIsActive(event.target.value === "active")}
+                disabled={editingAdmin?.role === "superadmin"}
+                style={{ border: "1px solid #e0d8cc", borderRadius: 12, padding: "12px 14px", background: editingAdmin?.role === "superadmin" ? "#f7f3ee" : "#fff" }}
+              >
+                <option value="active">Ativo</option>
+                <option value="inactive">Inativo</option>
+              </select>
+            </div>
+          ) : null}
+        </div>
+      </Drawer>
 
       <Drawer
         isOpen={Boolean(selectedRequest)}

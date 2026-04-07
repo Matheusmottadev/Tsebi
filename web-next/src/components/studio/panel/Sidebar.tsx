@@ -72,7 +72,7 @@ export function Sidebar({ activePage, onChangePage, pendingOrders, openCare, pen
         { key: "cupons", label: "Cupons", icon: Tag },
         { key: "gift_cards", label: "Gift Cards", icon: Gift },
         ...(canBalance ? [{ key: "saldo_clientes" as const, label: "Saldo de Clientes", icon: BriefcaseBusiness }] : []),
-        { key: "auditoria", label: "Auditoria", icon: FileText },
+        ...(isDirectoria ? [{ key: "auditoria" as const, label: "Auditoria", icon: FileText }] : []),
         { key: "notificacoes", label: "Notificações", icon: Bell },
       ],
     },

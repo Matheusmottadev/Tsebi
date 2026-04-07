@@ -3,6 +3,17 @@ import { readPublicEnv } from "@/lib/env";
 type HttpMethod = "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
 const userCsrfCookieName = String(process.env.NEXT_PUBLIC_USER_CSRF_COOKIE_NAME || "tsebi.csrf").trim() || "tsebi.csrf";
 const DEFAULT_SERVER_REVALIDATE_SECONDS = 60;
+const ADMIN_STEP_UP_RETRY_HEADER = "x-admin-step-up-retry";
+const ADMIN_STEP_UP_EVENT_NAME = "tsebi-admin-step-up";
+
+type AdminStepUpType = "password" | "mfa";
+
+type AdminStepUpEventDetail = {
+  stepUpType: AdminStepUpType;
+  actionLabel?: string;
+  errorMessage?: string;
+  resolve: (value: string | null) => void;
+};
 
 type NextFetchOptions = {
   revalidate?: number;
@@ -93,6 +104,11 @@ function shouldAttachUserCsrf(method: HttpMethod, path: string): boolean {
   return path.startsWith("/api/auth") || path.startsWith("/api/my");
 }
 
+function isAdminMutation(method: HttpMethod, path: string): boolean {
+  const isMutation = method === "POST" || method === "PUT" || method === "PATCH" || method === "DELETE";
+  return isMutation && path.startsWith("/api/admin");
+}
+
 function shouldBypassDefaultCache(path: string): boolean {
   const uncachedPrefixes = ["/api/auth", "/api/my", "/api/studio-auth", "/api/admin"];
   return uncachedPrefixes.some((prefix) => path.startsWith(prefix));
@@ -168,12 +184,116 @@ async function request<T>(
   const payload = await parseResponsePayload(response);
 
   if (!response.ok) {
+    if (
+      typeof window !== "undefined" &&
+      isAdminMutation(method, path) &&
+      !headers.has(ADMIN_STEP_UP_RETRY_HEADER) &&
+      payload &&
+      typeof payload === "object" &&
+      (payload as { error?: unknown }).error === "ADMIN_STEP_UP_REQUIRED"
+    ) {
+      const nextHeaders = new Headers(headers);
+      nextHeaders.set(ADMIN_STEP_UP_RETRY_HEADER, "1");
+      const stepUpCompleted = await completeAdminStepUp(
+        payload as { stepUpType?: unknown; action?: unknown; message?: unknown },
+        nextHeaders
+      );
+      if (stepUpCompleted) {
+        return request<T>(method, path, body, {
+          ...resolvedOptions,
+          headers: nextHeaders,
+        });
+      }
+    }
+
     const fallback = `Request failed with status ${response.status}`;
     const message = resolveErrorMessage(payload, fallback);
     throw new HttpError(message, response.status, url, payload);
   }
 
   return payload as T;
+}
+
+async function fetchAdminCsrfToken(headers: Headers): Promise<string> {
+  const explicit = String(headers.get("x-csrf-token") || "").trim();
+  if (explicit) return explicit;
+
+  const response = await fetch(buildAbsoluteUrl("/api/studio-auth/me"), {
+    method: "GET",
+    credentials: "include",
+    headers,
+  });
+  const payload = await parseResponsePayload(response);
+  if (!response.ok || !payload || typeof payload !== "object") {
+    throw new Error("ADMIN_CSRF_BOOTSTRAP_FAILED");
+  }
+  return String((payload as { csrfToken?: unknown }).csrfToken || "").trim();
+}
+
+async function completeAdminStepUp(
+  payload: { stepUpType?: unknown; action?: unknown; message?: unknown },
+  headers: Headers
+): Promise<boolean> {
+  const stepUpType = String(payload.stepUpType || "").trim().toLowerCase();
+  if (stepUpType !== "password" && stepUpType !== "mfa") return false;
+
+  const actionLabel = String(payload.message || payload.action || "").trim() || "Esta ação";
+  let errorMessage = "";
+
+  while (true) {
+    const secret = await requestAdminStepUpValue({
+      stepUpType,
+      actionLabel,
+      errorMessage,
+    });
+    if (!secret || !String(secret).trim()) return false;
+
+    const csrfToken = await fetchAdminCsrfToken(headers);
+    const verifyResponse = await fetch(buildAbsoluteUrl(stepUpType === "mfa" ? "/api/studio-auth/step-up/mfa" : "/api/studio-auth/step-up/password"), {
+      method: "POST",
+      credentials: "include",
+      headers: {
+        "Content-Type": "application/json",
+        "x-csrf-token": csrfToken,
+      },
+      body: JSON.stringify(stepUpType === "mfa" ? { token: String(secret).trim() } : { password: String(secret) }),
+    });
+
+    const verifyPayload = await parseResponsePayload(verifyResponse);
+    if (verifyResponse.ok) {
+      headers.set("x-csrf-token", csrfToken);
+      return true;
+    }
+
+    const responseError = String((verifyPayload as { error?: unknown } | null)?.error || "").trim();
+    if (responseError === "INVALID_CREDENTIALS" || responseError === "INVALID_MFA_CODE") {
+      errorMessage = resolveErrorMessage(verifyPayload, "Não foi possível confirmar esta ação.");
+      continue;
+    }
+
+    const message = resolveErrorMessage(verifyPayload, "Não foi possível confirmar esta ação.");
+    throw new HttpError(message, verifyResponse.status, verifyResponse.url, verifyPayload);
+  }
+}
+
+async function requestAdminStepUpValue(detail: {
+  stepUpType: AdminStepUpType;
+  actionLabel: string;
+  errorMessage?: string;
+}): Promise<string | null> {
+  if (typeof window === "undefined") return null;
+
+  return new Promise((resolve) => {
+    const event = new CustomEvent<AdminStepUpEventDetail>(ADMIN_STEP_UP_EVENT_NAME, {
+      detail: {
+        stepUpType: detail.stepUpType,
+        actionLabel: detail.actionLabel,
+        errorMessage: detail.errorMessage,
+        resolve,
+      },
+    });
+    window.dispatchEvent(event);
+  });
 }
 
 export function get<T>(path: string, options?: HttpRequestOptions): Promise<T> {

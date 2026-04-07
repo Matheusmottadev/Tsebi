@@ -106,6 +106,8 @@ const {
 const { getVipDatabaseUrl } = require("./lib/vip-db");
 const { requireAdmin, requireAdminCsrfForMutations } = require("./middlewares/requireAdmin");
 const { requirePermission } = require("./middlewares/requirePermission");
+const { requireRole } = require("./middlewares/requireRole");
+const { requireAdminStepUp } = require("./middlewares/requireAdminStepUp");
 const newsletterDataFile = path.resolve(__dirname, "..", "data", "newsletter-subscribers.json");
 
 let stripeClient: any = null;
@@ -130,6 +132,16 @@ const adminRateLimit = rateLimit({
 adminRouter.use(adminRateLimit);
 adminRouter.use(requireAdmin);
 adminRouter.use(requireAdminCsrfForMutations);
+adminRouter.use(
+  requireAdminStepUp((req: any) => {
+    const method = String(req.method || "").toUpperCase();
+    if (!["POST", "PUT", "PATCH", "DELETE"].includes(method)) return null;
+    const path = String(req.path || "").trim();
+    if (path === "/notifications/read-all") return null;
+    if (/^\/notifications\/[^/]+\/read$/i.test(path)) return null;
+    return "password";
+  }, "admin_mutation")
+);
 adminRouter.use(async (req: any, _res: any, next: any) => {
   try {
     req.adminProfile = await ensureAdminProfile({
@@ -1210,7 +1222,7 @@ adminRouter.patch("/me", async (req: any, res: any) => {
   }
 });
 
-adminRouter.get("/audit-logs", async (req: any, res: any) => {
+adminRouter.get("/audit-logs", requireRole(["director", "superadmin"]), async (req: any, res: any) => {
   const limit = Number(req.query.limit || 100);
   const offset = Number(req.query.offset || 0);
 
@@ -1227,7 +1239,7 @@ adminRouter.get("/audit-logs", async (req: any, res: any) => {
   }
 });
 
-adminRouter.get("/audit", async (req: any, res: any) => {
+adminRouter.get("/audit", requireRole(["director", "superadmin"]), async (req: any, res: any) => {
   const queryText = String(req.query.query || "").trim();
   const actor = String(req.query.actor || "").trim();
   const resourceType = String(req.query.resourceType || "").trim();
@@ -1254,7 +1266,7 @@ adminRouter.get("/audit", async (req: any, res: any) => {
   }
 });
 
-adminRouter.get("/audit/:id", async (req: any, res: any) => {
+adminRouter.get("/audit/:id", requireRole(["director", "superadmin"]), async (req: any, res: any) => {
   const id = String(req.params.id || "").trim();
   if (!id) return res.status(400).json({ error: "INVALID_ID" });
   try {
@@ -1266,7 +1278,7 @@ adminRouter.get("/audit/:id", async (req: any, res: any) => {
   }
 });
 
-adminRouter.get("/admin-logins", async (req: any, res: any) => {
+adminRouter.get("/admin-logins", requireRole(["director", "superadmin"]), async (req: any, res: any) => {
   const from = String(req.query.from || "").trim();
   const to = String(req.query.to || "").trim();
   const adminId = String(req.query.adminId || "").trim();
@@ -1281,7 +1293,7 @@ adminRouter.get("/admin-logins", async (req: any, res: any) => {
   }
 });
 
-adminRouter.post("/audit/:id/revert", sensitiveAdminRateLimit, async (req: any, res: any) => {
+adminRouter.post("/audit/:id/revert", requireRole(["director", "superadmin"]), sensitiveAdminRateLimit, async (req: any, res: any) => {
   const logId = String(req.params.id || "").trim();
   if (!logId) return res.status(400).json({ error: "INVALID_ID" });
   try {
@@ -1327,7 +1339,7 @@ adminRouter.post("/audit/:id/revert", sensitiveAdminRateLimit, async (req: any, 
   }
 });
 
-adminRouter.post("/audit-logs/:id/reverse", async (req: any, res: any) => {
+adminRouter.post("/audit-logs/:id/reverse", requireRole(["director", "superadmin"]), async (req: any, res: any) => {
   const logId = String(req.params.id || "").trim();
   if (!logId) return res.status(400).json({ error: "INVALID_ID" });
 
@@ -1879,7 +1891,20 @@ adminRouter.get("/orders", async (req: any, res: any) => {
   }
 });
 
-adminRouter.patch("/orders/:id", async (req: any, res: any) => {
+adminRouter.patch(
+  "/orders/:id",
+  requireAdminStepUp(async (req: any) => {
+    const body = req.body && typeof req.body === "object" && !Array.isArray(req.body) ? req.body : {};
+    const requestedStatus = normalizeOrderStatusInput(body.orderStatus ?? body.status);
+    if (!requestedStatus || requestedStatus !== "paid") return null;
+    const before = await findOrderById(String(req.params.id || "").trim());
+    const paymentMethod = String(before?.paymentMethod || body.paymentMethod || "").trim().toLowerCase();
+    if (["wallet", "gift_card", "giftcard"].includes(paymentMethod) || requestedStatus === "paid") {
+      return "mfa";
+    }
+    return null;
+  }, "order_status_approval"),
+  async (req: any, res: any) => {
   const rawBody = req.body && typeof req.body === "object" && !Array.isArray(req.body) ? { ...req.body } : {};
   const hasStatusKey = Object.prototype.hasOwnProperty.call(rawBody, "status");
   const hasOrderStatusKey = Object.prototype.hasOwnProperty.call(rawBody, "orderStatus");
@@ -4009,7 +4034,13 @@ adminRouter.get("/gift-cards", async (req: any, res: any) => {
   }
 });
 
-adminRouter.post("/gift-cards", async (req: any, res: any) => {
+adminRouter.post(
+  "/gift-cards",
+  requireAdminStepUp((req: any) => {
+    const initialBalanceCents = Number(req.body?.initialBalanceCents || 0);
+    return initialBalanceCents > 50_000 ? "mfa" : null;
+  }, "gift_card_create"),
+  async (req: any, res: any) => {
   const parsed = giftCardCreateSchema.safeParse(req.body || {});
   if (!parsed.success) return res.status(400).json({ error: "INVALID_INPUT" });
   try {
