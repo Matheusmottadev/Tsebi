@@ -40,6 +40,24 @@ function parseAmountToCents(value: string) {
   return Math.round(parsed * 100);
 }
 
+function formatAmountInput(value: string) {
+  const cleaned = String(value || "").replace(/[^\d,]/g, "");
+  if (!cleaned) return "";
+
+  const hasComma = cleaned.includes(",");
+  const [rawIntegerPart = "", ...decimalParts] = cleaned.split(",");
+  const integerDigits = rawIntegerPart.replace(/^0+(?=\d)/, "");
+  const safeInteger = integerDigits || "0";
+  const formattedInteger = safeInteger.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+  const decimalDigits = decimalParts.join("").slice(0, 2);
+
+  if (hasComma) {
+    return `${formattedInteger},${decimalDigits}`;
+  }
+
+  return formattedInteger;
+}
+
 function formatReason(reason: BalanceRequestRow["reason"]) {
   const labels: Record<BalanceRequestRow["reason"], string> = {
     product_return: "Devolução de produto",
@@ -53,25 +71,29 @@ function formatReason(reason: BalanceRequestRow["reason"]) {
 
 function formatOrderStatus(status: string) {
   const normalized = String(status || "").trim().toLowerCase();
-  if (["paid", "pago", "processing", "em_transito", "shipped"].includes(normalized)) return "Em trânsito";
   if (["delivered", "entregue"].includes(normalized)) return "Entregue";
+  if (["canceled", "cancelado", "failed", "refunded"].includes(normalized)) return "Cancelado";
   if (["pending_payment", "pending", "pendente"].includes(normalized)) return "Pendente";
-  if (["canceled", "cancelado", "failed"].includes(normalized)) return "Cancelado";
-  return normalized || "-";
+  return "Em análise";
 }
 
 function orderStatusTone(status: string) {
   const label = formatOrderStatus(status);
-  if (label === "Entregue") return { background: "rgba(101, 163, 13, 0.18)", color: "#bef264" };
-  if (label === "Em trânsito") return { background: "rgba(59, 130, 246, 0.18)", color: "#93c5fd" };
-  if (label === "Pendente") return { background: "rgba(245, 158, 11, 0.18)", color: "#fcd34d" };
-  return { background: "rgba(248, 113, 113, 0.18)", color: "#fca5a5" };
+  if (label === "Entregue") return { background: "#effaf2", color: "#166534", border: "#c7ebd1" };
+  if (label === "Cancelado") return { background: "#fef2f2", color: "#b42318", border: "#f5c7c7" };
+  return { background: "#f5f5f5", color: "#262626", border: "#dfdfdf" };
 }
 
 function requestStatusTone(status: BalanceRequestRow["status"]) {
-  if (status === "approved") return { background: "rgba(101, 163, 13, 0.16)", color: "#bef264", label: "Aprovada" };
-  if (status === "rejected") return { background: "rgba(239, 68, 68, 0.16)", color: "#fca5a5", label: "Rejeitada" };
-  return { background: "rgba(59, 130, 246, 0.16)", color: "#93c5fd", label: "Pendente" };
+  if (status === "approved") return { background: "#effaf2", color: "#166534", border: "#c7ebd1", label: "Aprovada" };
+  if (status === "rejected") return { background: "#fef2f2", color: "#b42318", border: "#f5c7c7", label: "Rejeitada" };
+  return { background: "#f5f5f5", color: "#262626", border: "#dfdfdf", label: "Pendente" };
+}
+
+function formatCompactOrderLabel(order: AdminUserOrderRow) {
+  const base = String(order.orderNumber || order.id || "").trim();
+  if (!base) return "-";
+  return base.startsWith("PED-") ? base : `PED-${base.slice(-4).toUpperCase()}`;
 }
 
 export function BalancePage({ csrfToken, refreshKey = 0 }: { csrfToken?: string; refreshKey?: number }) {
@@ -88,6 +110,7 @@ export function BalancePage({ csrfToken, refreshKey = 0 }: { csrfToken?: string;
   const [internalNote, setInternalNote] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [message, setMessage] = useState("");
+  const [showAllOrders, setShowAllOrders] = useState(false);
 
   async function loadMyRequests() {
     try {
@@ -126,6 +149,7 @@ export function BalancePage({ csrfToken, refreshKey = 0 }: { csrfToken?: string;
       ]);
       setSelectedCustomer(customerResponse.customer || null);
       setCustomerOrders(Array.isArray(ordersResponse) ? ordersResponse : []);
+      setShowAllOrders(false);
       setMessage("");
       setReason("manual_adjustment");
       setReasonDetail("");
@@ -142,8 +166,8 @@ export function BalancePage({ csrfToken, refreshKey = 0 }: { csrfToken?: string;
   async function handleSubmit() {
     if (!selectedCustomer?.id) return;
     const amountCents = parseAmountToCents(amount);
-    const canSubmit = amountCents > 0 && (reason !== "other" || reasonDetail.trim().length > 0);
-    if (!canSubmit) return;
+    const readyToSubmit = amountCents > 0 && (reason !== "other" || reasonDetail.trim().length > 0);
+    if (!readyToSubmit) return;
 
     setSubmitting(true);
     setMessage("");
@@ -166,12 +190,13 @@ export function BalancePage({ csrfToken, refreshKey = 0 }: { csrfToken?: string;
       setReasonDetail("");
       setRelatedOrderId("");
       setInternalNote("");
-      setMessage("Solicitação enviada para aprovação da Diretoria.");
+      setMessage("Solicitação enviada para aprovação.");
       await loadMyRequests();
       const refreshedCustomer = await getBalanceCustomerAdmin(selectedCustomer.id, { cache: "no-store" }).catch(() => null);
       const refreshedOrders = await listBalanceCustomerOrdersAdmin(selectedCustomer.id, { cache: "no-store" }).catch(() => []);
       if (refreshedCustomer?.customer) setSelectedCustomer(refreshedCustomer.customer);
       setCustomerOrders(Array.isArray(refreshedOrders) ? refreshedOrders : []);
+      setShowAllOrders(false);
     } catch (error: any) {
       setMessage(String(error?.message || "Não foi possível enviar a solicitação."));
     } finally {
@@ -187,65 +212,78 @@ export function BalancePage({ csrfToken, refreshKey = 0 }: { csrfToken?: string;
   }, [selectedCustomer?.walletCents, amountCents, type]);
   const canSubmit = Boolean(selectedCustomer?.id) && amountCents > 0 && (reason !== "other" || reasonDetail.trim().length > 0);
   const latestRequests = useMemo(() => requests.slice(0, 4), [requests]);
+  const visibleOrders = useMemo(
+    () => (showAllOrders ? customerOrders : customerOrders.slice(0, 5)),
+    [customerOrders, showAllOrders]
+  );
+  const hasMoreOrders = customerOrders.length > 5;
+  const linkedOrder = useMemo(
+    () => customerOrders.find((order) => order.id === relatedOrderId) || null,
+    [customerOrders, relatedOrderId]
+  );
 
-  const shellStyle: React.CSSProperties = {
-    borderRadius: 30,
-    background: "radial-gradient(circle at top left, rgba(196, 167, 117, 0.12), transparent 32%), linear-gradient(180deg, #191816 0%, #111111 100%)",
-    color: "#f7f1e8",
-    padding: "28px",
-    display: "flex",
-    flexDirection: "column",
-    gap: 24,
-    minHeight: 720,
-    border: "1px solid rgba(196, 167, 117, 0.18)",
-    boxShadow: "0 32px 90px rgba(10, 10, 10, 0.16)",
+  const cardStyle = {
+    border: "1px solid #e7e7e7",
+    borderRadius: 22,
+    background: "#ffffff",
+    padding: 24,
+    boxShadow: "0 12px 34px rgba(17, 17, 17, 0.05)",
+  };
+
+  const fieldStyle = {
+    borderRadius: 14,
+    border: "1px solid #dcdcdc",
+    background: "#ffffff",
+    color: "#111111",
+    padding: "14px 16px",
+    fontSize: 16,
+    outline: "none",
+  };
+
+  const fieldLabelStyle = {
+    fontSize: 12,
+    color: "#555555",
+    fontWeight: 500,
   };
 
   if (!selectedCustomer) {
     return (
-      <div style={shellStyle}>
-        <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-          <h2 style={{ margin: 0, fontSize: 40, lineHeight: 1, fontWeight: 600, color: "#fffaf3" }}>Saldo de Clientes</h2>
-          <p style={{ margin: 0, color: "#bdb2a5", fontSize: 17 }}>
-            Busque um cliente para visualizar ou modificar o saldo.
+      <div style={{ display: "grid", gap: 24 }}>
+        <div style={{ display: "grid", gap: 6 }}>
+          <h2 style={{ margin: 0, fontSize: 34, lineHeight: 1.05, color: "#111111" }}>Saldo de Clientes</h2>
+          <p style={{ margin: 0, color: "#666666", fontSize: 15 }}>
+            Busque um cliente para visualizar ou solicitar alteração de saldo.
           </p>
         </div>
 
-        <div
+        <section
           style={{
-            margin: "40px auto 0",
-            width: "min(760px, 100%)",
-            borderRadius: 28,
-            background: "rgba(255,255,255,0.06)",
-            border: "1px solid rgba(255,255,255,0.08)",
-            padding: "40px 32px",
+            ...cardStyle,
+            maxWidth: 760,
+            width: "100%",
+            margin: "0 auto",
             display: "grid",
             gap: 18,
-            backdropFilter: "blur(10px)",
+            textAlign: "center",
           }}
         >
-          <div style={{ textAlign: "center", display: "grid", gap: 8 }}>
-            <h3 style={{ margin: 0, fontSize: 36, fontWeight: 600, color: "#fff8ef" }}>Encontre o cliente</h3>
-            <p style={{ margin: 0, color: "#beb3a7", fontSize: 15 }}>
+          <div style={{ display: "grid", gap: 8 }}>
+            <h3 style={{ margin: 0, fontSize: 30, color: "#111111" }}>Encontre o cliente</h3>
+            <p style={{ margin: 0, color: "#666666", fontSize: 15 }}>
               Pesquise por nome, e-mail ou ID para começar. Busque por “Marina”, “Rafael” ou “Juliana” para testar.
             </p>
           </div>
 
-          <div style={{ display: "grid", gap: 14 }}>
+          <div style={{ display: "grid", gap: 14, textAlign: "left" }}>
             <input
               value={query}
               onChange={(event) => setQuery(event.target.value)}
               placeholder="Nome, e-mail ou ID do cliente..."
               style={{
-                width: "100%",
-                borderRadius: 16,
-                border: "1px solid rgba(196, 167, 117, 0.55)",
-                background: "#1c1b19",
-                color: "#fff7eb",
+                ...fieldStyle,
                 padding: "18px 20px",
-                fontSize: 26,
-                outline: "none",
-                boxShadow: "0 0 0 3px rgba(196, 167, 117, 0.14)",
+                fontSize: 20,
+                borderColor: "#d6d6d6",
               }}
             />
 
@@ -257,10 +295,10 @@ export function BalancePage({ csrfToken, refreshKey = 0 }: { csrfToken?: string;
                     type="button"
                     onClick={() => handleSelectCustomer(customer.id)}
                     style={{
-                      border: "1px solid rgba(255,255,255,0.10)",
+                      border: "1px solid #e2e2e2",
                       borderRadius: 16,
-                      background: "rgba(255,255,255,0.04)",
-                      color: "#fff8ef",
+                      background: "#ffffff",
+                      color: "#111111",
                       padding: "16px 18px",
                       textAlign: "left",
                       display: "grid",
@@ -272,13 +310,13 @@ export function BalancePage({ csrfToken, refreshKey = 0 }: { csrfToken?: string;
                   >
                     <div
                       style={{
-                        width: 42,
-                        height: 42,
+                        width: 44,
+                        height: 44,
                         borderRadius: 14,
                         display: "grid",
                         placeItems: "center",
-                        background: "rgba(196, 167, 117, 0.18)",
-                        color: "#f6dfba",
+                        background: "#111111",
+                        color: "#ffffff",
                         fontWeight: 700,
                         letterSpacing: "0.04em",
                       }}
@@ -287,9 +325,9 @@ export function BalancePage({ csrfToken, refreshKey = 0 }: { csrfToken?: string;
                     </div>
                     <div style={{ display: "grid", gap: 4 }}>
                       <strong style={{ fontSize: 16 }}>{customer.name || "Cliente"}</strong>
-                      <span style={{ fontSize: 13, color: "#cfc3b7" }}>{customer.email}</span>
+                      <span style={{ fontSize: 13, color: "#666666" }}>{customer.email}</span>
                     </div>
-                    <div style={{ fontSize: 12, color: "#f4e2c8", whiteSpace: "nowrap" }}>Selecionar</div>
+                    <span style={{ fontSize: 12, color: "#111111", fontWeight: 600 }}>Selecionar</span>
                   </button>
                 ))}
               </div>
@@ -297,9 +335,9 @@ export function BalancePage({ csrfToken, refreshKey = 0 }: { csrfToken?: string;
               <div
                 style={{
                   borderRadius: 16,
-                  border: "1px dashed rgba(255,255,255,0.12)",
+                  border: "1px dashed #d8d8d8",
                   padding: "18px 20px",
-                  color: "#beb3a7",
+                  color: "#666666",
                   textAlign: "center",
                 }}
               >
@@ -307,13 +345,20 @@ export function BalancePage({ csrfToken, refreshKey = 0 }: { csrfToken?: string;
               </div>
             ) : null}
           </div>
-        </div>
+        </section>
       </div>
     );
   }
 
   return (
-    <div style={shellStyle}>
+    <div style={{ display: "grid", gap: 20 }}>
+      <div style={{ display: "grid", gap: 6 }}>
+        <h2 style={{ margin: 0, fontSize: 34, lineHeight: 1.05, color: "#111111" }}>Saldo de Clientes</h2>
+        <p style={{ margin: 0, color: "#666666", fontSize: 15 }}>
+          Cliente selecionado: <strong style={{ color: "#111111" }}>{selectedCustomer.name || selectedCustomer.email}</strong>
+        </p>
+      </div>
+
       <div style={{ display: "flex", justifyContent: "space-between", gap: 16, alignItems: "center", flexWrap: "wrap" }}>
         <button
           type="button"
@@ -321,13 +366,14 @@ export function BalancePage({ csrfToken, refreshKey = 0 }: { csrfToken?: string;
             setSelectedCustomer(null);
             setCustomerOrders([]);
             setRelatedOrderId("");
+            setShowAllOrders(false);
             setMessage("");
           }}
           style={{
-            border: "1px solid rgba(255,255,255,0.16)",
-            borderRadius: 14,
-            background: "transparent",
-            color: "#fff8ef",
+            border: "1px solid #d7d7d7",
+            borderRadius: 12,
+            background: "#ffffff",
+            color: "#111111",
             padding: "12px 16px",
             cursor: "pointer",
             fontWeight: 600,
@@ -336,96 +382,98 @@ export function BalancePage({ csrfToken, refreshKey = 0 }: { csrfToken?: string;
           ← Voltar à busca
         </button>
 
-        <div style={{ color: "#bdb2a5", fontSize: 14 }}>
-          Cliente selecionado: <strong style={{ color: "#fff7eb" }}>{selectedCustomer.name || selectedCustomer.email}</strong>
-        </div>
+        {linkedOrder ? (
+          <div style={{ fontSize: 14, color: "#555555" }}>
+            Pedido vinculado: <strong style={{ color: "#111111" }}>{formatCompactOrderLabel(linkedOrder)}</strong>
+          </div>
+        ) : null}
       </div>
 
-      <div style={{ display: "grid", gridTemplateColumns: "360px minmax(0, 1fr)", gap: 18, alignItems: "start" }}>
-        <div style={{ display: "grid", gap: 18 }}>
-          <section
-            style={{
-              borderRadius: 22,
-              border: "1px solid rgba(255,255,255,0.08)",
-              background: "rgba(255,255,255,0.05)",
-              padding: 22,
-              display: "grid",
-              gap: 16,
-            }}
-          >
+      <div style={{ display: "flex", gap: 20, alignItems: "flex-start", flexWrap: "wrap" }}>
+        <div style={{ flex: "1 1 360px", minWidth: 320, display: "grid", gap: 20 }}>
+          <section style={cardStyle}>
             <div style={{ display: "flex", gap: 14, alignItems: "center" }}>
               <div
                 style={{
-                  width: 48,
-                  height: 48,
+                  width: 52,
+                  height: 52,
                   borderRadius: 16,
                   display: "grid",
                   placeItems: "center",
-                  background: "rgba(196, 167, 117, 0.18)",
-                  color: "#f7dfb8",
+                  background: "#111111",
+                  color: "#ffffff",
                   fontWeight: 700,
-                  fontSize: 20,
+                  fontSize: 18,
                 }}
               >
                 {getInitials(selectedCustomer.name, selectedCustomer.email)}
               </div>
               <div style={{ display: "grid", gap: 3 }}>
-                <strong style={{ fontSize: 22, color: "#fffaf3" }}>{selectedCustomer.name || "Cliente"}</strong>
-                <span style={{ color: "#beb3a7", fontSize: 14 }}>{selectedCustomer.email}</span>
+                <strong style={{ fontSize: 24, color: "#111111" }}>{selectedCustomer.name || "Cliente"}</strong>
+                <span style={{ color: "#666666", fontSize: 14, overflowWrap: "anywhere" }}>{selectedCustomer.email}</span>
               </div>
             </div>
 
-            <div style={{ height: 1, background: "rgba(255,255,255,0.08)" }} />
+            <div style={{ height: 1, background: "#eeeeee", margin: "16px 0" }} />
 
             <div style={{ display: "grid", gap: 12 }}>
-              <div style={{ fontSize: 11, letterSpacing: "0.16em", textTransform: "uppercase", color: "#a99985" }}>Informações</div>
+              <div style={{ fontSize: 11, letterSpacing: "0.16em", textTransform: "uppercase", color: "#666666" }}>Informações</div>
               <div style={{ display: "grid", gap: 10 }}>
-                <div style={{ display: "flex", justifyContent: "space-between", gap: 16 }}><span style={{ color: "#bdb2a5" }}>ID</span><strong>{selectedCustomer.id.slice(0, 8).toUpperCase()}</strong></div>
-                <div style={{ display: "flex", justifyContent: "space-between", gap: 16 }}><span style={{ color: "#bdb2a5" }}>Telefone</span><strong>{selectedCustomer.phone || "-"}</strong></div>
-                <div style={{ display: "flex", justifyContent: "space-between", gap: 16 }}><span style={{ color: "#bdb2a5" }}>Cliente desde</span><strong>{formatDate(selectedCustomer.createdAt)}</strong></div>
-                <div style={{ display: "flex", justifyContent: "space-between", gap: 16 }}><span style={{ color: "#bdb2a5" }}>Pedidos</span><strong>{customerOrders.length} pedidos</strong></div>
+                <div style={{ display: "flex", justifyContent: "space-between", gap: 16 }}>
+                  <span style={{ color: "#666666" }}>ID</span>
+                  <strong style={{ color: "#111111" }}>{selectedCustomer.id.slice(0, 8).toUpperCase()}</strong>
+                </div>
+                <div style={{ display: "flex", justifyContent: "space-between", gap: 16 }}>
+                  <span style={{ color: "#666666" }}>Telefone</span>
+                  <strong style={{ color: "#111111", maxWidth: 190, textAlign: "right", overflowWrap: "anywhere" }}>{selectedCustomer.phone || "-"}</strong>
+                </div>
+                <div style={{ display: "flex", justifyContent: "space-between", gap: 16 }}>
+                  <span style={{ color: "#666666" }}>Cliente desde</span>
+                  <strong style={{ color: "#111111" }}>{formatDate(selectedCustomer.createdAt)}</strong>
+                </div>
+                <div style={{ display: "flex", justifyContent: "space-between", gap: 16 }}>
+                  <span style={{ color: "#666666" }}>Pedidos</span>
+                  <strong style={{ color: "#111111" }}>{customerOrders.length} pedidos</strong>
+                </div>
               </div>
             </div>
           </section>
 
-          <section
-            style={{
-              borderRadius: 22,
-              border: "1px solid rgba(255,255,255,0.08)",
-              background: "rgba(255,255,255,0.05)",
-              padding: 22,
-              display: "grid",
-              gap: 16,
-            }}
-          >
-            <div style={{ fontSize: 11, letterSpacing: "0.16em", textTransform: "uppercase", color: "#a99985" }}>Modificar saldo</div>
+          <section style={cardStyle}>
+            <div style={{ fontSize: 11, letterSpacing: "0.16em", textTransform: "uppercase", color: "#666666" }}>Modificar saldo</div>
 
             <div
               style={{
                 borderRadius: 18,
-                background: "rgba(255,255,255,0.04)",
+                background: "#f7f7f7",
                 padding: 18,
                 display: "grid",
-                gap: 10,
+                gap: 8,
+                marginTop: 14,
               }}
             >
-              <div style={{ fontSize: 11, letterSpacing: "0.14em", textTransform: "uppercase", color: "#a99985" }}>Saldo atual</div>
-              <div style={{ fontSize: 42, lineHeight: 1, fontWeight: 700, color: "#fffaf3" }}>{formatMoney(selectedCustomer.walletCents)}</div>
-              <div style={{ fontSize: 13, color: resultingBalanceCents < 0 ? "#fca5a5" : "#cdbfae" }}>
-                Saldo resultante: <strong style={{ color: resultingBalanceCents < 0 ? "#fca5a5" : "#fff0d8" }}>{formatMoney(resultingBalanceCents)}</strong>
+              <div style={{ fontSize: 11, letterSpacing: "0.14em", textTransform: "uppercase", color: "#666666" }}>Saldo atual</div>
+              <div style={{ fontSize: 42, lineHeight: 1, fontWeight: 700, color: "#111111" }}>
+                {formatMoney(selectedCustomer.walletCents)}
+              </div>
+              <div style={{ fontSize: 13, color: resultingBalanceCents < 0 ? "#b42318" : "#444444" }}>
+                Saldo resultante:{" "}
+                <strong style={{ color: resultingBalanceCents < 0 ? "#b42318" : "#111111" }}>
+                  {formatMoney(resultingBalanceCents)}
+                </strong>
               </div>
             </div>
 
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginTop: 16 }}>
               <button
                 type="button"
                 onClick={() => setType("credit")}
                 style={{
                   borderRadius: 14,
                   padding: "12px 14px",
-                  border: type === "credit" ? "1px solid #d4b98f" : "1px solid rgba(255,255,255,0.10)",
-                  background: type === "credit" ? "#f1dec0" : "transparent",
-                  color: type === "credit" ? "#1a1713" : "#fff6ea",
+                  border: type === "credit" ? "1px solid #111111" : "1px solid #d8d8d8",
+                  background: type === "credit" ? "#111111" : "#ffffff",
+                  color: type === "credit" ? "#ffffff" : "#111111",
                   fontWeight: 700,
                   cursor: "pointer",
                 }}
@@ -438,9 +486,9 @@ export function BalancePage({ csrfToken, refreshKey = 0 }: { csrfToken?: string;
                 style={{
                   borderRadius: 14,
                   padding: "12px 14px",
-                  border: type === "debit" ? "1px solid rgba(248, 113, 113, 0.45)" : "1px solid rgba(255,255,255,0.10)",
-                  background: type === "debit" ? "rgba(248, 113, 113, 0.14)" : "transparent",
-                  color: "#fff6ea",
+                  border: type === "debit" ? "1px solid #b42318" : "1px solid #d8d8d8",
+                  background: type === "debit" ? "#b42318" : "#ffffff",
+                  color: type === "debit" ? "#ffffff" : "#111111",
                   fontWeight: 700,
                   cursor: "pointer",
                 }}
@@ -449,23 +497,24 @@ export function BalancePage({ csrfToken, refreshKey = 0 }: { csrfToken?: string;
               </button>
             </div>
 
-            <div style={{ display: "grid", gap: 12 }}>
+            <div style={{ display: "grid", gap: 12, marginTop: 16 }}>
               <label style={{ display: "grid", gap: 6 }}>
-                <span style={{ fontSize: 12, color: "#c5b8a8" }}>Valor</span>
+                <span style={fieldLabelStyle}>Valor</span>
                 <input
                   value={amount}
-                  onChange={(event) => setAmount(event.target.value)}
+                  onChange={(event) => setAmount(formatAmountInput(event.target.value))}
                   placeholder="Ex: 150,00"
-                  style={{ borderRadius: 14, border: "1px solid rgba(255,255,255,0.10)", background: "#1a1917", color: "#fff8ef", padding: "14px 16px", fontSize: 24 }}
+                  inputMode="decimal"
+                  style={fieldStyle}
                 />
               </label>
 
               <label style={{ display: "grid", gap: 6 }}>
-                <span style={{ fontSize: 12, color: "#c5b8a8" }}>Motivo</span>
+                <span style={fieldLabelStyle}>Motivo</span>
                 <select
                   value={reason}
                   onChange={(event) => setReason(event.target.value as BalanceRequestRow["reason"])}
-                  style={{ borderRadius: 14, border: "1px solid rgba(255,255,255,0.10)", background: "#1a1917", color: "#fff8ef", padding: "14px 16px" }}
+                  style={fieldStyle}
                 >
                   <option value="product_return">Devolução de produto</option>
                   <option value="billing_error">Erro de cobrança</option>
@@ -477,35 +526,40 @@ export function BalancePage({ csrfToken, refreshKey = 0 }: { csrfToken?: string;
 
               {reason === "other" ? (
                 <label style={{ display: "grid", gap: 6 }}>
-                  <span style={{ fontSize: 12, color: "#c5b8a8" }}>Detalhe do motivo</span>
+                  <span style={fieldLabelStyle}>Detalhe do motivo</span>
                   <textarea
                     value={reasonDetail}
                     onChange={(event) => setReasonDetail(event.target.value)}
                     placeholder="Explique o contexto da alteração"
                     rows={3}
-                    style={{ borderRadius: 14, border: "1px solid rgba(255,255,255,0.10)", background: "#1a1917", color: "#fff8ef", padding: "14px 16px", resize: "vertical" }}
+                    style={{ ...fieldStyle, resize: "vertical", minHeight: 104 }}
                   />
                 </label>
               ) : null}
 
               <label style={{ display: "grid", gap: 6 }}>
-                <span style={{ fontSize: 12, color: "#c5b8a8" }}>Pedido relacionado (opcional)</span>
+                <span style={fieldLabelStyle}>Pedido relacionado (opcional)</span>
                 <input
-                  value={relatedOrderId}
-                  onChange={(event) => setRelatedOrderId(event.target.value)}
+                  value={linkedOrder ? formatCompactOrderLabel(linkedOrder) : ""}
+                  readOnly
                   placeholder="Clique em Vincular na tabela"
-                  style={{ borderRadius: 14, border: "1px solid rgba(255,255,255,0.10)", background: "#1a1917", color: "#fff8ef", padding: "14px 16px" }}
+                  style={{
+                    ...fieldStyle,
+                    background: "#f7f7f7",
+                    color: linkedOrder ? "#111111" : "#666666",
+                    cursor: "default",
+                  }}
                 />
               </label>
 
               <label style={{ display: "grid", gap: 6 }}>
-                <span style={{ fontSize: 12, color: "#c5b8a8" }}>Observação interna (opcional)</span>
+                <span style={fieldLabelStyle}>Observação interna (opcional)</span>
                 <textarea
                   value={internalNote}
                   onChange={(event) => setInternalNote(event.target.value)}
                   placeholder="Contexto adicional para a equipe..."
                   rows={3}
-                  style={{ borderRadius: 14, border: "1px solid rgba(255,255,255,0.10)", background: "#1a1917", color: "#fff8ef", padding: "14px 16px", resize: "vertical" }}
+                  style={{ ...fieldStyle, resize: "vertical", minHeight: 104 }}
                 />
               </label>
             </div>
@@ -515,10 +569,11 @@ export function BalancePage({ csrfToken, refreshKey = 0 }: { csrfToken?: string;
                 style={{
                   borderRadius: 14,
                   padding: "12px 14px",
-                  border: message.includes("aprovação") ? "1px solid rgba(101, 163, 13, 0.28)" : "1px solid rgba(248, 113, 113, 0.24)",
-                  background: message.includes("aprovação") ? "rgba(101, 163, 13, 0.12)" : "rgba(239, 68, 68, 0.12)",
-                  color: message.includes("aprovação") ? "#d9f99d" : "#fecaca",
+                  border: message.includes("aprovação") ? "1px solid #c7ebd1" : "1px solid #f5c7c7",
+                  background: message.includes("aprovação") ? "#effaf2" : "#fef2f2",
+                  color: message.includes("aprovação") ? "#166534" : "#b42318",
                   fontSize: 13,
+                  marginTop: 14,
                 }}
               >
                 {message}
@@ -530,82 +585,126 @@ export function BalancePage({ csrfToken, refreshKey = 0 }: { csrfToken?: string;
               onClick={handleSubmit}
               disabled={!canSubmit || submitting}
               style={{
-                border: "1px solid rgba(212, 185, 143, 0.46)",
+                border: "1px solid #111111",
                 borderRadius: 16,
-                background: canSubmit && !submitting ? "#f1dec0" : "rgba(255,255,255,0.08)",
-                color: canSubmit && !submitting ? "#171411" : "#b7ab9d",
+                background: canSubmit && !submitting ? "#111111" : "#f0f0f0",
+                color: canSubmit && !submitting ? "#ffffff" : "#8b8b8b",
                 padding: "15px 18px",
-                fontWeight: 800,
+                fontWeight: 700,
                 cursor: canSubmit && !submitting ? "pointer" : "not-allowed",
+                marginTop: 16,
               }}
             >
-              {submitting ? "Enviando..." : "Enviar edição para aprovação"}
+              {submitting ? "Enviando..." : "Enviar para aprovação"}
             </button>
           </section>
         </div>
 
-        <div style={{ display: "grid", gap: 18 }}>
-          <section
-            style={{
-              borderRadius: 22,
-              border: "1px solid rgba(255,255,255,0.08)",
-              background: "rgba(255,255,255,0.05)",
-              padding: 22,
-              display: "grid",
-              gap: 14,
-            }}
-          >
+        <div style={{ flex: "2 1 620px", minWidth: 340, display: "grid", gap: 20 }}>
+          <section style={cardStyle}>
             <div style={{ display: "flex", justifyContent: "space-between", gap: 14, alignItems: "center", flexWrap: "wrap" }}>
-              <div>
-                <div style={{ fontSize: 11, letterSpacing: "0.16em", textTransform: "uppercase", color: "#a99985" }}>Pedidos do cliente</div>
-                <div style={{ marginTop: 6, fontSize: 14, color: "#c5b8a8" }}>Clique em <strong style={{ color: "#fff4e0" }}>Vincular</strong> para usar um pedido no ajuste.</div>
+              <div style={{ display: "grid", gap: 6 }}>
+                <div style={{ fontSize: 11, letterSpacing: "0.16em", textTransform: "uppercase", color: "#666666" }}>Pedidos do cliente</div>
+                <div style={{ fontSize: 14, color: "#666666" }}>Clique em <strong style={{ color: "#111111" }}>Vincular</strong> para usar um pedido no ajuste.</div>
               </div>
-              {relatedOrderId ? (
-                <button
-                  type="button"
-                  onClick={() => setRelatedOrderId("")}
-                  style={{ border: "1px solid rgba(255,255,255,0.12)", borderRadius: 12, background: "transparent", color: "#fff6ea", padding: "10px 12px", cursor: "pointer" }}
-                >
-                  Limpar vínculo
-                </button>
-              ) : null}
+              <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
+                {relatedOrderId ? (
+                  <button
+                    type="button"
+                    onClick={() => setRelatedOrderId("")}
+                    style={{
+                      border: "1px solid #d7d7d7",
+                      borderRadius: 12,
+                      background: "#ffffff",
+                      color: "#111111",
+                      padding: "10px 12px",
+                      cursor: "pointer",
+                    }}
+                  >
+                    Limpar vínculo
+                  </button>
+                ) : null}
+                {hasMoreOrders ? (
+                  <button
+                    type="button"
+                    onClick={() => setShowAllOrders((current) => !current)}
+                    style={{
+                      border: "1px solid #d7d7d7",
+                      borderRadius: 12,
+                      background: "#ffffff",
+                      color: "#111111",
+                      padding: "10px 12px",
+                      cursor: "pointer",
+                      fontWeight: 600,
+                    }}
+                  >
+                    {showAllOrders ? "Ver menos" : "Ver mais"}
+                  </button>
+                ) : null}
+              </div>
             </div>
 
             {customerOrders.length ? (
-              <div style={{ overflowX: "auto" }}>
-                <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 680 }}>
+              <div style={{ overflowX: "auto", marginTop: 14 }}>
+                <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 620 }}>
                   <thead>
                     <tr>
                       {["Pedido", "Data", "Total", "Status", ""].map((label) => (
-                        <th key={label} style={{ padding: "0 0 14px", textAlign: "left", fontSize: 11, letterSpacing: "0.14em", textTransform: "uppercase", color: "#9f917f", fontWeight: 500 }}>
+                        <th
+                          key={label}
+                          style={{
+                            padding: "0 0 14px",
+                            textAlign: "left",
+                            fontSize: 11,
+                            letterSpacing: "0.14em",
+                            textTransform: "uppercase",
+                            color: "#666666",
+                            fontWeight: 600,
+                          }}
+                        >
                           {label}
                         </th>
                       ))}
                     </tr>
                   </thead>
                   <tbody>
-                    {customerOrders.map((order) => {
+                    {visibleOrders.map((order) => {
                       const statusTone = orderStatusTone(order.status);
                       const isLinked = relatedOrderId === order.id;
                       return (
                         <tr key={order.id}>
-                          <td style={{ padding: "14px 0", borderTop: "1px solid rgba(255,255,255,0.08)", color: "#fffaf3", fontWeight: 700 }}>PED-{String(order.orderNumber || order.id).slice(-4)}</td>
-                          <td style={{ padding: "14px 0", borderTop: "1px solid rgba(255,255,255,0.08)", color: "#d2c7bb" }}>{formatDate(order.createdAt)}</td>
-                          <td style={{ padding: "14px 0", borderTop: "1px solid rgba(255,255,255,0.08)", color: "#fffaf3", fontWeight: 700 }}>{formatMoney(order.amount)}</td>
-                          <td style={{ padding: "14px 0", borderTop: "1px solid rgba(255,255,255,0.08)" }}>
-                            <span style={{ display: "inline-flex", borderRadius: 999, padding: "6px 12px", fontSize: 12, fontWeight: 700, ...statusTone }}>
+                          <td style={{ padding: "14px 0", borderTop: "1px solid #efefef", color: "#111111", fontWeight: 700 }}>
+                            {formatCompactOrderLabel(order)}
+                          </td>
+                          <td style={{ padding: "14px 0", borderTop: "1px solid #efefef", color: "#555555" }}>{formatDate(order.createdAt)}</td>
+                          <td style={{ padding: "14px 0", borderTop: "1px solid #efefef", color: "#111111", fontWeight: 700 }}>
+                            {formatMoney(order.amount)}
+                          </td>
+                          <td style={{ padding: "14px 0", borderTop: "1px solid #efefef" }}>
+                            <span
+                              style={{
+                                display: "inline-flex",
+                                borderRadius: 999,
+                                padding: "6px 12px",
+                                fontSize: 12,
+                                fontWeight: 700,
+                                background: statusTone.background,
+                                color: statusTone.color,
+                                border: `1px solid ${statusTone.border}`,
+                              }}
+                            >
                               {formatOrderStatus(order.status)}
                             </span>
                           </td>
-                          <td style={{ padding: "14px 0", borderTop: "1px solid rgba(255,255,255,0.08)", textAlign: "right" }}>
+                          <td style={{ padding: "14px 0", borderTop: "1px solid #efefef", textAlign: "right" }}>
                             <button
                               type="button"
                               onClick={() => setRelatedOrderId(isLinked ? "" : order.id)}
                               style={{
-                                border: "1px solid rgba(255,255,255,0.12)",
+                                border: isLinked ? "1px solid #111111" : "1px solid #d7d7d7",
                                 borderRadius: 12,
-                                background: isLinked ? "#f1dec0" : "transparent",
-                                color: isLinked ? "#15120f" : "#f5eadc",
+                                background: isLinked ? "#111111" : "#ffffff",
+                                color: isLinked ? "#ffffff" : "#111111",
                                 padding: "10px 12px",
                                 cursor: "pointer",
                                 fontWeight: 700,
@@ -621,31 +720,29 @@ export function BalancePage({ csrfToken, refreshKey = 0 }: { csrfToken?: string;
                 </table>
               </div>
             ) : (
-              <div style={{ borderRadius: 16, border: "1px dashed rgba(255,255,255,0.10)", padding: "22px", color: "#beb3a7", textAlign: "center" }}>
+              <div
+                style={{
+                  borderRadius: 16,
+                  border: "1px dashed #d8d8d8",
+                  padding: "22px",
+                  color: "#666666",
+                  textAlign: "center",
+                  marginTop: 14,
+                }}
+              >
                 Este cliente ainda não possui pedidos para vincular.
               </div>
             )}
           </section>
 
-          <section
-            style={{
-              borderRadius: 22,
-              border: "1px solid rgba(255,255,255,0.08)",
-              background: "rgba(255,255,255,0.05)",
-              padding: 22,
-              display: "grid",
-              gap: 14,
-            }}
-          >
-            <div style={{ display: "flex", justifyContent: "space-between", gap: 14, alignItems: "center", flexWrap: "wrap" }}>
-              <div>
-                <div style={{ fontSize: 11, letterSpacing: "0.16em", textTransform: "uppercase", color: "#a99985" }}>Minhas solicitações</div>
-                <div style={{ marginTop: 6, fontSize: 14, color: "#c5b8a8" }}>Acompanhamento rápido das últimas alterações solicitadas.</div>
-              </div>
+          <section style={cardStyle}>
+            <div style={{ display: "grid", gap: 6 }}>
+              <div style={{ fontSize: 11, letterSpacing: "0.16em", textTransform: "uppercase", color: "#666666" }}>Minhas solicitações</div>
+              <div style={{ fontSize: 14, color: "#666666" }}>Acompanhamento rápido das últimas solicitações de saldo.</div>
             </div>
 
             {latestRequests.length ? (
-              <div style={{ display: "grid", gap: 10 }}>
+              <div style={{ display: "grid", gap: 10, marginTop: 14 }}>
                 {latestRequests.map((request) => {
                   const tone = requestStatusTone(request.status);
                   return (
@@ -653,30 +750,55 @@ export function BalancePage({ csrfToken, refreshKey = 0 }: { csrfToken?: string;
                       key={request.id}
                       style={{
                         borderRadius: 16,
-                        border: "1px solid rgba(255,255,255,0.08)",
-                        background: "rgba(255,255,255,0.04)",
+                        border: "1px solid #ececec",
+                        background: "#ffffff",
                         padding: "14px 16px",
                         display: "grid",
                         gap: 8,
                       }}
                     >
                       <div style={{ display: "flex", justifyContent: "space-between", gap: 12, alignItems: "center", flexWrap: "wrap" }}>
-                        <strong style={{ fontSize: 15, color: "#fffaf3" }}>{request.customerName || request.customerEmail || "Cliente"}</strong>
-                        <span style={{ display: "inline-flex", borderRadius: 999, padding: "5px 10px", fontSize: 11, fontWeight: 700, ...tone }}>{tone.label}</span>
+                        <strong style={{ fontSize: 15, color: "#111111" }}>{request.customerName || request.customerEmail || "Cliente"}</strong>
+                        <span
+                          style={{
+                            display: "inline-flex",
+                            borderRadius: 999,
+                            padding: "5px 10px",
+                            fontSize: 11,
+                            fontWeight: 700,
+                            background: tone.background,
+                            color: tone.color,
+                            border: `1px solid ${tone.border}`,
+                          }}
+                        >
+                          {tone.label}
+                        </span>
                       </div>
-                      <div style={{ fontSize: 13, color: "#d3c7bb" }}>
-                        {request.type === "debit" ? "Remover saldo" : "Adicionar saldo"} de <strong style={{ color: "#fff4e0" }}>{formatMoney(Math.round(request.amount * 100))}</strong>
+                      <div style={{ fontSize: 13, color: "#444444" }}>
+                        {request.type === "debit" ? "Remover saldo" : "Adicionar saldo"} de{" "}
+                        <strong style={{ color: "#111111" }}>{formatMoney(Math.round(request.amount * 100))}</strong>
                       </div>
-                      <div style={{ fontSize: 12, color: "#aa9a88" }}>
+                      <div style={{ fontSize: 12, color: "#666666" }}>
                         {formatReason(request.reason)} • {formatDate(request.createdAt, true)}
                       </div>
-                      {request.rejectionReason ? <div style={{ fontSize: 12, color: "#fca5a5" }}>Motivo da rejeição: {request.rejectionReason}</div> : null}
+                      {request.rejectionReason ? (
+                        <div style={{ fontSize: 12, color: "#b42318" }}>Motivo da rejeição: {request.rejectionReason}</div>
+                      ) : null}
                     </div>
                   );
                 })}
               </div>
             ) : (
-              <div style={{ borderRadius: 16, border: "1px dashed rgba(255,255,255,0.10)", padding: "22px", color: "#beb3a7", textAlign: "center" }}>
+              <div
+                style={{
+                  borderRadius: 16,
+                  border: "1px dashed #d8d8d8",
+                  padding: "22px",
+                  color: "#666666",
+                  textAlign: "center",
+                  marginTop: 14,
+                }}
+              >
                 Você ainda não criou solicitações de saldo.
               </div>
             )}

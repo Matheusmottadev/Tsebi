@@ -28,6 +28,14 @@ const MODULES: Array<{ key: "balance" | "orders" | "users" | "products"; label: 
   { key: "products", label: "Produtos" },
 ];
 
+const drawerLabelColor = "#64748b";
+const drawerMutedTextColor = "#6b7280";
+const drawerFieldBorder = "#d8e1ec";
+const drawerFieldBackground = "#ffffff";
+const drawerFieldDisabledBackground = "#f3f6fb";
+const drawerOptionBorder = "#dbe4f0";
+const drawerOptionBackground = "#f8fbff";
+
 function formatRoleLabel(role: "admin" | "director" | "superadmin" | string): string {
   if (role === "superadmin") return "Diretoria";
   if (role === "director") return "Gerente";
@@ -362,14 +370,14 @@ export function DiretoriaPage({ csrfToken, refreshKey = 0 }: { csrfToken?: strin
         ))}
       </div>
 
-      {message ? <div style={{ color: "#6a5d50", fontSize: 13 }}>{message}</div> : null}
+      {message ? <div style={{ color: "#5b6472", fontSize: 13 }}>{message}</div> : null}
 
       {tab === "admins" ? (
         <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
           <div style={{ display: "flex", justifyContent: "space-between", gap: 16, alignItems: "flex-start", flexWrap: "wrap" }}>
             <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-              <div style={{ fontSize: 11, letterSpacing: "0.18em", textTransform: "uppercase", color: "#7a6b5c" }}>Equipe administrativa</div>
-              <div style={{ color: "#5f5245", fontSize: 14, maxWidth: 640 }}>
+              <div style={{ fontSize: 11, letterSpacing: "0.18em", textTransform: "uppercase", color: "#64748b" }}>Equipe administrativa</div>
+              <div style={{ color: "#5b6472", fontSize: 14, maxWidth: 640 }}>
                 Use a busca só para encontrar um admin já cadastrado. Para criar ou ajustar cargo e permissões, abra o painel de acesso.
               </div>
             </div>
@@ -580,15 +588,20 @@ export function DiretoriaPage({ csrfToken, refreshKey = 0 }: { csrfToken?: strin
       >
         <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
           <div style={{ display: "grid", gap: 8 }}>
-            <div style={{ fontSize: 11, letterSpacing: "0.18em", textTransform: "uppercase", color: "#7a6b5c" }}>E-mail</div>
+            <div style={{ fontSize: 11, letterSpacing: "0.18em", textTransform: "uppercase", color: drawerLabelColor }}>E-mail</div>
             <input
               value={formEmail}
               onChange={(event) => setFormEmail(event.target.value)}
               disabled={accessDrawerMode === "edit"}
               placeholder="funcionario@tsebi.com.br"
-              style={{ border: "1px solid #e0d8cc", borderRadius: 12, padding: "12px 14px", background: accessDrawerMode === "edit" ? "#f7f3ee" : "#fff" }}
+              style={{
+                border: `1px solid ${drawerFieldBorder}`,
+                borderRadius: 12,
+                padding: "12px 14px",
+                background: accessDrawerMode === "edit" ? drawerFieldDisabledBackground : drawerFieldBackground,
+              }}
             />
-            <div style={{ fontSize: 12, color: "#7a6b5c" }}>
+            <div style={{ fontSize: 12, color: drawerMutedTextColor }}>
               {accessDrawerMode === "create"
                 ? "Cadastre aqui o e-mail do funcionário para liberar o acesso administrativo."
                 : "O vínculo do admin continua sendo pelo e-mail já cadastrado."}
@@ -596,18 +609,23 @@ export function DiretoriaPage({ csrfToken, refreshKey = 0 }: { csrfToken?: strin
           </div>
 
           <div style={{ display: "grid", gap: 8 }}>
-            <div style={{ fontSize: 11, letterSpacing: "0.18em", textTransform: "uppercase", color: "#7a6b5c" }}>Cargo</div>
+            <div style={{ fontSize: 11, letterSpacing: "0.18em", textTransform: "uppercase", color: drawerLabelColor }}>Cargo</div>
             <select
               value={formRole}
               onChange={(event) => setFormRole(event.target.value as "admin" | "director" | "superadmin")}
               disabled={editingAdmin?.role === "superadmin"}
-              style={{ border: "1px solid #e0d8cc", borderRadius: 12, padding: "12px 14px", background: editingAdmin?.role === "superadmin" ? "#f7f3ee" : "#fff" }}
+              style={{
+                border: `1px solid ${drawerFieldBorder}`,
+                borderRadius: 12,
+                padding: "12px 14px",
+                background: editingAdmin?.role === "superadmin" ? drawerFieldDisabledBackground : drawerFieldBackground,
+              }}
             >
               <option value="admin">Admin</option>
               <option value="director">Gerente</option>
               <option value="superadmin">Diretoria</option>
             </select>
-            <div style={{ fontSize: 12, color: "#7a6b5c", lineHeight: 1.6 }}>
+            <div style={{ fontSize: 12, color: drawerMutedTextColor, lineHeight: 1.6 }}>
               {formRole === "superadmin"
                 ? "Diretoria tem acesso total e protegido."
                 : formRole === "director"
@@ -617,7 +635,7 @@ export function DiretoriaPage({ csrfToken, refreshKey = 0 }: { csrfToken?: strin
           </div>
 
           <div style={{ display: "grid", gap: 12 }}>
-            <div style={{ fontSize: 11, letterSpacing: "0.18em", textTransform: "uppercase", color: "#7a6b5c" }}>Permissões</div>
+            <div style={{ fontSize: 11, letterSpacing: "0.18em", textTransform: "uppercase", color: drawerLabelColor }}>Permissões</div>
             <div style={{ display: "grid", gap: 10 }}>
               {MODULES.map((moduleItem) => (
                 <label
@@ -627,15 +645,15 @@ export function DiretoriaPage({ csrfToken, refreshKey = 0 }: { csrfToken?: strin
                     alignItems: "center",
                     justifyContent: "space-between",
                     gap: 12,
-                    border: "1px solid #e7ddd1",
+                    border: `1px solid ${drawerOptionBorder}`,
                     borderRadius: 14,
                     padding: "12px 14px",
-                    background: "#fff",
+                    background: drawerOptionBackground,
                   }}
                 >
                   <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
                     <strong style={{ fontSize: 14, fontWeight: 500 }}>{moduleItem.label}</strong>
-                    <span style={{ fontSize: 12, color: "#7a6b5c" }}>Libera o módulo {moduleItem.label.toLowerCase()} para este admin.</span>
+                    <span style={{ fontSize: 12, color: drawerMutedTextColor }}>Libera o módulo {moduleItem.label.toLowerCase()} para este admin.</span>
                   </div>
                   <input
                     type="checkbox"
@@ -653,7 +671,7 @@ export function DiretoriaPage({ csrfToken, refreshKey = 0 }: { csrfToken?: strin
               ))}
             </div>
             {formRole !== "admin" ? (
-              <div style={{ fontSize: 12, color: "#7a6b5c" }}>
+              <div style={{ fontSize: 12, color: drawerMutedTextColor }}>
                 Para Gerente e Diretoria, as permissões por módulo deixam de limitar o acesso principal.
               </div>
             ) : null}
@@ -661,12 +679,17 @@ export function DiretoriaPage({ csrfToken, refreshKey = 0 }: { csrfToken?: strin
 
           {accessDrawerMode === "edit" ? (
             <div style={{ display: "grid", gap: 8 }}>
-              <div style={{ fontSize: 11, letterSpacing: "0.18em", textTransform: "uppercase", color: "#7a6b5c" }}>Status</div>
+              <div style={{ fontSize: 11, letterSpacing: "0.18em", textTransform: "uppercase", color: drawerLabelColor }}>Status</div>
               <select
                 value={formIsActive ? "active" : "inactive"}
                 onChange={(event) => setFormIsActive(event.target.value === "active")}
                 disabled={editingAdmin?.role === "superadmin"}
-                style={{ border: "1px solid #e0d8cc", borderRadius: 12, padding: "12px 14px", background: editingAdmin?.role === "superadmin" ? "#f7f3ee" : "#fff" }}
+                style={{
+                  border: `1px solid ${drawerFieldBorder}`,
+                  borderRadius: 12,
+                  padding: "12px 14px",
+                  background: editingAdmin?.role === "superadmin" ? drawerFieldDisabledBackground : drawerFieldBackground,
+                }}
               >
                 <option value="active">Ativo</option>
                 <option value="inactive">Inativo</option>

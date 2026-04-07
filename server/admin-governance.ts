@@ -272,7 +272,7 @@ adminGovernanceRouter.patch("/diretoria/admins/:id/permissions", requireRole(["d
   }
 });
 
-adminGovernanceRouter.patch("/diretoria/admins/:id/status", requireRole(["director", "superadmin"]), async (req: any, res: any) => {
+adminGovernanceRouter.patch("/diretoria/admins/:id/status", requireRole(["director", "superadmin"]), requireAdminStepUp("mfa", "admin_status_update"), async (req: any, res: any) => {
   const parsed = adminStatusSchema.safeParse(req.body || {});
   if (!parsed.success) return res.status(400).json({ error: "INVALID_INPUT" });
 
@@ -437,7 +437,7 @@ adminGovernanceRouter.post(
     if (!requestRow) return "mfa";
     const amount = Number(requestRow.amount || 0);
     if (amount > 1000 || requestRow.relatedOrderId) return "mfa";
-    return null;
+    return "password";
   }, "balance_approve"),
   async (req: any, res: any) => {
   try {

@@ -139,6 +139,18 @@ adminRouter.use(
     const path = String(req.path || "").trim();
     if (path === "/notifications/read-all") return null;
     if (/^\/notifications\/[^/]+\/read$/i.test(path)) return null;
+    if (path === "/diretoria/admins") return null;
+    if (/^\/diretoria\/admins\/[^/]+\/(role|permissions|status)$/i.test(path)) return null;
+    if (/^\/diretoria\/balance\/requests\/[^/]+\/approve$/i.test(path)) return null;
+    if (path === "/gift-cards" && method === "POST") {
+      const initialBalanceCents = Number(req.body?.initialBalanceCents || 0);
+      return initialBalanceCents > 50_000 ? null : "password";
+    }
+    if (/^\/orders\/[^/]+$/i.test(path) && method === "PATCH") {
+      const body = req.body && typeof req.body === "object" && !Array.isArray(req.body) ? req.body : {};
+      const requestedStatus = normalizeOrderStatusInput(body.orderStatus ?? body.status);
+      if (requestedStatus === "paid") return null;
+    }
     return "password";
   }, "admin_mutation")
 );
