@@ -46,6 +46,8 @@ function mapTxnRow(row: any) {
     giftCardId: row.gift_card_id,
     orderId: row.order_id || null,
     userId: row.user_id || null,
+    userEmail: row.user_email || null,
+    userName: row.user_name || null,
     deltaCents: row.delta_cents,
     balanceAfterCents: row.balance_after_cents,
     reason: row.reason,
@@ -294,7 +296,15 @@ async function refundGiftCard(params: {
 
 async function getGiftCardTransactions(giftCardId: string) {
   const result = await query(
-    `SELECT * FROM gift_card_transactions WHERE gift_card_id = $1 ORDER BY created_at DESC LIMIT 100`,
+    `SELECT
+       tx.*,
+       u.email AS user_email,
+       u.name AS user_name
+     FROM gift_card_transactions tx
+     LEFT JOIN users u ON u.id = tx.user_id
+     WHERE tx.gift_card_id = $1
+     ORDER BY tx.created_at DESC
+     LIMIT 100`,
     [giftCardId]
   );
   return result.rows.map(mapTxnRow);
@@ -400,7 +410,13 @@ async function redeemGiftCardToWallet(userId: string, code: string) {
       [userId, amount, balanceAfter, card.id]
     );
 
-    return { ok: true as const, addedCents: amount, walletBalanceCents: balanceAfter };
+    return {
+      ok: true as const,
+      giftCardId: card.id,
+      giftCardCode: card.code,
+      addedCents: amount,
+      walletBalanceCents: balanceAfter
+    };
   });
 }
 

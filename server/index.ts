@@ -50,6 +50,7 @@ const {
 const { withTransaction, query } = require("./lib/db");
 const { logServerEvent, buildRequestLogContext } = require("./lib/observability-log");
 const { logProductSearchEvent } = require("./lib/search-telemetry-repository");
+const { insertAdminAuditLog } = require("./lib/admin-audit-repository");
 const {
   logBehaviorEvent,
   mergeAnonymousIdentity,
@@ -128,12 +129,45 @@ function giftCardActorKey(req: any): string {
   return `${getRequestIp(req)}:${userId}`;
 }
 
+async function recordGiftCardAuditEvent(
+  req: any,
+  payload: {
+    action: string;
+    summary: string;
+    entityId?: string | null;
+    actorUserId?: string | null;
+    actorEmail?: string | null;
+    meta?: Record<string, unknown>;
+  }
+) {
+  try {
+    await insertAdminAuditLog({
+      action: payload.action,
+      entityType: "gift_card",
+      entityId: payload.entityId ? String(payload.entityId) : "",
+      summary: payload.summary,
+      actorUserId: payload.actorUserId || null,
+      actorEmail: String(payload.actorEmail || "").trim(),
+      requestIp: getRequestIp(req),
+      userAgent: String(req.headers["user-agent"] || ""),
+      meta: {
+        route: String(req.originalUrl || req.url || ""),
+        sourceIp: getRequestIp(req),
+        ...payload.meta,
+      },
+      reversible: false,
+    });
+  } catch {}
+}
+
 function logGiftCardSecurityEvent(req: any, event: string, extra?: Record<string, unknown>) {
   const userId = String(req.session?.userId || "").trim() || undefined;
   const rawCode = req.body?.code || req.body?.giftCardCode;
+  const routeType = String(extra?.routeType || req.originalUrl || req.url || "").trim() || "unknown";
+  const sourceIp = getRequestIp(req);
   const requestContext = buildRequestLogContext(req, {
     userId,
-    ipAddress: getRequestIp(req),
+    ipAddress: sourceIp,
     giftCardCodeHash: hashGiftCardCodeForSecurity(rawCode),
     ...extra,
   });
@@ -141,6 +175,19 @@ function logGiftCardSecurityEvent(req: any, event: string, extra?: Record<string
     event,
     message: "Gift card security event detected.",
     ...requestContext,
+  });
+  void recordGiftCardAuditEvent(req, {
+    action: "security_alert",
+    actorUserId: userId || null,
+    actorEmail: String(req.session?.user?.email || "").trim() || null,
+    summary: `Tentativas incomuns detectadas em um gift card via ${routeType}.`,
+    meta: {
+      event,
+      routeType,
+      sourceIp,
+      giftCardCodeHash: hashGiftCardCodeForSecurity(rawCode),
+      ...extra,
+    },
   });
 }
 
@@ -2406,6 +2453,19 @@ app.post("/api/gift-cards/redeem", requireAuth, requireUserCsrfForMutations, gif
       logGiftCardSecurityEvent(req, "gift_card_redeem_failed", { routeType: "redeem", errorCode: result.error });
       return res.status(400).json({ ok: false, error: result.error });
     }
+    await recordGiftCardAuditEvent(req, {
+      action: "redemption",
+      entityId: result.giftCardId || null,
+      actorUserId: userId,
+      actorEmail: String(req.session?.user?.email || "").trim() || null,
+      summary: `Gift card ${result.giftCardCode || code} resgatado para a conta.`,
+      meta: {
+        giftCardCode: result.giftCardCode || code,
+        addedCents: result.addedCents,
+        walletBalanceCents: result.walletBalanceCents,
+        source: "wallet_redeem",
+      },
+    });
     return res.json({ ok: true, addedCents: result.addedCents, walletBalanceCents: result.walletBalanceCents });
   } catch {
     return res.status(500).json({ ok: false, error: "GIFT_CARD_REDEEM_FAILED" });
@@ -2423,6 +2483,19 @@ app.post("/api/gift-cards/link", requireAuth, requireUserCsrfForMutations, giftC
       logGiftCardSecurityEvent(req, "gift_card_link_failed", { routeType: "link", errorCode: result.error });
       return res.status(400).json({ ok: false, error: result.error });
     }
+    await recordGiftCardAuditEvent(req, {
+      action: "link",
+      entityId: result.giftCardId || null,
+      actorUserId: userId,
+      actorEmail: String(req.session?.user?.email || "").trim() || null,
+      summary: `Gift card ${result.giftCardCode || code} vinculado e resgatado para a conta.`,
+      meta: {
+        giftCardCode: result.giftCardCode || code,
+        addedCents: result.addedCents,
+        walletBalanceCents: result.walletBalanceCents,
+        source: "account_link",
+      },
+    });
     return res.json({ ok: true, addedCents: result.addedCents, walletBalanceCents: result.walletBalanceCents });
   } catch {
     return res.status(500).json({ ok: false, error: "GIFT_CARD_REDEEM_FAILED" });
@@ -2694,7 +2767,7 @@ app.post(
     if (walletBalance < walletOrderAmount) {
       return res.status(400).json({ error: "INSUFFICIENT_WALLET_BALANCE", balanceCents: walletBalance });
     }
-    const newOrder = await withTransaction(async (client: any) => {
+    const walletCheckoutResult = await withTransaction(async (client: any) => {
       const createdOrder = await createOrderWithClient(client, {
         userId: checkoutUser.id,
         items: availability.resolvedItems,
@@ -2725,11 +2798,27 @@ app.post(
       if (!debitResult.ok) {
         throw Object.assign(new Error(String(debitResult.error || "WALLET_DEBIT_FAILED")), { status: 409 });
       }
-      return createdOrder;
+      return {
+        order: createdOrder,
+        walletBalanceCents: debitResult.balanceAfterCents,
+      };
     });
+    const newOrder = walletCheckoutResult?.order || null;
     if (!newOrder?.id) return res.status(500).json({ error: "ORDER_CREATE_FAILED" });
     await commitStock(availability.resolvedItems, newOrder.id).catch(() => {});
     if (requestedDiscountCode && walletDiscountAmount > 0) await incrementAccessCodeUsage(requestedDiscountCode).catch(() => {});
+    await recordGiftCardAuditEvent(req, {
+      action: "wallet_purchase",
+      actorUserId: checkoutUser.id,
+      actorEmail: checkoutUser.email || null,
+      summary: "Compra paga com saldo da conta.",
+      meta: {
+        orderId: newOrder.id,
+        orderNumber: newOrder.orderNumber || "",
+        walletBalanceCents: walletCheckoutResult?.walletBalanceCents ?? null,
+        source: "checkout_wallet",
+      },
+    });
     notifyOrderConfirmed({ order: newOrder, user: checkoutUser }).catch(() => {});
     return res.json({ ok: true, orderNumber: String(newOrder.id || ""), orderStatus: "paid", paymentMethod: "wallet" });
   }
@@ -2764,7 +2853,7 @@ app.post(
     }
 
     // Create order with paid status
-    const newOrder = await withTransaction(async (client: any) => {
+    const giftCardCheckoutResult = await withTransaction(async (client: any) => {
       const createdOrder = await createOrderWithClient(client, {
         userId: checkoutUser.id,
         items: availability.resolvedItems,
@@ -2804,8 +2893,12 @@ app.post(
       if (!debitResult.ok) {
         throw Object.assign(new Error(String(debitResult.error || "GIFT_CARD_DEBIT_FAILED")), { status: 409 });
       }
-      return createdOrder;
+      return {
+        order: createdOrder,
+        card: debitResult.card || null,
+      };
     });
+    const newOrder = giftCardCheckoutResult?.order || null;
 
     if (!newOrder?.id) {
       return res.status(500).json({ error: "ORDER_CREATE_FAILED" });
@@ -2818,6 +2911,21 @@ app.post(
     if (requestedDiscountCode && gcDiscountAmount > 0) {
       await incrementAccessCodeUsage(requestedDiscountCode).catch(() => {});
     }
+
+    await recordGiftCardAuditEvent(req, {
+      action: "purchase",
+      entityId: giftCardCheckoutResult?.card?.id || null,
+      actorUserId: checkoutUser.id,
+      actorEmail: checkoutUser.email || null,
+      summary: `Gift card ${requestedGiftCardCode} usado em uma compra.`,
+      meta: {
+        giftCardCode: requestedGiftCardCode,
+        orderId: newOrder.id,
+        orderNumber: newOrder.orderNumber || "",
+        amountCents: gcOrderAmount,
+        source: "checkout_gift_card",
+      },
+    });
 
     // Notify
     notifyOrderConfirmed({ order: newOrder, user: checkoutUser }).catch(() => {});

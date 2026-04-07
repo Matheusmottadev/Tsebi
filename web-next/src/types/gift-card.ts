@@ -18,6 +18,8 @@ export interface GiftCardTransaction {
   giftCardId: string;
   orderId: string | null;
   userId: string | null;
+  userEmail?: string | null;
+  userName?: string | null;
   deltaCents: number;
   balanceAfterCents: number;
   reason: string;

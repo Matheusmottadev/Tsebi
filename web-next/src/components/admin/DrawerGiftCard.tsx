@@ -200,6 +200,17 @@ export function DrawerGiftCard({ isOpen, giftCard, csrfToken, onClose, onSaved }
               <div>
                 <div style={{ fontWeight: 500 }}>{formatReason(txn.reason)}</div>
                 <div style={{ color: "#999", fontSize: 11, marginTop: 2 }}>{formatDate(txn.createdAt)}</div>
+                {(txn.userEmail || txn.userName) && (
+                  <div style={{ color: "#999", fontSize: 11, marginTop: 2 }}>
+                    Conta: {txn.userName || txn.userEmail}
+                    {txn.userName && txn.userEmail ? ` (${txn.userEmail})` : ""}
+                  </div>
+                )}
+                {txn.orderId && (
+                  <div style={{ color: "#999", fontSize: 11, marginTop: 2 }}>
+                    Pedido: {txn.orderId}
+                  </div>
+                )}
               </div>
               <div style={{ textAlign: "right" }}>
                 <div style={{ color: txn.deltaCents < 0 ? "#c0392b" : "#27ae60", fontWeight: 600 }}>

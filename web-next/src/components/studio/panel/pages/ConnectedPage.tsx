@@ -222,6 +222,18 @@ function normalizeAuditEventType(action: string): "login" | "logout" | "criacao"
   return "outro";
 }
 
+function readAuditMetaString(log: AdminAuditLog, key: string): string {
+  const value = log.meta?.[key];
+  return typeof value === "string" ? value.trim() : "";
+}
+
+function formatAuditOrigin(log: AdminAuditLog): string {
+  const route = readAuditMetaString(log, "routeType") || readAuditMetaString(log, "route");
+  const sourceIp = readAuditMetaString(log, "sourceIp") || log.requestIp || "";
+  if (route && sourceIp) return `${route} • ${sourceIp}`;
+  return route || sourceIp || "-";
+}
+
 function formatOrderStatus(order: AdminOrderSummary): string {
   const status = normalizeTextForCompare(order.status);
   const tracking = [order.trackingStatus, order.shipment?.status]
@@ -840,7 +852,16 @@ export function ConnectedPage({
   const filteredAudit = useMemo(() => {
     const query = normalizeTextForCompare(auditSearch);
     const nextRows = [...auditRows].filter((log) => {
-      const matchesQuery = !query || normalizeTextForCompare([log.summary, log.actorEmail, log.action, log.entityType].join(" ")).includes(query);
+      const matchesQuery = !query || normalizeTextForCompare([
+        log.summary,
+        log.actorEmail,
+        log.action,
+        log.entityType,
+        log.requestIp,
+        readAuditMetaString(log, "routeType"),
+        readAuditMetaString(log, "route"),
+        readAuditMetaString(log, "sourceIp"),
+      ].join(" ")).includes(query);
       if (!matchesQuery) return false;
       if (auditEventFilter !== "todos" && normalizeAuditEventType(log.action) !== auditEventFilter) return false;
       return matchesPeriod(log.createdAt, auditPeriodFilter);
@@ -1865,7 +1886,7 @@ export function ConnectedPage({
                 <thead>
                   <tr>
                     <th>Código</th>
-                    <th>Saldo</th>
+                    <th>Usos</th>
                     <th>Valor inicial</th>
                     <th>Ativo</th>
                     <th>Expira em</th>
@@ -1892,7 +1913,7 @@ export function ConnectedPage({
                           </button>
                         </span>
                       </td>
-                      <td style={{ fontWeight: 600 }}>{formatMoneyCents(card.balanceCents)}</td>
+                      <td style={{ fontWeight: 600 }}>{Number(card.useCount || 0)} / {Number(card.maxUses || 1)}</td>
                       <td>{formatMoneyCents(card.initialBalanceCents)}</td>
                       <td>{card.active ? "sim" : "não"}</td>
                       <td>{formatDateTime(card.expiresAt)}</td>
@@ -1974,7 +1995,8 @@ export function ConnectedPage({
                     <th>Acao</th>
                     <th>Entidade</th>
                     <th>Resumo</th>
-                    <th>Ator</th>
+                    <th>Conta</th>
+                    <th>Origem</th>
                     <th>Data</th>
                   </tr>
                 </thead>
@@ -1985,6 +2007,7 @@ export function ConnectedPage({
                       <td>{log.entityType || "-"}</td>
                       <td>{log.summary || "-"}</td>
                       <td>{log.actorEmail || "-"}</td>
+                      <td>{formatAuditOrigin(log)}</td>
                       <td>{formatDateTime(log.createdAt)}</td>
                     </tr>
                   ))}

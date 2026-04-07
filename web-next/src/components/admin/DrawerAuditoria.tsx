@@ -18,11 +18,21 @@ function csvEscape(value: unknown) {
 }
 
 function downloadAuditCsv(rows: AdminAuditLog[]) {
-  const header = ["id", "action", "entityType", "entityId", "summary", "actorEmail", "createdAt"];
+  const header = ["id", "action", "entityType", "entityId", "summary", "actorEmail", "requestIp", "route", "createdAt"];
   const lines = [header.join(",")];
   for (const row of rows) {
     lines.push(
-      [row.id, row.action, row.entityType, row.entityId || "", row.summary || "", row.actorEmail || "", row.createdAt || ""]
+      [
+        row.id,
+        row.action,
+        row.entityType,
+        row.entityId || "",
+        row.summary || "",
+        row.actorEmail || "",
+        row.requestIp || "",
+        typeof row.meta?.routeType === "string" ? row.meta.routeType : typeof row.meta?.route === "string" ? row.meta.route : "",
+        row.createdAt || "",
+      ]
         .map((value) => csvEscape(value))
         .join(",")
     );
@@ -70,4 +80,3 @@ export function DrawerAuditoria({ isOpen, onClose, rows, onSaved }: DrawerAudito
     </Drawer>
   );
 }
-
