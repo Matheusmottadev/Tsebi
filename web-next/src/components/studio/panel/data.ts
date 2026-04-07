@@ -10,6 +10,7 @@ export const PAGE_TITLES: Record<AdminPageKey, string> = {
   lista_vip: "Lista VIP",
   newsletter: "Newsletter",
   cupons: "Cupons",
+  gift_cards: "Gift Cards",
   auditoria: "Auditoria",
   notificacoes: "Notificações",
 };
