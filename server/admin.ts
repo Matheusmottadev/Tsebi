@@ -4056,7 +4056,7 @@ adminRouter.delete("/gift-cards/:id", async (req, res) => {
     if (!result?.ok && result?.error === "GC_DELETE_FORBIDDEN_HAS_HISTORY") {
       return res.status(409).json({
         error: "GC_DELETE_FORBIDDEN_HAS_HISTORY",
-        message: "Gift cards com historico de uso nao podem ser excluidos. Suspenda o uso em vez de apagar."
+        message: "Este gift card ja teve movimentacao no sistema e nao pode ser apagado. Para impedir novos usos, clique em suspender."
       });
     }
     if (!result?.ok) return res.status(400).json({ error: result?.error || "REQUEST_FAILED" });

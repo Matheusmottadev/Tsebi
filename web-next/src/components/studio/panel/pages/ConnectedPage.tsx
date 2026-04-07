@@ -246,6 +246,12 @@ function formatOrderStatus(order: AdminOrderSummary): string {
 }
 
 function pickErrorMessage(error: unknown): string {
+  if (error && typeof error === "object" && "payload" in error) {
+    const payload = (error as { payload?: { message?: unknown } }).payload;
+    if (payload && typeof payload === "object" && typeof payload.message === "string" && payload.message.trim()) {
+      return payload.message.trim();
+    }
+  }
   if (error instanceof Error && error.message) return error.message;
   return "Falha na operação.";
 }
@@ -408,6 +414,7 @@ export function ConnectedPage({
   const [couponsSort, setCouponsSort] = useState("mais_recente");
 
   const [giftCardsSearch, setGiftCardsSearch] = useState("");
+  const [giftCardsStatusFilter, setGiftCardsStatusFilter] = useState("todos");
   const [copiedGiftCardId, setCopiedGiftCardId] = useState<string | null>(null);
 
   const [editingGiftCard, setEditingGiftCard] = useState<GiftCard | null | undefined>(undefined);
@@ -818,13 +825,17 @@ export function ConnectedPage({
 
   const filteredGiftCards = useMemo(() => {
     const search = normalizeTextForCompare(giftCardsSearch);
-    if (!search) return giftCardsRows || [];
-    return (giftCardsRows || []).filter(
-      (c) =>
-        normalizeTextForCompare(c.code).includes(search) ||
-        normalizeTextForCompare(c.note).includes(search)
-    );
-  }, [giftCardsRows, giftCardsSearch]);
+    return (giftCardsRows || []).filter((card) => {
+      const matchesSearch =
+        !search ||
+        normalizeTextForCompare(card.code).includes(search) ||
+        normalizeTextForCompare(card.note).includes(search);
+      if (!matchesSearch) return false;
+      if (giftCardsStatusFilter === "ativos" && !card.active) return false;
+      if (giftCardsStatusFilter === "inativos" && card.active) return false;
+      return true;
+    });
+  }, [giftCardsRows, giftCardsSearch, giftCardsStatusFilter]);
 
   const filteredAudit = useMemo(() => {
     const query = normalizeTextForCompare(auditSearch);
@@ -1827,10 +1838,25 @@ export function ConnectedPage({
               placeholder="Buscar por código ou nota"
               value={giftCardsSearch}
               onChange={setGiftCardsSearch}
-              filters={[]}
+              filters={[
+                {
+                  key: "gift-cards-status",
+                  value: giftCardsStatusFilter,
+                  onChange: setGiftCardsStatusFilter,
+                  ariaLabel: "Filtrar gift cards por status",
+                  options: [
+                    { label: "Todos", value: "todos" },
+                    { label: "Ativos", value: "ativos" },
+                    { label: "Inativos", value: "inativos" },
+                  ],
+                },
+              ]}
               sortOptions={[]}
               resultsCount={filteredGiftCards.length}
-              onClear={() => setGiftCardsSearch("")}
+              onClear={() => {
+                setGiftCardsSearch("");
+                setGiftCardsStatusFilter("todos");
+              }}
             />
           </div>
           {filteredGiftCards.length ? (
