@@ -225,6 +225,22 @@ export function BalancePage({ csrfToken, refreshKey = 0 }: { csrfToken?: string;
   }, [selectedCustomer?.walletCents, amountCents, type]);
   const canSubmit = Boolean(selectedCustomer?.id) && amountCents > 0 && (reason !== "other" || reasonDetail.trim().length > 0);
   const latestRequests = useMemo(() => requests.slice(0, 4), [requests]);
+  const recentCustomers = useMemo(() => {
+    const seen = new Set<string>();
+    return requests
+      .filter((request) => {
+        const customerId = String(request.customerId || "").trim();
+        if (!customerId || seen.has(customerId)) return false;
+        seen.add(customerId);
+        return true;
+      })
+      .slice(0, 4)
+      .map((request) => ({
+        id: String(request.customerId || "").trim(),
+        name: String(request.customerName || "").trim() || "Cliente",
+        email: String(request.customerEmail || "").trim(),
+      }));
+  }, [requests]);
   const visibleOrders = useMemo(
     () => (showAllOrders ? customerOrders : customerOrders.slice(0, 5)),
     [customerOrders, showAllOrders]
@@ -296,107 +312,229 @@ export function BalancePage({ csrfToken, refreshKey = 0 }: { csrfToken?: string;
           </p>
         </div>
 
-        <section
+        <div
           style={{
-            ...cardStyle,
-            maxWidth: 760,
-            width: "100%",
-            margin: "0 auto",
             display: "grid",
-            gap: 18,
-            textAlign: "center",
+            gridTemplateColumns: "minmax(0, 1.5fr) minmax(320px, 0.9fr)",
+            gap: 20,
+            alignItems: "start",
           }}
         >
-          <div style={{ display: "grid", gap: 8 }}>
-            <h3
-              style={{
-                margin: 0,
-                fontSize: 28,
-                color: "#111111",
-                fontFamily: 'var(--font-jost), "Helvetica Neue", Arial, sans-serif',
-                fontWeight: 500,
-                letterSpacing: "-0.02em",
-              }}
-            >
-              Buscar cliente
-            </h3>
-            <p style={{ margin: 0, color: "#666666", fontSize: 15 }}>
-              Digite o nome, e-mail ou ID para localizar a conta e continuar o atendimento.
-            </p>
-          </div>
-
-          <div style={{ display: "grid", gap: 14, textAlign: "left" }}>
-            <input
-              value={query}
-              onChange={(event) => setQuery(event.target.value)}
-              placeholder="Nome, e-mail ou ID do cliente..."
-              style={{
-                ...fieldStyle,
-                padding: "18px 20px",
-                fontSize: 20,
-                borderColor: "#d6d6d6",
-              }}
-            />
-
-            {results.length > 0 ? (
-              <div style={{ display: "grid", gap: 10 }}>
-                {results.map((customer) => (
-                  <button
-                    key={customer.id}
-                    type="button"
-                    onClick={() => handleSelectCustomer(customer.id)}
-                    style={{
-                      border: "1px solid #e2e2e2",
-                      borderRadius: 16,
-                      background: "#ffffff",
-                      color: "#111111",
-                      padding: "16px 18px",
-                      textAlign: "left",
-                      display: "grid",
-                      gridTemplateColumns: "auto 1fr auto",
-                      gap: 14,
-                      alignItems: "center",
-                      cursor: "pointer",
-                    }}
-                  >
-                    <div
-                      style={{
-                        width: 44,
-                        height: 44,
-                        borderRadius: 14,
-                        display: "grid",
-                        placeItems: "center",
-                        background: "#111111",
-                        color: "#ffffff",
-                        fontWeight: 700,
-                        letterSpacing: "0.04em",
-                      }}
-                    >
-                      {getInitials(customer.name, customer.email)}
-                    </div>
-                    <div style={{ display: "grid", gap: 4 }}>
-                      <strong style={{ fontSize: 16 }}>{customer.name || "Cliente"}</strong>
-                      <span style={{ fontSize: 13, color: "#666666" }}>{customer.email}</span>
-                    </div>
-                    <span style={{ fontSize: 12, color: "#111111", fontWeight: 600 }}>Selecionar</span>
-                  </button>
-                ))}
-              </div>
-            ) : query.trim().length >= 2 ? (
-              <div
+          <section
+            style={{
+              ...cardStyle,
+              display: "grid",
+              gap: 18,
+            }}
+          >
+            <div style={{ display: "grid", gap: 8 }}>
+              <h3
                 style={{
-                  borderRadius: 16,
-                  border: "1px dashed #d8d8d8",
-                  padding: "18px 20px",
-                  color: "#666666",
-                  textAlign: "center",
+                  margin: 0,
+                  fontSize: 28,
+                  color: "#111111",
+                  fontFamily: 'var(--font-jost), "Helvetica Neue", Arial, sans-serif',
+                  fontWeight: 500,
+                  letterSpacing: "-0.02em",
                 }}
               >
-                Nenhum cliente encontrado para essa busca.
+                Buscar cliente
+              </h3>
+              <p style={{ margin: 0, color: "#666666", fontSize: 15 }}>
+                Digite o nome, e-mail ou ID para localizar a conta e continuar o atendimento.
+              </p>
+            </div>
+
+            <div style={{ display: "grid", gap: 14 }}>
+              <input
+                value={query}
+                onChange={(event) => setQuery(event.target.value)}
+                placeholder="Nome, e-mail ou ID do cliente..."
+                style={{
+                  ...fieldStyle,
+                  padding: "18px 20px",
+                  fontSize: 20,
+                  borderColor: "#d6d6d6",
+                }}
+              />
+
+              {results.length > 0 ? (
+                <div style={{ display: "grid", gap: 10 }}>
+                  {results.map((customer) => (
+                    <button
+                      key={customer.id}
+                      type="button"
+                      onClick={() => handleSelectCustomer(customer.id)}
+                      style={{
+                        border: "1px solid #e2e2e2",
+                        borderRadius: 16,
+                        background: "#ffffff",
+                        color: "#111111",
+                        padding: "16px 18px",
+                        textAlign: "left",
+                        display: "grid",
+                        gridTemplateColumns: "auto 1fr auto",
+                        gap: 14,
+                        alignItems: "center",
+                        cursor: "pointer",
+                      }}
+                    >
+                      <div
+                        style={{
+                          width: 44,
+                          height: 44,
+                          borderRadius: 14,
+                          display: "grid",
+                          placeItems: "center",
+                          background: "#111111",
+                          color: "#ffffff",
+                          fontWeight: 700,
+                          letterSpacing: "0.04em",
+                        }}
+                      >
+                        {getInitials(customer.name, customer.email)}
+                      </div>
+                      <div style={{ display: "grid", gap: 4 }}>
+                        <strong style={{ fontSize: 16 }}>{customer.name || "Cliente"}</strong>
+                        <span style={{ fontSize: 13, color: "#666666" }}>{customer.email}</span>
+                      </div>
+                      <span style={{ fontSize: 12, color: "#111111", fontWeight: 600 }}>Selecionar</span>
+                    </button>
+                  ))}
+                </div>
+              ) : query.trim().length >= 2 ? (
+                <div
+                  style={{
+                    borderRadius: 16,
+                    border: "1px dashed #d8d8d8",
+                    padding: "18px 20px",
+                    color: "#666666",
+                    textAlign: "center",
+                  }}
+                >
+                  Nenhum cliente encontrado para essa busca.
+                </div>
+              ) : null}
+            </div>
+
+            {!query.trim() && recentCustomers.length ? (
+              <div style={{ display: "grid", gap: 10 }}>
+                <div style={{ fontSize: 11, letterSpacing: "0.16em", textTransform: "uppercase", color: "#666666" }}>
+                  Clientes recentes
+                </div>
+                <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+                  {recentCustomers.map((customer) => (
+                    <button
+                      key={customer.id}
+                      type="button"
+                      onClick={() => handleSelectCustomer(customer.id)}
+                      style={{
+                        border: "1px solid #d8d8d8",
+                        borderRadius: 999,
+                        background: "#ffffff",
+                        color: "#111111",
+                        padding: "10px 14px",
+                        cursor: "pointer",
+                        fontSize: 13,
+                        fontWeight: 600,
+                      }}
+                    >
+                      {customer.name}
+                    </button>
+                  ))}
+                </div>
               </div>
             ) : null}
+          </section>
+
+          <div style={{ display: "grid", gap: 20 }}>
+            <section style={cardStyle}>
+              <div style={{ display: "grid", gap: 12 }}>
+                <div style={{ fontSize: 11, letterSpacing: "0.16em", textTransform: "uppercase", color: "#666666" }}>
+                  Como funciona
+                </div>
+                {[
+                  "1. Busque o cliente para abrir a conta correta.",
+                  "2. Confira saldo, pedidos e histórico recente.",
+                  "3. Envie o ajuste para aprovação da gerência ou diretoria.",
+                ].map((item) => (
+                  <div key={item} style={{ display: "flex", gap: 10, alignItems: "flex-start", color: "#444444", fontSize: 14, lineHeight: 1.5 }}>
+                    <span style={{ width: 7, height: 7, borderRadius: 999, background: "#111111", marginTop: 7, flexShrink: 0 }} />
+                    <span>{item}</span>
+                  </div>
+                ))}
+              </div>
+            </section>
+
+            <section style={cardStyle}>
+              <div style={{ display: "grid", gap: 6 }}>
+                <div style={{ fontSize: 11, letterSpacing: "0.16em", textTransform: "uppercase", color: "#666666" }}>
+                  Últimas solicitações
+                </div>
+                <div style={{ fontSize: 14, color: "#666666" }}>
+                  Consulte os últimos ajustes já enviados pelo time.
+                </div>
+              </div>
+
+              {latestRequests.length ? (
+                <div style={{ display: "grid", gap: 10, marginTop: 14 }}>
+                  {latestRequests.map((request) => {
+                    const tone = requestStatusTone(request.status);
+                    return (
+                      <div
+                        key={request.id}
+                        style={{
+                          borderRadius: 16,
+                          border: "1px solid #ececec",
+                          background: "#ffffff",
+                          padding: "14px 16px",
+                          display: "grid",
+                          gap: 8,
+                        }}
+                      >
+                        <div style={{ display: "flex", justifyContent: "space-between", gap: 12, alignItems: "center", flexWrap: "wrap" }}>
+                          <strong style={{ fontSize: 15, color: "#111111" }}>{request.customerName || request.customerEmail || "Cliente"}</strong>
+                          <span
+                            style={{
+                              display: "inline-flex",
+                              borderRadius: 999,
+                              padding: "5px 10px",
+                              fontSize: 11,
+                              fontWeight: 700,
+                              background: tone.background,
+                              color: tone.color,
+                              border: `1px solid ${tone.border}`,
+                            }}
+                          >
+                            {tone.label}
+                          </span>
+                        </div>
+                        <div style={{ fontSize: 13, color: "#444444" }}>
+                          {request.type === "debit" ? "Remoção" : "Adição"} de{" "}
+                          <strong style={{ color: "#111111" }}>{formatMoney(Math.round(request.amount * 100))}</strong>
+                        </div>
+                        <div style={{ fontSize: 12, color: "#666666" }}>{formatDate(request.createdAt, true)}</div>
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div
+                  style={{
+                    borderRadius: 16,
+                    border: "1px dashed #d8d8d8",
+                    padding: "18px 20px",
+                    color: "#666666",
+                    textAlign: "center",
+                    marginTop: 14,
+                  }}
+                >
+                  As últimas solicitações de saldo vão aparecer aqui.
+                </div>
+              )}
+            </section>
           </div>
-        </section>
+        </div>
       </div>
     );
   }
