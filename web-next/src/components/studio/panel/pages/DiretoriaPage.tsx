@@ -79,6 +79,14 @@ function statusBadge(status: BalanceRequestRow["status"]) {
   return { background: "#f7f0e5", color: "#7a5d28", label: "Pendente" };
 }
 
+function formatApprovalReason(reason: BalanceRequestRow["reason"]) {
+  if (reason === "product_return") return "Devolução de produto";
+  if (reason === "billing_error") return "Erro de cobrança";
+  if (reason === "courtesy") return "Cortesia";
+  if (reason === "manual_adjustment") return "Ajuste manual";
+  return "Outro motivo";
+}
+
 export function DiretoriaPage({ csrfToken, refreshKey = 0 }: { csrfToken?: string; refreshKey?: number }) {
   const [tab, setTab] = useState<"admins" | "approvals" | "audit">("admins");
   const [admins, setAdmins] = useState<AdminAccessRow[]>([]);
@@ -707,6 +715,8 @@ export function DiretoriaPage({ csrfToken, refreshKey = 0 }: { csrfToken?: strin
         }}
         title="Solicitação de saldo"
         subtitle={selectedRequest?.customerName || selectedRequest?.customerEmail || ""}
+        wide
+        stickyFooter
         footer={
           <div style={{ display: "flex", width: "100%", justifyContent: "space-between", gap: 10 }}>
             <button type="button" className={styles.btnDelete} onClick={handleRejectSelected} disabled={!selectedRequest || selectedRequest.status !== "pending" || !rejectReason.trim()}>
@@ -719,31 +729,131 @@ export function DiretoriaPage({ csrfToken, refreshKey = 0 }: { csrfToken?: strin
         }
       >
         {selectedRequest ? (
-          <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
             {selectedBadge ? (
               <span style={{ alignSelf: "flex-start", display: "inline-flex", borderRadius: 999, padding: "4px 9px", fontSize: 10, letterSpacing: "0.12em", textTransform: "uppercase", fontWeight: 600, ...selectedBadge }}>
                 {selectedBadge.label}
               </span>
             ) : null}
-            <div style={{ display: "grid", gap: 10 }}>
-              <div><strong>Solicitante:</strong> {selectedRequest.requesterName || selectedRequest.requesterEmail || "-"}</div>
-              <div><strong>Cliente:</strong> {selectedRequest.customerName || selectedRequest.customerEmail || "-"}</div>
-              <div><strong>Operação:</strong> {selectedRequest.type === "debit" ? "Débito" : "Crédito"}</div>
-              <div><strong>Valor:</strong> {formatMoney(Math.round(Number(selectedRequest.amount || 0) * 100))}</div>
-              <div><strong>Saldo atual:</strong> {formatMoney(selectedRequest.customerWalletCents)}</div>
-              <div><strong>Saldo resultante:</strong> {formatMoney(selectedRequest.resultingBalanceCents)}</div>
-              <div><strong>Motivo:</strong> {selectedRequest.reason}</div>
-              {selectedRequest.reasonDetail ? <div><strong>Detalhe:</strong> {selectedRequest.reasonDetail}</div> : null}
-              {selectedRequest.relatedOrderId ? <div><strong>Pedido relacionado:</strong> {selectedRequest.relatedOrderId}</div> : null}
-              {selectedRequest.internalNote ? <div><strong>Nota interna:</strong> {selectedRequest.internalNote}</div> : null}
+
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "1fr 1fr",
+                gap: 12,
+              }}
+            >
+              {[
+                { label: "Solicitante", value: selectedRequest.requesterName || "-" },
+                { label: "E-mail do solicitante", value: selectedRequest.requesterEmail || "-" },
+                { label: "Cliente", value: selectedRequest.customerName || "-" },
+                { label: "E-mail do cliente", value: selectedRequest.customerEmail || "-" },
+                { label: "Operação", value: selectedRequest.type === "debit" ? "Débito" : "Crédito" },
+                { label: "Motivo", value: formatApprovalReason(selectedRequest.reason) },
+                { label: "Valor solicitado", value: formatMoney(Math.round(Number(selectedRequest.amount || 0) * 100)) },
+                { label: "Saldo atual", value: formatMoney(selectedRequest.customerWalletCents) },
+                { label: "Saldo resultante", value: formatMoney(selectedRequest.resultingBalanceCents) },
+                { label: "Enviada em", value: formatDate(selectedRequest.createdAt) },
+              ].map((item) => (
+                <div
+                  key={item.label}
+                  style={{
+                    border: "1px solid #ebe6df",
+                    borderRadius: 14,
+                    padding: "14px 16px",
+                    background: "#fcfbf9",
+                    display: "grid",
+                    gap: 6,
+                  }}
+                >
+                  <div style={{ fontSize: 11, letterSpacing: "0.14em", textTransform: "uppercase", color: "#8a7b69" }}>
+                    {item.label}
+                  </div>
+                  <div style={{ fontSize: 15, lineHeight: 1.5, color: "#2b2118", wordBreak: "break-word" }}>
+                    {item.value}
+                  </div>
+                </div>
+              ))}
             </div>
-            <textarea
-              value={rejectReason}
-              onChange={(event) => setRejectReason(event.target.value)}
-              placeholder="Motivo da rejeição"
-              rows={4}
-              style={{ border: "1px solid #e0d8cc", borderRadius: 12, padding: "12px 14px", resize: "vertical" }}
-            />
+
+            {selectedRequest.relatedOrderId ? (
+              <div
+                style={{
+                  border: "1px solid #ebe6df",
+                  borderRadius: 14,
+                  padding: "14px 16px",
+                  background: "#ffffff",
+                  display: "grid",
+                  gap: 6,
+                }}
+              >
+                <div style={{ fontSize: 11, letterSpacing: "0.14em", textTransform: "uppercase", color: "#8a7b69" }}>
+                  Pedido relacionado
+                </div>
+                <div style={{ fontSize: 14, lineHeight: 1.6, color: "#2b2118", wordBreak: "break-word" }}>
+                  {selectedRequest.relatedOrderId}
+                </div>
+              </div>
+            ) : null}
+
+            {selectedRequest.reasonDetail ? (
+              <div
+                style={{
+                  border: "1px solid #ebe6df",
+                  borderRadius: 14,
+                  padding: "14px 16px",
+                  background: "#ffffff",
+                  display: "grid",
+                  gap: 6,
+                }}
+              >
+                <div style={{ fontSize: 11, letterSpacing: "0.14em", textTransform: "uppercase", color: "#8a7b69" }}>
+                  Detalhe do motivo
+                </div>
+                <div style={{ fontSize: 14, lineHeight: 1.6, color: "#2b2118", whiteSpace: "pre-wrap" }}>
+                  {selectedRequest.reasonDetail}
+                </div>
+              </div>
+            ) : null}
+
+            {selectedRequest.internalNote ? (
+              <div
+                style={{
+                  border: "1px solid #ebe6df",
+                  borderRadius: 14,
+                  padding: "14px 16px",
+                  background: "#ffffff",
+                  display: "grid",
+                  gap: 6,
+                }}
+              >
+                <div style={{ fontSize: 11, letterSpacing: "0.14em", textTransform: "uppercase", color: "#8a7b69" }}>
+                  Observação interna
+                </div>
+                <div style={{ fontSize: 14, lineHeight: 1.6, color: "#2b2118", whiteSpace: "pre-wrap" }}>
+                  {selectedRequest.internalNote}
+                </div>
+              </div>
+            ) : null}
+
+            <div style={{ display: "grid", gap: 8 }}>
+              <div style={{ fontSize: 11, letterSpacing: "0.14em", textTransform: "uppercase", color: "#8a7b69" }}>
+                Motivo da rejeição
+              </div>
+              <textarea
+                value={rejectReason}
+                onChange={(event) => setRejectReason(event.target.value)}
+                placeholder="Explique por que esta solicitação não deve ser aprovada"
+                rows={5}
+                style={{
+                  border: "1px solid #e0d8cc",
+                  borderRadius: 12,
+                  padding: "12px 14px",
+                  resize: "vertical",
+                  lineHeight: 1.6,
+                }}
+              />
+            </div>
           </div>
         ) : null}
       </Drawer>
