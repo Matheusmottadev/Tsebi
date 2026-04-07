@@ -7,9 +7,8 @@ import {
   updateGiftCardAdmin,
   getGiftCardTransactionsAdmin,
   type CreateGiftCardAdminPayload,
-  type GiftCardTransaction,
 } from "@/services/admin";
-import type { GiftCard } from "@/types";
+import type { GiftCard, GiftCardTransaction } from "@/types";
 import styles from "./DrawerForms.module.css";
 
 interface Props {
