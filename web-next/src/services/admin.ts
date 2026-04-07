@@ -937,12 +937,14 @@ export interface CreateGiftCardAdminPayload {
   expiresAt?: string | null;
   note?: string;
   active?: boolean;
+  maxUses?: number;
 }
 
 export interface PatchGiftCardAdminPayload {
   active?: boolean;
   expiresAt?: string | null;
   note?: string;
+  maxUses?: number;
 }
 
 export interface GiftCardMutationResponse {

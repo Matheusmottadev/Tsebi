@@ -25,6 +25,7 @@ import { DrawerNewsletter } from "@/components/admin/DrawerNewsletter";
 import { DrawerNovoAtendimento } from "@/components/admin/DrawerNovoAtendimento";
 import { DrawerNovoCadastroVIP } from "@/components/admin/DrawerNovoCadastroVIP";
 import { DrawerNovoCupom } from "@/components/admin/DrawerNovoCupom";
+import { DrawerGiftCard } from "@/components/admin/DrawerGiftCard";
 import { DrawerNovoPedido } from "@/components/admin/DrawerNovoPedido";
 import { DrawerNovoProduto } from "@/components/admin/DrawerNovoProduto";
 import { DrawerNovoUsuario } from "@/components/admin/DrawerNovoUsuario";
@@ -783,6 +784,19 @@ export function StudioAdminPanel() {
       ) : null}
       {activeDrawer === "cupons" ? (
         <DrawerNovoCupom isOpen={true} onClose={closeDrawer} onSaved={() => handleSaved(true)} />
+      ) : null}
+      {activeDrawer === "gift_cards" ? (
+        <DrawerGiftCard
+          isOpen={true}
+          giftCard={null}
+          csrfToken={csrfToken}
+          onClose={closeDrawer}
+          onSaved={(card) => {
+            setConnectedData((prev) => ({ ...prev, giftCards: [card, ...prev.giftCards] }));
+            closeDrawer();
+            showToast("Gift card criado com sucesso!");
+          }}
+        />
       ) : null}
       {activeDrawer === "auditoria" ? (
         <DrawerAuditoria isOpen={true} onClose={closeDrawer} rows={connectedData.audit} onSaved={() => handleSaved(false)} />

@@ -35,6 +35,8 @@ function formatReason(reason: string): string {
     purchase: "Compra",
     refund: "Estorno",
     admin_adjustment: "Ajuste admin",
+    redemption: "Resgate para saldo",
+    gift_card_redemption: "Resgate de gift card",
   };
   return map[reason] || reason;
 }
@@ -54,6 +56,7 @@ export function DrawerGiftCard({ isOpen, giftCard, csrfToken, onClose, onSaved }
   const [expiresAt, setExpiresAt] = useState(
     giftCard?.expiresAt ? giftCard.expiresAt.slice(0, 16) : ""
   );
+  const [maxUses, setMaxUses] = useState(String(giftCard?.maxUses ?? 1));
 
   // Transaction history (edit mode)
   const [transactions, setTransactions] = useState<GiftCardTransaction[]>([]);
@@ -94,10 +97,11 @@ export function DrawerGiftCard({ isOpen, giftCard, csrfToken, onClose, onSaved }
     setError("");
     setSaving(true);
     try {
+      const maxUsesNum = Math.max(1, parseInt(maxUses) || 1);
       if (isEdit && giftCard) {
         const res = await updateGiftCardAdmin(
           giftCard.id,
-          { active, note, expiresAt: expiresAt || null },
+          { active, note, expiresAt: expiresAt || null, maxUses: maxUsesNum },
           csrfToken
         );
         onSaved(res.giftCard);
@@ -113,6 +117,7 @@ export function DrawerGiftCard({ isOpen, giftCard, csrfToken, onClose, onSaved }
           active,
           note,
           expiresAt: expiresAt || null,
+          maxUses: maxUsesNum,
         };
         if (useCustomCode && customCode.trim().length >= 3) {
           payload.code = customCode.trim().toUpperCase();
@@ -244,6 +249,9 @@ export function DrawerGiftCard({ isOpen, giftCard, csrfToken, onClose, onSaved }
                   <span>R$ 0</span>
                   <span>Valor inicial: {formatCents(giftCard.initialBalanceCents)}</span>
                 </div>
+                <div style={{ marginTop: 8, fontSize: 11, color: "#aaa" }}>
+                  Usos: {giftCard.useCount ?? 0} / {giftCard.maxUses ?? 1}
+                </div>
               </div>
             </div>
           )}
@@ -340,6 +348,24 @@ export function DrawerGiftCard({ isOpen, giftCard, csrfToken, onClose, onSaved }
               value={expiresAt}
               onChange={(e) => setExpiresAt(e.target.value)}
             />
+          </div>
+
+          <div>
+            <label style={{ fontSize: 11, letterSpacing: 1.5, color: "#555", display: "block", marginBottom: 4 }}>
+              LIMITE DE USOS
+            </label>
+            <input
+              className={styles.input}
+              type="number"
+              min="1"
+              step="1"
+              placeholder="1"
+              value={maxUses}
+              onChange={(e) => setMaxUses(e.target.value)}
+            />
+            <p style={{ fontSize: 11, color: "#aaa", marginTop: 4 }}>
+              Quantas vezes este código pode ser resgatado (cada uso esgota o saldo).
+            </p>
           </div>
 
           <div>

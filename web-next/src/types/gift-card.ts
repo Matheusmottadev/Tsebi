@@ -7,6 +7,8 @@ export interface GiftCard {
   active: boolean;
   expiresAt: string | null;
   note: string;
+  maxUses: number;
+  useCount: number;
   createdAt: string;
   updatedAt: string;
 }
