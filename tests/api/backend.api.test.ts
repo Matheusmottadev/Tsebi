@@ -103,6 +103,8 @@ const state = vi.hoisted(() => {
   const runtimeState = {
     baseUser,
     orders: new Map<string, Record<string, unknown>>(),
+    giftCards: new Map<string, Record<string, unknown>>(),
+    walletCentsByUserId: new Map<string, number>(),
     webhookEventIds: new Set<string>(),
     stripeCreateParams: [] as Array<Record<string, unknown>>,
     lastCheckAvailabilityInput: null as unknown,
@@ -110,11 +112,30 @@ const state = vi.hoisted(() => {
     nextOrderNumber: 1,
     reset() {
       runtimeState.orders.clear();
+      runtimeState.giftCards.clear();
+      runtimeState.walletCentsByUserId.clear();
       runtimeState.webhookEventIds.clear();
       runtimeState.stripeCreateParams = [];
       runtimeState.lastCheckAvailabilityInput = null;
       runtimeState.webhookStatusUpdateCount = 0;
       runtimeState.nextOrderNumber = 1;
+      runtimeState.walletCentsByUserId.set(baseUser.id, 0);
+
+      runtimeState.giftCards.set("GC-VALID-0000-0000", {
+        id: "gc-valid-1",
+        code: "GC-VALID-0000-0000",
+        initialBalanceCents: 50000,
+        balanceCents: 50000,
+        currency: "brl",
+        active: true,
+        expiresAt: null,
+        note: "Valid gift card",
+        maxUses: 1,
+        useCount: 0,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        redeemedBy: new Set<string>(),
+      });
 
       runtimeState.orders.set(
         "order-existing-1",
@@ -322,22 +343,24 @@ vi.mock("../../server/user-repository", () => {
 });
 
 vi.mock("../../server/lib/order-repository", () => {
+  const createOrderImpl = async (payload: Record<string, unknown>) => {
+    const id = `order-new-${state.nextOrderNumber++}`;
+    const order = {
+      ...clone(payload),
+      id,
+      orderNumber: `PED-NEW${String(state.nextOrderNumber).padStart(4, "0")}`,
+      currentStatus: "ORDER_PLACED",
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      items: Array.isArray(payload.items) ? clone(payload.items) : [],
+      stripePaymentIntentId: null,
+    };
+    state.orders.set(id, order);
+    return clone(order);
+  };
   return {
-    createOrder: vi.fn(async (payload: Record<string, unknown>) => {
-      const id = `order-new-${state.nextOrderNumber++}`;
-      const order = {
-        ...clone(payload),
-        id,
-        orderNumber: `PED-NEW${String(state.nextOrderNumber).padStart(4, "0")}`,
-        currentStatus: "ORDER_PLACED",
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-        items: Array.isArray(payload.items) ? clone(payload.items) : [],
-        stripePaymentIntentId: null,
-      };
-      state.orders.set(id, order);
-      return clone(order);
-    }),
+    createOrder: vi.fn(createOrderImpl),
+    createOrderWithClient: vi.fn(async (_client: unknown, payload: Record<string, unknown>) => createOrderImpl(payload)),
     updateOrder: vi.fn(async (orderId: string, patch: Record<string, unknown>) => {
       const current = state.orders.get(orderId);
       if (!current) return null;
@@ -390,6 +413,88 @@ vi.mock("../../server/lib/access-code-repository", () => {
       totalCents: 0,
       entry: { code: "NONE", type: "amount", percentOff: 0, amountOffCents: 0 },
     })),
+  };
+});
+
+vi.mock("../../server/lib/gift-card-repository", () => {
+  const normalizeCode = (value: string) => String(value || "").trim().toUpperCase();
+  const debitGiftCardImpl = async (params: Record<string, unknown>) => {
+    const normalized = normalizeCode(String(params.code || ""));
+    const card = state.giftCards.get(normalized);
+    const amountCents = Math.max(0, Number(params.amountCents || 0));
+    if (!card || !card.active || Number(card.balanceCents || 0) < amountCents) {
+      return { ok: false, error: "INSUFFICIENT_BALANCE" };
+    }
+    card.balanceCents = Number(card.balanceCents || 0) - amountCents;
+    card.updatedAt = new Date().toISOString();
+    return { ok: true, card: clone(card) };
+  };
+
+  return {
+    debitGiftCardWithClient: vi.fn(async (_client: unknown, params: Record<string, unknown>) => debitGiftCardImpl(params)),
+    validateGiftCard: vi.fn(async (code: string, requiredCents: number) => {
+      const card = state.giftCards.get(normalizeCode(code));
+      if (!card) return { ok: false, error: "GC_NOT_FOUND" };
+      if (!card.active) return { ok: false, error: "GC_INACTIVE", balanceCents: card.balanceCents };
+      if (card.expiresAt && new Date(String(card.expiresAt)) <= new Date()) {
+        return { ok: false, error: "GC_EXPIRED", balanceCents: card.balanceCents };
+      }
+      if (Number(card.balanceCents || 0) < Math.max(0, Number(requiredCents || 0))) {
+        return { ok: false, error: "INSUFFICIENT_BALANCE", balanceCents: card.balanceCents };
+      }
+      const { redeemedBy: _redeemedBy, ...giftCard } = card;
+      return { ok: true, giftCard: clone(giftCard) };
+    }),
+    debitGiftCard: vi.fn(async (params: Record<string, unknown>) => debitGiftCardImpl(params)),
+    redeemGiftCardToWallet: vi.fn(async (userId: string, code: string) => {
+      const normalized = normalizeCode(code);
+      const card = state.giftCards.get(normalized);
+      if (!card) return { ok: false, error: "GC_NOT_FOUND" };
+      if (!card.active) return { ok: false, error: "GC_INACTIVE" };
+      if (card.expiresAt && new Date(String(card.expiresAt)) <= new Date()) {
+        return { ok: false, error: "GC_EXPIRED" };
+      }
+      if (Number(card.balanceCents || 0) <= 0) return { ok: false, error: "GC_EMPTY" };
+
+      const redeemedBy = card.redeemedBy as Set<string>;
+      if (redeemedBy.has(userId)) return { ok: false, error: "GC_ALREADY_REDEEMED" };
+      if (Number(card.useCount || 0) >= Number(card.maxUses || 1)) {
+        return { ok: false, error: "GC_MAX_USES_REACHED" };
+      }
+
+      const amount = Number(card.balanceCents || 0);
+      redeemedBy.add(userId);
+      card.balanceCents = 0;
+      card.useCount = Number(card.useCount || 0) + 1;
+      if (card.useCount >= Number(card.maxUses || 1)) {
+        card.active = false;
+      }
+      card.updatedAt = new Date().toISOString();
+
+      const nextWallet = Number(state.walletCentsByUserId.get(userId) || 0) + amount;
+      state.walletCentsByUserId.set(userId, nextWallet);
+      return { ok: true, addedCents: amount, walletBalanceCents: nextWallet };
+    }),
+    debitWalletWithClient: vi.fn(async (_client: unknown, params: Record<string, unknown>) => {
+      const amount = Math.max(0, Number(params.amountCents || 0));
+      const userId = String(params.userId || "");
+      const current = Number(state.walletCentsByUserId.get(userId) || 0);
+      if (current < amount) return { ok: false, error: "INSUFFICIENT_WALLET_BALANCE" };
+      const next = current - amount;
+      state.walletCentsByUserId.set(userId, next);
+      return { ok: true, balanceAfterCents: next };
+    }),
+    getWalletBalance: vi.fn(async (userId: string) => Number(state.walletCentsByUserId.get(userId) || 0)),
+    debitWallet: vi.fn(async (params: Record<string, unknown>) => {
+      const amount = Math.max(0, Number(params.amountCents || 0));
+      const userId = String(params.userId || "");
+      const current = Number(state.walletCentsByUserId.get(userId) || 0);
+      if (current < amount) return { ok: false, error: "INSUFFICIENT_WALLET_BALANCE" };
+      const next = current - amount;
+      state.walletCentsByUserId.set(userId, next);
+      return { ok: true, balanceAfterCents: next };
+    }),
+    getWalletTransactions: vi.fn(async () => []),
   };
 });
 
@@ -613,6 +718,16 @@ vi.mock("../../src/routes/whatsapp.routes", () => {
 let app: Express;
 const sessionStore = new Map<string, Record<string, unknown>>();
 let sessionCounter = 1;
+
+function createAuthenticatedCookieHeader() {
+  const sid = `sid_test_${sessionCounter++}`;
+  sessionStore.set(sid, {
+    userId: state.baseUser.id,
+    user: clone(state.baseUser),
+    userCsrfToken: "csrf-test-token",
+  });
+  return `tsebi.sid=${sid}`;
+}
 
 function readCookie(raw: string, key: string): string {
   const parts = String(raw || "")
@@ -1013,6 +1128,57 @@ describe("Express critical API flows", () => {
     expect(response.status).toBe(401);
     expect(response.body.error).toBe("ADMIN_UNAUTHORIZED");
   });
+
+  it("POST /api/gift-cards/validate requires authentication", async () => {
+    const response = await request(app)
+      .post("/api/gift-cards/validate")
+      .send({ code: "GC-VALID-0000-0000", requiredCents: 1000 });
+
+    expect(response.status).toBe(401);
+  });
+
+  it("POST /api/gift-cards/validate hides whether a code exists when validation fails", async () => {
+    const cookie = createAuthenticatedCookieHeader();
+
+    const response = await request(app)
+      .post("/api/gift-cards/validate")
+      .set("Cookie", cookie)
+      .send({ code: "GC-NOT-REAL0-0000", requiredCents: 1000 });
+
+    expect(response.status).toBe(400);
+    expect(response.body.ok).toBe(false);
+    expect(response.body.error).toBe("GIFT_CARD_UNAVAILABLE");
+    expect(response.body.balanceCents).toBeUndefined();
+    expect(response.body.code).toBeUndefined();
+  });
+
+  it("POST /api/gift-cards/redeem rate limits repeated attempts", async () => {
+    const cookie = createAuthenticatedCookieHeader();
+    let lastResponse: any = null;
+
+    for (let attempt = 0; attempt < 4; attempt += 1) {
+      lastResponse = await request(app)
+        .post("/api/gift-cards/redeem")
+        .set("Cookie", cookie)
+        .send({ code: "GC-BRUTE-1111-1111" });
+    }
+
+    expect(lastResponse?.status).toBe(429);
+    expect(lastResponse?.body?.error).toBe("TOO_MANY_ATTEMPTS");
+  });
+
+  it("POST /api/gift-cards/link rate limits repeated attempts", async () => {
+    const cookie = createAuthenticatedCookieHeader();
+    let lastResponse: any = null;
+
+    for (let attempt = 0; attempt < 4; attempt += 1) {
+      lastResponse = await request(app)
+        .post("/api/gift-cards/link")
+        .set("Cookie", cookie)
+        .send({ code: "GC-BRUTE-2222-2222" });
+    }
+
+    expect(lastResponse?.status).toBe(429);
+    expect(lastResponse?.body?.error).toBe("TOO_MANY_ATTEMPTS");
+  });
 });
-
-

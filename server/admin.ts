@@ -67,6 +67,7 @@ const {
   findGiftCardById,
   listGiftCards,
   updateGiftCard,
+  deleteGiftCardById,
   getGiftCardTransactions,
 } = require("./lib/gift-card-repository");
 const {
@@ -4041,6 +4042,27 @@ adminRouter.patch("/gift-cards/:id", async (req, res) => {
     return res.json({ ok: true, giftCard: card });
   } catch {
     return res.status(500).json({ error: "ADMIN_GIFT_CARD_UPDATE_FAILED" });
+  }
+});
+
+adminRouter.delete("/gift-cards/:id", async (req, res) => {
+  const id = String(req.params.id || "").trim();
+  if (!id) return res.status(400).json({ error: "INVALID_ID" });
+  try {
+    const result = await deleteGiftCardById(id);
+    if (!result?.ok && result?.error === "NOT_FOUND") {
+      return res.status(404).json({ error: "NOT_FOUND" });
+    }
+    if (!result?.ok && result?.error === "GC_DELETE_FORBIDDEN_HAS_HISTORY") {
+      return res.status(409).json({
+        error: "GC_DELETE_FORBIDDEN_HAS_HISTORY",
+        message: "Gift cards com historico de uso nao podem ser excluidos. Suspenda o uso em vez de apagar."
+      });
+    }
+    if (!result?.ok) return res.status(400).json({ error: result?.error || "REQUEST_FAILED" });
+    return res.json({ ok: true, removed: result.removed });
+  } catch {
+    return res.status(500).json({ error: "ADMIN_GIFT_CARD_DELETE_FAILED" });
   }
 });
 

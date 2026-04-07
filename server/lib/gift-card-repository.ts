@@ -1,6 +1,10 @@
 const crypto = require("node:crypto");
 const { query, withTransaction } = require("./db");
 
+type DbClient = {
+  query: (text: string, params?: unknown[]) => Promise<{ rows: any[]; rowCount?: number }>;
+};
+
 // Alphabet: uppercase alphanumeric excluding 0/O and 1/I to avoid confusion
 const CODE_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
 
@@ -169,6 +173,41 @@ async function updateGiftCard(id: string, patch: {
   return result.rows[0] ? mapRow(result.rows[0]) : null;
 }
 
+async function deleteGiftCardById(id: string) {
+  return withTransaction(async (client: any) => {
+    const existingResult = await client.query(
+      `SELECT id, code, use_count FROM gift_cards WHERE id = $1 LIMIT 1`,
+      [id]
+    );
+    const existing = existingResult.rows[0];
+    if (!existing) return { ok: false as const, error: "NOT_FOUND" };
+
+    const transactionsResult = await client.query(
+      `SELECT COUNT(*)::int AS count FROM gift_card_transactions WHERE gift_card_id = $1`,
+      [id]
+    );
+    const linkedResult = await client.query(
+      `SELECT COUNT(*)::int AS count FROM user_gift_cards WHERE gift_card_id = $1`,
+      [id]
+    );
+
+    const transactionCount = Number(transactionsResult.rows[0]?.count || 0);
+    const linkedCount = Number(linkedResult.rows[0]?.count || 0);
+    const useCount = Number(existing.use_count || 0);
+
+    if (transactionCount > 0 || linkedCount > 0 || useCount > 0) {
+      return { ok: false as const, error: "GC_DELETE_FORBIDDEN_HAS_HISTORY" };
+    }
+
+    const deleted = await client.query(
+      `DELETE FROM gift_cards WHERE id = $1 RETURNING id, code`,
+      [id]
+    );
+    if (!deleted.rows[0]) return { ok: false as const, error: "NOT_FOUND" };
+    return { ok: true as const, removed: { id: deleted.rows[0].id, code: deleted.rows[0].code } };
+  });
+}
+
 async function validateGiftCard(code: string, requiredCents: number) {
   const card = await findGiftCardByCode(code);
   if (!card) return { ok: false as const, error: "GC_NOT_FOUND" };
@@ -182,6 +221,41 @@ async function validateGiftCard(code: string, requiredCents: number) {
   return { ok: true as const, giftCard: card };
 }
 
+async function debitGiftCardWithClient(client: DbClient, params: {
+  code: string;
+  amountCents: number;
+  orderId?: string | null;
+  userId?: string | null;
+  reason?: string;
+}) {
+  const normalized = normalizeCode(params.code);
+  const result = await client.query(
+    `UPDATE gift_cards
+     SET balance_cents = balance_cents - $1, updated_at = now()
+     WHERE upper(code) = upper($2)
+       AND balance_cents >= $1
+       AND active = true
+     RETURNING *`,
+    [params.amountCents, normalized]
+  );
+  if (!result.rows[0]) return { ok: false as const, error: "INSUFFICIENT_BALANCE" };
+
+  const card = mapRow(result.rows[0]);
+  await client.query(
+    `INSERT INTO gift_card_transactions (gift_card_id, order_id, user_id, delta_cents, balance_after_cents, reason)
+     VALUES ($1, $2, $3, $4, $5, $6)`,
+    [
+      card.id,
+      params.orderId || null,
+      params.userId || null,
+      -params.amountCents,
+      card.balanceCents,
+      params.reason || "purchase",
+    ]
+  );
+  return { ok: true as const, card };
+}
+
 async function debitGiftCard(params: {
   code: string;
   amountCents: number;
@@ -189,34 +263,7 @@ async function debitGiftCard(params: {
   userId?: string | null;
   reason?: string;
 }) {
-  return withTransaction(async (client: any) => {
-    const normalized = normalizeCode(params.code);
-    const result = await client.query(
-      `UPDATE gift_cards
-       SET balance_cents = balance_cents - $1, updated_at = now()
-       WHERE upper(code) = upper($2)
-         AND balance_cents >= $1
-         AND active = true
-       RETURNING *`,
-      [params.amountCents, normalized]
-    );
-    if (!result.rows[0]) return { ok: false as const, error: "INSUFFICIENT_BALANCE" };
-
-    const card = mapRow(result.rows[0]);
-    await client.query(
-      `INSERT INTO gift_card_transactions (gift_card_id, order_id, user_id, delta_cents, balance_after_cents, reason)
-       VALUES ($1, $2, $3, $4, $5, $6)`,
-      [
-        card.id,
-        params.orderId || null,
-        params.userId || null,
-        -params.amountCents,
-        card.balanceCents,
-        params.reason || "purchase",
-      ]
-    );
-    return { ok: true as const, card };
-  });
+  return withTransaction(async (client: any) => debitGiftCardWithClient(client, params));
 }
 
 async function refundGiftCard(params: {
@@ -263,29 +310,36 @@ async function getWalletBalance(userId: string): Promise<number> {
   return Number(result.rows[0]?.wallet_cents ?? 0);
 }
 
+async function debitWalletWithClient(client: DbClient, params: {
+  userId: string;
+  amountCents: number;
+  orderId?: string | null;
+  reason?: string;
+}) {
+  const result = await client.query(
+    `UPDATE users
+     SET wallet_cents = wallet_cents - $1
+     WHERE id = $2 AND wallet_cents >= $1
+     RETURNING wallet_cents`,
+    [params.amountCents, params.userId]
+  );
+  if (!result.rows[0]) return { ok: false as const, error: "INSUFFICIENT_WALLET_BALANCE" };
+  const balanceAfter = Number(result.rows[0].wallet_cents);
+  await client.query(
+    `INSERT INTO wallet_transactions (user_id, delta_cents, balance_after_cents, reason, ref_id)
+     VALUES ($1, $2, $3, $4, $5)`,
+    [params.userId, -params.amountCents, balanceAfter, params.reason || "purchase", params.orderId || null]
+  );
+  return { ok: true as const, balanceAfterCents: balanceAfter };
+}
+
 async function debitWallet(params: {
   userId: string;
   amountCents: number;
   orderId?: string | null;
   reason?: string;
 }) {
-  return withTransaction(async (client: any) => {
-    const result = await client.query(
-      `UPDATE users
-       SET wallet_cents = wallet_cents - $1
-       WHERE id = $2 AND wallet_cents >= $1
-       RETURNING wallet_cents`,
-      [params.amountCents, params.userId]
-    );
-    if (!result.rows[0]) return { ok: false as const, error: "INSUFFICIENT_WALLET_BALANCE" };
-    const balanceAfter = Number(result.rows[0].wallet_cents);
-    await client.query(
-      `INSERT INTO wallet_transactions (user_id, delta_cents, balance_after_cents, reason, ref_id)
-       VALUES ($1, $2, $3, $4, $5)`,
-      [params.userId, -params.amountCents, balanceAfter, params.reason || "purchase", params.orderId || null]
-    );
-    return { ok: true as const, balanceAfterCents: balanceAfter };
-  });
+  return withTransaction(async (client: any) => debitWalletWithClient(client, params));
 }
 
 // Redeem a gift card: transfer its balance to the user's wallet
@@ -366,12 +420,15 @@ module.exports = {
   findGiftCardById,
   listGiftCards,
   updateGiftCard,
+  deleteGiftCardById,
   validateGiftCard,
+  debitGiftCardWithClient,
   debitGiftCard,
   refundGiftCard,
   getGiftCardTransactions,
   // wallet
   getWalletBalance,
+  debitWalletWithClient,
   debitWallet,
   redeemGiftCardToWallet,
   getWalletTransactions,
