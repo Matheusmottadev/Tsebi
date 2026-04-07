@@ -183,7 +183,6 @@ export function GiftCardsTab() {
               style={{
                 width: "100%",
                 padding: "10px 0",
-                borderBottom: "1px solid #ccc",
                 border: "none",
                 borderBottom: "1px solid #ccc",
                 background: "transparent",
