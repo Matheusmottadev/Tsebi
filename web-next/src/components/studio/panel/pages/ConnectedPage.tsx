@@ -1,4 +1,4 @@
-import { PencilLine, Trash2 } from "lucide-react";
+import { Copy, PencilLine, Trash2 } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { ConfirmModal } from "@/components/admin/ConfirmModal";
 import { DrawerDetalhesUsuario } from "@/components/admin/DrawerDetalhesUsuario";
@@ -1787,12 +1787,6 @@ export function ConnectedPage({
               resultsCount={filteredGiftCards.length}
               onClear={() => setGiftCardsSearch("")}
             />
-            <button
-              className={styles.btnCreate}
-              onClick={() => setEditingGiftCard(null)}
-            >
-              + Novo Gift Card
-            </button>
           </div>
           {filteredGiftCards.length ? (
             <div className={styles.tableWrap}>
@@ -1811,7 +1805,18 @@ export function ConnectedPage({
                 <tbody>
                   {filteredGiftCards.slice(0, 200).map((card) => (
                     <tr key={card.id}>
-                      <td style={{ fontFamily: "monospace", fontSize: 12 }}>{card.code}</td>
+                      <td style={{ fontFamily: "monospace", fontSize: 12 }}>
+                        <span style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                          {card.code}
+                          <button
+                            title="Copiar código"
+                            onClick={() => navigator.clipboard.writeText(card.code)}
+                            style={{ background: "none", border: "none", cursor: "pointer", padding: 0, color: "#999", lineHeight: 1 }}
+                          >
+                            <Copy size={12} />
+                          </button>
+                        </span>
+                      </td>
                       <td style={{ fontWeight: 600 }}>{formatMoneyCents(card.balanceCents)}</td>
                       <td>{formatMoneyCents(card.initialBalanceCents)}</td>
                       <td>{card.active ? "sim" : "não"}</td>

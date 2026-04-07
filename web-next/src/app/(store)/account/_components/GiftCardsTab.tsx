@@ -54,9 +54,11 @@ export function GiftCardsTab() {
     setLinkError("");
     setLinkSuccess(false);
     try {
-      // get csrf token first
-      const csrfRes = await fetch("/api/csrf-token", { credentials: "include" });
-      const { csrfToken } = csrfRes.ok ? await csrfRes.json() : { csrfToken: "" };
+      const csrfToken = document.cookie
+        .split(";")
+        .map((c) => c.trim())
+        .find((c) => c.startsWith("tsebi.csrf="))
+        ?.split("=")[1] ?? "";
 
       const res = await fetch("/api/gift-cards/link", {
         method: "POST",
