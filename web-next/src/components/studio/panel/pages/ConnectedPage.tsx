@@ -397,6 +397,7 @@ export function ConnectedPage({
   const [couponsSort, setCouponsSort] = useState("mais_recente");
 
   const [giftCardsSearch, setGiftCardsSearch] = useState("");
+  const [copiedGiftCardId, setCopiedGiftCardId] = useState<string | null>(null);
 
   const [editingGiftCard, setEditingGiftCard] = useState<GiftCard | null | undefined>(undefined);
 
@@ -1810,10 +1811,14 @@ export function ConnectedPage({
                           {card.code}
                           <button
                             title="Copiar código"
-                            onClick={() => navigator.clipboard.writeText(card.code)}
-                            style={{ background: "none", border: "none", cursor: "pointer", padding: 0, color: "#999", lineHeight: 1 }}
+                            onClick={() => {
+                              navigator.clipboard.writeText(card.code);
+                              setCopiedGiftCardId(card.id);
+                              setTimeout(() => setCopiedGiftCardId(null), 2000);
+                            }}
+                            style={{ background: "none", border: "none", cursor: "pointer", padding: 0, color: copiedGiftCardId === card.id ? "#16a34a" : "#999", lineHeight: 1, fontSize: 11 }}
                           >
-                            <Copy size={12} />
+                            {copiedGiftCardId === card.id ? "Copiado!" : <Copy size={12} />}
                           </button>
                         </span>
                       </td>
