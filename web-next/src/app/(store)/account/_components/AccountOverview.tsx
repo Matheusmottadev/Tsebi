@@ -75,7 +75,7 @@ function formatBRL(cents: number) {
   return new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(cents / 100);
 }
 
-function GiftCardCard({ onNavigate }: { onNavigate: (tab: AccountTab) => void }) {
+function GiftCardCard() {
   const [cards, setCards] = useState<GiftCard[]>([]);
   const [linkCode, setLinkCode] = useState("");
   const [linking, setLinking] = useState(false);
@@ -191,16 +191,7 @@ function GiftCardCard({ onNavigate }: { onNavigate: (tab: AccountTab) => void })
       )}
 
       <div className={styles.cardActions}>
-        {cards.length > 0 && (
           <button
-            type="button"
-            className={styles.btnPill}
-            onClick={() => onNavigate("gift_cards")}
-          >
-            Ver gift cards
-          </button>
-        )}
-        <button
           type="button"
           className={styles.btnText}
           onClick={() => { setShowInput((v) => !v); setError(""); }}
@@ -242,7 +233,7 @@ export function AccountOverview({ user, onNavigate }: Props) {
           </div>
         </div>
       ))}
-      <GiftCardCard onNavigate={onNavigate} />
+      <GiftCardCard />
     </div>
   );
 }

@@ -12,7 +12,6 @@ import { AppointmentsTab } from "./AppointmentsTab";
 import { WishlistTab } from "./WishlistTab";
 import { RecommendationsTab } from "./RecommendationsTab";
 import { RepairsTab } from "./RepairsTab";
-import { GiftCardsTab } from "./GiftCardsTab";
 import styles from "../account.module.css";
 
 export const ACCOUNT_TABS = [
@@ -23,7 +22,6 @@ export const ACCOUNT_TABS = [
   "wishlist",
   "recommendations",
   "repairs",
-  "gift_cards",
 ] as const;
 
 export type AccountTab = (typeof ACCOUNT_TABS)[number];
@@ -71,7 +69,6 @@ export function AccountShell({ user }: { user: PublicUser }) {
         {activeTab === "wishlist" && <WishlistTab />}
         {activeTab === "recommendations" && <RecommendationsTab />}
         {activeTab === "repairs" && <RepairsTab user={user} />}
-        {activeTab === "gift_cards" && <GiftCardsTab />}
       </div>
       <div className={styles.logoutRow}>
         <button
