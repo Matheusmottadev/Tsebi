@@ -10,6 +10,7 @@ const Stripe = require("stripe");
 const rateLimit = require("express-rate-limit");
 const { z } = require("zod");
 const { createSessionMiddleware } = require("./session");
+const { requireAuth } = require("./middlewares/requireAuth");
 const { attachUserCsrfToken, requireUserCsrfForMutations } = require("./middlewares/userCsrf");
 const { hashPassword } = require("./lib/password-hash");
 const { authRouter, myRouter } = require("./auth");
@@ -2293,7 +2294,7 @@ app.post("/api/gift-cards/validate", giftCardRateLimit, async (req: any, res: an
   }
 });
 
-app.post("/api/gift-cards/link", requireUserAuth, requireUserCsrfForMutations, async (req: any, res: any) => {
+app.post("/api/gift-cards/link", requireAuth, requireUserCsrfForMutations, async (req: any, res: any) => {
   const userId = String(req.session?.userId || "").trim();
   const code = String(req.body?.code || "").trim().toUpperCase();
   if (!code) return res.status(400).json({ ok: false, error: "INVALID_CODE" });
@@ -2306,7 +2307,7 @@ app.post("/api/gift-cards/link", requireUserAuth, requireUserCsrfForMutations, a
   }
 });
 
-app.get("/api/gift-cards/mine", requireUserAuth, async (req: any, res: any) => {
+app.get("/api/gift-cards/mine", requireAuth, async (req: any, res: any) => {
   const userId = String(req.session?.userId || "").trim();
   try {
     const giftCards = await listUserGiftCards(userId);
