@@ -957,6 +957,14 @@ export interface GiftCardDetailResponse {
   transactions: GiftCardTransaction[];
 }
 
+export interface GiftCardDeleteAdminResponse {
+  ok: true;
+  removed: {
+    id: string;
+    code: string;
+  };
+}
+
 /**
  * GET /api/admin/gift-cards
  */
@@ -1002,6 +1010,21 @@ export async function updateGiftCardAdmin(
   return patch<GiftCardMutationResponse>(
     `/api/admin/gift-cards/${encodeURIComponent(id)}`,
     payload,
+    mergeOptionsWithHeaders(options, buildCsrfHeader(token))
+  );
+}
+
+/**
+ * DELETE /api/admin/gift-cards/:id
+ */
+export async function deleteGiftCardAdmin(
+  id: string,
+  csrfToken?: string,
+  options?: HttpRequestOptions
+): Promise<GiftCardDeleteAdminResponse> {
+  const token = await resolveCsrfToken(csrfToken, options);
+  return del<GiftCardDeleteAdminResponse>(
+    `/api/admin/gift-cards/${encodeURIComponent(id)}`,
     mergeOptionsWithHeaders(options, buildCsrfHeader(token))
   );
 }

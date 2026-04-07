@@ -383,12 +383,11 @@ async function insertOrderItems(client: DbClient, orderId: string, items: OrderI
   }
 }
 
-async function createOrder(payload: CreateOrderPayload): Promise<Order | null> {
+async function createOrderWithClient(client: DbClient, payload: CreateOrderPayload): Promise<Order | null> {
   await ensureOrderSchema();
-  return withTransaction(async (client) => {
-    const generatedOrderId = crypto.randomUUID();
-    const generatedOrderNumber = `PED-${String(generatedOrderId).replace(/-/g, "").slice(0, 10).toUpperCase()}`;
-    const sql = `
+  const generatedOrderId = crypto.randomUUID();
+  const generatedOrderNumber = `PED-${String(generatedOrderId).replace(/-/g, "").slice(0, 10).toUpperCase()}`;
+  const sql = `
       INSERT INTO orders (
         id, order_number,
         status, payment_method, installments, currency,
@@ -409,39 +408,39 @@ async function createOrder(payload: CreateOrderPayload): Promise<Order | null> {
       RETURNING *
     `;
 
-    const result = await client.query<OrderRow>(sql, [
-      generatedOrderId,
-      generatedOrderNumber,
-      String(payload.status || "pending_payment"),
-      String(payload.paymentMethod || "automatic"),
-      Math.max(1, Number(payload.installments || 1)),
-      String(payload.currency || "brl").toLowerCase(),
-      Math.max(0, Number(payload.amount || 0)),
-      Math.max(0, Number(payload.itemsAmount || 0)),
-      Math.max(0, Number(payload.shippingAmount || 0)),
-      Math.max(0, Number(payload.shippingPriceCents || payload.shippingAmount || 0)),
-      String(payload.shippingSelectedProvider || "").trim().toLowerCase() || null,
-      String(payload.shippingSelectedService || "").trim() || null,
-      String(payload.shippingSelectedServiceCode || "").trim() || null,
-      String(payload.shippingSelectedCarrierName || "").trim() || null,
-      payload.shippingDeadlineDays == null ? null : Math.max(0, Number(payload.shippingDeadlineDays || 0)),
-      String(payload.shippingDestinationZip || "").replace(/\D/g, "").slice(0, 8) || null,
-      JSON.stringify(protectJsonForStorage(payload.shipping || null)),
-      payload.userId || null,
-      payload.userEmail || null,
-      payload.userName || null,
-      Boolean(payload.stockCommitted)
-    ]);
+  const result = await client.query<OrderRow>(sql, [
+    generatedOrderId,
+    generatedOrderNumber,
+    String(payload.status || "pending_payment"),
+    String(payload.paymentMethod || "automatic"),
+    Math.max(1, Number(payload.installments || 1)),
+    String(payload.currency || "brl").toLowerCase(),
+    Math.max(0, Number(payload.amount || 0)),
+    Math.max(0, Number(payload.itemsAmount || 0)),
+    Math.max(0, Number(payload.shippingAmount || 0)),
+    Math.max(0, Number(payload.shippingPriceCents || payload.shippingAmount || 0)),
+    String(payload.shippingSelectedProvider || "").trim().toLowerCase() || null,
+    String(payload.shippingSelectedService || "").trim() || null,
+    String(payload.shippingSelectedServiceCode || "").trim() || null,
+    String(payload.shippingSelectedCarrierName || "").trim() || null,
+    payload.shippingDeadlineDays == null ? null : Math.max(0, Number(payload.shippingDeadlineDays || 0)),
+    String(payload.shippingDestinationZip || "").replace(/\D/g, "").slice(0, 8) || null,
+    JSON.stringify(protectJsonForStorage(payload.shipping || null)),
+    payload.userId || null,
+    payload.userEmail || null,
+    payload.userName || null,
+    Boolean(payload.stockCommitted)
+  ]);
 
-    const orderRow = result.rows[0];
-    if (!orderRow) return null;
+  const orderRow = result.rows[0];
+  if (!orderRow) return null;
 
-    if (Array.isArray(payload.items) && payload.items.length > 0) {
-      await insertOrderItems(client, orderRow.id, payload.items);
-    }
+  if (Array.isArray(payload.items) && payload.items.length > 0) {
+    await insertOrderItems(client, orderRow.id, payload.items);
+  }
 
-    const itemResult = await client.query<OrderItemRow>(
-      `SELECT
+  const itemResult = await client.query<OrderItemRow>(
+    `SELECT
          oi.order_id,
          oi.product_sku,
          oi.product_id,
@@ -456,11 +455,14 @@ async function createOrder(payload: CreateOrderPayload): Promise<Order | null> {
        FROM order_items oi
        LEFT JOIN products p ON p.id = oi.product_id
        WHERE oi.order_id = $1`,
-      [orderRow.id]
-    );
+    [orderRow.id]
+  );
 
-    return mapOrderRow(orderRow, itemResult.rows.map(mapOrderItemRow));
-  });
+  return mapOrderRow(orderRow, itemResult.rows.map(mapOrderItemRow));
+}
+
+async function createOrder(payload: CreateOrderPayload): Promise<Order | null> {
+  return withTransaction(async (client) => createOrderWithClient(client, payload));
 }
 
 const PATCH_TO_COLUMN = {
@@ -666,6 +668,7 @@ async function listOrdersByUserId(userId: string): Promise<Order[]> {
 
 module.exports = {
   createOrder,
+  createOrderWithClient,
   updateOrder,
   findOrderById,
   deleteOrderById,
@@ -673,4 +676,3 @@ module.exports = {
   listOrders,
   listOrdersByUserId
 };
-

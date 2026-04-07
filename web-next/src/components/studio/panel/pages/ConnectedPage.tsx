@@ -14,8 +14,10 @@ import { PrivateCareManager } from "@/components/studio/PrivateCareManager";
 import {
   deleteAppointmentSlotAdmin,
   deleteCouponAdmin,
+  deleteGiftCardAdmin,
   deleteNewsletterAdmin,
   fetchNotificationLogs,
+  updateGiftCardAdmin,
   updateAppointmentSlotAdmin,
   type AdminAppointmentSlot,
   deleteVipAdmin,
@@ -60,7 +62,8 @@ type ConfirmDeleteTarget =
   | { kind: "coupon"; id: string; label: string }
   | { kind: "appointment_slot"; id: string; label: string }
   | { kind: "vip"; id: string; label: string }
-  | { kind: "newsletter"; id: string; label: string };
+  | { kind: "newsletter"; id: string; label: string }
+  | { kind: "gift_card"; id: string; label: string };
 
 function formatDateTime(value: string | null): string {
   if (!value) return "-";
@@ -329,6 +332,14 @@ function getDeleteContent(target: ConfirmDeleteTarget): {
     };
   }
 
+  if (target.kind === "gift_card") {
+    return {
+      title: "Excluir gift card",
+      text: `Tem certeza que deseja excluir o gift card ${target.label}? Se ele ja tiver historico de uso, a exclusao sera bloqueada e voce devera apenas suspender o uso.`,
+      confirmLabel: "Excluir permanentemente",
+    };
+  }
+
   return {
     title: "Confirmar exclusao",
     text: `Tem certeza que deseja remover ${target.label} da Newsletter?`,
@@ -436,6 +447,7 @@ export function ConnectedPage({
 
   const [confirmTarget, setConfirmTarget] = useState<ConfirmDeleteTarget | null>(null);
   const [confirmLoading, setConfirmLoading] = useState(false);
+  const [giftCardActionId, setGiftCardActionId] = useState<string | null>(null);
 
   const [toastMessage, setToastMessage] = useState("");
   const [toastVisible, setToastVisible] = useState(false);
@@ -1429,12 +1441,44 @@ export function ConnectedPage({
         showToast("Inscrito removido da Newsletter.");
       }
 
+      if (confirmTarget.kind === "gift_card") {
+        await deleteGiftCardAdmin(confirmTarget.id, csrfToken);
+        setGiftCardsRows((current) => current.filter((row) => String(row.id || "") !== confirmTarget.id));
+        if (editingGiftCard?.id === confirmTarget.id) {
+          setEditingGiftCard(undefined);
+        }
+        showToast("Gift card excluido.");
+      }
+
       setConfirmTarget(null);
       onRequestRefresh?.();
     } catch (error) {
       showToast(pickErrorMessage(error));
     } finally {
       setConfirmLoading(false);
+    }
+  };
+
+  const handleGiftCardToggle = async (card: GiftCard) => {
+    const nextActive = !card.active;
+    const confirmMessage = nextActive
+      ? `Reativar o gift card ${card.code}?`
+      : `Suspender o uso do gift card ${card.code}?`;
+    if (!window.confirm(confirmMessage)) return;
+
+    setGiftCardActionId(card.id);
+    try {
+      const response = await updateGiftCardAdmin(card.id, { active: nextActive }, csrfToken);
+      setGiftCardsRows((current) => current.map((row) => (row.id === card.id ? response.giftCard : row)));
+      if (editingGiftCard?.id === card.id) {
+        setEditingGiftCard(response.giftCard);
+      }
+      showToast(nextActive ? "Gift card reativado." : "Gift card suspenso.");
+      onRequestRefresh?.();
+    } catch (error) {
+      showToast(pickErrorMessage(error));
+    } finally {
+      setGiftCardActionId(null);
     }
   };
 
@@ -1830,6 +1874,26 @@ export function ConnectedPage({
                       <td className={styles.actionCell}>
                         <button className={styles.btnEdit} onClick={() => setEditingGiftCard(card)}>
                           <PencilLine size={12} /> Editar
+                        </button>
+                        <button
+                          className={styles.btnEdit}
+                          onClick={() => handleGiftCardToggle(card)}
+                          disabled={giftCardActionId === card.id}
+                        >
+                          {giftCardActionId === card.id ? "Salvando..." : card.active ? "Suspender" : "Reativar"}
+                        </button>
+                        <button
+                          className={styles.btnDelete}
+                          onClick={() =>
+                            openDeleteConfirm({
+                              kind: "gift_card",
+                              id: String(card.id || ""),
+                              label: String(card.code || "gift card"),
+                            })
+                          }
+                          disabled={giftCardActionId === card.id}
+                        >
+                          <Trash2 size={12} /> Excluir
                         </button>
                       </td>
                     </tr>
