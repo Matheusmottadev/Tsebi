@@ -4,6 +4,16 @@ import { useEffect, useState } from "react";
 import styles from "../account.module.css";
 import type { GiftCard } from "@/types";
 
+function applyGiftCardMask(input: string): string {
+  const clean = input.replace(/[^A-Z0-9]/gi, "").toUpperCase().slice(0, 14);
+  const parts: string[] = [];
+  if (clean.length > 0) parts.push(clean.slice(0, 2));
+  if (clean.length > 2) parts.push(clean.slice(2, 6));
+  if (clean.length > 6) parts.push(clean.slice(6, 10));
+  if (clean.length > 10) parts.push(clean.slice(10, 14));
+  return parts.join("-");
+}
+
 function formatCents(cents: number): string {
   return new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(cents / 100);
 }
@@ -180,7 +190,7 @@ export function GiftCardsTab() {
               type="text"
               placeholder="GC-XXXX-XXXX-XXXX"
               value={linkCode}
-              onChange={(e) => setLinkCode(e.target.value.toUpperCase())}
+              onChange={(e) => setLinkCode(applyGiftCardMask(e.target.value))}
               maxLength={20}
               style={{
                 width: "100%",
