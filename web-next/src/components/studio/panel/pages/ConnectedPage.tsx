@@ -17,6 +17,7 @@ import {
   deleteGiftCardAdmin,
   deleteNewsletterAdmin,
   fetchNotificationLogs,
+  listUsersAdmin,
   updateGiftCardAdmin,
   updateAppointmentSlotAdmin,
   type AdminAppointmentSlot,
@@ -485,6 +486,44 @@ export function ConnectedPage({
   }, [data.users]);
 
   useEffect(() => {
+    if (page !== "usuarios") return;
+
+    const normalizedQuery = String(usersSearch || "").trim();
+    const normalizedStatus = usersStatusFilter === "suspended" ? "disabled" : usersStatusFilter;
+    if (!normalizedQuery && normalizedStatus === "todos") {
+      setUsersRows(data.users || []);
+      return;
+    }
+
+    let cancelled = false;
+    const timer = setTimeout(async () => {
+      try {
+        const response = await listUsersAdmin(
+          {
+            query: normalizedQuery,
+            status: normalizedStatus === "todos" ? "" : normalizedStatus,
+            page: 1,
+            pageSize: 200,
+          },
+          { cache: "no-store" }
+        );
+        if (!cancelled) {
+          setUsersRows(Array.isArray(response.users) ? response.users : []);
+        }
+      } catch {
+        if (!cancelled) {
+          setUsersRows([]);
+        }
+      }
+    }, 220);
+
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [data.users, page, usersSearch, usersStatusFilter]);
+
+  useEffect(() => {
     setAppointmentSlotRows(data.appointmentSlots || []);
   }, [data.appointmentSlots]);
 
@@ -704,7 +743,7 @@ export function ConnectedPage({
     const queryDigits = normalizeDigits(usersSearch);
     const nextRows = [...usersRows].filter((user) => {
       const matchesText =
-        !queryText || normalizeTextForCompare([user.name, user.email, user.cpf, user.phone, user.cep].join(" ")).includes(queryText);
+        !queryText || normalizeTextForCompare([user.id, user.name, user.email, user.cpf, user.phone, user.cep].join(" ")).includes(queryText);
       const matchesDigits =
         !queryDigits || normalizeDigits([user.cpf, user.phone, user.cep].join(" ")).includes(queryDigits);
       if (!matchesText && !matchesDigits) return false;

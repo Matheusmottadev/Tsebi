@@ -87,6 +87,21 @@ function formatApprovalReason(reason: BalanceRequestRow["reason"]) {
   return "Outro motivo";
 }
 
+function formatApprovalActionError(error: any, fallback: string) {
+  const raw = String(error?.message || "").trim();
+  if (!raw) return fallback;
+  if (raw.includes("SELF_APPROVAL_FORBIDDEN")) {
+    return "Você não pode aprovar uma solicitação criada pela sua própria conta.";
+  }
+  if (raw.includes("REQUEST_ALREADY_REVIEWED")) {
+    return "Essa solicitação já foi analisada por outra pessoa.";
+  }
+  if (raw.includes("INSUFFICIENT_CUSTOMER_BALANCE")) {
+    return "O cliente não tem saldo suficiente para esta remoção.";
+  }
+  return raw;
+}
+
 export function DiretoriaPage({ csrfToken, refreshKey = 0 }: { csrfToken?: string; refreshKey?: number }) {
   const [tab, setTab] = useState<"admins" | "approvals" | "audit">("admins");
   const [admins, setAdmins] = useState<AdminAccessRow[]>([]);
@@ -108,6 +123,7 @@ export function DiretoriaPage({ csrfToken, refreshKey = 0 }: { csrfToken?: strin
   const [requesterFilter, setRequesterFilter] = useState("");
   const [selectedRequest, setSelectedRequest] = useState<BalanceRequestRow | null>(null);
   const [rejectReason, setRejectReason] = useState("");
+  const [requestActionLoading, setRequestActionLoading] = useState<"approve" | "reject" | null>(null);
   const [auditActionFilter, setAuditActionFilter] = useState("");
   const [auditDateFrom, setAuditDateFrom] = useState("");
   const [auditDateTo, setAuditDateTo] = useState("");
@@ -252,32 +268,43 @@ export function DiretoriaPage({ csrfToken, refreshKey = 0 }: { csrfToken?: strin
     } catch {
       setSelectedRequest(null);
       setRejectReason("");
+      setMessage("Não foi possível abrir os detalhes desta solicitação.");
     }
   }
 
   async function handleApproveSelected() {
     if (!selectedRequest?.id) return;
     try {
+      setRequestActionLoading("approve");
       await approveBalanceRequestAdmin(selectedRequest.id, csrfToken, { cache: "no-store" });
       setSelectedRequest(null);
       setRejectReason("");
       await loadRequests();
       await loadAudit();
     } catch (error: any) {
-      setMessage(String(error?.message || "Não foi possível aprovar a solicitação."));
+      setMessage(formatApprovalActionError(error, "Não foi possível aprovar a solicitação."));
+      setSelectedRequest(null);
+      setRejectReason("");
+    } finally {
+      setRequestActionLoading(null);
     }
   }
 
   async function handleRejectSelected() {
     if (!selectedRequest?.id || !rejectReason.trim()) return;
     try {
+      setRequestActionLoading("reject");
       await rejectBalanceRequestAdmin(selectedRequest.id, rejectReason.trim(), csrfToken, { cache: "no-store" });
       setSelectedRequest(null);
       setRejectReason("");
       await loadRequests();
       await loadAudit();
     } catch (error: any) {
-      setMessage(String(error?.message || "Não foi possível rejeitar a solicitação."));
+      setMessage(formatApprovalActionError(error, "Não foi possível rejeitar a solicitação."));
+      setSelectedRequest(null);
+      setRejectReason("");
+    } finally {
+      setRequestActionLoading(null);
     }
   }
 
@@ -511,13 +538,14 @@ export function DiretoriaPage({ csrfToken, refreshKey = 0 }: { csrfToken?: strin
                   <th>Saldo resultante</th>
                   <th>Motivo</th>
                   <th>Status</th>
+                  <th></th>
                 </tr>
               </thead>
               <tbody>
                 {filteredRequests.map((row) => {
                   const badge = statusBadge(row.status);
                   return (
-                    <tr key={row.id} onClick={() => handleOpenRequest(row.id)} style={{ cursor: "pointer" }}>
+                    <tr key={row.id}>
                       <td>{formatDate(row.createdAt)}</td>
                       <td>{row.requesterName || row.requesterEmail || "-"}</td>
                       <td>{row.customerName || row.customerEmail || "-"}</td>
@@ -530,6 +558,15 @@ export function DiretoriaPage({ csrfToken, refreshKey = 0 }: { csrfToken?: strin
                         <span style={{ display: "inline-flex", borderRadius: 999, padding: "4px 9px", fontSize: 10, letterSpacing: "0.12em", textTransform: "uppercase", fontWeight: 600, ...badge }}>
                           {badge.label}
                         </span>
+                      </td>
+                      <td className={styles.actionCell}>
+                        <button
+                          type="button"
+                          onClick={() => handleOpenRequest(row.id)}
+                          className={styles.btnEdit}
+                        >
+                          Revisar
+                        </button>
                       </td>
                     </tr>
                   );
@@ -719,11 +756,21 @@ export function DiretoriaPage({ csrfToken, refreshKey = 0 }: { csrfToken?: strin
         stickyFooter
         footer={
           <div style={{ display: "flex", width: "100%", justifyContent: "space-between", gap: 10 }}>
-            <button type="button" className={styles.btnDelete} onClick={handleRejectSelected} disabled={!selectedRequest || selectedRequest.status !== "pending" || !rejectReason.trim()}>
-              Rejeitar
+            <button
+              type="button"
+              className={styles.btnDelete}
+              onClick={handleRejectSelected}
+              disabled={!selectedRequest || selectedRequest.status !== "pending" || !rejectReason.trim() || requestActionLoading !== null}
+            >
+              {requestActionLoading === "reject" ? "Rejeitando..." : "Rejeitar"}
             </button>
-            <button type="button" className={styles.btnEdit} onClick={handleApproveSelected} disabled={!selectedRequest || selectedRequest.status !== "pending"}>
-              Aprovar
+            <button
+              type="button"
+              className={styles.btnEdit}
+              onClick={handleApproveSelected}
+              disabled={!selectedRequest || selectedRequest.status !== "pending" || requestActionLoading !== null}
+            >
+              {requestActionLoading === "approve" ? "Aprovando..." : "Aprovar"}
             </button>
           </div>
         }
