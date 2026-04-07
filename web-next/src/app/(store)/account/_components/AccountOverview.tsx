@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import type { GiftCard, PublicUser } from "@/types";
+import type { PublicUser } from "@/types";
 import styles from "../account.module.css";
 import type { AccountTab } from "./AccountShell";
 
@@ -76,26 +76,26 @@ function formatBRL(cents: number) {
 }
 
 function GiftCardCard() {
-  const [cards, setCards] = useState<GiftCard[]>([]);
-  const [linkCode, setLinkCode] = useState("");
-  const [linking, setLinking] = useState(false);
+  const [walletCents, setWalletCents] = useState<number | null>(null);
+  const [redeemCode, setRedeemCode] = useState("");
+  const [redeeming, setRedeeming] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
   const [showInput, setShowInput] = useState(false);
 
-  useEffect(() => {
-    fetch("/api/gift-cards/mine", { credentials: "include" })
+  const loadBalance = () => {
+    fetch("/api/wallet/balance", { credentials: "include" })
       .then((r) => r.json())
-      .then((d) => setCards(d.giftCards ?? []))
-      .catch(() => {});
-  }, [success]);
+      .then((d) => setWalletCents(d.walletCents ?? 0))
+      .catch(() => setWalletCents(0));
+  };
 
-  const totalCents = cards.reduce((s, c) => s + c.balanceCents, 0);
+  useEffect(() => { loadBalance(); }, []);
 
-  const handleLink = async () => {
-    const code = linkCode.trim().toUpperCase();
+  const handleRedeem = async () => {
+    const code = redeemCode.trim().toUpperCase();
     if (!code) return;
-    setLinking(true);
+    setRedeeming(true);
     setError("");
     setSuccess(false);
     try {
@@ -105,7 +105,7 @@ function GiftCardCard() {
         .find((c) => c.startsWith("tsebi.csrf="))
         ?.split("=")[1] ?? "";
 
-      const res = await fetch("/api/gift-cards/link", {
+      const res = await fetch("/api/gift-cards/redeem", {
         method: "POST",
         credentials: "include",
         headers: {
@@ -120,38 +120,40 @@ function GiftCardCard() {
           GC_NOT_FOUND: "Gift card não encontrado.",
           GC_INACTIVE: "Este gift card está inativo.",
           GC_EXPIRED: "Este gift card está expirado.",
-          GC_ALREADY_LINKED: "Este gift card já está vinculado.",
+          GC_EMPTY: "Este gift card não tem saldo.",
+          GC_ALREADY_REDEEMED: "Você já resgatou este gift card.",
+          GC_MAX_USES_REACHED: "Limite de usos deste gift card atingido.",
         };
-        setError(msgs[data.error] || "Não foi possível vincular o gift card.");
+        setError(msgs[data.error] || "Não foi possível resgatar o gift card.");
       } else {
-        setLinkCode("");
+        setRedeemCode("");
         setSuccess(true);
         setShowInput(false);
-        setTimeout(() => setSuccess(false), 3000);
+        loadBalance();
+        setTimeout(() => setSuccess(false), 4000);
       }
     } catch {
       setError("Erro de conexão. Tente novamente.");
     } finally {
-      setLinking(false);
+      setRedeeming(false);
     }
   };
 
   return (
     <div className={styles.card}>
-      <h2 className={styles.cardTitle}>Gift Cards</h2>
+      <h2 className={styles.cardTitle}>Saldo em Conta</h2>
 
-      {cards.length > 0 ? (
-        <p className={styles.cardDesc}>
-          Saldo disponível: <strong>{formatBRL(totalCents)}</strong>
-          {cards.length > 1 && ` · ${cards.length} gift cards`}
-        </p>
-      ) : (
-        <p className={styles.cardDesc}>Você ainda não tem gift cards vinculados.</p>
-      )}
+      <p className={styles.cardDesc}>
+        {walletCents === null
+          ? "Carregando..."
+          : walletCents > 0
+          ? <>Disponível: <strong>{formatBRL(walletCents)}</strong></>
+          : "Nenhum saldo disponível."}
+      </p>
 
       {success && (
         <p style={{ fontSize: 12, color: "#16a34a", marginBottom: 8 }}>
-          Gift card vinculado com sucesso!
+          Saldo adicionado com sucesso!
         </p>
       )}
 
@@ -160,8 +162,8 @@ function GiftCardCard() {
           <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
             <input
               type="text"
-              value={linkCode}
-              onChange={(e) => setLinkCode(applyGiftCardMask(e.target.value))}
+              value={redeemCode}
+              onChange={(e) => setRedeemCode(applyGiftCardMask(e.target.value))}
               placeholder="GC-XXXX-XXXX-XXXX"
               maxLength={20}
               style={{
@@ -179,11 +181,11 @@ function GiftCardCard() {
             <button
               type="button"
               className={styles.btnPill}
-              onClick={handleLink}
-              disabled={linking || linkCode.length < 6}
+              onClick={handleRedeem}
+              disabled={redeeming || redeemCode.length < 6}
               style={{ padding: "6px 14px", fontSize: 11 }}
             >
-              {linking ? "..." : "Vincular"}
+              {redeeming ? "..." : "Resgatar"}
             </button>
           </div>
           {error && <p style={{ fontSize: 12, color: "red", marginTop: 4 }}>{error}</p>}
@@ -191,7 +193,7 @@ function GiftCardCard() {
       )}
 
       <div className={styles.cardActions}>
-          <button
+        <button
           type="button"
           className={styles.btnText}
           onClick={() => { setShowInput((v) => !v); setError(""); }}

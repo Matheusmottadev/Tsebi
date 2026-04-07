@@ -39,8 +39,10 @@ const { evaluateAccessCode, incrementAccessCodeUsage } = require("./lib/access-c
 const {
   validateGiftCard,
   debitGiftCard,
-  linkGiftCardToUser,
-  listUserGiftCards,
+  redeemGiftCardToWallet,
+  getWalletBalance,
+  debitWallet,
+  getWalletTransactions,
 } = require("./lib/gift-card-repository");
 const { withTransaction, query } = require("./lib/db");
 const { logProductSearchEvent } = require("./lib/search-telemetry-repository");
@@ -2294,26 +2296,52 @@ app.post("/api/gift-cards/validate", giftCardRateLimit, async (req: any, res: an
   }
 });
 
+// Redeem gift card → add balance to user wallet
+app.post("/api/gift-cards/redeem", requireAuth, requireUserCsrfForMutations, async (req: any, res: any) => {
+  const userId = String(req.session?.userId || "").trim();
+  const code = String(req.body?.code || "").trim().toUpperCase();
+  if (!code) return res.status(400).json({ ok: false, error: "INVALID_CODE" });
+  try {
+    const result = await redeemGiftCardToWallet(userId, code);
+    if (!result.ok) return res.status(400).json({ ok: false, error: result.error });
+    return res.json({ ok: true, addedCents: result.addedCents, walletBalanceCents: result.walletBalanceCents });
+  } catch {
+    return res.status(500).json({ ok: false, error: "GIFT_CARD_REDEEM_FAILED" });
+  }
+});
+
+// Keep /link as alias for backwards compat
 app.post("/api/gift-cards/link", requireAuth, requireUserCsrfForMutations, async (req: any, res: any) => {
   const userId = String(req.session?.userId || "").trim();
   const code = String(req.body?.code || "").trim().toUpperCase();
   if (!code) return res.status(400).json({ ok: false, error: "INVALID_CODE" });
   try {
-    const result = await linkGiftCardToUser(userId, code);
+    const result = await redeemGiftCardToWallet(userId, code);
     if (!result.ok) return res.status(400).json({ ok: false, error: result.error });
-    return res.json({ ok: true, giftCard: result.giftCard });
+    return res.json({ ok: true, addedCents: result.addedCents, walletBalanceCents: result.walletBalanceCents });
   } catch {
-    return res.status(500).json({ ok: false, error: "GIFT_CARD_LINK_FAILED" });
+    return res.status(500).json({ ok: false, error: "GIFT_CARD_REDEEM_FAILED" });
   }
 });
 
-app.get("/api/gift-cards/mine", requireAuth, async (req: any, res: any) => {
+// Wallet balance
+app.get("/api/wallet/balance", requireAuth, async (req: any, res: any) => {
   const userId = String(req.session?.userId || "").trim();
   try {
-    const giftCards = await listUserGiftCards(userId);
-    return res.json({ giftCards });
+    const walletCents = await getWalletBalance(userId);
+    return res.json({ walletCents });
   } catch {
-    return res.status(500).json({ ok: false, error: "GIFT_CARD_LIST_FAILED" });
+    return res.status(500).json({ ok: false, error: "WALLET_BALANCE_FAILED" });
+  }
+});
+
+app.get("/api/wallet/transactions", requireAuth, async (req: any, res: any) => {
+  const userId = String(req.session?.userId || "").trim();
+  try {
+    const transactions = await getWalletTransactions(userId);
+    return res.json({ transactions });
+  } catch {
+    return res.status(500).json({ ok: false, error: "WALLET_TXN_FAILED" });
   }
 });
 
@@ -2546,6 +2574,47 @@ app.post(
     companyPaidByStore = true;
     companyPaidShippingCents = 0;
     shippingAmount = 0;
+  }
+
+  // Wallet checkout — bypass Stripe entirely
+  if (paymentMethod === "wallet") {
+    if (!checkoutUser) return res.status(401).json({ error: "AUTH_REQUIRED" });
+    let walletDiscountAmount = 0;
+    if (requestedDiscountCode) {
+      const dr = await evaluateAccessCode({ code: requestedDiscountCode, subtotalCents: itemsAmount, shippingCents: shippingAmount });
+      if (dr.ok) walletDiscountAmount = Math.max(0, Number(dr.discountCents || 0));
+    }
+    const walletOrderAmount = Math.max(0, itemsAmount + shippingAmount - walletDiscountAmount);
+    const walletBalance = await getWalletBalance(checkoutUser.id);
+    if (walletBalance < walletOrderAmount) {
+      return res.status(400).json({ error: "INSUFFICIENT_WALLET_BALANCE", balanceCents: walletBalance });
+    }
+    const newOrder = await createOrder({
+      userId: checkoutUser.id,
+      items: availability.resolvedItems,
+      itemsAmount,
+      shippingAmount,
+      discountAmount: walletDiscountAmount,
+      discountCode: requestedDiscountCode || null,
+      totalAmount: walletOrderAmount,
+      paymentMethod: "wallet",
+      status: "paid",
+      shippingAddress: shipping ? { cep: shipping.cep, street: shipping.street, number: shipping.number, complement: shipping.complement, district: shipping.district, city: shipping.city, state: shipping.state } : null,
+      customerEmail: checkoutUser.email || "",
+      customerName: checkoutUser.name || "",
+      customerPhone: checkoutUser.phone || "",
+      customerCpf: checkoutUser.cpf || "",
+      shippingMethod: shipping?.shippingMethod || "",
+      shippingEstimate: shipping?.shippingEstimate || "",
+      companyPaidShipping: companyPaidByStore,
+      companyPaidShippingCents: companyPaidShippingCents,
+    });
+    if (!newOrder?.id) return res.status(500).json({ error: "ORDER_CREATE_FAILED" });
+    await debitWallet({ userId: checkoutUser.id, amountCents: walletOrderAmount, orderId: newOrder.id, reason: "purchase" });
+    await commitStock(availability.resolvedItems, newOrder.id).catch(() => {});
+    if (requestedDiscountCode && walletDiscountAmount > 0) await incrementAccessCodeUsage(requestedDiscountCode).catch(() => {});
+    notifyOrderConfirmed({ order: newOrder, user: checkoutUser }).catch(() => {});
+    return res.json({ ok: true, orderNumber: String(newOrder.id || ""), orderStatus: "paid", paymentMethod: "wallet" });
   }
 
   // Gift card checkout — bypass Stripe entirely
