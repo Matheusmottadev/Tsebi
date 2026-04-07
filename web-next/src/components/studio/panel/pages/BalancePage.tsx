@@ -33,6 +33,19 @@ function getInitials(name: string, email: string) {
     .join("") || "CL";
 }
 
+function formatPhoneDisplay(value: string) {
+  let digits = String(value || "").replace(/\D/g, "");
+  if (digits.length > 11 && digits.startsWith("55")) digits = digits.slice(2);
+  digits = digits.slice(0, 11);
+  if (!digits) return "-";
+  const ddd = digits.slice(0, 2);
+  const rest = digits.slice(2);
+  if (!rest) return `(${ddd}`;
+  if (rest.length <= 4) return `(${ddd}) ${rest}`;
+  if (rest.length <= 8) return `(${ddd}) ${rest.slice(0, 4)}-${rest.slice(4)}`;
+  return `(${ddd}) ${rest.slice(0, 5)}-${rest.slice(5)}`;
+}
+
 function parseAmountToCents(value: string) {
   const normalized = String(value || "").replace(/\./g, "").replace(",", ".").trim();
   const parsed = Number(normalized);
@@ -240,6 +253,21 @@ export function BalancePage({ csrfToken, refreshKey = 0 }: { csrfToken?: string;
     outline: "none",
   };
 
+  const selectStyle = {
+    ...fieldStyle,
+    height: 52,
+    appearance: "none" as const,
+    WebkitAppearance: "none" as const,
+    MozAppearance: "none" as const,
+    backgroundImage:
+      "linear-gradient(45deg, transparent 50%, #111111 50%), linear-gradient(135deg, #111111 50%, transparent 50%)",
+    backgroundPosition: "calc(100% - 18px) calc(50% - 3px), calc(100% - 12px) calc(50% - 3px)",
+    backgroundSize: "6px 6px, 6px 6px",
+    backgroundRepeat: "no-repeat",
+    paddingRight: 40,
+    boxShadow: "0 1px 0 rgba(17,17,17,0.02)",
+  };
+
   const fieldLabelStyle = {
     fontSize: 12,
     color: "#555555",
@@ -250,9 +278,21 @@ export function BalancePage({ csrfToken, refreshKey = 0 }: { csrfToken?: string;
     return (
       <div style={{ display: "grid", gap: 24 }}>
         <div style={{ display: "grid", gap: 6 }}>
-          <h2 style={{ margin: 0, fontSize: 34, lineHeight: 1.05, color: "#111111" }}>Saldo de Clientes</h2>
+          <h2
+            style={{
+              margin: 0,
+              fontSize: 34,
+              lineHeight: 1.05,
+              color: "#111111",
+              fontFamily: 'var(--font-jost), "Helvetica Neue", Arial, sans-serif',
+              fontWeight: 500,
+              letterSpacing: "-0.02em",
+            }}
+          >
+            Saldo de Clientes
+          </h2>
           <p style={{ margin: 0, color: "#666666", fontSize: 15 }}>
-            Busque um cliente para visualizar ou solicitar alteração de saldo.
+            Consulte o saldo atual do cliente e envie ajustes para aprovação.
           </p>
         </div>
 
@@ -268,9 +308,20 @@ export function BalancePage({ csrfToken, refreshKey = 0 }: { csrfToken?: string;
           }}
         >
           <div style={{ display: "grid", gap: 8 }}>
-            <h3 style={{ margin: 0, fontSize: 30, color: "#111111" }}>Encontre o cliente</h3>
+            <h3
+              style={{
+                margin: 0,
+                fontSize: 28,
+                color: "#111111",
+                fontFamily: 'var(--font-jost), "Helvetica Neue", Arial, sans-serif',
+                fontWeight: 500,
+                letterSpacing: "-0.02em",
+              }}
+            >
+              Buscar cliente
+            </h3>
             <p style={{ margin: 0, color: "#666666", fontSize: 15 }}>
-              Pesquise por nome, e-mail ou ID para começar. Busque por “Marina”, “Rafael” ou “Juliana” para testar.
+              Digite o nome, e-mail ou ID para localizar a conta e continuar o atendimento.
             </p>
           </div>
 
@@ -353,7 +404,19 @@ export function BalancePage({ csrfToken, refreshKey = 0 }: { csrfToken?: string;
   return (
     <div style={{ display: "grid", gap: 20 }}>
       <div style={{ display: "grid", gap: 6 }}>
-        <h2 style={{ margin: 0, fontSize: 34, lineHeight: 1.05, color: "#111111" }}>Saldo de Clientes</h2>
+        <h2
+          style={{
+            margin: 0,
+            fontSize: 34,
+            lineHeight: 1.05,
+            color: "#111111",
+            fontFamily: 'var(--font-jost), "Helvetica Neue", Arial, sans-serif',
+            fontWeight: 500,
+            letterSpacing: "-0.02em",
+          }}
+        >
+          Saldo de Clientes
+        </h2>
         <p style={{ margin: 0, color: "#666666", fontSize: 15 }}>
           Cliente selecionado: <strong style={{ color: "#111111" }}>{selectedCustomer.name || selectedCustomer.email}</strong>
         </p>
@@ -425,7 +488,9 @@ export function BalancePage({ csrfToken, refreshKey = 0 }: { csrfToken?: string;
                 </div>
                 <div style={{ display: "flex", justifyContent: "space-between", gap: 16 }}>
                   <span style={{ color: "#666666" }}>Telefone</span>
-                  <strong style={{ color: "#111111", maxWidth: 190, textAlign: "right", overflowWrap: "anywhere" }}>{selectedCustomer.phone || "-"}</strong>
+                  <strong style={{ color: "#111111", maxWidth: 190, textAlign: "right", overflowWrap: "anywhere" }}>
+                    {formatPhoneDisplay(selectedCustomer.phone)}
+                  </strong>
                 </div>
                 <div style={{ display: "flex", justifyContent: "space-between", gap: 16 }}>
                   <span style={{ color: "#666666" }}>Cliente desde</span>
@@ -514,7 +579,7 @@ export function BalancePage({ csrfToken, refreshKey = 0 }: { csrfToken?: string;
                 <select
                   value={reason}
                   onChange={(event) => setReason(event.target.value as BalanceRequestRow["reason"])}
-                  style={fieldStyle}
+                  style={selectStyle}
                 >
                   <option value="product_return">Devolução de produto</option>
                   <option value="billing_error">Erro de cobrança</option>
@@ -532,7 +597,13 @@ export function BalancePage({ csrfToken, refreshKey = 0 }: { csrfToken?: string;
                     onChange={(event) => setReasonDetail(event.target.value)}
                     placeholder="Explique o contexto da alteração"
                     rows={3}
-                    style={{ ...fieldStyle, resize: "vertical", minHeight: 104 }}
+                    style={{
+                      ...fieldStyle,
+                      resize: "vertical",
+                      minHeight: 104,
+                      lineHeight: 1.5,
+                      background: "#fcfcfc",
+                    }}
                   />
                 </label>
               ) : null}

@@ -10,6 +10,9 @@ const { query, withTransaction } = require("./db") as {
   query: DbClient["query"];
   withTransaction: <T>(work: (client: DbClient) => Promise<T>) => Promise<T>;
 };
+const { decryptSensitiveString } = require("./data-protection") as {
+  decryptSensitiveString: (value: unknown) => string;
+};
 const { normalizeEmail } = require("../user-repository") as {
   normalizeEmail: (value: string) => string;
 };
@@ -140,11 +143,13 @@ function mapBalanceRequestRow(row: BalanceRequestRow | null | undefined): Balanc
 
 function mapBalanceCustomerRow(row: any): BalanceCustomer | null {
   if (!row) return null;
+  const rawPhone = String(row.phone || "").trim();
+  const decryptedPhone = String(decryptSensitiveString(rawPhone) || "").trim();
   return {
     id: String(row.id || ""),
     name: String(row.name || "").trim(),
     email: normalizeEmail(row.email || ""),
-    phone: String(row.phone || "").trim(),
+    phone: decryptedPhone || rawPhone,
     walletCents: Number(row.wallet_cents || 0),
     createdAt: row.created_at || null,
   };
