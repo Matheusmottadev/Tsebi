@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Drawer } from "@/components/admin/Drawer";
 import { SearchBar, type FilterConfig } from "@/components/studio/panel/SearchBar";
 import type { AdminModulePermission } from "@/types";
@@ -19,6 +19,7 @@ import {
   type BalanceRequestRow,
   type OpsAuditLogRow,
 } from "@/services/admin";
+import type { AdminPageKey } from "../types";
 import styles from "./ConnectedPage.module.css";
 
 const MODULES: Array<{ key: "balance" | "orders" | "users" | "products"; label: string }> = [
@@ -99,7 +100,51 @@ function formatApprovalActionError(error: any, fallback: string) {
   return raw;
 }
 
-export function DiretoriaPage({ csrfToken, refreshKey = 0 }: { csrfToken?: string; refreshKey?: number }) {
+const SECURITY_AUDIT_ACTIONS = new Set([
+  "ADMIN_SUSPICIOUS_LOGIN",
+  "ADMIN_SUSPICIOUS_ACCESS",
+  "ADMIN_CREATED",
+  "ADMIN_ROLE_UPDATED",
+  "ADMIN_PERMISSIONS_UPDATED",
+  "ADMIN_STATUS_UPDATED",
+  "BALANCE_APPROVED",
+  "BALANCE_REJECTED",
+]);
+
+function getAuditSeverity(action: string): { label: string; color: string; background: string; border: string } {
+  const normalized = String(action || "").trim().toUpperCase();
+  if (normalized.startsWith("ADMIN_SUSPICIOUS_")) {
+    return { label: "Crítico", color: "#991b1b", background: "#fef2f2", border: "#fecaca" };
+  }
+  if (["ADMIN_CREATED", "ADMIN_ROLE_UPDATED", "ADMIN_PERMISSIONS_UPDATED", "ADMIN_STATUS_UPDATED"].includes(normalized)) {
+    return { label: "Alto", color: "#9a3412", background: "#fff7ed", border: "#fed7aa" };
+  }
+  if (["BALANCE_APPROVED", "BALANCE_REJECTED", "BALANCE_REQUESTED"].includes(normalized)) {
+    return { label: "Médio", color: "#1d4ed8", background: "#eff6ff", border: "#bfdbfe" };
+  }
+  return { label: "Normal", color: "#475569", background: "#f8fafc", border: "#cbd5e1" };
+}
+
+function isSensitiveAuditAction(action: string): boolean {
+  return SECURITY_AUDIT_ACTIONS.has(String(action || "").trim().toUpperCase());
+}
+
+type ApprovalToastState = {
+  message: string;
+  customerId: string | null;
+};
+
+export function DiretoriaPage({
+  csrfToken,
+  refreshKey = 0,
+  onNavigatePage,
+  onOpenBalanceCustomer,
+}: {
+  csrfToken?: string;
+  refreshKey?: number;
+  onNavigatePage?: (page: AdminPageKey) => void;
+  onOpenBalanceCustomer?: (customerId: string) => void;
+}) {
   const [tab, setTab] = useState<"admins" | "approvals" | "audit">("admins");
   const [admins, setAdmins] = useState<AdminAccessRow[]>([]);
   const [requests, setRequests] = useState<BalanceRequestRow[]>([]);
@@ -121,9 +166,14 @@ export function DiretoriaPage({ csrfToken, refreshKey = 0 }: { csrfToken?: strin
   const [selectedRequest, setSelectedRequest] = useState<BalanceRequestRow | null>(null);
   const [rejectReason, setRejectReason] = useState("");
   const [requestActionLoading, setRequestActionLoading] = useState<"approve" | "reject" | null>(null);
+  const [highlightedRequestId, setHighlightedRequestId] = useState("");
+  const [approvalToast, setApprovalToast] = useState<ApprovalToastState | null>(null);
   const [auditActionFilter, setAuditActionFilter] = useState("");
+  const [auditSecurityFilter, setAuditSecurityFilter] = useState("all");
   const [auditDateFrom, setAuditDateFrom] = useState("");
   const [auditDateTo, setAuditDateTo] = useState("");
+  const highlightTimerRef = useRef<number | null>(null);
+  const approvalToastTimerRef = useRef<number | null>(null);
 
   async function loadAdmins() {
     try {
@@ -160,6 +210,7 @@ export function DiretoriaPage({ csrfToken, refreshKey = 0 }: { csrfToken?: strin
           action: auditActionFilter,
           dateFrom: auditDateFrom,
           dateTo: auditDateTo,
+          securityOnly: auditSecurityFilter === "security_only",
           page: 1,
           limit: 100,
         },
@@ -182,7 +233,33 @@ export function DiretoriaPage({ csrfToken, refreshKey = 0 }: { csrfToken?: strin
     if (tab === "audit") {
       loadAudit();
     }
-  }, [tab, requestStatusFilter, requestDateFrom, requestDateTo, requesterFilter, auditActionFilter, auditDateFrom, auditDateTo, refreshKey]);
+  }, [tab, requestStatusFilter, requestDateFrom, requestDateTo, requesterFilter, auditActionFilter, auditSecurityFilter, auditDateFrom, auditDateTo, refreshKey]);
+
+  useEffect(
+    () => () => {
+      if (highlightTimerRef.current) clearTimeout(highlightTimerRef.current);
+      if (approvalToastTimerRef.current) clearTimeout(approvalToastTimerRef.current);
+    },
+    []
+  );
+
+  function pulseRequestRow(requestId: string) {
+    setHighlightedRequestId(requestId);
+    if (highlightTimerRef.current) clearTimeout(highlightTimerRef.current);
+    highlightTimerRef.current = window.setTimeout(() => {
+      setHighlightedRequestId("");
+      highlightTimerRef.current = null;
+    }, 2400);
+  }
+
+  function showApprovalToast(message: string, customerId: string | null) {
+    setApprovalToast({ message, customerId });
+    if (approvalToastTimerRef.current) clearTimeout(approvalToastTimerRef.current);
+    approvalToastTimerRef.current = window.setTimeout(() => {
+      setApprovalToast(null);
+      approvalToastTimerRef.current = null;
+    }, 5000);
+  }
 
   async function handleCreateAdmin() {
     if (!formEmail.trim()) {
@@ -273,9 +350,15 @@ export function DiretoriaPage({ csrfToken, refreshKey = 0 }: { csrfToken?: strin
     if (!selectedRequest?.id) return;
     try {
       setRequestActionLoading("approve");
-      await approveBalanceRequestAdmin(selectedRequest.id, csrfToken, { cache: "no-store" });
+      const currentRequest = selectedRequest;
+      const response = await approveBalanceRequestAdmin(selectedRequest.id, csrfToken, { cache: "no-store" });
+      if (response.request) {
+        setRequests((current) => current.map((row) => (row.id === response.request?.id ? response.request : row)));
+        pulseRequestRow(response.request.id);
+      }
       setSelectedRequest(null);
       setRejectReason("");
+      showApprovalToast("Solicitação aprovada com sucesso.", currentRequest.customerId || null);
       await loadRequests();
       await loadAudit();
     } catch (error: any) {
@@ -291,9 +374,15 @@ export function DiretoriaPage({ csrfToken, refreshKey = 0 }: { csrfToken?: strin
     if (!selectedRequest?.id || !rejectReason.trim()) return;
     try {
       setRequestActionLoading("reject");
-      await rejectBalanceRequestAdmin(selectedRequest.id, rejectReason.trim(), csrfToken, { cache: "no-store" });
+      const currentRequest = selectedRequest;
+      const response = await rejectBalanceRequestAdmin(selectedRequest.id, rejectReason.trim(), csrfToken, { cache: "no-store" });
+      if (response.request) {
+        setRequests((current) => current.map((row) => (row.id === response.request?.id ? response.request : row)));
+        pulseRequestRow(response.request.id);
+      }
       setSelectedRequest(null);
       setRejectReason("");
+      showApprovalToast("Solicitação rejeitada com sucesso.", currentRequest.customerId || null);
       await loadRequests();
       await loadAudit();
     } catch (error: any) {
@@ -366,12 +455,18 @@ export function DiretoriaPage({ csrfToken, refreshKey = 0 }: { csrfToken?: strin
   ];
 
   const selectedBadge = selectedRequest ? statusBadge(selectedRequest.status) : null;
+  const sensitiveAuditRows = useMemo(() => auditRows.filter((row) => isSensitiveAuditAction(row.action)).slice(0, 6), [auditRows]);
+  const regularAuditRows = useMemo(() => {
+    if (auditSecurityFilter === "security_only") return auditRows;
+    return auditRows.filter((row) => !isSensitiveAuditAction(row.action));
+  }, [auditRows, auditSecurityFilter]);
 
   function exportAudit() {
     const query = new URLSearchParams();
     if (auditActionFilter.trim()) query.set("action", auditActionFilter.trim());
     if (auditDateFrom.trim()) query.set("date_from", auditDateFrom.trim());
     if (auditDateTo.trim()) query.set("date_to", auditDateTo.trim());
+    if (auditSecurityFilter === "security_only") query.set("security_only", "true");
     query.set("export", "csv");
     window.open(`/api/admin/diretoria/audit-logs?${query.toString()}`, "_blank");
   }
@@ -542,7 +637,18 @@ export function DiretoriaPage({ csrfToken, refreshKey = 0 }: { csrfToken?: strin
                 {filteredRequests.map((row) => {
                   const badge = statusBadge(row.status);
                   return (
-                    <tr key={row.id}>
+                    <tr
+                      key={row.id}
+                      style={
+                        highlightedRequestId === row.id
+                          ? {
+                              background: "#f5fbf7",
+                              boxShadow: "inset 0 0 0 1px #d7eadb",
+                              transition: "background 220ms ease, box-shadow 220ms ease",
+                            }
+                          : { transition: "background 220ms ease, box-shadow 220ms ease" }
+                      }
+                    >
                       <td>{formatDate(row.createdAt)}</td>
                       <td>{row.requesterName || row.requesterEmail || "-"}</td>
                       <td>{row.customerName || row.customerEmail || "-"}</td>
@@ -578,10 +684,86 @@ export function DiretoriaPage({ csrfToken, refreshKey = 0 }: { csrfToken?: strin
         <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
           <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
             <input value={auditActionFilter} onChange={(event) => setAuditActionFilter(event.target.value)} placeholder="Filtrar por ação" style={{ border: "1px solid #e0d8cc", borderRadius: 12, padding: "10px 12px", minWidth: 220 }} />
+            <select
+              value={auditSecurityFilter}
+              onChange={(event) => setAuditSecurityFilter(event.target.value)}
+              style={{ border: "1px solid #e0d8cc", borderRadius: 12, padding: "10px 12px", background: "#fff" }}
+            >
+              <option value="all">Todos os eventos</option>
+              <option value="security_only">Somente segurança</option>
+            </select>
             <input type="date" value={auditDateFrom} onChange={(event) => setAuditDateFrom(event.target.value)} style={{ border: "1px solid #e0d8cc", borderRadius: 12, padding: "10px 12px" }} />
             <input type="date" value={auditDateTo} onChange={(event) => setAuditDateTo(event.target.value)} style={{ border: "1px solid #e0d8cc", borderRadius: 12, padding: "10px 12px" }} />
             <button type="button" onClick={exportAudit} className={styles.btnEdit}>Exportar CSV</button>
           </div>
+
+          {auditSecurityFilter !== "security_only" && sensitiveAuditRows.length ? (
+            <section
+              style={{
+                border: "1px solid #f1d5d5",
+                borderRadius: 18,
+                background: "#fffafa",
+                padding: 18,
+                display: "grid",
+                gap: 14,
+              }}
+            >
+              <div style={{ display: "grid", gap: 4 }}>
+                <div style={{ fontSize: 11, letterSpacing: "0.16em", textTransform: "uppercase", color: "#991b1b", fontWeight: 700 }}>
+                  Eventos sensíveis
+                </div>
+                <div style={{ fontSize: 14, color: "#6b7280" }}>
+                  Alterações de acesso, eventos suspeitos e decisões críticas de saldo aparecem aqui com prioridade.
+                </div>
+              </div>
+
+              <div style={{ display: "grid", gap: 10 }}>
+                {sensitiveAuditRows.map((row) => {
+                  const severity = getAuditSeverity(row.action);
+                  return (
+                    <div
+                      key={`sensitive-${row.id}`}
+                      style={{
+                        border: "1px solid #f3dfdf",
+                        borderRadius: 14,
+                        background: "#ffffff",
+                        padding: "14px 16px",
+                        display: "grid",
+                        gap: 8,
+                      }}
+                    >
+                      <div style={{ display: "flex", justifyContent: "space-between", gap: 10, flexWrap: "wrap", alignItems: "center" }}>
+                        <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
+                          <span
+                            style={{
+                              display: "inline-flex",
+                              borderRadius: 999,
+                              padding: "4px 9px",
+                              fontSize: 10,
+                              letterSpacing: "0.12em",
+                              textTransform: "uppercase",
+                              fontWeight: 700,
+                              color: severity.color,
+                              background: severity.background,
+                              border: `1px solid ${severity.border}`,
+                            }}
+                          >
+                            {severity.label}
+                          </span>
+                          <strong style={{ fontSize: 14, color: "#111111" }}>{row.action}</strong>
+                        </div>
+                        <span style={{ fontSize: 12, color: "#6b7280" }}>{formatDate(row.createdAt)}</span>
+                      </div>
+                      <div style={{ fontSize: 13, color: "#374151" }}>
+                        {row.performerName || row.performerEmail || "-"} • {row.targetType || "sem alvo"}
+                        {row.targetId ? ` #${row.targetId.slice(0, 8)}` : ""}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </section>
+          ) : null}
 
           <div className={styles.tableWrap}>
             <table className={styles.table}>
@@ -590,25 +772,53 @@ export function DiretoriaPage({ csrfToken, refreshKey = 0 }: { csrfToken?: strin
                   <th>Timestamp</th>
                   <th>Admin</th>
                   <th>Ação</th>
+                  <th>Severidade</th>
                   <th>Alvo</th>
                   <th>Antes</th>
                   <th>Depois</th>
                 </tr>
               </thead>
               <tbody>
-                {auditRows.map((row) => (
+                {regularAuditRows.map((row) => {
+                  const severity = getAuditSeverity(row.action);
+                  return (
                   <tr key={row.id}>
                     <td>{formatDate(row.createdAt)}</td>
                     <td>{row.performerName || row.performerEmail || "-"}</td>
                     <td>{row.action}</td>
+                    <td>
+                      <span
+                        style={{
+                          display: "inline-flex",
+                          borderRadius: 999,
+                          padding: "4px 9px",
+                          fontSize: 10,
+                          letterSpacing: "0.12em",
+                          textTransform: "uppercase",
+                          fontWeight: 700,
+                          color: severity.color,
+                          background: severity.background,
+                          border: `1px solid ${severity.border}`,
+                        }}
+                      >
+                        {severity.label}
+                      </span>
+                    </td>
                     <td>{row.targetType || "-"} {row.targetId ? `#${row.targetId.slice(0, 8)}` : ""}</td>
                     <td style={{ maxWidth: 220, whiteSpace: "pre-wrap", wordBreak: "break-word" }}>{JSON.stringify(row.beforeState || {}, null, 2)}</td>
                     <td style={{ maxWidth: 220, whiteSpace: "pre-wrap", wordBreak: "break-word" }}>{JSON.stringify(row.afterState || {}, null, 2)}</td>
                   </tr>
-                ))}
+                )})}
               </tbody>
             </table>
           </div>
+          {!regularAuditRows.length ? (
+            <div style={{ color: "#6b7280", fontSize: 13 }}>
+              {auditSecurityFilter === "security_only"
+                ? "Nenhum evento de segurança encontrado para este filtro."
+                : "Nenhum evento restante encontrado para este filtro."}
+            </div>
+          ) : null}
         </div>
       ) : null}
 
@@ -903,6 +1113,73 @@ export function DiretoriaPage({ csrfToken, refreshKey = 0 }: { csrfToken?: strin
           </div>
         ) : null}
       </Drawer>
+
+      {approvalToast ? (
+        <div
+          style={{
+            position: "fixed",
+            right: 28,
+            bottom: 28,
+            zIndex: 220,
+            width: "min(420px, calc(100vw - 32px))",
+            borderRadius: 18,
+            border: "1px solid #d9e4f1",
+            background: "#ffffff",
+            boxShadow: "0 24px 50px rgba(15, 23, 42, 0.16)",
+            padding: 18,
+            display: "grid",
+            gap: 14,
+          }}
+        >
+          <div
+            style={{
+              display: "inline-flex",
+              alignSelf: "flex-start",
+              borderRadius: 999,
+              padding: "6px 10px",
+              background: "#111111",
+              color: "#ffffff",
+              fontSize: 11,
+              letterSpacing: "0.12em",
+              textTransform: "uppercase",
+              fontWeight: 700,
+            }}
+          >
+            Atualização concluída
+          </div>
+          <div style={{ fontSize: 16, color: "#111111", fontWeight: 600 }}>
+            {approvalToast.message}
+          </div>
+          <div style={{ color: "#5b6472", fontSize: 13 }}>
+            A linha foi atualizada e você pode seguir para o cliente ou revisar o registro na auditoria.
+          </div>
+          <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+            {approvalToast.customerId ? (
+              <button
+                type="button"
+                className={styles.btnEdit}
+                onClick={() => {
+                  setApprovalToast(null);
+                  onOpenBalanceCustomer?.(approvalToast.customerId as string);
+                }}
+              >
+                Ver cliente
+              </button>
+            ) : null}
+            <button
+              type="button"
+              className={styles.btnDetalhes}
+              onClick={() => {
+                setApprovalToast(null);
+                setTab("audit");
+                onNavigatePage?.("auditoria");
+              }}
+            >
+              Ver auditoria
+            </button>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }

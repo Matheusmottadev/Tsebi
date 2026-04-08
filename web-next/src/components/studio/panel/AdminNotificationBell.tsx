@@ -131,7 +131,7 @@ export function AdminNotificationBell({
             top: "calc(100% + 12px)",
             width: 340,
             background: "#fff",
-            border: "1px solid #ece7df",
+            border: "1px solid #e2e8f0",
             borderRadius: 16,
             boxShadow: "0 24px 80px rgba(17,17,17,0.16)",
             padding: 14,
@@ -140,8 +140,8 @@ export function AdminNotificationBell({
         >
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
             <div>
-              <div style={{ fontSize: 11, textTransform: "uppercase", letterSpacing: "0.16em", color: "#8d7f70" }}>Notificações</div>
-              <div style={{ fontSize: 12, color: "#6a5d50", marginTop: 4 }}>{unreadCount} não lida(s)</div>
+              <div style={{ fontSize: 11, textTransform: "uppercase", letterSpacing: "0.16em", color: "#64748b" }}>Notificações</div>
+              <div style={{ fontSize: 12, color: "#475569", marginTop: 4 }}>{unreadCount} não lida(s)</div>
             </div>
             <button
               type="button"
@@ -155,7 +155,7 @@ export function AdminNotificationBell({
 
           <div style={{ maxHeight: 360, overflowY: "auto", display: "flex", flexDirection: "column", gap: 8 }}>
             {unreadFirst.length === 0 ? (
-              <div style={{ padding: "22px 10px", color: "#8d7f70", fontSize: 13, textAlign: "center" }}>
+              <div style={{ padding: "22px 10px", color: "#64748b", fontSize: 13, textAlign: "center" }}>
                 Nenhuma notificação interna por enquanto.
               </div>
             ) : unreadFirst.map((notification) => (
@@ -165,8 +165,8 @@ export function AdminNotificationBell({
                 onClick={() => handleOpenNotification(notification)}
                 style={{
                   textAlign: "left",
-                  border: "1px solid #f0ebe4",
-                  background: notification.read ? "#fff" : "#fbf6ef",
+                  border: "1px solid #e2e8f0",
+                  background: notification.read ? "#ffffff" : "#f8fbff",
                   borderRadius: 12,
                   padding: "12px 14px",
                   cursor: "pointer",
@@ -174,9 +174,9 @@ export function AdminNotificationBell({
               >
                 <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
                   <strong style={{ fontSize: 13, fontWeight: 500, color: "#17130f" }}>{notification.title}</strong>
-                  <span style={{ fontSize: 10, color: "#8d7f70" }}>{formatRelative(notification.createdAt)}</span>
+                  <span style={{ fontSize: 10, color: "#64748b" }}>{formatRelative(notification.createdAt)}</span>
                 </div>
-                <p style={{ margin: "6px 0 0", fontSize: 12, color: "#6a5d50", lineHeight: 1.5 }}>{notification.message}</p>
+                <p style={{ margin: "6px 0 0", fontSize: 12, color: "#475569", lineHeight: 1.5 }}>{notification.message}</p>
               </button>
             ))}
           </div>

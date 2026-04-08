@@ -314,6 +314,7 @@ export function StudioAdminPanel() {
   const [isGlobalSearchOpen, setIsGlobalSearchOpen] = useState(false);
   const [globalSearchQuery, setGlobalSearchQuery] = useState("");
   const [globalSearchTarget, setGlobalSearchTarget] = useState<GlobalSearchTarget | null>(null);
+  const [balanceCustomerTargetId, setBalanceCustomerTargetId] = useState<string | null>(null);
   const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const globalSearchInputRef = useRef<HTMLInputElement | null>(null);
 
@@ -695,11 +696,24 @@ export function StudioAdminPanel() {
       />
     ) : activePage === "saldo_clientes" ? (
       <RequirePermission module="balance">
-        <BalancePage csrfToken={csrfToken} refreshKey={refreshIndex} />
+        <BalancePage
+          csrfToken={csrfToken}
+          refreshKey={refreshIndex}
+          focusCustomerId={balanceCustomerTargetId}
+          onFocusCustomerHandled={() => setBalanceCustomerTargetId(null)}
+        />
       </RequirePermission>
     ) : activePage === "diretoria" ? (
       <RequireRole roles={["director", "superadmin"]}>
-        <DiretoriaPage csrfToken={csrfToken} refreshKey={refreshIndex} />
+        <DiretoriaPage
+          csrfToken={csrfToken}
+          refreshKey={refreshIndex}
+          onNavigatePage={setActivePage}
+          onOpenBalanceCustomer={(customerId) => {
+            setBalanceCustomerTargetId(customerId);
+            setActivePage("saldo_clientes");
+          }}
+        />
       </RequireRole>
     ) : activePage === "auditoria" ? (
       <RequireRole roles={["director", "superadmin"]}>

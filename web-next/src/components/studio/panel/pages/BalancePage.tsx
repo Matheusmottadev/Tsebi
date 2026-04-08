@@ -5,10 +5,12 @@ import {
   createBalanceRequestAdmin,
   getBalanceCustomerAdmin,
   listBalanceCustomerOrdersAdmin,
+  listBalanceCustomerHistoryAdmin,
   listMyBalanceRequestsAdmin,
   searchBalanceCustomersAdmin,
   type AdminUserOrderRow,
   type BalanceCustomer,
+  type BalanceHistoryEntry,
   type BalanceRequestRow,
 } from "@/services/admin";
 
@@ -82,6 +84,19 @@ function formatReason(reason: BalanceRequestRow["reason"]) {
   return labels[reason] || reason;
 }
 
+function formatHistoryReason(entry: BalanceHistoryEntry) {
+  if (entry.reason === "admin_balance_credit") {
+    const detail = entry.requestReason && entry.requestReason !== "other" ? formatReason(entry.requestReason as BalanceRequestRow["reason"]) : null;
+    return detail ? `Saldo adicionado • ${detail}` : "Saldo adicionado";
+  }
+  if (entry.reason === "admin_balance_debit") {
+    const detail = entry.requestReason && entry.requestReason !== "other" ? formatReason(entry.requestReason as BalanceRequestRow["reason"]) : null;
+    return detail ? `Saldo removido • ${detail}` : "Saldo removido";
+  }
+  if (entry.reason === "gift_card_redemption") return "Resgate de gift card";
+  return "Movimentação de saldo";
+}
+
 function formatOrderStatus(status: string) {
   const normalized = String(status || "").trim().toLowerCase();
   if (["delivered", "entregue"].includes(normalized)) return "Entregue";
@@ -109,11 +124,22 @@ function formatCompactOrderLabel(order: AdminUserOrderRow) {
   return base.startsWith("PED-") ? base : `PED-${base.slice(-4).toUpperCase()}`;
 }
 
-export function BalancePage({ csrfToken, refreshKey = 0 }: { csrfToken?: string; refreshKey?: number }) {
+export function BalancePage({
+  csrfToken,
+  refreshKey = 0,
+  focusCustomerId,
+  onFocusCustomerHandled,
+}: {
+  csrfToken?: string;
+  refreshKey?: number;
+  focusCustomerId?: string | null;
+  onFocusCustomerHandled?: () => void;
+}) {
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<BalanceCustomer[]>([]);
   const [selectedCustomer, setSelectedCustomer] = useState<BalanceCustomer | null>(null);
   const [customerOrders, setCustomerOrders] = useState<AdminUserOrderRow[]>([]);
+  const [customerHistory, setCustomerHistory] = useState<BalanceHistoryEntry[]>([]);
   const [requests, setRequests] = useState<BalanceRequestRow[]>([]);
   const [type, setType] = useState<"credit" | "debit">("credit");
   const [amount, setAmount] = useState("");
@@ -124,6 +150,7 @@ export function BalancePage({ csrfToken, refreshKey = 0 }: { csrfToken?: string;
   const [submitting, setSubmitting] = useState(false);
   const [message, setMessage] = useState("");
   const [showAllOrders, setShowAllOrders] = useState(false);
+  const [orderStatusFilter, setOrderStatusFilter] = useState<"all" | "pending" | "delivered" | "canceled" | "analysis">("all");
 
   async function loadMyRequests() {
     try {
@@ -137,6 +164,13 @@ export function BalancePage({ csrfToken, refreshKey = 0 }: { csrfToken?: string;
   useEffect(() => {
     loadMyRequests();
   }, [refreshKey]);
+
+  useEffect(() => {
+    if (!focusCustomerId) return;
+    handleSelectCustomer(focusCustomerId).finally(() => {
+      onFocusCustomerHandled?.();
+    });
+  }, [focusCustomerId]);
 
   useEffect(() => {
     if (query.trim().length < 2 || selectedCustomer) {
@@ -156,13 +190,16 @@ export function BalancePage({ csrfToken, refreshKey = 0 }: { csrfToken?: string;
 
   async function handleSelectCustomer(customerId: string) {
     try {
-      const [customerResponse, ordersResponse] = await Promise.all([
+      const [customerResponse, ordersResponse, historyResponse] = await Promise.all([
         getBalanceCustomerAdmin(customerId, { cache: "no-store" }),
         listBalanceCustomerOrdersAdmin(customerId, { cache: "no-store" }),
+        listBalanceCustomerHistoryAdmin(customerId, { cache: "no-store" }),
       ]);
       setSelectedCustomer(customerResponse.customer || null);
       setCustomerOrders(Array.isArray(ordersResponse) ? ordersResponse : []);
+      setCustomerHistory(Array.isArray(historyResponse) ? historyResponse : []);
       setShowAllOrders(false);
+      setOrderStatusFilter("all");
       setMessage("");
       setReason("manual_adjustment");
       setReasonDetail("");
@@ -173,6 +210,7 @@ export function BalancePage({ csrfToken, refreshKey = 0 }: { csrfToken?: string;
     } catch {
       setSelectedCustomer(null);
       setCustomerOrders([]);
+      setCustomerHistory([]);
     }
   }
 
@@ -206,9 +244,13 @@ export function BalancePage({ csrfToken, refreshKey = 0 }: { csrfToken?: string;
       setMessage("Solicitação enviada para aprovação.");
       await loadMyRequests();
       const refreshedCustomer = await getBalanceCustomerAdmin(selectedCustomer.id, { cache: "no-store" }).catch(() => null);
-      const refreshedOrders = await listBalanceCustomerOrdersAdmin(selectedCustomer.id, { cache: "no-store" }).catch(() => []);
+      const [refreshedOrders, refreshedHistory] = await Promise.all([
+        listBalanceCustomerOrdersAdmin(selectedCustomer.id, { cache: "no-store" }).catch(() => []),
+        listBalanceCustomerHistoryAdmin(selectedCustomer.id, { cache: "no-store" }).catch(() => []),
+      ]);
       if (refreshedCustomer?.customer) setSelectedCustomer(refreshedCustomer.customer);
       setCustomerOrders(Array.isArray(refreshedOrders) ? refreshedOrders : []);
+      setCustomerHistory(Array.isArray(refreshedHistory) ? refreshedHistory : []);
       setShowAllOrders(false);
     } catch (error: any) {
       setMessage(String(error?.message || "Não foi possível enviar a solicitação."));
@@ -241,11 +283,21 @@ export function BalancePage({ csrfToken, refreshKey = 0 }: { csrfToken?: string;
         email: String(request.customerEmail || "").trim(),
       }));
   }, [requests]);
+  const filteredOrders = useMemo(() => {
+    if (orderStatusFilter === "all") return customerOrders;
+    return customerOrders.filter((order) => {
+      const label = formatOrderStatus(order.status);
+      if (orderStatusFilter === "delivered") return label === "Entregue";
+      if (orderStatusFilter === "canceled") return label === "Cancelado";
+      if (orderStatusFilter === "pending") return label === "Pendente";
+      return label === "Em análise";
+    });
+  }, [customerOrders, orderStatusFilter]);
   const visibleOrders = useMemo(
-    () => (showAllOrders ? customerOrders : customerOrders.slice(0, 5)),
-    [customerOrders, showAllOrders]
+    () => (showAllOrders ? filteredOrders : filteredOrders.slice(0, 5)),
+    [filteredOrders, showAllOrders]
   );
-  const hasMoreOrders = customerOrders.length > 5;
+  const hasMoreOrders = filteredOrders.length > 5;
   const linkedOrder = useMemo(
     () => customerOrders.find((order) => order.id === relatedOrderId) || null,
     [customerOrders, relatedOrderId]
@@ -566,8 +618,10 @@ export function BalancePage({ csrfToken, refreshKey = 0 }: { csrfToken?: string;
           onClick={() => {
             setSelectedCustomer(null);
             setCustomerOrders([]);
+            setCustomerHistory([]);
             setRelatedOrderId("");
             setShowAllOrders(false);
+            setOrderStatusFilter("all");
             setMessage("");
           }}
           style={{
@@ -761,6 +815,29 @@ export function BalancePage({ csrfToken, refreshKey = 0 }: { csrfToken?: string;
                 />
               </label>
 
+              {linkedOrder ? (
+                <div
+                  style={{
+                    borderRadius: 16,
+                    border: "1px solid #d7eadb",
+                    background: "#f5fbf7",
+                    padding: "14px 16px",
+                    display: "grid",
+                    gap: 6,
+                  }}
+                >
+                  <div style={{ fontSize: 11, letterSpacing: "0.14em", textTransform: "uppercase", color: "#166534", fontWeight: 700 }}>
+                    Pedido vinculado confirmado
+                  </div>
+                  <div style={{ fontSize: 15, color: "#111111", fontWeight: 700 }}>
+                    {formatCompactOrderLabel(linkedOrder)} • {formatMoney(linkedOrder.amount)}
+                  </div>
+                  <div style={{ fontSize: 13, color: "#555555" }}>
+                    {formatDate(linkedOrder.createdAt)} • {formatOrderStatus(linkedOrder.status)}
+                  </div>
+                </div>
+              ) : null}
+
               <label style={{ display: "grid", gap: 6 }}>
                 <span style={fieldLabelStyle}>Observação interna (opcional)</span>
                 <textarea
@@ -807,6 +884,75 @@ export function BalancePage({ csrfToken, refreshKey = 0 }: { csrfToken?: string;
               {submitting ? "Enviando..." : "Enviar para aprovação"}
             </button>
           </section>
+
+          <section style={cardStyle}>
+            <div style={{ display: "grid", gap: 6 }}>
+              <div style={{ fontSize: 11, letterSpacing: "0.16em", textTransform: "uppercase", color: "#666666" }}>Histórico do saldo</div>
+              <div style={{ fontSize: 14, color: "#666666" }}>Últimas movimentações reais da carteira deste cliente.</div>
+            </div>
+
+            {customerHistory.length ? (
+              <div style={{ display: "grid", gap: 10, marginTop: 14 }}>
+                {customerHistory.map((entry) => {
+                  const positive = entry.deltaCents >= 0;
+                  return (
+                    <div
+                      key={entry.id}
+                      style={{
+                        borderRadius: 16,
+                        border: "1px solid #ececec",
+                        background: "#ffffff",
+                        padding: "14px 16px",
+                        display: "grid",
+                        gap: 8,
+                      }}
+                    >
+                      <div style={{ display: "flex", justifyContent: "space-between", gap: 12, alignItems: "center", flexWrap: "wrap" }}>
+                        <strong style={{ fontSize: 15, color: "#111111" }}>{formatHistoryReason(entry)}</strong>
+                        <span
+                          style={{
+                            display: "inline-flex",
+                            borderRadius: 999,
+                            padding: "5px 10px",
+                            fontSize: 12,
+                            fontWeight: 700,
+                            background: positive ? "#effaf2" : "#fef2f2",
+                            color: positive ? "#166534" : "#b42318",
+                            border: `1px solid ${positive ? "#c7ebd1" : "#f5c7c7"}`,
+                          }}
+                        >
+                          {positive ? "+" : "−"} {formatMoney(Math.abs(entry.deltaCents))}
+                        </span>
+                      </div>
+                      <div style={{ fontSize: 13, color: "#444444" }}>
+                        Saldo após a movimentação: <strong style={{ color: "#111111" }}>{formatMoney(entry.balanceAfterCents)}</strong>
+                      </div>
+                      <div style={{ fontSize: 12, color: "#666666" }}>
+                        {formatDate(entry.createdAt, true)}
+                        {entry.relatedOrderId ? ` • Pedido ${String(entry.relatedOrderId).slice(0, 8).toUpperCase()}` : ""}
+                      </div>
+                      {entry.internalNote ? (
+                        <div style={{ fontSize: 12, color: "#555555" }}>{entry.internalNote}</div>
+                      ) : null}
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <div
+                style={{
+                  borderRadius: 16,
+                  border: "1px dashed #d8d8d8",
+                  padding: "22px",
+                  color: "#666666",
+                  textAlign: "center",
+                  marginTop: 14,
+                }}
+              >
+                As movimentações de saldo deste cliente vão aparecer aqui.
+              </div>
+            )}
+          </section>
         </div>
 
         <div style={{ flex: "2 1 620px", minWidth: 340, display: "grid", gap: 20 }}>
@@ -817,6 +963,27 @@ export function BalancePage({ csrfToken, refreshKey = 0 }: { csrfToken?: string;
                 <div style={{ fontSize: 14, color: "#666666" }}>Clique em <strong style={{ color: "#111111" }}>Vincular</strong> para usar um pedido no ajuste.</div>
               </div>
               <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
+                <select
+                  value={orderStatusFilter}
+                  onChange={(event) => {
+                    setOrderStatusFilter(event.target.value as typeof orderStatusFilter);
+                    setShowAllOrders(false);
+                  }}
+                  style={{
+                    ...selectStyle,
+                    height: 44,
+                    minWidth: 180,
+                    paddingTop: 0,
+                    paddingBottom: 0,
+                    fontSize: 14,
+                  }}
+                >
+                  <option value="all">Todos os status</option>
+                  <option value="pending">Pendentes</option>
+                  <option value="analysis">Em análise</option>
+                  <option value="delivered">Entregues</option>
+                  <option value="canceled">Cancelados</option>
+                </select>
                 {relatedOrderId ? (
                   <button
                     type="button"
@@ -853,7 +1020,7 @@ export function BalancePage({ csrfToken, refreshKey = 0 }: { csrfToken?: string;
               </div>
             </div>
 
-            {customerOrders.length ? (
+            {filteredOrders.length ? (
               <div style={{ overflowX: "auto", marginTop: 14 }}>
                 <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 620 }}>
                   <thead>
@@ -881,15 +1048,15 @@ export function BalancePage({ csrfToken, refreshKey = 0 }: { csrfToken?: string;
                       const statusTone = orderStatusTone(order.status);
                       const isLinked = relatedOrderId === order.id;
                       return (
-                        <tr key={order.id}>
-                          <td style={{ padding: "14px 0", borderTop: "1px solid #efefef", color: "#111111", fontWeight: 700 }}>
+                        <tr key={order.id} style={isLinked ? { background: "#f5fbf7" } : undefined}>
+                          <td style={{ padding: "14px 12px 14px 0", borderTop: "1px solid #efefef", color: "#111111", fontWeight: 700 }}>
                             {formatCompactOrderLabel(order)}
                           </td>
-                          <td style={{ padding: "14px 0", borderTop: "1px solid #efefef", color: "#555555" }}>{formatDate(order.createdAt)}</td>
-                          <td style={{ padding: "14px 0", borderTop: "1px solid #efefef", color: "#111111", fontWeight: 700 }}>
+                          <td style={{ padding: "14px 12px 14px 0", borderTop: "1px solid #efefef", color: "#555555" }}>{formatDate(order.createdAt)}</td>
+                          <td style={{ padding: "14px 12px 14px 0", borderTop: "1px solid #efefef", color: "#111111", fontWeight: 700 }}>
                             {formatMoney(order.amount)}
                           </td>
-                          <td style={{ padding: "14px 0", borderTop: "1px solid #efefef" }}>
+                          <td style={{ padding: "14px 12px 14px 0", borderTop: "1px solid #efefef" }}>
                             <span
                               style={{
                                 display: "inline-flex",
@@ -905,7 +1072,7 @@ export function BalancePage({ csrfToken, refreshKey = 0 }: { csrfToken?: string;
                               {formatOrderStatus(order.status)}
                             </span>
                           </td>
-                          <td style={{ padding: "14px 0", borderTop: "1px solid #efefef", textAlign: "right" }}>
+                          <td style={{ padding: "14px 0 14px 12px", borderTop: "1px solid #efefef", textAlign: "right" }}>
                             <button
                               type="button"
                               onClick={() => setRelatedOrderId(isLinked ? "" : order.id)}
@@ -939,7 +1106,9 @@ export function BalancePage({ csrfToken, refreshKey = 0 }: { csrfToken?: string;
                   marginTop: 14,
                 }}
               >
-                Este cliente ainda não possui pedidos para vincular.
+                {customerOrders.length
+                  ? "Nenhum pedido encontrado para o filtro selecionado."
+                  : "Este cliente ainda não possui pedidos para vincular."}
               </div>
             )}
           </section>

@@ -84,6 +84,30 @@ type BalanceCustomer = {
   createdAt: string | null;
 };
 
+type WalletHistoryRow = {
+  id?: string;
+  delta_cents?: number | string | null;
+  balance_after_cents?: number | string | null;
+  reason?: string | null;
+  ref_id?: string | null;
+  created_at?: string | null;
+  related_order_id?: string | null;
+  request_reason?: string | null;
+  internal_note?: string | null;
+};
+
+type BalanceHistoryEntry = {
+  id: string;
+  createdAt: string | null;
+  deltaCents: number;
+  balanceAfterCents: number;
+  reason: string;
+  refId: string | null;
+  relatedOrderId: string | null;
+  requestReason: string | null;
+  internalNote: string | null;
+};
+
 let balanceSchemaPromise: Promise<void> | null = null;
 
 function normalizeRequestType(value: unknown): BalanceRequestRecord["type"] {
@@ -152,6 +176,21 @@ function mapBalanceCustomerRow(row: any): BalanceCustomer | null {
     phone: decryptedPhone || rawPhone,
     walletCents: Number(row.wallet_cents || 0),
     createdAt: row.created_at || null,
+  };
+}
+
+function mapBalanceHistoryRow(row: WalletHistoryRow | null | undefined): BalanceHistoryEntry | null {
+  if (!row) return null;
+  return {
+    id: String(row.id || ""),
+    createdAt: row.created_at || null,
+    deltaCents: Number(row.delta_cents || 0),
+    balanceAfterCents: Number(row.balance_after_cents || 0),
+    reason: String(row.reason || "").trim(),
+    refId: row.ref_id ? String(row.ref_id).trim() : null,
+    relatedOrderId: row.related_order_id ? String(row.related_order_id).trim() : null,
+    requestReason: row.request_reason ? String(row.request_reason).trim() : null,
+    internalNote: row.internal_note ? String(row.internal_note).trim() : null,
   };
 }
 
@@ -260,6 +299,38 @@ async function searchBalanceCustomers(search = "", limit = 20): Promise<BalanceC
     [likeValue, safeLimit]
   );
   return result.rows.map(mapBalanceCustomerRow).filter((row): row is BalanceCustomer => Boolean(row));
+}
+
+async function listBalanceHistoryByCustomerId(customerId: string, limit = 12): Promise<BalanceHistoryEntry[]> {
+  await ensureBalanceRequestSchema();
+  const normalizedId = String(customerId || "").trim();
+  const safeLimit = Math.max(1, Math.min(50, Number(limit) || 12));
+  if (!normalizedId) return [];
+
+  const result = await query<WalletHistoryRow>(
+    `
+    SELECT
+      wt.id,
+      wt.delta_cents,
+      wt.balance_after_cents,
+      wt.reason,
+      wt.ref_id,
+      wt.created_at,
+      br.related_order_id,
+      br.reason AS request_reason,
+      br.internal_note
+    FROM wallet_transactions wt
+    LEFT JOIN balance_requests br
+      ON br.id::text = wt.ref_id
+      AND wt.reason IN ('admin_balance_credit', 'admin_balance_debit')
+    WHERE wt.user_id = $1
+    ORDER BY wt.created_at DESC
+    LIMIT $2
+    `,
+    [normalizedId, safeLimit]
+  );
+
+  return result.rows.map(mapBalanceHistoryRow).filter((row): row is BalanceHistoryEntry => Boolean(row));
 }
 
 async function createBalanceRequest(payload: {
@@ -571,6 +642,7 @@ module.exports = {
   mapBalanceCustomerRow,
   getBalanceCustomerById,
   searchBalanceCustomers,
+  listBalanceHistoryByCustomerId,
   createBalanceRequest,
   findBalanceRequestById,
   listBalanceRequests,

@@ -15,6 +15,7 @@ const {
 const {
   getBalanceCustomerById,
   searchBalanceCustomers,
+  listBalanceHistoryByCustomerId,
   createBalanceRequest,
   listBalanceRequestsByRequester,
   listBalanceRequests,
@@ -35,6 +36,16 @@ const {
 const { listOrdersByUserId } = require("./lib/order-repository");
 
 const adminGovernanceRouter = express.Router();
+const SECURITY_AUDIT_ACTIONS = [
+  "ADMIN_SUSPICIOUS_LOGIN",
+  "ADMIN_SUSPICIOUS_ACCESS",
+  "ADMIN_CREATED",
+  "ADMIN_ROLE_UPDATED",
+  "ADMIN_PERMISSIONS_UPDATED",
+  "ADMIN_STATUS_UPDATED",
+  "BALANCE_APPROVED",
+  "BALANCE_REJECTED",
+];
 
 const adminRoleSchema = z.enum(["admin", "director", "superadmin"]);
 const adminPermissionsSchema = z.object({
@@ -358,6 +369,18 @@ adminGovernanceRouter.get("/balance/customers/:id/orders", requirePermission("ba
   }
 });
 
+adminGovernanceRouter.get("/balance/customers/:id/history", requirePermission("balance"), async (req: any, res: any) => {
+  try {
+    const customerId = String(req.params.id || "").trim();
+    const customer = await getBalanceCustomerById(customerId);
+    if (!customer) return res.status(404).json({ error: "NOT_FOUND" });
+    const rows = await listBalanceHistoryByCustomerId(customerId, Number(req.query.limit || 12));
+    return res.json({ rows });
+  } catch {
+    return res.status(500).json({ error: "BALANCE_CUSTOMER_HISTORY_FETCH_FAILED" });
+  }
+});
+
 adminGovernanceRouter.post("/balance/requests", requirePermission("balance"), async (req: any, res: any) => {
   const parsed = balanceRequestSchema.safeParse(req.body || {});
   if (!parsed.success) return res.status(400).json({ error: "INVALID_INPUT" });
@@ -566,6 +589,7 @@ adminGovernanceRouter.patch("/notifications/read-all", async (req: any, res: any
 
 adminGovernanceRouter.get("/diretoria/audit-logs", requireRole(["director", "superadmin"]), async (req: any, res: any) => {
   try {
+    const securityOnly = String(req.query.security_only || "").trim().toLowerCase() === "true";
     const excludedActions = String(req.admin?.role || "") === "superadmin"
       ? []
       : ["ADMIN_SUSPICIOUS_LOGIN", "ADMIN_SUSPICIOUS_ACCESS"];
@@ -573,6 +597,7 @@ adminGovernanceRouter.get("/diretoria/audit-logs", requireRole(["director", "sup
       action: String(req.query.action || ""),
       performedBy: String(req.query.performed_by || ""),
       targetType: String(req.query.target_type || ""),
+      includedActions: securityOnly ? SECURITY_AUDIT_ACTIONS : [],
       excludedActions,
       dateFrom: String(req.query.date_from || ""),
       dateTo: String(req.query.date_to || ""),

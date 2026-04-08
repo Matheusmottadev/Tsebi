@@ -669,6 +669,18 @@ export interface BalanceRequestRow {
   resultingBalanceCents: number;
 }
 
+export interface BalanceHistoryEntry {
+  id: string;
+  createdAt: string | null;
+  deltaCents: number;
+  balanceAfterCents: number;
+  reason: string;
+  refId: string | null;
+  relatedOrderId: string | null;
+  requestReason: BalanceRequestRow["reason"] | string | null;
+  internalNote: string | null;
+}
+
 export interface CreateBalanceRequestPayload {
   customerId: string;
   type: "credit" | "debit";
@@ -1939,6 +1951,17 @@ export async function listBalanceCustomerOrdersAdmin(
   return Array.isArray(response.orders) ? response.orders : [];
 }
 
+export async function listBalanceCustomerHistoryAdmin(
+  id: string,
+  options?: HttpRequestOptions
+): Promise<BalanceHistoryEntry[]> {
+  const response = await get<{ rows: BalanceHistoryEntry[] }>(
+    `/api/admin/balance/customers/${encodeURIComponent(String(id || "").trim())}/history`,
+    options
+  );
+  return Array.isArray(response.rows) ? response.rows : [];
+}
+
 export async function createBalanceRequestAdmin(
   payload: CreateBalanceRequestPayload,
   csrfToken?: string,
@@ -2035,7 +2058,7 @@ export async function markAllAdminBellNotificationsRead(
 }
 
 export async function listDirectoriaAuditLogs(
-  params: { action?: string; performedBy?: string; targetType?: string; dateFrom?: string; dateTo?: string; page?: number; limit?: number } = {},
+  params: { action?: string; performedBy?: string; targetType?: string; dateFrom?: string; dateTo?: string; page?: number; limit?: number; securityOnly?: boolean } = {},
   options?: HttpRequestOptions
 ): Promise<ListOpsAuditLogsResponse> {
   const query = buildQuery({
@@ -2044,6 +2067,7 @@ export async function listDirectoriaAuditLogs(
     target_type: params.targetType,
     date_from: params.dateFrom,
     date_to: params.dateTo,
+    security_only: params.securityOnly ? "true" : "",
     page: params.page,
     limit: params.limit,
   });
