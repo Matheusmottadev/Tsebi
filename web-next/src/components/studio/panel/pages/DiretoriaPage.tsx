@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Drawer } from "@/components/admin/Drawer";
-import { SearchBar, type FilterConfig } from "@/components/studio/panel/SearchBar";
+import { SearchBar, type FilterConfig, type SortOption } from "@/components/studio/panel/SearchBar";
 import type { AdminModulePermission } from "@/types";
 import {
   approveBalanceRequestAdmin,
@@ -54,6 +54,49 @@ function formatDate(value: string | null): string {
   return new Intl.DateTimeFormat("pt-BR", { dateStyle: "short", timeStyle: "short" }).format(date);
 }
 
+function formatDateTime(value: string | null): string {
+  return formatDate(value);
+}
+
+function normalizeTextForCompare(value: unknown): string {
+  return String(value || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .trim()
+    .toLowerCase();
+}
+
+function isToday(date: Date): boolean {
+  const now = new Date();
+  return date.getDate() === now.getDate() && date.getMonth() === now.getMonth() && date.getFullYear() === now.getFullYear();
+}
+
+function isThisWeek(date: Date): boolean {
+  const now = new Date();
+  const day = now.getDay();
+  const diff = day === 0 ? 6 : day - 1;
+  const weekStart = new Date(now);
+  weekStart.setHours(0, 0, 0, 0);
+  weekStart.setDate(now.getDate() - diff);
+  return date.getTime() >= weekStart.getTime();
+}
+
+function isThisMonth(date: Date): boolean {
+  const now = new Date();
+  return date.getFullYear() === now.getFullYear() && date.getMonth() === now.getMonth();
+}
+
+function matchesPeriod(dateValue: string | null | undefined, period: string): boolean {
+  if (period === "todos") return true;
+  if (!dateValue) return false;
+  const date = new Date(dateValue);
+  if (Number.isNaN(date.getTime())) return false;
+  if (period === "hoje") return isToday(date);
+  if (period === "esta_semana") return isThisWeek(date);
+  if (period === "este_mes") return isThisMonth(date);
+  return true;
+}
+
 function formatAdminMutationError(error: any, fallback: string): string {
   const raw = String(error?.message || "").trim();
   if (!raw) return fallback;
@@ -98,6 +141,86 @@ function formatApprovalActionError(error: any, fallback: string) {
     return "O cliente não tem saldo suficiente para esta remoção.";
   }
   return raw;
+}
+
+function formatOpsAuditActionLabel(action: string): string {
+  const normalized = String(action || "").trim().toUpperCase();
+  if (normalized === "ADMIN_CREATED") return "Admin criado";
+  if (normalized === "ADMIN_ROLE_UPDATED") return "Cargo alterado";
+  if (normalized === "ADMIN_PERMISSIONS_UPDATED") return "Permissões alteradas";
+  if (normalized === "ADMIN_STATUS_UPDATED") return "Status alterado";
+  if (normalized === "BALANCE_REQUESTED") return "Solicitação criada";
+  if (normalized === "BALANCE_APPROVED") return "Saldo aprovado";
+  if (normalized === "BALANCE_REJECTED") return "Saldo rejeitado";
+  if (normalized === "ADMIN_SUSPICIOUS_LOGIN") return "Login suspeito";
+  if (normalized === "ADMIN_SUSPICIOUS_ACCESS") return "Acesso suspeito";
+  return String(action || "Evento").replace(/_/g, " ").toLowerCase();
+}
+
+function formatOpsAuditEntityLabel(targetType: string | null): string {
+  const normalized = String(targetType || "").trim().toLowerCase();
+  if (normalized === "balance_request") return "Solicitação de saldo";
+  if (normalized === "admin") return "Admin";
+  if (normalized === "admin_security") return "Segurança";
+  if (!normalized) return "-";
+  return normalized.replace(/_/g, " ");
+}
+
+function readOpsAuditMetaString(row: OpsAuditLogRow, key: string): string {
+  const value = row.metadata?.[key];
+  return typeof value === "string" ? value.trim() : "";
+}
+
+function formatOpsAuditOrigin(row: OpsAuditLogRow): string {
+  const route = readOpsAuditMetaString(row, "route");
+  const ip = readOpsAuditMetaString(row, "ip") || readOpsAuditMetaString(row, "sourceIp");
+  if (route && ip) return `${route} • ${ip}`;
+  return route || ip || "-";
+}
+
+function buildOpsAuditSummary(row: OpsAuditLogRow): string {
+  const before = row.beforeState && typeof row.beforeState === "object" ? (row.beforeState as Record<string, any>) : null;
+  const after = row.afterState && typeof row.afterState === "object" ? (row.afterState as Record<string, any>) : null;
+  const request = (after?.request || after || before?.request || before) as Record<string, any> | null;
+
+  if (row.action === "BALANCE_REQUESTED" || row.action === "BALANCE_APPROVED" || row.action === "BALANCE_REJECTED") {
+    const customer = String(request?.customerName || request?.customerEmail || "").trim() || "cliente";
+    const amount = Number(request?.amount || 0);
+    const type = request?.type === "debit" ? "remoção" : "adição";
+    const amountLabel = amount > 0 ? formatMoney(Math.round(amount * 100)) : "";
+    return `${type} de saldo${amountLabel ? ` de ${amountLabel}` : ""} para ${customer}`;
+  }
+
+  if (row.action === "ADMIN_CREATED") {
+    const email = String(after?.email || "").trim();
+    const role = String(after?.role || "").trim();
+    return email ? `${email} criado como ${formatRoleLabel(role)}` : "Novo admin cadastrado";
+  }
+
+  if (row.action === "ADMIN_ROLE_UPDATED") {
+    const role = String(after?.role || "").trim();
+    return role ? `Cargo ajustado para ${formatRoleLabel(role)}` : "Cargo do admin atualizado";
+  }
+
+  if (row.action === "ADMIN_PERMISSIONS_UPDATED") {
+    const permissions = Array.isArray(after?.permissions) ? after.permissions : [];
+    return permissions.length ? `Módulos liberados: ${permissions.join(", ")}` : "Permissões do admin atualizadas";
+  }
+
+  if (row.action === "ADMIN_STATUS_UPDATED") {
+    if (typeof after?.isActive === "boolean") {
+      return after.isActive ? "Admin reativado" : "Admin desativado";
+    }
+    return "Status do admin atualizado";
+  }
+
+  if (row.action === "ADMIN_SUSPICIOUS_LOGIN" || row.action === "ADMIN_SUSPICIOUS_ACCESS") {
+    return String(after?.message || after?.title || "").trim() || "Atividade suspeita registrada";
+  }
+
+  const targetLabel = formatOpsAuditEntityLabel(row.targetType);
+  const targetId = row.targetId ? ` #${row.targetId.slice(0, 8)}` : "";
+  return `${targetLabel}${targetId}`;
 }
 
 const SECURITY_AUDIT_ACTIONS = new Set([
@@ -168,10 +291,10 @@ export function DiretoriaPage({
   const [requestActionLoading, setRequestActionLoading] = useState<"approve" | "reject" | null>(null);
   const [highlightedRequestId, setHighlightedRequestId] = useState("");
   const [approvalToast, setApprovalToast] = useState<ApprovalToastState | null>(null);
-  const [auditActionFilter, setAuditActionFilter] = useState("");
+  const [auditSearch, setAuditSearch] = useState("");
   const [auditSecurityFilter, setAuditSecurityFilter] = useState("all");
-  const [auditDateFrom, setAuditDateFrom] = useState("");
-  const [auditDateTo, setAuditDateTo] = useState("");
+  const [auditPeriodFilter, setAuditPeriodFilter] = useState("todos");
+  const [auditSort, setAuditSort] = useState("mais_recente");
   const highlightTimerRef = useRef<number | null>(null);
   const approvalToastTimerRef = useRef<number | null>(null);
 
@@ -207,9 +330,6 @@ export function DiretoriaPage({
     try {
       const response = await listDirectoriaAuditLogs(
         {
-          action: auditActionFilter,
-          dateFrom: auditDateFrom,
-          dateTo: auditDateTo,
           securityOnly: auditSecurityFilter === "security_only",
           page: 1,
           limit: 100,
@@ -233,7 +353,7 @@ export function DiretoriaPage({
     if (tab === "audit") {
       loadAudit();
     }
-  }, [tab, requestStatusFilter, requestDateFrom, requestDateTo, requesterFilter, auditActionFilter, auditSecurityFilter, auditDateFrom, auditDateTo, refreshKey]);
+  }, [tab, requestStatusFilter, requestDateFrom, requestDateTo, requesterFilter, auditSecurityFilter, refreshKey]);
 
   useEffect(
     () => () => {
@@ -455,17 +575,73 @@ export function DiretoriaPage({
   ];
 
   const selectedBadge = selectedRequest ? statusBadge(selectedRequest.status) : null;
-  const sensitiveAuditRows = useMemo(() => auditRows.filter((row) => isSensitiveAuditAction(row.action)).slice(0, 6), [auditRows]);
+  const auditFilterConfigs: FilterConfig[] = [
+    {
+      key: "visao_auditoria_diretoria",
+      value: auditSecurityFilter,
+      onChange: setAuditSecurityFilter,
+      options: [
+        { value: "all", label: "Visão: Todos os eventos" },
+        { value: "security_only", label: "Visão: Somente segurança" },
+      ],
+    },
+    {
+      key: "periodo_auditoria_diretoria",
+      value: auditPeriodFilter,
+      onChange: setAuditPeriodFilter,
+      options: [
+        { value: "todos", label: "Período: Todos" },
+        { value: "hoje", label: "Hoje" },
+        { value: "esta_semana", label: "Esta semana" },
+        { value: "este_mes", label: "Este mês" },
+      ],
+    },
+  ];
+  const auditSortOptions: SortOption[] = [
+    {
+      key: "ordenacao_auditoria_diretoria",
+      value: auditSort,
+      onChange: setAuditSort,
+      options: [
+        { value: "mais_recente", label: "Mais recente" },
+        { value: "mais_antigo", label: "Mais antigo" },
+      ],
+    },
+  ];
+  const filteredAuditRows = useMemo(() => {
+    const query = normalizeTextForCompare(auditSearch);
+    const rows = auditRows.filter((row) => {
+      const summary = buildOpsAuditSummary(row);
+      const searchable = normalizeTextForCompare([
+        formatOpsAuditActionLabel(row.action),
+        formatOpsAuditEntityLabel(row.targetType),
+        summary,
+        row.performerName,
+        row.performerEmail,
+        formatOpsAuditOrigin(row),
+      ].join(" "));
+      if (query && !searchable.includes(query)) return false;
+      return matchesPeriod(row.createdAt, auditPeriodFilter);
+    });
+
+    rows.sort((a, b) => {
+      const left = new Date(a.createdAt || 0).getTime();
+      const right = new Date(b.createdAt || 0).getTime();
+      return auditSort === "mais_antigo" ? left - right : right - left;
+    });
+    return rows;
+  }, [auditRows, auditSearch, auditPeriodFilter, auditSort]);
+  const sensitiveAuditRows = useMemo(
+    () => filteredAuditRows.filter((row) => isSensitiveAuditAction(row.action)).slice(0, 6),
+    [filteredAuditRows]
+  );
   const regularAuditRows = useMemo(() => {
-    if (auditSecurityFilter === "security_only") return auditRows;
-    return auditRows.filter((row) => !isSensitiveAuditAction(row.action));
-  }, [auditRows, auditSecurityFilter]);
+    if (auditSecurityFilter === "security_only") return filteredAuditRows;
+    return filteredAuditRows.filter((row) => !isSensitiveAuditAction(row.action));
+  }, [filteredAuditRows, auditSecurityFilter]);
 
   function exportAudit() {
     const query = new URLSearchParams();
-    if (auditActionFilter.trim()) query.set("action", auditActionFilter.trim());
-    if (auditDateFrom.trim()) query.set("date_from", auditDateFrom.trim());
-    if (auditDateTo.trim()) query.set("date_to", auditDateTo.trim());
     if (auditSecurityFilter === "security_only") query.set("security_only", "true");
     query.set("export", "csv");
     window.open(`/api/admin/diretoria/audit-logs?${query.toString()}`, "_blank");
@@ -682,85 +858,93 @@ export function DiretoriaPage({
 
       {tab === "audit" ? (
         <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-          <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
-            <input value={auditActionFilter} onChange={(event) => setAuditActionFilter(event.target.value)} placeholder="Filtrar por ação" style={{ border: "1px solid #e0d8cc", borderRadius: 12, padding: "10px 12px", minWidth: 220 }} />
-            <select
-              value={auditSecurityFilter}
-              onChange={(event) => setAuditSecurityFilter(event.target.value)}
-              style={{ border: "1px solid #e0d8cc", borderRadius: 12, padding: "10px 12px", background: "#fff" }}
-            >
-              <option value="all">Todos os eventos</option>
-              <option value="security_only">Somente segurança</option>
-            </select>
-            <input type="date" value={auditDateFrom} onChange={(event) => setAuditDateFrom(event.target.value)} style={{ border: "1px solid #e0d8cc", borderRadius: 12, padding: "10px 12px" }} />
-            <input type="date" value={auditDateTo} onChange={(event) => setAuditDateTo(event.target.value)} style={{ border: "1px solid #e0d8cc", borderRadius: 12, padding: "10px 12px" }} />
+          <SearchBar
+            placeholder="Buscar por ação, admin ou resumo"
+            value={auditSearch}
+            onChange={setAuditSearch}
+            filters={auditFilterConfigs}
+            sortOptions={auditSortOptions}
+            resultsCount={regularAuditRows.length}
+            onClear={() => {
+              setAuditSearch("");
+              setAuditSecurityFilter("all");
+              setAuditPeriodFilter("todos");
+              setAuditSort("mais_recente");
+            }}
+          />
+          <div style={{ display: "flex", justifyContent: "flex-end" }}>
             <button type="button" onClick={exportAudit} className={styles.btnEdit}>Exportar CSV</button>
           </div>
 
           {auditSecurityFilter !== "security_only" && sensitiveAuditRows.length ? (
             <section
               style={{
-                border: "1px solid #f1d5d5",
-                borderRadius: 18,
-                background: "#fffafa",
-                padding: 18,
+                border: "1px solid #eeeeee",
+                borderRadius: 0,
+                background: "#ffffff",
+                padding: "14px 16px 8px",
                 display: "grid",
                 gap: 14,
               }}
             >
               <div style={{ display: "grid", gap: 4 }}>
-                <div style={{ fontSize: 11, letterSpacing: "0.16em", textTransform: "uppercase", color: "#991b1b", fontWeight: 700 }}>
+                <div style={{ fontSize: 9, letterSpacing: "0.12em", textTransform: "uppercase", color: "#999", fontFamily: "var(--font-jost), sans-serif", fontWeight: 300 }}>
                   Eventos sensíveis
                 </div>
-                <div style={{ fontSize: 14, color: "#6b7280" }}>
+                <div style={{ fontSize: 12, color: "#777", fontFamily: "var(--font-jost), sans-serif", fontWeight: 300 }}>
                   Alterações de acesso, eventos suspeitos e decisões críticas de saldo aparecem aqui com prioridade.
                 </div>
               </div>
 
-              <div style={{ display: "grid", gap: 10 }}>
-                {sensitiveAuditRows.map((row) => {
-                  const severity = getAuditSeverity(row.action);
-                  return (
-                    <div
-                      key={`sensitive-${row.id}`}
-                      style={{
-                        border: "1px solid #f3dfdf",
-                        borderRadius: 14,
-                        background: "#ffffff",
-                        padding: "14px 16px",
-                        display: "grid",
-                        gap: 8,
-                      }}
-                    >
-                      <div style={{ display: "flex", justifyContent: "space-between", gap: 10, flexWrap: "wrap", alignItems: "center" }}>
-                        <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
-                          <span
-                            style={{
-                              display: "inline-flex",
-                              borderRadius: 999,
-                              padding: "4px 9px",
-                              fontSize: 10,
-                              letterSpacing: "0.12em",
-                              textTransform: "uppercase",
-                              fontWeight: 700,
-                              color: severity.color,
-                              background: severity.background,
-                              border: `1px solid ${severity.border}`,
-                            }}
-                          >
-                            {severity.label}
-                          </span>
-                          <strong style={{ fontSize: 14, color: "#111111" }}>{row.action}</strong>
-                        </div>
-                        <span style={{ fontSize: 12, color: "#6b7280" }}>{formatDate(row.createdAt)}</span>
-                      </div>
-                      <div style={{ fontSize: 13, color: "#374151" }}>
-                        {row.performerName || row.performerEmail || "-"} • {row.targetType || "sem alvo"}
-                        {row.targetId ? ` #${row.targetId.slice(0, 8)}` : ""}
-                      </div>
-                    </div>
-                  );
-                })}
+              <div className={styles.tableWrap}>
+                <table className={styles.table}>
+                  <thead>
+                    <tr>
+                      <th>Ação</th>
+                      <th>Entidade</th>
+                      <th>Resumo</th>
+                      <th>Conta</th>
+                      <th>Origem</th>
+                      <th>Data</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {sensitiveAuditRows.map((row) => {
+                      const severity = getAuditSeverity(row.action);
+                      return (
+                        <tr key={`sensitive-${row.id}`}>
+                          <td>
+                            <div style={{ display: "grid", gap: 4 }}>
+                              <span>{formatOpsAuditActionLabel(row.action)}</span>
+                              <span
+                                style={{
+                                  display: "inline-flex",
+                                  alignSelf: "flex-start",
+                                  borderRadius: 999,
+                                  padding: "2px 7px",
+                                  fontSize: 9,
+                                  letterSpacing: "0.08em",
+                                  textTransform: "uppercase",
+                                  fontWeight: 400,
+                                  color: severity.color,
+                                  background: severity.background,
+                                  border: `1px solid ${severity.border}`,
+                                }}
+                              >
+                                {severity.label}
+                              </span>
+                            </div>
+                          </td>
+                          <td>{formatOpsAuditEntityLabel(row.targetType)}</td>
+                          <td>{buildOpsAuditSummary(row)}</td>
+                          <td>{row.performerEmail || row.performerName || "-"}</td>
+                          <td>{formatOpsAuditOrigin(row)}</td>
+                          <td>{formatDateTime(row.createdAt)}</td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
               </div>
             </section>
           ) : null}
@@ -769,13 +953,12 @@ export function DiretoriaPage({
             <table className={styles.table}>
               <thead>
                 <tr>
-                  <th>Timestamp</th>
-                  <th>Admin</th>
                   <th>Ação</th>
-                  <th>Severidade</th>
-                  <th>Alvo</th>
-                  <th>Antes</th>
-                  <th>Depois</th>
+                  <th>Entidade</th>
+                  <th>Resumo</th>
+                  <th>Conta</th>
+                  <th>Origem</th>
+                  <th>Data</th>
                 </tr>
               </thead>
               <tbody>
@@ -783,30 +966,33 @@ export function DiretoriaPage({
                   const severity = getAuditSeverity(row.action);
                   return (
                   <tr key={row.id}>
-                    <td>{formatDate(row.createdAt)}</td>
-                    <td>{row.performerName || row.performerEmail || "-"}</td>
-                    <td>{row.action}</td>
                     <td>
-                      <span
-                        style={{
-                          display: "inline-flex",
-                          borderRadius: 999,
-                          padding: "4px 9px",
-                          fontSize: 10,
-                          letterSpacing: "0.12em",
-                          textTransform: "uppercase",
-                          fontWeight: 700,
-                          color: severity.color,
-                          background: severity.background,
-                          border: `1px solid ${severity.border}`,
-                        }}
-                      >
-                        {severity.label}
-                      </span>
+                      <div style={{ display: "grid", gap: 4 }}>
+                        <span>{formatOpsAuditActionLabel(row.action)}</span>
+                        <span
+                          style={{
+                            display: "inline-flex",
+                            alignSelf: "flex-start",
+                            borderRadius: 999,
+                            padding: "2px 7px",
+                            fontSize: 9,
+                            letterSpacing: "0.08em",
+                            textTransform: "uppercase",
+                            fontWeight: 400,
+                            color: severity.color,
+                            background: severity.background,
+                            border: `1px solid ${severity.border}`,
+                          }}
+                        >
+                          {severity.label}
+                        </span>
+                      </div>
                     </td>
-                    <td>{row.targetType || "-"} {row.targetId ? `#${row.targetId.slice(0, 8)}` : ""}</td>
-                    <td style={{ maxWidth: 220, whiteSpace: "pre-wrap", wordBreak: "break-word" }}>{JSON.stringify(row.beforeState || {}, null, 2)}</td>
-                    <td style={{ maxWidth: 220, whiteSpace: "pre-wrap", wordBreak: "break-word" }}>{JSON.stringify(row.afterState || {}, null, 2)}</td>
+                    <td>{formatOpsAuditEntityLabel(row.targetType)}</td>
+                    <td>{buildOpsAuditSummary(row)}</td>
+                    <td>{row.performerEmail || row.performerName || "-"}</td>
+                    <td>{formatOpsAuditOrigin(row)}</td>
+                    <td>{formatDateTime(row.createdAt)}</td>
                   </tr>
                 )})}
               </tbody>
