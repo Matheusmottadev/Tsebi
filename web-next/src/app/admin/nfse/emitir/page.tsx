@@ -1,9 +1,7 @@
+import { headers } from "next/headers";
 import { requireAdminSession } from "@/lib/admin/server";
+import { getOrderAdmin } from "@/services/admin";
 import NfseFormulario, { type PedidoPrefill } from "./_components/NfseFormulario";
-
-const { query } = require("../../../../../../server/lib/db") as {
-  query: <TRow = Record<string, unknown>>(text: string, params?: unknown[]) => Promise<{ rows: TRow[] }>;
-};
 
 type EmitirNfsePageProps = {
   searchParams: Promise<{
@@ -12,40 +10,14 @@ type EmitirNfsePageProps = {
   }>;
 };
 
-type OrderRow = {
-  id: string;
-  user_name?: string | null;
-  user_email?: string | null;
-  total_cents?: number | null;
-  shipping_json?: Record<string, unknown> | null;
-  user_cpf?: string | null;
-  user_cep?: string | null;
-  account_name?: string | null;
-  account_email?: string | null;
-};
-
 async function buscarPedido(pedidoId: string): Promise<PedidoPrefill | null> {
   try {
-    const { rows } = await query<OrderRow>(
-      `
-        SELECT
-          o.*,
-          u.cpf AS user_cpf,
-          u.cep AS user_cep,
-          u.name AS account_name,
-          u.email AS account_email
-        FROM orders o
-        LEFT JOIN users u ON u.id = o.user_id
-        WHERE o.id = $1
-        LIMIT 1
-      `,
-      [pedidoId]
-    );
-
-    const pedido = rows[0];
+    const headerStore = await headers();
+    const cookie = headerStore.get("cookie") || undefined;
+    const pedido = await getOrderAdmin(pedidoId, { cookie, cache: "no-store" });
     if (!pedido) return null;
 
-    const shipping = (pedido.shipping_json || {}) as Record<string, unknown>;
+    const shipping = (pedido.shipping || {}) as Record<string, unknown>;
     const shippingAddress =
       shipping.shippingAddress && typeof shipping.shippingAddress === "object"
         ? (shipping.shippingAddress as Record<string, unknown>)
@@ -53,16 +25,16 @@ async function buscarPedido(pedidoId: string): Promise<PedidoPrefill | null> {
 
     return {
       id: pedido.id,
-      cliente_nome: String(pedido.user_name || pedido.account_name || ""),
-      cliente_email: String(pedido.user_email || pedido.account_email || ""),
-      cliente_cpf: String(shipping.customerCpf || shipping.cpf || pedido.user_cpf || ""),
-      cep: String(shippingAddress.cep || shipping.cep || pedido.user_cep || ""),
+      cliente_nome: String(pedido.userName || shipping.fullName || ""),
+      cliente_email: String(pedido.userEmail || shipping.email || ""),
+      cliente_cpf: String(shipping.customerCpf || shipping.cpf || shipping.document || ""),
+      cep: String(shippingAddress.cep || shipping.cep || pedido.shippingDestinationZip || ""),
       logradouro: String(shippingAddress.street || shippingAddress.logradouro || shipping.logradouro || ""),
       numero: String(shippingAddress.number || shippingAddress.numero || shipping.numero || ""),
       bairro: String(shippingAddress.district || shippingAddress.bairro || shipping.bairro || ""),
       municipio: String(shippingAddress.city || shippingAddress.municipio || shipping.municipio || ""),
       uf: String(shippingAddress.state || shippingAddress.uf || shipping.uf || ""),
-      total: Number(pedido.total_cents || 0) / 100,
+      total: Number(pedido.amount || 0) / 100,
     };
   } catch {
     return null;
