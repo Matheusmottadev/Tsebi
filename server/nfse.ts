@@ -10,7 +10,12 @@ const {
   generateCsrfToken,
   setAdminCsrfCookie,
 } = require("./lib/admin-security");
-const { trocarCodigoBlingPorToken, emitirNFSeNoBling, cancelarNFSeNoBling } = require("../lib/bling");
+const {
+  trocarCodigoBlingPorToken,
+  emitirNFSeNoBling,
+  cancelarNFSeNoBling,
+  resolveBlingCallbackUrl,
+} = require("../lib/bling");
 const { enviarEmailNfse } = require("../lib/email");
 const {
   listarNfse,
@@ -319,7 +324,7 @@ blingIntegrationsRouter.get("/callback", async (req: Request & any, res: Respons
   }
 
   try {
-    const redirectUri = `${req.protocol}://${req.get("host")}/api/integrations/bling/callback`;
+    const redirectUri = resolveBlingCallbackUrl(`${req.protocol}://${req.get("host")}`);
     const tokens = await trocarCodigoBlingPorToken(code, redirectUri);
     const envSnippet = [
       `BLING_ACCESS_TOKEN=${tokens.access_token}`,

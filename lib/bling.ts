@@ -11,6 +11,41 @@ type BlingTokenResponse = {
   scope?: string;
 };
 
+function resolveBlingCallbackUrl(fallbackOrigin?: string): string {
+  const explicit = String(process.env.BLING_REDIRECT_URI || "").trim();
+  if (explicit) return explicit;
+
+  const appBaseUrl = String(process.env.APP_BASE_URL || "").trim().replace(/\/+$/, "");
+  if (appBaseUrl) return `${appBaseUrl}/api/integrations/bling/callback`;
+
+  const fallback = String(fallbackOrigin || "").trim().replace(/\/+$/, "");
+  if (fallback) return `${fallback}/api/integrations/bling/callback`;
+
+  return "https://tsebi.com.br/api/integrations/bling/callback";
+}
+
+function parseBlingTokenErrorPayload(data: unknown, status: number): string {
+  if (!data || typeof data !== "object") {
+    return `Falha ao trocar o código do Bling (${status}).`;
+  }
+
+  const payload = data as Record<string, unknown>;
+  const directMessage = [payload.error_description, payload.message, payload.description, payload.error]
+    .map((value) => (typeof value === "string" ? value.trim() : ""))
+    .find(Boolean);
+  if (directMessage) return directMessage;
+
+  const nestedError = payload.error && typeof payload.error === "object" ? (payload.error as Record<string, unknown>) : null;
+  if (nestedError) {
+    const nestedMessage = [nestedError.message, nestedError.description, nestedError.type, nestedError.error]
+      .map((value) => (typeof value === "string" ? value.trim() : ""))
+      .find(Boolean);
+    if (nestedMessage) return nestedMessage;
+  }
+
+  return `Falha ao trocar o código do Bling (${status}).`;
+}
+
 function getBlingBasicAuthorization(): string {
   const clientId = String(process.env.BLING_CLIENT_ID || "").trim();
   const clientSecret = String(process.env.BLING_CLIENT_SECRET || "").trim();
@@ -71,14 +106,17 @@ export async function trocarCodigoBlingPorToken(code: string, redirectUri: strin
     }),
   });
 
-  const data = (await res.json().catch(() => null)) as Record<string, unknown> | null;
+  const rawText = await res.text().catch(() => "");
+  const data = rawText ? ((() => {
+    try {
+      return JSON.parse(rawText) as Record<string, unknown>;
+    } catch {
+      return { raw: rawText } as Record<string, unknown>;
+    }
+  })()) : null;
+
   if (!res.ok || !data || typeof data.access_token !== "string") {
-    const message =
-      typeof data?.error_description === "string"
-        ? data.error_description
-        : typeof data?.message === "string"
-          ? data.message
-          : `Falha ao trocar o código do Bling (${res.status}).`;
+    const message = parseBlingTokenErrorPayload(data, res.status);
     throw new Error(message);
   }
 
@@ -157,3 +195,11 @@ export async function consultarNFSeNoBling(blingId: string) {
   if (!res.ok) throw new Error(`Erro ao consultar no Bling: ${res.status}`);
   return res.json();
 }
+
+module.exports = {
+  trocarCodigoBlingPorToken,
+  emitirNFSeNoBling,
+  cancelarNFSeNoBling,
+  consultarNFSeNoBling,
+  resolveBlingCallbackUrl,
+};
