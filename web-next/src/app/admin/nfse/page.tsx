@@ -1,3 +1,4 @@
+import { headers } from "next/headers";
 import { requireAdminSession } from "@/lib/admin/server";
 import { getNfseStatsAdmin, listNfseAdmin } from "@/services/admin";
 import { NfseStats } from "./_components/NfseStats";
@@ -17,6 +18,8 @@ export const revalidate = 0;
 export default async function NfsePage({ searchParams }: NfsePageProps) {
   await requireAdminSession("/admin/nfse");
 
+  const headerStore = await headers();
+  const cookie = headerStore.get("cookie") || undefined;
   const resolvedSearchParams = await searchParams;
   const [{ notas, total }, stats] = await Promise.all([
     listNfseAdmin({
@@ -24,8 +27,8 @@ export default async function NfsePage({ searchParams }: NfsePageProps) {
       busca: resolvedSearchParams.busca,
       pagina: Number(resolvedSearchParams.pagina ?? 1),
       periodo: resolvedSearchParams.periodo,
-    }, { cache: "no-store" }),
-    getNfseStatsAdmin({ cache: "no-store" }),
+    }, { cookie, cache: "no-store" }),
+    getNfseStatsAdmin({ cookie, cache: "no-store" }),
   ]);
 
   return (
