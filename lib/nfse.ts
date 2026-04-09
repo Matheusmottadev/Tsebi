@@ -81,7 +81,7 @@ export async function listarNfse({
     ),
     pending_rows AS (
       SELECT
-        CONCAT('pending:', o.id) AS id,
+        o.id AS id,
         o.id AS pedido_id,
         NULL::varchar(100) AS bling_id,
         NULL::varchar(20) AS numero,
@@ -133,7 +133,7 @@ export async function listarNfse({
       ${nfseWhere}
     ),
     pending_rows AS (
-      SELECT CONCAT('pending:', o.id) AS id
+      SELECT o.id AS id
       FROM orders o
       ${pendingWhere}
     ),
