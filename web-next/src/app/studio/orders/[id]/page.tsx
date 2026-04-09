@@ -5,6 +5,7 @@ import { StudioShell } from "@/components/studio/StudioShell";
 import { HttpError } from "@/lib/http";
 import { readStudioSession } from "@/lib/studio/server";
 import { getOrderAdmin } from "@/services/admin";
+import { buscarNfsePorPedido } from "../../../../../../lib/nfse";
 import styles from "./page.module.css";
 
 export const revalidate = 0;
@@ -43,6 +44,7 @@ export default async function StudioOrderDetailPage({ params }: StudioOrderDetai
     }
     throw error;
   }
+  const nfse = await buscarNfsePorPedido(orderId);
 
   return (
     <StudioShell
@@ -102,6 +104,81 @@ export default async function StudioOrderDetailPage({ params }: StudioOrderDetai
             </div>
           </dl>
         </section>
+      </div>
+
+      <div
+        style={{
+          marginTop: "24px",
+          padding: "16px 20px",
+          background: "#161616",
+          border: "0.5px solid #1e1e1e",
+          borderRadius: "8px",
+        }}
+      >
+        <p style={{ fontSize: "10px", letterSpacing: "2px", color: "#444", margin: "0 0 12px", fontWeight: 500 }}>
+          NOTA FISCAL
+        </p>
+
+        {!nfse ? (
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "12px" }}>
+            <span style={{ fontSize: "13px", color: "#555" }}>Nenhuma nota emitida</span>
+            <a
+              href={`/admin/nfse/emitir?pedidoId=${encodeURIComponent(orderId)}`}
+              style={{
+                background: "transparent",
+                border: "0.5px solid #334",
+                color: "#5577aa",
+                fontSize: "11px",
+                padding: "5px 12px",
+                borderRadius: "5px",
+                textDecoration: "none",
+              }}
+            >
+              Emitir NFS-e
+            </a>
+          </div>
+        ) : (
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "12px" }}>
+            <div>
+              <span style={{ fontSize: "13px", color: "#ccc" }}>
+                {nfse.numero ? `NFS-e ${nfse.numero}` : "Em processamento"}
+              </span>
+              <span style={{ fontSize: "11px", color: "#555", marginLeft: "10px" }}>
+                {Number(nfse.valor_servicos).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
+              </span>
+            </div>
+            <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
+              <span
+                style={{
+                  fontSize: "11px",
+                  padding: "3px 8px",
+                  borderRadius: "20px",
+                  background: nfse.status === "autorizada" ? "#0d2b1a" : "#1a1a1a",
+                  color: nfse.status === "autorizada" ? "#3a9e6a" : "#555",
+                }}
+              >
+                {nfse.status}
+              </span>
+              {nfse.pdf_url ? (
+                <a
+                  href={nfse.pdf_url}
+                  target="_blank"
+                  rel="noreferrer"
+                  style={{
+                    fontSize: "11px",
+                    color: "#666",
+                    textDecoration: "none",
+                    border: "0.5px solid #2a2a2a",
+                    padding: "4px 10px",
+                    borderRadius: "5px",
+                  }}
+                >
+                  PDF
+                </a>
+              ) : null}
+            </div>
+          </div>
+        )}
       </div>
 
       <section className={styles.card}>
@@ -168,4 +245,3 @@ export default async function StudioOrderDetailPage({ params }: StudioOrderDetai
     </StudioShell>
   );
 }
-

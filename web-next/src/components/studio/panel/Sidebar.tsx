@@ -9,6 +9,8 @@ import {
   Mail,
   MessageCircle,
   Package,
+  ReceiptText,
+  Settings2,
   ShoppingBag,
   Star,
   Tag,
@@ -16,6 +18,8 @@ import {
   Wrench,
   type LucideIcon,
 } from "lucide-react";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
 import type { AdminPageKey } from "./types";
 import { useAdminAccess, useAdminPermission } from "./access-control";
 import styles from "./Sidebar.module.css";
@@ -29,9 +33,11 @@ type SidebarProps = {
 };
 
 type NavItem = {
-  key: AdminPageKey;
+  key: string;
   label: string;
   icon: LucideIcon;
+  pageKey?: AdminPageKey;
+  href?: string;
   badge?: number;
 };
 
@@ -41,6 +47,7 @@ type NavGroup = {
 };
 
 export function Sidebar({ activePage, onChangePage, pendingOrders, openCare, pendingRepairs }: SidebarProps) {
+  const pathname = usePathname();
   const access = useAdminAccess();
   const canOrders = useAdminPermission("orders");
   const canUsers = useAdminPermission("users");
@@ -51,36 +58,43 @@ export function Sidebar({ activePage, onChangePage, pendingOrders, openCare, pen
     {
       label: "Geral",
       items: [
-        { key: "inicio", label: "Início", icon: LayoutGrid },
-        ...(canOrders ? [{ key: "pedidos" as const, label: "Pedidos", icon: Package, badge: pendingOrders }] : []),
-        ...(canProducts ? [{ key: "produtos" as const, label: "Produtos", icon: ShoppingBag }] : []),
-        ...(canUsers ? [{ key: "usuarios" as const, label: "Usuários", icon: Users }] : []),
+        { key: "inicio", pageKey: "inicio", label: "Início", icon: LayoutGrid },
+        ...(canOrders ? [{ key: "pedidos", pageKey: "pedidos" as const, label: "Pedidos", icon: Package, badge: pendingOrders }] : []),
+        ...(canProducts ? [{ key: "produtos", pageKey: "produtos" as const, label: "Produtos", icon: ShoppingBag }] : []),
+        ...(canUsers ? [{ key: "usuarios", pageKey: "usuarios" as const, label: "Usuários", icon: Users }] : []),
       ],
     },
     {
       label: "Relacionamento",
       items: [
-        { key: "atendimentos", label: "Atendimentos", icon: MessageCircle, badge: openCare },
-        { key: "reparos", label: "Reparos", icon: Wrench, badge: pendingRepairs },
-        { key: "lista_vip", label: "Lista VIP", icon: Star },
-        { key: "newsletter", label: "Newsletter", icon: Mail },
+        { key: "atendimentos", pageKey: "atendimentos", label: "Atendimentos", icon: MessageCircle, badge: openCare },
+        { key: "reparos", pageKey: "reparos", label: "Reparos", icon: Wrench, badge: pendingRepairs },
+        { key: "lista_vip", pageKey: "lista_vip", label: "Lista VIP", icon: Star },
+        { key: "newsletter", pageKey: "newsletter", label: "Newsletter", icon: Mail },
       ],
     },
     {
       label: "Comercial",
       items: [
-        { key: "cupons", label: "Cupons", icon: Tag },
-        { key: "gift_cards", label: "Gift Cards", icon: Gift },
-        ...(canBalance ? [{ key: "saldo_clientes" as const, label: "Saldo de Clientes", icon: BriefcaseBusiness }] : []),
-        ...(isDirectoria ? [{ key: "auditoria" as const, label: "Auditoria", icon: FileText }] : []),
-        { key: "notificacoes", label: "Notificações", icon: Bell },
+        { key: "cupons", pageKey: "cupons", label: "Cupons", icon: Tag },
+        { key: "gift_cards", pageKey: "gift_cards", label: "Gift Cards", icon: Gift },
+        ...(canBalance ? [{ key: "saldo_clientes", pageKey: "saldo_clientes" as const, label: "Saldo de Clientes", icon: BriefcaseBusiness }] : []),
+        ...(isDirectoria ? [{ key: "auditoria", pageKey: "auditoria" as const, label: "Auditoria", icon: FileText }] : []),
+        { key: "notificacoes", pageKey: "notificacoes", label: "Notificações", icon: Bell },
+      ],
+    },
+    {
+      label: "Fiscal",
+      items: [
+        { key: "nfse-link", href: "/admin/nfse", label: "Notas Fiscais", icon: ReceiptText },
+        { key: "nfse-config-link", href: "/admin/nfse/configuracoes", label: "Configurações", icon: Settings2 },
       ],
     },
     ...(isDirectoria
       ? [
           {
             label: "Diretoria",
-            items: [{ key: "diretoria" as const, label: "Diretoria", icon: BriefcaseBusiness }],
+            items: [{ key: "diretoria", pageKey: "diretoria" as const, label: "Diretoria", icon: BriefcaseBusiness }],
           },
         ]
       : []),
@@ -131,30 +145,50 @@ export function Sidebar({ activePage, onChangePage, pendingOrders, openCare, pen
             </p>
             {group.items.map((item) => {
               const Icon = item.icon;
-              const isActive = activePage === item.key;
+              const isActive = item.href
+                ? pathname === item.href || pathname.startsWith(`${item.href}/`)
+                : activePage === item.pageKey;
+              const sharedStyle = {
+                border: 0,
+                borderLeft: isActive ? "2px solid #fff" : "2px solid transparent",
+                background: isActive ? "#1a1a1a" : "transparent",
+                padding: "11px 28px",
+                display: "flex",
+                alignItems: "center",
+                gap: 10,
+                width: "100%",
+                cursor: "pointer",
+                color: isActive ? "#fff" : "#bbb",
+                fontSize: 12,
+                fontWeight: 300,
+                letterSpacing: "0.05em",
+                textAlign: "left" as const,
+                textDecoration: "none",
+              };
+
+              if (item.href) {
+                return (
+                  <Link
+                    key={item.key}
+                    href={item.href}
+                    className={`${styles.navItem} ${isActive ? styles.active : ""}`}
+                    aria-current={isActive ? "page" : undefined}
+                    style={sharedStyle}
+                  >
+                    <Icon size={14} strokeWidth={1.6} aria-hidden="true" />
+                    <span>{item.label}</span>
+                  </Link>
+                );
+              }
+
               return (
                 <button
                   key={item.key}
                   type="button"
                   className={`${styles.navItem} ${isActive ? styles.active : ""}`}
-                  onClick={() => onChangePage(item.key)}
+                  onClick={() => item.pageKey && onChangePage(item.pageKey)}
                   aria-current={isActive ? "page" : undefined}
-                  style={{
-                    border: 0,
-                    borderLeft: isActive ? "2px solid #fff" : "2px solid transparent",
-                    background: isActive ? "#1a1a1a" : "transparent",
-                    padding: "11px 28px",
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 10,
-                    width: "100%",
-                    cursor: "pointer",
-                    color: isActive ? "#fff" : "#bbb",
-                    fontSize: 12,
-                    fontWeight: 300,
-                    letterSpacing: "0.05em",
-                    textAlign: "left",
-                  }}
+                  style={sharedStyle}
                 >
                   <Icon size={14} strokeWidth={1.6} aria-hidden="true" />
                   <span>{item.label}</span>
