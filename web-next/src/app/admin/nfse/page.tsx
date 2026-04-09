@@ -1,6 +1,7 @@
 import { headers } from "next/headers";
 import { requireAdminSession } from "@/lib/admin/server";
-import { getNfseStatsAdmin, listNfseAdmin } from "@/services/admin";
+import { getNfseStatsAdmin, listNfseAdmin, studioAuthMe } from "@/services/admin";
+import NfseAdminShell from "./_components/NfseAdminShell";
 import { NfseStats } from "./_components/NfseStats";
 import NfseTabela from "./_components/NfseTabela";
 
@@ -20,6 +21,7 @@ export default async function NfsePage({ searchParams }: NfsePageProps) {
 
   const headerStore = await headers();
   const cookie = headerStore.get("cookie") || undefined;
+  const me = await studioAuthMe({ cookie, cache: "no-store" });
   const resolvedSearchParams = await searchParams;
   const [{ notas, total }, stats] = await Promise.all([
     listNfseAdmin({
@@ -32,6 +34,7 @@ export default async function NfsePage({ searchParams }: NfsePageProps) {
   ]);
 
   return (
+    <NfseAdminShell admin={me.admin!} access={me.access ?? null}>
     <div style={{ padding: "20px 28px", color: "#161616", background: "#ffffff", minHeight: "100%" }}>
       <div
         style={{
@@ -88,5 +91,6 @@ export default async function NfsePage({ searchParams }: NfsePageProps) {
       <NfseStats stats={stats} />
       <NfseTabela notas={notas} total={total} searchParams={resolvedSearchParams} />
     </div>
+    </NfseAdminShell>
   );
 }

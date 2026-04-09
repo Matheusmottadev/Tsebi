@@ -1,4 +1,7 @@
+import { headers } from "next/headers";
 import { requireAdminSession } from "@/lib/admin/server";
+import { studioAuthMe } from "@/services/admin";
+import NfseAdminShell from "../_components/NfseAdminShell";
 
 export const revalidate = 0;
 
@@ -16,6 +19,9 @@ function formatCnpj(value: string): string {
 
 export default async function NfseConfiguracoesPage() {
   await requireAdminSession("/admin/nfse/configuracoes");
+  const headerStore = await headers();
+  const cookie = headerStore.get("cookie") || undefined;
+  const me = await studioAuthMe({ cookie, cache: "no-store" });
 
   const clientId = String(process.env.BLING_CLIENT_ID || "").trim();
   const hasClientSecret = Boolean(String(process.env.BLING_CLIENT_SECRET || "").trim());
@@ -59,6 +65,7 @@ export default async function NfseConfiguracoesPage() {
   ];
 
   return (
+    <NfseAdminShell admin={me.admin!} access={me.access ?? null}>
     <div style={{ padding: "32px 28px", color: "#111" }}>
       <div style={{ maxWidth: "1120px" }}>
         <div style={{ marginBottom: "24px" }}>
@@ -280,5 +287,6 @@ export default async function NfseConfiguracoesPage() {
         </div>
       </div>
     </div>
+    </NfseAdminShell>
   );
 }
