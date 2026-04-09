@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useState, type CSSProperties } from "react";
+import { bootstrapAdminCsrfToken } from "@/services/admin";
 
 const CODIGOS_ISS = [
   { value: "01.07", label: "01.07 — Programacao e desenvolvimento de software" },
@@ -115,9 +116,10 @@ export default function NfseFormulario({ pedido, pedidoId, substituir }: NfseFor
     setErro(null);
     setLoading(true);
     try {
+      const csrfToken = await bootstrapAdminCsrfToken({ cache: "no-store" });
       const response = await fetch("/api/nfse", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", "x-csrf-token": csrfToken },
         body: JSON.stringify({
           ...form,
           pedido_id: pedidoId,

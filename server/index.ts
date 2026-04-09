@@ -17,6 +17,7 @@ const { authRouter, myRouter } = require("./auth");
 const { studioAuthRouter } = require("./studio-auth");
 const { vipRouter } = require("./vip");
 const { adminRouter } = require("./admin");
+const { nfseRouter, blingIntegrationsRouter } = require("./nfse");
 const { readJson, writeJson } = require("./lib/json-store");
 const { findUserById, upsertCheckoutGuestUser, setGuestTempPasswordIfMissing, normalizeEmail, updateUser } = require("./user-repository");
 const { sendGuestCheckoutAccountCreatedEmail, sendEmail } = require("./lib/email-service");
@@ -1793,6 +1794,8 @@ app.use("/api/auth", attachUserCsrfToken, requireUserCsrfForMutations, authRoute
 app.use("/api/my", attachUserCsrfToken, requireUserCsrfForMutations, myRouter);
 app.use("/api/studio-auth", studioAuthRouter);
 app.use("/api/vip", vipRouter);
+app.use("/api/integrations/bling", blingIntegrationsRouter);
+app.use("/api/nfse", nfseRouter);
 app.use("/api", shippingRouter);
 app.use("/api", orderTrackingRouter);
 app.use("/api/whatsapp", whatsappRouter);

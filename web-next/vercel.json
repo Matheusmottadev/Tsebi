@@ -20,18 +20,6 @@
   ],
   "rewrites": [
     {
-      "source": "/api/integrations/bling/callback",
-      "destination": "/api/integrations/bling/callback"
-    },
-    {
-      "source": "/api/nfse",
-      "destination": "/api/nfse"
-    },
-    {
-      "source": "/api/nfse/:path*",
-      "destination": "/api/nfse/:path*"
-    },
-    {
       "source": "/api/:path*",
       "destination": "https://tsebi-production.up.railway.app/api/:path*"
     }

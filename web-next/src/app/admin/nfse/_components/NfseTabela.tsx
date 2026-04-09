@@ -2,6 +2,7 @@
 
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useState, useTransition, type CSSProperties } from "react";
+import { bootstrapAdminCsrfToken } from "@/services/admin";
 import type { Nfse } from "../../../../../../types/nfse";
 
 const STATUS_STYLE: Record<string, { bg: string; cor: string; dot: string }> = {
@@ -42,7 +43,11 @@ export default function NfseTabela({ notas, total, searchParams }: NfseTabelaPro
     if (!window.confirm("Cancelar esta nota fiscal?")) return;
     setLoadingId(id);
     try {
-      const response = await fetch(`/api/nfse/${id}`, { method: "DELETE" });
+      const csrfToken = await bootstrapAdminCsrfToken({ cache: "no-store" });
+      const response = await fetch(`/api/nfse/${id}`, {
+        method: "DELETE",
+        headers: { "x-csrf-token": csrfToken },
+      });
       if (!response.ok) {
         const data = (await response.json().catch(() => null)) as { error?: string } | null;
         setErroModal(data?.error ?? "Erro ao cancelar nota");
@@ -57,7 +62,11 @@ export default function NfseTabela({ notas, total, searchParams }: NfseTabelaPro
   async function reenviarEmail(id: string) {
     setLoadingId(id);
     try {
-      const response = await fetch(`/api/nfse/${id}/reenviar`, { method: "POST" });
+      const csrfToken = await bootstrapAdminCsrfToken({ cache: "no-store" });
+      const response = await fetch(`/api/nfse/${id}/reenviar`, {
+        method: "POST",
+        headers: { "x-csrf-token": csrfToken },
+      });
       if (!response.ok) {
         const data = (await response.json().catch(() => null)) as { error?: string } | null;
         setErroModal(data?.error ?? "Erro ao reenviar email");
