@@ -9,7 +9,7 @@ const STATUS_STYLE: Record<string, { bg: string; cor: string; dot: string }> = {
   autorizada: { bg: "#0d2b1a", cor: "#3a9e6a", dot: "#3a9e6a" },
   processando: { bg: "#1e1e08", cor: "#8a7a20", dot: "#8a7a20" },
   cancelada: { bg: "#2a1010", cor: "#9e3a3a", dot: "#9e3a3a" },
-  pendente: { bg: "#1a1a1a", cor: "#555", dot: "#444" },
+  pendente: { bg: "#f3f4f6", cor: "#374151", dot: "#6b7280" },
   erro: { bg: "#2a1010", cor: "#cc4444", dot: "#cc4444" },
 };
 
@@ -81,16 +81,16 @@ export default function NfseTabela({ notas, total, searchParams }: NfseTabelaPro
   const thStyle: CSSProperties = {
     fontSize: "10px",
     letterSpacing: "1.5px",
-    color: "#444",
+    color: "#6b7280",
     fontWeight: 500,
     padding: "8px 0",
-    borderBottom: "0.5px solid #1e1e1e",
+    borderBottom: "1px solid #e5e7eb",
     textAlign: "left",
   };
 
   const tdStyle: CSSProperties = {
     padding: "13px 0",
-    borderBottom: "0.5px solid #1a1a1a",
+    borderBottom: "1px solid #f1f5f9",
     verticalAlign: "middle",
   };
 
@@ -103,11 +103,11 @@ export default function NfseTabela({ notas, total, searchParams }: NfseTabelaPro
           placeholder="Buscar por nota, pedido ou cliente..."
           style={{
             flex: 1,
-            background: "#1a1a1a",
-            border: "0.5px solid #2a2a2a",
+            background: "#ffffff",
+            border: "1px solid #d1d5db",
             borderRadius: "6px",
             padding: "7px 12px",
-            color: "#888",
+            color: "#111111",
             fontSize: "12px",
             outline: "none",
           }}
@@ -116,11 +116,11 @@ export default function NfseTabela({ notas, total, searchParams }: NfseTabelaPro
           onChange={(event) => atualizarFiltro("status", event.target.value)}
           defaultValue={searchParams.status ?? ""}
           style={{
-            background: "#1a1a1a",
-            border: "0.5px solid #2a2a2a",
+            background: "#ffffff",
+            border: "1px solid #d1d5db",
             borderRadius: "6px",
             padding: "7px 10px",
-            color: "#666",
+            color: "#111111",
             fontSize: "11px",
           }}
         >
@@ -135,11 +135,11 @@ export default function NfseTabela({ notas, total, searchParams }: NfseTabelaPro
           onChange={(event) => atualizarFiltro("periodo", event.target.value)}
           defaultValue={searchParams.periodo ?? ""}
           style={{
-            background: "#1a1a1a",
-            border: "0.5px solid #2a2a2a",
+            background: "#ffffff",
+            border: "1px solid #d1d5db",
             borderRadius: "6px",
             padding: "7px 10px",
-            color: "#666",
+            color: "#111111",
             fontSize: "11px",
           }}
         >
@@ -147,7 +147,7 @@ export default function NfseTabela({ notas, total, searchParams }: NfseTabelaPro
           <option value="mes-atual">Este mes</option>
           <option value="mes-anterior">Mes anterior</option>
         </select>
-        <span style={{ fontSize: "11px", color: "#444" }}>{total} resultado(s)</span>
+        <span style={{ fontSize: "11px", color: "#6b7280" }}>{total} resultado(s)</span>
       </div>
 
       <table style={{ width: "100%", borderCollapse: "collapse" }}>
@@ -168,20 +168,20 @@ export default function NfseTabela({ notas, total, searchParams }: NfseTabelaPro
             return (
               <tr key={nota.id} style={{ cursor: "default" }}>
                 <td style={tdStyle}>
-                  <span style={{ fontSize: "11px", color: "#555", fontFamily: "monospace" }}>
-                    {nota.numero ? `NFS-e ${nota.numero}` : "—"}
+                  <span style={{ fontSize: "11px", color: "#374151", fontFamily: "monospace" }}>
+                    {nota.numero ? `NFS-e ${nota.numero}` : "Pendente"}
                   </span>
                 </td>
                 <td style={tdStyle}>
-                  <span style={{ fontSize: "11px", color: "#777", fontFamily: "monospace" }}>
+                  <span style={{ fontSize: "11px", color: "#374151", fontFamily: "monospace" }}>
                     #{nota.pedido_id.slice(0, 12)}
                   </span>
                 </td>
                 <td style={tdStyle}>
-                  <span style={{ fontSize: "13px", color: "#ccc" }}>{nota.tomador_nome}</span>
+                  <span style={{ fontSize: "13px", color: "#111111", fontWeight: 500 }}>{nota.tomador_nome}</span>
                 </td>
                 <td style={tdStyle}>
-                  <span style={{ fontSize: "13px", color: "#ccc" }}>
+                  <span style={{ fontSize: "13px", color: "#111111" }}>
                     {Number(nota.valor_servicos).toLocaleString("pt-BR", {
                       style: "currency",
                       currency: "BRL",
@@ -213,7 +213,7 @@ export default function NfseTabela({ notas, total, searchParams }: NfseTabelaPro
                     {nota.status.charAt(0).toUpperCase() + nota.status.slice(1)}
                   </span>
                 </td>
-                <td style={{ ...tdStyle, fontSize: "12px", color: "#555" }}>
+                <td style={{ ...tdStyle, fontSize: "12px", color: "#4b5563" }}>
                   {new Date(nota.created_at).toLocaleString("pt-BR")}
                 </td>
                 <td style={{ ...tdStyle, textAlign: "right" }}>
@@ -225,9 +225,9 @@ export default function NfseTabela({ notas, total, searchParams }: NfseTabelaPro
                           target="_blank"
                           rel="noreferrer"
                           style={{
-                            background: "transparent",
-                            border: "0.5px solid #2a2a2a",
-                            color: "#666",
+                            background: "#ffffff",
+                            border: "1px solid #d1d5db",
+                            color: "#111111",
                             fontSize: "11px",
                             padding: "5px 10px",
                             borderRadius: "5px",
@@ -240,9 +240,9 @@ export default function NfseTabela({ notas, total, searchParams }: NfseTabelaPro
                           onClick={() => reenviarEmail(nota.id)}
                           disabled={loading}
                           style={{
-                            background: "transparent",
-                            border: "0.5px solid #2a2a2a",
-                            color: "#666",
+                            background: "#ffffff",
+                            border: "1px solid #d1d5db",
+                            color: "#111111",
                             fontSize: "11px",
                             padding: "5px 10px",
                             borderRadius: "5px",
@@ -255,8 +255,8 @@ export default function NfseTabela({ notas, total, searchParams }: NfseTabelaPro
                           onClick={() => cancelarNota(nota.id)}
                           disabled={loading}
                           style={{
-                            background: "transparent",
-                            border: "0.5px solid #2a1010",
+                            background: "#ffffff",
+                            border: "1px solid #fecaca",
                             color: "#9e3a3a",
                             fontSize: "11px",
                             padding: "5px 10px",
@@ -273,9 +273,9 @@ export default function NfseTabela({ notas, total, searchParams }: NfseTabelaPro
                       <a
                         href={`/admin/nfse/emitir?pedidoId=${nota.pedido_id}`}
                         style={{
-                          background: "transparent",
-                          border: "0.5px solid #334",
-                          color: "#5577aa",
+                          background: "#111111",
+                          border: "1px solid #111111",
+                          color: "#ffffff",
                           fontSize: "11px",
                           padding: "5px 10px",
                           borderRadius: "5px",
@@ -290,9 +290,9 @@ export default function NfseTabela({ notas, total, searchParams }: NfseTabelaPro
                       <a
                         href={`/admin/nfse/emitir?pedidoId=${nota.pedido_id}&substituir=${nota.id}`}
                         style={{
-                          background: "transparent",
-                          border: "0.5px solid #2a2a2a",
-                          color: "#666",
+                          background: "#ffffff",
+                          border: "1px solid #d1d5db",
+                          color: "#111111",
                           fontSize: "11px",
                           padding: "5px 10px",
                           borderRadius: "5px",
@@ -307,8 +307,8 @@ export default function NfseTabela({ notas, total, searchParams }: NfseTabelaPro
                       <button
                         onClick={() => setErroModal(nota.erro_mensagem ?? "Erro desconhecido")}
                         style={{
-                          background: "transparent",
-                          border: "0.5px solid #2a1010",
+                          background: "#ffffff",
+                          border: "1px solid #fecaca",
                           color: "#cc4444",
                           fontSize: "11px",
                           padding: "5px 10px",
@@ -321,13 +321,20 @@ export default function NfseTabela({ notas, total, searchParams }: NfseTabelaPro
                     ) : null}
 
                     {nota.status === "processando" ? (
-                      <span style={{ fontSize: "11px", color: "#444" }}>Aguardando...</span>
+                      <span style={{ fontSize: "11px", color: "#6b7280" }}>Aguardando...</span>
                     ) : null}
                   </div>
                 </td>
               </tr>
             );
           })}
+          {notas.length === 0 ? (
+            <tr>
+              <td colSpan={7} style={{ padding: "28px 0", color: "#6b7280", fontSize: "13px", textAlign: "center" }}>
+                Nenhuma nota ou pedido pendente encontrado com os filtros atuais.
+              </td>
+            </tr>
+          ) : null}
         </tbody>
       </table>
 
@@ -336,7 +343,7 @@ export default function NfseTabela({ notas, total, searchParams }: NfseTabelaPro
           style={{
             position: "fixed",
             inset: 0,
-            background: "rgba(0,0,0,0.7)",
+            background: "rgba(17,24,39,0.35)",
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
@@ -346,23 +353,25 @@ export default function NfseTabela({ notas, total, searchParams }: NfseTabelaPro
         >
           <div
             style={{
-              background: "#161616",
-              border: "0.5px solid #2a2a2a",
-              borderRadius: "8px",
+              background: "#ffffff",
+              border: "1px solid #e5e7eb",
+              borderRadius: "12px",
               padding: "24px",
               maxWidth: "480px",
               width: "100%",
+              boxShadow: "0 24px 80px rgba(15,23,42,0.16)",
             }}
           >
-            <p style={{ fontSize: "14px", fontWeight: 500, color: "#fff", marginBottom: "12px" }}>Erro na emissao</p>
+            <p style={{ fontSize: "14px", fontWeight: 600, color: "#111111", marginBottom: "12px" }}>Erro na emissao</p>
             <p
               style={{
                 fontSize: "13px",
-                color: "#cc4444",
+                color: "#b91c1c",
                 fontFamily: "monospace",
-                background: "#1a0a0a",
+                background: "#fef2f2",
                 padding: "12px",
-                borderRadius: "6px",
+                borderRadius: "8px",
+                border: "1px solid #fecaca",
               }}
             >
               {erroModal}
@@ -371,9 +380,9 @@ export default function NfseTabela({ notas, total, searchParams }: NfseTabelaPro
               onClick={() => setErroModal(null)}
               style={{
                 marginTop: "16px",
-                background: "transparent",
-                border: "0.5px solid #2a2a2a",
-                color: "#666",
+                background: "#ffffff",
+                border: "1px solid #d1d5db",
+                color: "#111111",
                 padding: "7px 14px",
                 borderRadius: "6px",
                 fontSize: "12px",

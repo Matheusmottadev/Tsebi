@@ -32,7 +32,7 @@ export default async function NfsePage({ searchParams }: NfsePageProps) {
   ]);
 
   return (
-    <div style={{ padding: "20px 28px", color: "#e8e8e8" }}>
+    <div style={{ padding: "20px 28px", color: "#161616", background: "#ffffff", minHeight: "100%" }}>
       <div
         style={{
           display: "flex",
@@ -43,8 +43,8 @@ export default async function NfsePage({ searchParams }: NfsePageProps) {
         }}
       >
         <div>
-          <h1 style={{ fontSize: "22px", fontWeight: 500, color: "#fff", margin: 0 }}>Notas Fiscais</h1>
-          <p style={{ fontSize: "11px", color: "#444", margin: "4px 0 0" }}>
+          <h1 style={{ fontSize: "22px", fontWeight: 600, color: "#111111", margin: 0 }}>Notas Fiscais</h1>
+          <p style={{ fontSize: "11px", color: "#6b7280", margin: "4px 0 0" }}>
             {new Date().toLocaleDateString("pt-BR", {
               weekday: "long",
               day: "numeric",
@@ -57,9 +57,9 @@ export default async function NfsePage({ searchParams }: NfsePageProps) {
           <a
             href="/api/nfse/export"
             style={{
-              background: "transparent",
-              border: "0.5px solid #2a2a2a",
-              color: "#666",
+              background: "#ffffff",
+              border: "1px solid #d1d5db",
+              color: "#111111",
               padding: "7px 14px",
               borderRadius: "6px",
               fontSize: "12px",
@@ -71,8 +71,8 @@ export default async function NfsePage({ searchParams }: NfsePageProps) {
           <a
             href="/admin/nfse/emitir"
             style={{
-              background: "#fff",
-              color: "#111",
+              background: "#111111",
+              color: "#ffffff",
               padding: "7px 14px",
               borderRadius: "6px",
               fontSize: "12px",

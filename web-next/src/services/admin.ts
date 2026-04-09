@@ -2117,7 +2117,7 @@ export type NfseStats = {
 };
 
 export async function listNfseAdmin(
-  params: { status?: string; busca?: string; pagina?: number; periodo?: string } = {},
+  params: { status?: string; busca?: string; pagina?: number; periodo?: string; include_pending_orders?: boolean } = {},
   options?: HttpRequestOptions
 ): Promise<{ notas: NfseRow[]; total: number }> {
   const query = buildQuery({
@@ -2125,6 +2125,10 @@ export async function listNfseAdmin(
     busca: params.busca,
     pagina: params.pagina,
     periodo: params.periodo,
+    include_pending_orders:
+      typeof params.include_pending_orders === "boolean"
+        ? (params.include_pending_orders ? "true" : "false")
+        : undefined,
   });
   return get<{ notas: NfseRow[]; total: number }>(`/api/nfse${query}`, options);
 }
@@ -2134,7 +2138,7 @@ export async function getNfseStatsAdmin(options?: HttpRequestOptions): Promise<N
 }
 
 export async function findOrderNfseAdmin(orderId: string, options?: HttpRequestOptions): Promise<NfseRow | null> {
-  const response = await listNfseAdmin({ busca: orderId, pagina: 1 }, options);
+  const response = await listNfseAdmin({ busca: orderId, pagina: 1, include_pending_orders: false }, options);
   const match = Array.isArray(response.notas)
     ? response.notas.find((row) => String(row.pedido_id || "") === String(orderId || ""))
     : null;

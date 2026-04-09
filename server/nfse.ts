@@ -372,6 +372,7 @@ nfseRouter.get("/", requireAdmin, async (req: Request & any, res: Response) => {
       busca: String(req.query?.busca || "").trim() || undefined,
       pagina: Number(req.query?.pagina || 1),
       periodo: String(req.query?.periodo || "").trim() || undefined,
+      includePendingOrders: String(req.query?.include_pending_orders || "").trim() !== "false",
     });
     return res.json(notas);
   } catch (err) {
@@ -408,6 +409,7 @@ nfseRouter.get("/export", requireAdmin, async (req: Request & any, res: Response
       busca: String(req.query?.busca || "").trim() || undefined,
       pagina: 1,
       periodo: String(req.query?.periodo || "").trim() || undefined,
+      includePendingOrders: false,
     });
 
     const header = "Número,Pedido,Cliente,Documento,Valor,ISS,Status,Emitida em\n";
