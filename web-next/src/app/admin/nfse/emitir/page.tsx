@@ -1,6 +1,7 @@
 import { headers } from "next/headers";
 import { requireAdminSession } from "@/lib/admin/server";
-import { getOrderAdmin } from "@/services/admin";
+import { getOrderAdmin, studioAuthMe } from "@/services/admin";
+import NfseAdminShell from "../_components/NfseAdminShell";
 import NfseFormulario, { type PedidoPrefill } from "./_components/NfseFormulario";
 
 type EmitirNfsePageProps = {
@@ -44,44 +45,59 @@ async function buscarPedido(pedidoId: string): Promise<PedidoPrefill | null> {
 export default async function EmitirNfsePage({ searchParams }: EmitirNfsePageProps) {
   await requireAdminSession("/admin/nfse/emitir");
 
+  const headerStore = await headers();
+  const cookie = headerStore.get("cookie") || undefined;
+  const me = await studioAuthMe({ cookie, cache: "no-store" });
   const resolvedSearchParams = await searchParams;
   const pedido = resolvedSearchParams.pedidoId ? await buscarPedido(resolvedSearchParams.pedidoId) : null;
 
   return (
-    <div style={{ position: "relative", minHeight: "100vh" }}>
-      <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)" }} />
-      <div
-        style={{
-          position: "fixed",
-          top: 0,
-          right: 0,
-          bottom: 0,
-          width: "480px",
-          background: "#111",
-          borderLeft: "0.5px solid #2a2a2a",
-          padding: "28px",
-          overflowY: "auto",
-          zIndex: 1,
-          boxSizing: "border-box",
-        }}
-      >
+    <NfseAdminShell admin={me.admin!} access={me.access ?? null}>
+      <div style={{ position: "relative", minHeight: "calc(100vh - 72px)" }}>
         <div
-          style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "4px" }}
-        >
-          <h2 style={{ fontSize: "22px", fontWeight: 500, color: "#fff", margin: 0 }}>Emitir NFS-e</h2>
-          <a href="/admin/nfse" style={{ color: "#555", fontSize: "20px", textDecoration: "none", lineHeight: 1 }}>
-            ×
-          </a>
-        </div>
-        <p style={{ fontSize: "11px", color: "#444", marginBottom: "28px", letterSpacing: "0.5px" }}>
-          PREENCHA OS DADOS DA NOTA FISCAL
-        </p>
-        <NfseFormulario
-          pedido={pedido}
-          pedidoId={resolvedSearchParams.pedidoId}
-          substituir={resolvedSearchParams.substituir}
+          style={{
+            position: "fixed",
+            top: 0,
+            left: 220,
+            right: 0,
+            bottom: 0,
+            background: "rgba(15, 15, 15, 0.38)",
+          }}
         />
+        <div
+          style={{
+            position: "fixed",
+            top: 0,
+            right: 0,
+            bottom: 0,
+            width: "480px",
+            background: "#111",
+            borderLeft: "0.5px solid #2a2a2a",
+            padding: "28px",
+            overflowY: "auto",
+            zIndex: 1,
+            boxSizing: "border-box",
+            boxShadow: "-24px 0 60px rgba(0,0,0,0.16)",
+          }}
+        >
+          <div
+            style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "4px" }}
+          >
+            <h2 style={{ fontSize: "22px", fontWeight: 500, color: "#fff", margin: 0 }}>Emitir NFS-e</h2>
+            <a href="/admin/nfse" style={{ color: "#555", fontSize: "20px", textDecoration: "none", lineHeight: 1 }}>
+              ×
+            </a>
+          </div>
+          <p style={{ fontSize: "11px", color: "#444", marginBottom: "28px", letterSpacing: "0.5px" }}>
+            PREENCHA OS DADOS DA NOTA FISCAL
+          </p>
+          <NfseFormulario
+            pedido={pedido}
+            pedidoId={resolvedSearchParams.pedidoId}
+            substituir={resolvedSearchParams.substituir}
+          />
+        </div>
       </div>
-    </div>
+    </NfseAdminShell>
   );
 }
