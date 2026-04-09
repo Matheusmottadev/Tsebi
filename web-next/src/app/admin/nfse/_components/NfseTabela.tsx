@@ -39,6 +39,16 @@ export default function NfseTabela({ notas, total, searchParams }: NfseTabelaPro
     });
   }
 
+  function buildDrawerHref(next: { pedidoId?: string; substituir?: string } = {}) {
+    const nextParams = new URLSearchParams(params.toString());
+    nextParams.set("emitir", "1");
+    if (next.pedidoId) nextParams.set("pedidoId", next.pedidoId);
+    else nextParams.delete("pedidoId");
+    if (next.substituir) nextParams.set("substituir", next.substituir);
+    else nextParams.delete("substituir");
+    return `${pathname}?${nextParams.toString()}`;
+  }
+
   async function cancelarNota(id: string) {
     if (!window.confirm("Cancelar esta nota fiscal?")) return;
     setLoadingId(id);
@@ -271,7 +281,7 @@ export default function NfseTabela({ notas, total, searchParams }: NfseTabelaPro
 
                     {nota.status === "pendente" ? (
                       <a
-                        href={`/admin/nfse/emitir?pedidoId=${nota.pedido_id}`}
+                        href={buildDrawerHref({ pedidoId: nota.pedido_id })}
                         style={{
                           background: "#111111",
                           border: "1px solid #111111",
@@ -288,7 +298,7 @@ export default function NfseTabela({ notas, total, searchParams }: NfseTabelaPro
 
                     {nota.status === "cancelada" ? (
                       <a
-                        href={`/admin/nfse/emitir?pedidoId=${nota.pedido_id}&substituir=${nota.id}`}
+                        href={buildDrawerHref({ pedidoId: nota.pedido_id, substituir: nota.id })}
                         style={{
                           background: "#ffffff",
                           border: "1px solid #d1d5db",
