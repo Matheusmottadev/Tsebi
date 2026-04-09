@@ -4,8 +4,7 @@ import { Price } from "@/components/Price";
 import { StudioShell } from "@/components/studio/StudioShell";
 import { HttpError } from "@/lib/http";
 import { readStudioSession } from "@/lib/studio/server";
-import { getOrderAdmin } from "@/services/admin";
-import { buscarNfsePorPedido } from "../../../../../../lib/nfse";
+import { findOrderNfseAdmin, getOrderAdmin } from "@/services/admin";
 import styles from "./page.module.css";
 
 export const revalidate = 0;
@@ -44,7 +43,7 @@ export default async function StudioOrderDetailPage({ params }: StudioOrderDetai
     }
     throw error;
   }
-  const nfse = await buscarNfsePorPedido(orderId);
+  const nfse = await findOrderNfseAdmin(orderId, { cookie: session.cookie, cache: "no-store" });
 
   return (
     <StudioShell

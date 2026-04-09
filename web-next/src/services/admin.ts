@@ -2074,6 +2074,73 @@ export async function listDirectoriaAuditLogs(
   return get<ListOpsAuditLogsResponse>(`/api/admin/diretoria/audit-logs${query}`, options);
 }
 
+export type NfseStatus = "pendente" | "processando" | "autorizada" | "cancelada" | "erro";
+
+export type NfseRow = {
+  id: string;
+  pedido_id: string;
+  bling_id: string | null;
+  numero: string | null;
+  serie: string | null;
+  status: NfseStatus;
+  tomador_nome: string;
+  tomador_documento: string;
+  tomador_email: string | null;
+  tomador_cep: string | null;
+  tomador_logradouro: string | null;
+  tomador_numero: string | null;
+  tomador_bairro: string | null;
+  tomador_municipio: string | null;
+  tomador_uf: string | null;
+  servico_descricao: string;
+  servico_codigo: string;
+  valor_servicos: number;
+  aliquota_iss: number;
+  valor_iss: number | null;
+  competencia: string;
+  pdf_url: string | null;
+  xml_url: string | null;
+  link_nota: string | null;
+  erro_mensagem: string | null;
+  tentativas: number;
+  bling_payload: Record<string, unknown> | null;
+  email_enviado_em: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type NfseStats = {
+  emitidas_mes: number;
+  total_faturado: number;
+  pendentes: number;
+  erros: number;
+};
+
+export async function listNfseAdmin(
+  params: { status?: string; busca?: string; pagina?: number; periodo?: string } = {},
+  options?: HttpRequestOptions
+): Promise<{ notas: NfseRow[]; total: number }> {
+  const query = buildQuery({
+    status: params.status,
+    busca: params.busca,
+    pagina: params.pagina,
+    periodo: params.periodo,
+  });
+  return get<{ notas: NfseRow[]; total: number }>(`/api/nfse${query}`, options);
+}
+
+export async function getNfseStatsAdmin(options?: HttpRequestOptions): Promise<NfseStats> {
+  return get<NfseStats>("/api/nfse?stats=true", options);
+}
+
+export async function findOrderNfseAdmin(orderId: string, options?: HttpRequestOptions): Promise<NfseRow | null> {
+  const response = await listNfseAdmin({ busca: orderId, pagina: 1 }, options);
+  const match = Array.isArray(response.notas)
+    ? response.notas.find((row) => String(row.pedido_id || "") === String(orderId || ""))
+    : null;
+  return match || null;
+}
+
 /**
  * POST /api/notifications/register-token
  * Auth: user session (called from iOS app).

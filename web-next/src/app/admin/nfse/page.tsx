@@ -1,5 +1,5 @@
 import { requireAdminSession } from "@/lib/admin/server";
-import { buscarStatsNfse, listarNfse } from "../../../../../lib/nfse";
+import { getNfseStatsAdmin, listNfseAdmin } from "@/services/admin";
 import { NfseStats } from "./_components/NfseStats";
 import NfseTabela from "./_components/NfseTabela";
 
@@ -19,13 +19,13 @@ export default async function NfsePage({ searchParams }: NfsePageProps) {
 
   const resolvedSearchParams = await searchParams;
   const [{ notas, total }, stats] = await Promise.all([
-    listarNfse({
+    listNfseAdmin({
       status: resolvedSearchParams.status,
       busca: resolvedSearchParams.busca,
       pagina: Number(resolvedSearchParams.pagina ?? 1),
       periodo: resolvedSearchParams.periodo,
-    }),
-    buscarStatsNfse(),
+    }, { cache: "no-store" }),
+    getNfseStatsAdmin({ cache: "no-store" }),
   ]);
 
   return (
