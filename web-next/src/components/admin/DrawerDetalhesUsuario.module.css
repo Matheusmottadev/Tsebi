@@ -120,7 +120,7 @@
 
 .statsGrid {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 10px;
 }
 
@@ -280,6 +280,89 @@
   font-size: 11px;
   color: #999;
   font-weight: 300;
+}
+
+.timelineList {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.timelineCard {
+  border: 1px solid #efefef;
+  padding: 10px 12px;
+}
+
+.timelineTop {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.timelineTop strong {
+  font-family: var(--font-jost), sans-serif;
+  font-size: 13px;
+  font-weight: 400;
+  color: #111;
+}
+
+.timelineCard p {
+  margin: 6px 0 0;
+  font-family: var(--font-jost), sans-serif;
+  font-size: 11px;
+  color: #666;
+  font-weight: 300;
+}
+
+.badgeNeutral,
+.badgeMuted {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  padding: 3px 8px;
+  font-family: var(--font-jost), sans-serif;
+  font-size: 9px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  border: 1px solid transparent;
+}
+
+.badgeNeutral {
+  background: #f5f5f5;
+  color: #555;
+  border-color: #e8e8e8;
+}
+
+.badgeMuted {
+  background: #fff;
+  color: #888;
+  border-color: #ececec;
+}
+
+.amountPositive,
+.amountNegative {
+  font-family: var(--font-jost), sans-serif;
+  font-size: 12px;
+  font-weight: 400;
+}
+
+.amountPositive {
+  color: #1c7c3b;
+}
+
+.amountNegative {
+  color: #9b2226;
+}
+
+@media (max-width: 820px) {
+  .statsGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .infoGrid {
+    grid-template-columns: 1fr;
+  }
 }
 
 .footer {
@@ -499,4 +582,3 @@
     grid-template-columns: 1fr;
   }
 }
-

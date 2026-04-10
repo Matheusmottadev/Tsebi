@@ -10,9 +10,14 @@ import {
   listUserOrdersAdmin,
   resetUserPasswordAdmin,
   updateUserAdmin,
+  type AdminUserAppointmentRow,
+  type AdminUserAuditRow,
   type AdminUserDetail,
+  type AdminUserGiftCardRow,
   type AdminUserOrderRow,
+  type AdminUserRepairRow,
   type AdminUserRow,
+  type AdminUserWalletHistoryEntry,
 } from "@/services/admin";
 import styles from "./DrawerDetalhesUsuario.module.css";
 
@@ -189,6 +194,42 @@ function toStatusBadge(value: string): { label: "Pago" | "Pendente" | "Cancelado
   return { label: "Pendente", tone: "pending" };
 }
 
+function toWalletReasonLabel(value: string): string {
+  const normalized = String(value || "").trim().toLowerCase();
+  if (normalized === "gift_card_redemption") return "Resgate de gift card";
+  if (normalized === "purchase") return "Compra";
+  if (normalized === "admin_balance_credit") return "Saldo adicionado";
+  if (normalized === "admin_balance_debit") return "Saldo removido";
+  return String(value || "Movimentação");
+}
+
+function toAppointmentStatusLabel(value: string): string {
+  const normalized = String(value || "").trim().toLowerCase();
+  if (normalized === "scheduled") return "Agendado";
+  if (normalized === "completed") return "Concluído";
+  if (normalized === "canceled") return "Cancelado";
+  return String(value || "-");
+}
+
+function toRepairStatusLabel(value: string): string {
+  const normalized = String(value || "").trim().toLowerCase();
+  if (normalized === "awaiting_shipment") return "Aguardando envio";
+  if (normalized === "item_received") return "Peça recebida";
+  if (normalized === "in_repair") return "Em reparo";
+  if (normalized === "completed") return "Concluído";
+  if (normalized === "returned") return "Devolvido";
+  if (normalized === "rejected") return "Recusado";
+  return String(value || "-");
+}
+
+function toAuditActionLabel(value: string): string {
+  return String(value || "")
+    .split("_")
+    .filter(Boolean)
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1).toLowerCase())
+    .join(" ");
+}
+
 function mapFallbackOrderToUserOrder(row: {
   id: string;
   orderNumber?: string;
@@ -363,8 +404,15 @@ export function DrawerDetalhesUsuario({
       totalSpent,
       totalOrders: orders.length,
       accountAge: formatDistanceToNowLabel(detail?.createdAt || user?.createdAt || null),
+      walletCents: Number(detail?.walletCents || 0),
     };
-  }, [detail?.createdAt, orders, user?.createdAt]);
+  }, [detail?.createdAt, detail?.walletCents, orders, user?.createdAt]);
+
+  const walletHistory = (detail?.history?.wallet || []) as AdminUserWalletHistoryEntry[];
+  const giftCards = (detail?.history?.giftCards || []) as AdminUserGiftCardRow[];
+  const appointments = (detail?.history?.appointments || []) as AdminUserAppointmentRow[];
+  const repairs = (detail?.history?.repairs || []) as AdminUserRepairRow[];
+  const auditLogs = (detail?.history?.auditLogs || []) as AdminUserAuditRow[];
 
   async function handleResetSenha() {
     if (!selectedId) return;
@@ -491,6 +539,10 @@ export function DrawerDetalhesUsuario({
         {loading ? <p className={styles.loading}>Carregando usuário...</p> : null}
 
         <section className={styles.statsGrid}>
+          <article className={styles.statCard}>
+            <span>Saldo disponível</span>
+            <strong>{formatMoneyCents(stats.walletCents, "BRL")}</strong>
+          </article>
           <article className={styles.statCard}>
             <span>Total gasto</span>
             <strong>{formatMoneyCents(stats.totalSpent, "BRL")}</strong>
@@ -632,6 +684,112 @@ export function DrawerDetalhesUsuario({
                   </article>
                 );
               })}
+            </div>
+          ) : null}
+        </section>
+
+        <section className={styles.section}>
+          <h4>Saldo e movimentações</h4>
+          {walletHistory.length === 0 ? <p className={styles.empty}>Nenhuma movimentação de saldo encontrada.</p> : null}
+          {walletHistory.length > 0 ? (
+            <div className={styles.timelineList}>
+              {walletHistory.map((entry) => (
+                <article key={entry.id} className={styles.timelineCard}>
+                  <div className={styles.timelineTop}>
+                    <strong>{toWalletReasonLabel(entry.reason)}</strong>
+                    <span className={entry.deltaCents >= 0 ? styles.amountPositive : styles.amountNegative}>
+                      {entry.deltaCents >= 0 ? "+" : "-"}
+                      {formatMoneyCents(Math.abs(entry.deltaCents), "BRL")}
+                    </span>
+                  </div>
+                  <p>
+                    Saldo após: {formatMoneyCents(entry.balanceAfterCents, "BRL")} · {formatDateTime(entry.createdAt)}
+                  </p>
+                </article>
+              ))}
+            </div>
+          ) : null}
+        </section>
+
+        <section className={styles.section}>
+          <h4>Gift Cards</h4>
+          {giftCards.length === 0 ? <p className={styles.empty}>Nenhum gift card vinculado.</p> : null}
+          {giftCards.length > 0 ? (
+            <div className={styles.timelineList}>
+              {giftCards.map((card) => (
+                <article key={card.id} className={styles.timelineCard}>
+                  <div className={styles.timelineTop}>
+                    <strong>{card.code}</strong>
+                    <span className={card.active ? styles.badgeNeutral : styles.badgeMuted}>
+                      {card.active ? "Ativo" : "Inativo"}
+                    </span>
+                  </div>
+                  <p>
+                    Saldo: {formatMoneyCents(card.balanceCents, "BRL")} de {formatMoneyCents(card.initialBalanceCents, "BRL")} ·
+                    Vinculado em {formatDateTime(card.linkedAt)}
+                  </p>
+                </article>
+              ))}
+            </div>
+          ) : null}
+        </section>
+
+        <section className={styles.section}>
+          <h4>Atendimentos</h4>
+          {appointments.length === 0 ? <p className={styles.empty}>Nenhum atendimento encontrado.</p> : null}
+          {appointments.length > 0 ? (
+            <div className={styles.timelineList}>
+              {appointments.map((appointment) => (
+                <article key={appointment.id} className={styles.timelineCard}>
+                  <div className={styles.timelineTop}>
+                    <strong>{appointment.serviceType || "Atendimento"}</strong>
+                    <span className={styles.badgeNeutral}>{toAppointmentStatusLabel(appointment.status)}</span>
+                  </div>
+                  <p>
+                    {appointment.date || formatDate(appointment.createdAt)} {appointment.time ? `· ${appointment.time}` : ""}{" "}
+                    {appointment.location ? `· ${appointment.location}` : ""}
+                  </p>
+                </article>
+              ))}
+            </div>
+          ) : null}
+        </section>
+
+        <section className={styles.section}>
+          <h4>Auditoria relevante</h4>
+          {auditLogs.length === 0 ? <p className={styles.empty}>Nenhum evento recente para este cliente.</p> : null}
+          {auditLogs.length > 0 ? (
+            <div className={styles.timelineList}>
+              {auditLogs.map((log) => (
+                <article key={log.id} className={styles.timelineCard}>
+                  <div className={styles.timelineTop}>
+                    <strong>{toAuditActionLabel(log.action)}</strong>
+                    <span className={styles.badgeMuted}>{formatDateTime(log.createdAt)}</span>
+                  </div>
+                  <p>{log.summary || `${log.entityType} atualizado`}</p>
+                </article>
+              ))}
+            </div>
+          ) : null}
+        </section>
+
+        <section className={styles.section}>
+          <h4>Reparos feitos</h4>
+          {repairs.length === 0 ? <p className={styles.empty}>Nenhum reparo encontrado.</p> : null}
+          {repairs.length > 0 ? (
+            <div className={styles.timelineList}>
+              {repairs.map((repair) => (
+                <article key={repair.id} className={styles.timelineCard}>
+                  <div className={styles.timelineTop}>
+                    <strong>{repair.pieceName || repair.orderRef || "Reparo"}</strong>
+                    <span className={styles.badgeNeutral}>{toRepairStatusLabel(repair.status)}</span>
+                  </div>
+                  <p>
+                    {repair.repairType || "Sem tipo"} {repair.orderRef ? `· Pedido ${repair.orderRef}` : ""} ·{" "}
+                    {formatDateTime(repair.reviewedAt || repair.createdAt)}
+                  </p>
+                </article>
+              ))}
             </div>
           ) : null}
         </section>

@@ -69,6 +69,7 @@ const {
   updateGiftCard,
   deleteGiftCardById,
   getGiftCardTransactions,
+  getWalletBalance,
 } = require("./lib/gift-card-repository");
 const {
   listAdminAppointmentSlots,
@@ -77,12 +78,15 @@ const {
   deleteAdminAppointmentSlot,
   cancelAdminAppointment,
   rescheduleAdminAppointment,
+  listMyAppointments,
 } = require("./lib/appointments-repository");
 const {
   ensureRepairTables,
+  listMyRepairRequests,
   listAdminRepairRequests,
   updateRepairRequestStatus,
 } = require("./lib/repairs-repository");
+const { listBalanceHistoryByCustomerId } = require("./lib/balance-request-repository");
 const { logServerEvent, buildRequestLogContext, toErrorMeta } = require("./lib/observability-log");
 const { query, withTransaction } = require("./lib/db");
 const { adminGovernanceRouter } = require("./admin-governance");
@@ -559,6 +563,63 @@ function sanitizeUser(user: any) {
     createdAt: user.createdAt || null,
     updatedAt: user.updatedAt || null
   };
+}
+
+async function listLinkedGiftCardsByUserId(userId: string) {
+  const result = await query(
+    `
+    SELECT
+      gc.id,
+      gc.code,
+      gc.initial_balance_cents,
+      gc.balance_cents,
+      gc.active,
+      gc.created_at,
+      ugc.linked_at
+    FROM user_gift_cards ugc
+    JOIN gift_cards gc ON gc.id = ugc.gift_card_id
+    WHERE ugc.user_id = $1::uuid
+    ORDER BY ugc.linked_at DESC
+    LIMIT 8
+    `,
+    [userId]
+  );
+
+  return result.rows.map((row: any) => ({
+    id: String(row.id || ""),
+    code: String(row.code || ""),
+    initialBalanceCents: Number(row.initial_balance_cents || 0),
+    balanceCents: Number(row.balance_cents || 0),
+    active: Boolean(row.active),
+    linkedAt: row.linked_at || null,
+    createdAt: row.created_at || null,
+  }));
+}
+
+async function listRelevantUserAuditLogs(input: { userId: string; email: string }) {
+  const email = normalizeEmail(input.email || "");
+  const result = await query(
+    `
+    SELECT *
+    FROM admin_audit_logs
+    WHERE
+      (entity_type = 'user' AND entity_id = $1)
+      OR ($2 <> '' AND lower(summary) LIKE lower($3))
+      OR ($2 <> '' AND lower(actor_email) = lower($2))
+    ORDER BY created_at DESC
+    LIMIT 8
+    `,
+    [input.userId, email, `%${email}%`]
+  );
+
+  return result.rows.map((row: any) => ({
+    id: String(row.id || ""),
+    action: String(row.action || ""),
+    summary: String(row.summary || ""),
+    actorEmail: String(row.actor_email || ""),
+    entityType: String(row.entity_type || ""),
+    createdAt: row.created_at || null,
+  }));
 }
 
 function sanitizeUserList(user: any) {
@@ -1437,7 +1498,28 @@ adminRouter.get("/users/:id", async (req: any, res: any) => {
   try {
     const user = await findUserById(id);
     if (!user) return res.status(404).json({ error: "NOT_FOUND" });
-    return res.json({ user: sanitizeUser(user) });
+    const [walletCents, walletHistory, giftCards, appointments, repairs, auditLogs] = await Promise.all([
+      getWalletBalance(id).catch(() => 0),
+      listBalanceHistoryByCustomerId(id, 8).catch(() => []),
+      listLinkedGiftCardsByUserId(id).catch(() => []),
+      listMyAppointments(id).catch(() => []),
+      listMyRepairRequests(id).catch(() => []),
+      listRelevantUserAuditLogs({ userId: id, email: String(user.email || "") }).catch(() => []),
+    ]);
+
+    return res.json({
+      user: {
+        ...sanitizeUser(user),
+        walletCents,
+        history: {
+          wallet: Array.isArray(walletHistory) ? walletHistory : [],
+          giftCards: Array.isArray(giftCards) ? giftCards : [],
+          appointments: Array.isArray(appointments) ? appointments : [],
+          repairs: Array.isArray(repairs) ? repairs : [],
+          auditLogs: Array.isArray(auditLogs) ? auditLogs : [],
+        },
+      },
+    });
   } catch {
     return res.status(500).json({ error: "ADMIN_USER_FETCH_FAILED" });
   }

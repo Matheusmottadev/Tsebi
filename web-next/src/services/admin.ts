@@ -802,6 +802,66 @@ export interface AdminUserDetail {
   addresses: Array<Record<string, unknown>>;
   createdAt: string | null;
   updatedAt: string | null;
+  walletCents?: number;
+  history?: {
+    wallet: AdminUserWalletHistoryEntry[];
+    giftCards: AdminUserGiftCardRow[];
+    appointments: AdminUserAppointmentRow[];
+    repairs: AdminUserRepairRow[];
+    auditLogs: AdminUserAuditRow[];
+  };
+}
+
+export interface AdminUserWalletHistoryEntry {
+  id: string;
+  createdAt: string | null;
+  deltaCents: number;
+  balanceAfterCents: number;
+  reason: string;
+  refId: string | null;
+  relatedOrderId: string | null;
+  requestReason: string | null;
+  internalNote: string | null;
+}
+
+export interface AdminUserGiftCardRow {
+  id: string;
+  code: string;
+  initialBalanceCents: number;
+  balanceCents: number;
+  active: boolean;
+  linkedAt: string | null;
+  createdAt: string | null;
+}
+
+export interface AdminUserAppointmentRow {
+  id: string;
+  status: string;
+  serviceType: string;
+  modality: string;
+  date: string;
+  time: string;
+  location: string;
+  createdAt: string | null;
+}
+
+export interface AdminUserRepairRow {
+  id: string;
+  orderRef: string;
+  pieceName: string;
+  repairType: string;
+  status: string;
+  createdAt: string | null;
+  reviewedAt: string | null;
+}
+
+export interface AdminUserAuditRow {
+  id: string;
+  action: string;
+  summary: string;
+  actorEmail: string;
+  entityType: string;
+  createdAt: string | null;
 }
 
 export interface ListUsersAdminResponse {
@@ -2117,7 +2177,14 @@ export type NfseStats = {
 };
 
 export async function listNfseAdmin(
-  params: { status?: string; busca?: string; pagina?: number; periodo?: string; include_pending_orders?: boolean } = {},
+  params: {
+    status?: string;
+    busca?: string;
+    pagina?: number;
+    periodo?: string;
+    include_pending_orders?: boolean;
+    visao?: "todos" | "sem_nota" | "emitidas";
+  } = {},
   options?: HttpRequestOptions
 ): Promise<{ notas: NfseRow[]; total: number }> {
   const query = buildQuery({
@@ -2129,6 +2196,7 @@ export async function listNfseAdmin(
       typeof params.include_pending_orders === "boolean"
         ? (params.include_pending_orders ? "true" : "false")
         : undefined,
+    visao: params.visao,
   });
   return get<{ notas: NfseRow[]; total: number }>(`/api/nfse${query}`, options);
 }
