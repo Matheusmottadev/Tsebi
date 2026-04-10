@@ -6,6 +6,7 @@ import {
   FileText,
   Gift,
   LayoutGrid,
+  LifeBuoy,
   Mail,
   MessageCircle,
   Package,
@@ -98,6 +99,10 @@ export function Sidebar({ activePage, onChangePage, pendingOrders, openCare, pen
           },
         ]
       : []),
+    {
+      label: "Sistema",
+      items: [{ key: "status", pageKey: "status" as const, label: "Status", icon: LifeBuoy }],
+    },
   ];
 
   return (

@@ -729,6 +729,71 @@ export interface ListAdminBellNotificationsResponse {
   unreadCount: number;
 }
 
+export interface AdminPendingSummaryItem {
+  id: string;
+  title: string;
+  subtitle: string;
+  createdAt: string | null;
+  amount?: number | null;
+}
+
+export interface AdminPendingSummarySection {
+  key: "nfse_pending" | "balance_pending" | "gift_card_suspicious" | "security_alerts" | "repairs_pending";
+  label: string;
+  description: string;
+  count: number;
+  targetPage: "gift_cards" | "reparos" | "diretoria" | null;
+  targetHref: string | null;
+  items: AdminPendingSummaryItem[];
+}
+
+export interface AdminPendingSummaryResponse {
+  totalCount: number;
+  updatedAt: string;
+  sections: AdminPendingSummarySection[];
+}
+
+export interface AdminSystemStatusQueue {
+  key: string;
+  label: string;
+  count: number;
+  description: string;
+}
+
+export interface AdminSystemStatusService {
+  configured: boolean;
+  label: string;
+  description: string;
+}
+
+export interface AdminSystemStatusFailure {
+  id: string;
+  pedidoId: string;
+  customerName: string;
+  message: string;
+  attempts: number;
+  happenedAt: string | null;
+}
+
+export interface AdminSystemStatusAlert {
+  id: string;
+  action: string;
+  title: string;
+  subtitle: string;
+  createdAt: string | null;
+}
+
+export interface AdminSystemStatusResponse {
+  updatedAt: string;
+  services: {
+    bling: AdminSystemStatusService;
+    resend: AdminSystemStatusService;
+  };
+  queues: AdminSystemStatusQueue[];
+  nfseFailures: AdminSystemStatusFailure[];
+  criticalAlerts: AdminSystemStatusAlert[];
+}
+
 export interface OpsAuditLogRow {
   id: string;
   action: string;
@@ -2115,6 +2180,14 @@ export async function markAllAdminBellNotificationsRead(
     {},
     mergeOptionsWithHeaders(options, buildCsrfHeader(token))
   );
+}
+
+export async function listAdminPendingSummary(options?: HttpRequestOptions): Promise<AdminPendingSummaryResponse> {
+  return get<AdminPendingSummaryResponse>("/api/admin/pending-summary", options);
+}
+
+export async function getAdminSystemStatus(options?: HttpRequestOptions): Promise<AdminSystemStatusResponse> {
+  return get<AdminSystemStatusResponse>("/api/admin/status-overview", options);
 }
 
 export async function listDirectoriaAuditLogs(

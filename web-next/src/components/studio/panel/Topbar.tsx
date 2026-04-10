@@ -10,10 +10,11 @@ type TopbarProps = {
   actionLabel: string;
   onAction: () => void;
   onOpenGlobalSearch: () => void;
+  pendingSlot?: ReactNode;
   notificationsSlot?: ReactNode;
 };
 
-export function Topbar({ title, actionLabel, onAction, onOpenGlobalSearch, notificationsSlot }: TopbarProps) {
+export function Topbar({ title, actionLabel, onAction, onOpenGlobalSearch, pendingSlot, notificationsSlot }: TopbarProps) {
   const formattedDate = useMemo(
     () =>
       new Intl.DateTimeFormat("pt-BR", {
@@ -56,7 +57,8 @@ export function Topbar({ title, actionLabel, onAction, onOpenGlobalSearch, notif
         <button type="button" className={styles.searchBtn} aria-label="Pesquisa global" onClick={onOpenGlobalSearch}>
           <Search size={16} strokeWidth={1.7} aria-hidden="true" />
         </button>
-        <div className={styles.bellBtn}>{notificationsSlot}</div>
+        {pendingSlot ? <div className={styles.iconSlot}>{pendingSlot}</div> : null}
+        <div className={styles.iconSlot}>{notificationsSlot}</div>
         <button type="button" className={styles.newBtn} onClick={onAction}>
           {actionLabel}
         </button>

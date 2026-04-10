@@ -12,6 +12,7 @@ export const PAGE_TITLES: Record<AdminPageKey, string> = {
   cupons: "Cupons",
   gift_cards: "Gift Cards",
   saldo_clientes: "Saldo de Clientes",
+  status: "Status",
   diretoria: "Diretoria",
   auditoria: "Auditoria",
   notificacoes: "Notificações",

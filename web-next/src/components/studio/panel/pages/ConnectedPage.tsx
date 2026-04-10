@@ -17,6 +17,7 @@ import {
   deleteGiftCardAdmin,
   deleteNewsletterAdmin,
   fetchNotificationLogs,
+  getOrderAdmin,
   listUsersAdmin,
   updateGiftCardAdmin,
   updateAppointmentSlotAdmin,
@@ -25,6 +26,7 @@ import {
   type AdminAuditLog,
   type AdminNewsletterRow,
   type AdminNotificationLog,
+  type AdminOrderDetail,
   type AdminOrderSummary,
   type AdminUserRow,
   type AdminVipRow,
@@ -57,6 +59,7 @@ type ConnectedPageProps = {
   globalSearchTarget?: GlobalSearchTarget | null;
   onGlobalSearchTargetHandled?: () => void;
   notifLogsRefreshKey?: number;
+  onNavigateToOrder?: (orderId: string) => void;
 };
 
 type ConfirmDeleteTarget =
@@ -322,6 +325,43 @@ function toSummaryFromOrder(base: AdminOrderSummary, next: Order): AdminOrderSum
   };
 }
 
+function toSummaryFromOrderDetail(order: AdminOrderDetail): AdminOrderSummary {
+  return {
+    id: String(order.id || ""),
+    orderNumber: String(order.orderNumber || ""),
+    createdAt: order.createdAt || null,
+    updatedAt: order.updatedAt || null,
+    status: String(order.status || ""),
+    currency: String(order.currency || "BRL"),
+    amount: Number(order.amount || 0),
+    itemsAmount: Number(order.itemsAmount || 0),
+    shippingAmount: Number(order.shippingAmount || 0),
+    shippingPriceCents: Number(order.shippingPriceCents || 0),
+    shippingSelectedProvider: String(order.shippingSelectedProvider || ""),
+    shippingSelectedService: String(order.shippingSelectedService || ""),
+    shippingSelectedServiceCode: String(order.shippingSelectedServiceCode || ""),
+    shippingSelectedCarrierName: String(order.shippingSelectedCarrierName || ""),
+    shippingDeadlineDays: order.shippingDeadlineDays == null ? null : Number(order.shippingDeadlineDays),
+    shippingDestinationZip: String(order.shippingDestinationZip || ""),
+    userEmail: String(order.userEmail || ""),
+    userName: String(order.userName || ""),
+    isGuest: false,
+    trackingId: String(order.trackingId || ""),
+    trackingStatus: String(order.trackingStatus || ""),
+    carrier: String(order.carrier || ""),
+    shippingDeadline: order.shippingDeadline || null,
+    shipment: order.shipment
+      ? {
+          id: order.shipment.id,
+          provider: String(order.shipment.provider || ""),
+          trackingCode: String(order.shipment.trackingCode || ""),
+          status: String(order.shipment.status || ""),
+          updatedAt: order.shipment.updatedAt || null,
+        }
+      : null,
+  };
+}
+
 function getDeleteContent(target: ConfirmDeleteTarget): {
   title: string;
   text: string;
@@ -377,6 +417,7 @@ export function ConnectedPage({
   globalSearchTarget,
   onGlobalSearchTargetHandled,
   notifLogsRefreshKey,
+  onNavigateToOrder,
 }: ConnectedPageProps) {
   const [ordersRows, setOrdersRows] = useState<AdminOrderSummary[]>(data.orders || []);
   const [productsRows, setProductsRows] = useState<Product[]>(data.products || []);
@@ -1346,13 +1387,29 @@ export function ConnectedPage({
     if (!globalSearchTarget) return;
     if (globalSearchTarget.page !== page) return;
 
+    let cancelled = false;
+
     if (globalSearchTarget.kind === "order") {
       const order = ordersRows.find((row) => String(row.id || "") === globalSearchTarget.id);
       if (order) {
         openOrderDrawer(order);
         onGlobalSearchTargetHandled?.();
+      } else {
+        getOrderAdmin(globalSearchTarget.id, { cache: "no-store" })
+          .then((fullOrder) => {
+            if (cancelled) return;
+            openOrderDrawer(toSummaryFromOrderDetail(fullOrder));
+            onGlobalSearchTargetHandled?.();
+          })
+          .catch(() => {
+            if (cancelled) return;
+            showToast("Não foi possível abrir este pedido.");
+            onGlobalSearchTargetHandled?.();
+          });
       }
-      return;
+      return () => {
+        cancelled = true;
+      };
     }
 
     if (globalSearchTarget.kind === "product") {
@@ -1364,7 +1421,9 @@ export function ConnectedPage({
         openProductDrawer(product);
         onGlobalSearchTargetHandled?.();
       }
-      return;
+      return () => {
+        cancelled = true;
+      };
     }
 
     if (globalSearchTarget.kind === "user") {
@@ -1373,7 +1432,9 @@ export function ConnectedPage({
         openUserDrawer(user);
         onGlobalSearchTargetHandled?.();
       }
-      return;
+      return () => {
+        cancelled = true;
+      };
     }
 
     if (globalSearchTarget.kind === "coupon") {
@@ -1382,7 +1443,14 @@ export function ConnectedPage({
         openCouponDrawer(coupon);
         onGlobalSearchTargetHandled?.();
       }
+      return () => {
+        cancelled = true;
+      };
     }
+
+    return () => {
+      cancelled = true;
+    };
   }, [
     couponsRows,
     globalSearchTarget,
@@ -2129,6 +2197,7 @@ export function ConnectedPage({
           onUserRowUpdated={handleUserRowUpdated}
           onUserDeleted={handleUserDeleted}
           onRequestRefresh={onRequestRefresh}
+          onOpenOrder={onNavigateToOrder}
         />
       ) : null}
 

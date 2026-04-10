@@ -32,6 +32,7 @@ import { DrawerNovoProduto } from "@/components/admin/DrawerNovoProduto";
 import { DrawerNovoUsuario } from "@/components/admin/DrawerNovoUsuario";
 import { Toast } from "@/components/admin/Toast";
 import { PAGE_TITLES } from "./data";
+import { AdminPendingBell } from "./AdminPendingBell";
 import { AdminStepUpModal } from "./AdminStepUpModal";
 import { AdminNotificationBell } from "./AdminNotificationBell";
 import { Sidebar } from "./Sidebar";
@@ -41,6 +42,7 @@ import type { ActivityItem, AdminPageKey, GlobalSearchTarget, KpiData, RecentOrd
 import { BalancePage } from "./pages/BalancePage";
 import { DiretoriaPage } from "./pages/DiretoriaPage";
 import { InicioPage } from "./pages/InicioPage";
+import { StatusPage } from "./pages/StatusPage";
 import { ConnectedPage, type ConnectedPanelData } from "./pages/ConnectedPage";
 import styles from "./StudioAdminPanel.module.css";
 
@@ -293,6 +295,7 @@ const TOPBAR_BUTTONS: Record<AdminPageKey, { label: string }> = {
   cupons: { label: "+ Novo Cupom" },
   gift_cards: { label: "+ Novo Gift Card" },
   saldo_clientes: { label: "Atualizar" },
+  status: { label: "Atualizar" },
   diretoria: { label: "Atualizar" },
   auditoria: { label: "Exportar" },
   notificacoes: { label: "+ Nova Notificação" },
@@ -647,7 +650,7 @@ export function StudioAdminPanel() {
       setRefreshIndex((current) => current + 1);
       return;
     }
-    if (activePage === "saldo_clientes" || activePage === "diretoria") {
+    if (activePage === "saldo_clientes" || activePage === "diretoria" || activePage === "status") {
       setRefreshIndex((current) => current + 1);
       return;
     }
@@ -659,6 +662,17 @@ export function StudioAdminPanel() {
     setGlobalSearchQuery("");
     setActivePage(target.page);
     setGlobalSearchTarget(target);
+  }
+
+  function handleNavigateToOrder(orderId: string) {
+    const normalizedOrderId = String(orderId || "").trim();
+    if (!normalizedOrderId) return;
+    setActivePage("pedidos");
+    setGlobalSearchTarget({
+      page: "pedidos",
+      kind: "order",
+      id: normalizedOrderId,
+    });
   }
 
   const handleGlobalSearchTargetHandled = useCallback(() => {
@@ -682,6 +696,7 @@ export function StudioAdminPanel() {
     globalSearchTarget,
     onGlobalSearchTargetHandled: handleGlobalSearchTargetHandled,
     notifLogsRefreshKey: notifLogsKey,
+    onNavigateToOrder: handleNavigateToOrder,
   } as const;
 
   const content =
@@ -715,6 +730,8 @@ export function StudioAdminPanel() {
           }}
         />
       </RequireRole>
+    ) : activePage === "status" ? (
+      <StatusPage refreshKey={refreshIndex} />
     ) : activePage === "auditoria" ? (
       <RequireRole roles={["director", "superadmin"]}>
         <ConnectedPage page="auditoria" {...connectedPageProps} />
@@ -772,6 +789,7 @@ export function StudioAdminPanel() {
             actionLabel={topbarActionLabel}
             onAction={handleTopbarButton}
             onOpenGlobalSearch={() => setIsGlobalSearchOpen(true)}
+            pendingSlot={<AdminPendingBell onNavigate={setActivePage} />}
             notificationsSlot={<AdminNotificationBell csrfToken={csrfToken} onNavigate={setActivePage} />}
           />
 

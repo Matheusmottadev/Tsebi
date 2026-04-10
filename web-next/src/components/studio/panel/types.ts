@@ -10,6 +10,7 @@
   | "cupons"
   | "gift_cards"
   | "saldo_clientes"
+  | "status"
   | "diretoria"
   | "auditoria"
   | "notificacoes";

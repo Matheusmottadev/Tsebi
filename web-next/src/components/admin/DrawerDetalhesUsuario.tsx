@@ -31,7 +31,10 @@ type DrawerDetalhesUsuarioProps = {
   onUserRowUpdated: (nextUser: AdminUserRow) => void;
   onUserDeleted: (userId: string) => void;
   onRequestRefresh?: () => void;
+  onOpenOrder?: (orderId: string) => void;
 };
+
+const INITIAL_ORDERS_VISIBLE = 5;
 
 type UserDraft = {
   title: "sr" | "sra" | "srta" | "nao_informar" | "";
@@ -288,12 +291,14 @@ export function DrawerDetalhesUsuario({
   onUserRowUpdated,
   onUserDeleted,
   onRequestRefresh,
+  onOpenOrder,
 }: DrawerDetalhesUsuarioProps) {
   const [detail, setDetail] = useState<AdminUserDetail | null>(null);
   const [draft, setDraft] = useState<UserDraft | null>(null);
   const [orders, setOrders] = useState<AdminUserOrderRow[]>([]);
   const [loading, setLoading] = useState(false);
   const [ordersLoading, setOrdersLoading] = useState(false);
+  const [visibleOrdersCount, setVisibleOrdersCount] = useState(INITIAL_ORDERS_VISIBLE);
   const [actionLoading, setActionLoading] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
   const [confirmMode, setConfirmMode] = useState<"suspend" | "delete" | null>(null);
@@ -322,6 +327,7 @@ export function DrawerDetalhesUsuario({
     setDetail(null);
     setDraft(null);
     setOrders([]);
+    setVisibleOrdersCount(INITIAL_ORDERS_VISIBLE);
     setLoading(true);
     setOrdersLoading(true);
     setErrorMessage("");
@@ -413,6 +419,14 @@ export function DrawerDetalhesUsuario({
   const appointments = (detail?.history?.appointments || []) as AdminUserAppointmentRow[];
   const repairs = (detail?.history?.repairs || []) as AdminUserRepairRow[];
   const auditLogs = (detail?.history?.auditLogs || []) as AdminUserAuditRow[];
+  const visibleOrders = orders.slice(0, visibleOrdersCount);
+  const hasMoreOrders = orders.length > visibleOrders.length;
+
+  function handleOpenOrder(orderId: string) {
+    if (!orderId || !onOpenOrder) return;
+    onClose();
+    onOpenOrder(orderId);
+  }
 
   async function handleResetSenha() {
     if (!selectedId) return;
@@ -663,25 +677,48 @@ export function DrawerDetalhesUsuario({
         </section>
 
         <section className={styles.section}>
-          <h4>Pedidos Anteriores</h4>
+          <div className={styles.sectionHeader}>
+            <h4>Pedidos Anteriores</h4>
+            {orders.length > INITIAL_ORDERS_VISIBLE ? (
+              <button
+                type="button"
+                className={styles.linkButton}
+                onClick={() =>
+                  setVisibleOrdersCount((current) =>
+                    current >= orders.length ? INITIAL_ORDERS_VISIBLE : current + INITIAL_ORDERS_VISIBLE
+                  )
+                }
+              >
+                {hasMoreOrders ? "Ver mais" : "Mostrar menos"}
+              </button>
+            ) : null}
+          </div>
           {ordersLoading ? <p className={styles.loading}>Carregando pedidos...</p> : null}
           {!ordersLoading && orders.length === 0 ? <p className={styles.empty}>Nenhum pedido encontrado.</p> : null}
           {!ordersLoading && orders.length > 0 ? (
             <div className={styles.orderList}>
-              {orders.map((order) => {
+              {visibleOrders.map((order) => {
                 const status = toStatusBadge(order.status);
                 const orderLabel = String(order.orderNumber || order.id || "").trim() || "-";
                 return (
-                  <article key={order.id} className={styles.orderCard}>
-                    <div className={styles.orderTop}>
-                      <code>{orderLabel}</code>
-                      <span className={`${styles.statusBadge} ${styles[`status${status.tone}`]}`}>{status.label}</span>
+                  <button
+                    key={order.id}
+                    type="button"
+                    className={styles.orderCardButton}
+                    onClick={() => handleOpenOrder(String(order.id || "").trim())}
+                    disabled={!onOpenOrder}
+                  >
+                    <div className={styles.orderCard}>
+                      <div className={styles.orderTop}>
+                        <code>{orderLabel}</code>
+                        <span className={`${styles.statusBadge} ${styles[`status${status.tone}`]}`}>{status.label}</span>
+                      </div>
+                      <p>
+                        {order.productName || "Pedido"} · {formatDateTime(order.createdAt)}
+                      </p>
+                      <strong>{formatMoneyCents(order.amount, order.currency)}</strong>
                     </div>
-                    <p>
-                      {order.productName || "Pedido"} · {formatDateTime(order.createdAt)}
-                    </p>
-                    <strong>{formatMoneyCents(order.amount, order.currency)}</strong>
-                  </article>
+                  </button>
                 );
               })}
             </div>

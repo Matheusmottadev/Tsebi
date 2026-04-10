@@ -1,3 +1,4 @@
+export {};
 const express = require("express");
 const { z } = require("zod");
 const { requireRole } = require("./middlewares/requireRole");
@@ -34,6 +35,7 @@ const {
   listOpsAuditLogs,
 } = require("./lib/ops-audit-repository");
 const { listOrdersByUserId } = require("./lib/order-repository");
+const { query } = require("./lib/db");
 
 const adminGovernanceRouter = express.Router();
 const SECURITY_AUDIT_ACTIONS = [
@@ -100,6 +102,237 @@ function toAuditPayload(value: unknown) {
 
 function csvEscape(value: unknown) {
   return `"${String(value ?? "").replace(/"/g, '""')}"`;
+}
+
+function formatPendingCurrency(value: unknown) {
+  const amount = Number(value || 0);
+  return new Intl.NumberFormat("pt-BR", {
+    style: "currency",
+    currency: "BRL",
+  }).format(amount);
+}
+
+async function loadPendingNfseSummary(limit = 4) {
+  const [countResult, listResult] = await Promise.all([
+    query(
+      `
+      SELECT COUNT(*)::int AS total
+      FROM orders o
+      WHERE NOT EXISTS (SELECT 1 FROM nfse n WHERE n.pedido_id = o.id)
+        AND o.canceled_at IS NULL
+        AND o.refunded_at IS NULL
+        AND (o.paid_at IS NOT NULL OR LOWER(COALESCE(o.status, '')) = 'paid')
+      `
+    ),
+    query(
+      `
+      SELECT
+        o.id,
+        COALESCE(NULLIF(o.user_name, ''), NULLIF(o.user_email, ''), 'Pedido sem cliente') AS customer_name,
+        COALESCE(NULLIF(o.order_number, ''), UPPER(LEFT(o.id::text, 8))) AS order_label,
+        ROUND(COALESCE(o.total_cents, 0)::numeric / 100, 2) AS amount,
+        COALESCE(o.paid_at, o.created_at) AS created_at
+      FROM orders o
+      WHERE NOT EXISTS (SELECT 1 FROM nfse n WHERE n.pedido_id = o.id)
+        AND o.canceled_at IS NULL
+        AND o.refunded_at IS NULL
+        AND (o.paid_at IS NOT NULL OR LOWER(COALESCE(o.status, '')) = 'paid')
+      ORDER BY COALESCE(o.paid_at, o.created_at) DESC
+      LIMIT $1
+      `,
+      [limit]
+    ),
+  ]);
+
+  return {
+    key: "nfse_pending",
+    label: "Pedidos sem nota",
+    description: "Pedidos pagos aguardando emissão de NFS-e.",
+    count: Number(countResult.rows?.[0]?.total || 0),
+    targetPage: null,
+    targetHref: "/admin/nfse",
+    items: (listResult.rows || []).map((row: any) => ({
+      id: String(row.id || ""),
+      title: String(row.customer_name || "Pedido sem cliente"),
+      subtitle: `${String(row.order_label || "")} · ${formatPendingCurrency(row.amount)}`,
+      createdAt: row.created_at || null,
+      amount: Number(row.amount || 0),
+    })),
+  };
+}
+
+async function loadPendingBalanceSummary(limit = 4) {
+  const result = await listBalanceRequests({ status: "pending", page: 1, limit });
+  return {
+    key: "balance_pending",
+    label: "Saldo pendente",
+    description: "Solicitações aguardando decisão da gerência ou diretoria.",
+    count: Number(result.total || 0),
+    targetPage: "diretoria",
+    targetHref: null,
+    items: (result.rows || []).map((row: any) => ({
+      id: String(row.id || ""),
+      title: String(row.customerName || row.customerEmail || "Cliente"),
+      subtitle: `${row.type === "debit" ? "Remover saldo" : "Adicionar saldo"} · ${formatPendingCurrency(row.amount)}`,
+      createdAt: row.createdAt || null,
+      amount: Number(row.amount || 0),
+    })),
+  };
+}
+
+async function loadGiftCardSuspiciousSummary(limit = 4) {
+  const [countResult, listResult] = await Promise.all([
+    query(
+      `
+      SELECT COUNT(*)::int AS total
+      FROM admin_audit_logs
+      WHERE entity_type = 'gift_card'
+        AND action = 'security_alert'
+        AND created_at >= NOW() - INTERVAL '7 days'
+      `
+    ),
+    query(
+      `
+      SELECT id, summary, created_at
+      FROM admin_audit_logs
+      WHERE entity_type = 'gift_card'
+        AND action = 'security_alert'
+        AND created_at >= NOW() - INTERVAL '7 days'
+      ORDER BY created_at DESC
+      LIMIT $1
+      `,
+      [limit]
+    ),
+  ]);
+
+  return {
+    key: "gift_card_suspicious",
+    label: "Gift cards suspeitos",
+    description: "Alertas recentes de uso incomum ou abuso.",
+    count: Number(countResult.rows?.[0]?.total || 0),
+    targetPage: "gift_cards",
+    targetHref: null,
+    items: (listResult.rows || []).map((row: any) => ({
+      id: String(row.id || ""),
+      title: "Atividade suspeita em gift card",
+      subtitle: String(row.summary || "Tentativa incomum detectada."),
+      createdAt: row.created_at || null,
+    })),
+  };
+}
+
+async function loadSecurityAlertsSummary(limit = 4) {
+  const result = await listOpsAuditLogs({
+    includedActions: ["ADMIN_SUSPICIOUS_LOGIN", "ADMIN_SUSPICIOUS_ACCESS"],
+    page: 1,
+    limit,
+  });
+  return {
+    key: "security_alerts",
+    label: "Alertas de segurança",
+    description: "Logins ou acessos administrativos marcados como suspeitos.",
+    count: Number(result.total || 0),
+    targetPage: "diretoria",
+    targetHref: null,
+    items: (result.rows || []).map((row: any) => ({
+      id: String(row.id || ""),
+      title: row.action === "ADMIN_SUSPICIOUS_LOGIN" ? "Login suspeito" : "Acesso suspeito",
+      subtitle: String(row.performerEmail || row.performerName || "Admin não identificado"),
+      createdAt: row.createdAt || null,
+    })),
+  };
+}
+
+async function loadPendingRepairsSummary(limit = 4) {
+  const statuses = ["pending", "awaiting_shipment", "item_received", "in_repair"];
+  const [countResult, listResult] = await Promise.all([
+    query(
+      `
+      SELECT COUNT(*)::int AS total
+      FROM repair_requests
+      WHERE status = ANY($1::text[])
+      `,
+      [statuses]
+    ),
+    query(
+      `
+      SELECT id, user_name, piece_name, status, created_at
+      FROM repair_requests
+      WHERE status = ANY($1::text[])
+      ORDER BY created_at DESC
+      LIMIT $2
+      `,
+      [statuses, limit]
+    ),
+  ]);
+
+  return {
+    key: "repairs_pending",
+    label: "Reparos pendentes",
+    description: "Solicitações de reparo ainda em andamento.",
+    count: Number(countResult.rows?.[0]?.total || 0),
+    targetPage: "reparos",
+    targetHref: null,
+    items: (listResult.rows || []).map((row: any) => ({
+      id: String(row.id || ""),
+      title: String(row.user_name || "Cliente sem nome"),
+      subtitle: `${String(row.piece_name || "Peça sem nome")} · ${String(row.status || "pendente")}`,
+      createdAt: row.created_at || null,
+    })),
+  };
+}
+
+async function loadRecentNfseFailures(limit = 5) {
+  const result = await query(
+    `
+    SELECT
+      id,
+      pedido_id,
+      COALESCE(NULLIF(tomador_nome, ''), 'Cliente não informado') AS tomador_nome,
+      COALESCE(NULLIF(erro_mensagem, ''), 'Falha sem detalhe') AS erro_mensagem,
+      tentativas,
+      COALESCE(updated_at, created_at) AS happened_at
+    FROM nfse
+    WHERE status = 'erro'
+    ORDER BY COALESCE(updated_at, created_at) DESC
+    LIMIT $1
+    `,
+    [limit]
+  );
+
+  return (result.rows || []).map((row: any) => ({
+    id: String(row.id || ""),
+    pedidoId: String(row.pedido_id || ""),
+    customerName: String(row.tomador_nome || "Cliente não informado"),
+    message: String(row.erro_mensagem || "Falha sem detalhe"),
+    attempts: Number(row.tentativas || 0),
+    happenedAt: row.happened_at || null,
+  }));
+}
+
+async function loadCriticalAlerts(limit = 5) {
+  const result = await listOpsAuditLogs({
+    includedActions: ["ADMIN_SUSPICIOUS_LOGIN", "ADMIN_SUSPICIOUS_ACCESS", "BALANCE_REJECTED", "BALANCE_APPROVED"],
+    page: 1,
+    limit,
+  });
+
+  return (result.rows || []).map((row: any) => ({
+    id: String(row.id || ""),
+    action: String(row.action || ""),
+    title:
+      row.action === "ADMIN_SUSPICIOUS_LOGIN"
+        ? "Login suspeito"
+        : row.action === "ADMIN_SUSPICIOUS_ACCESS"
+          ? "Acesso suspeito"
+          : row.action === "BALANCE_REJECTED"
+            ? "Solicitação de saldo rejeitada"
+            : row.action === "BALANCE_APPROVED"
+              ? "Solicitação de saldo aprovada"
+              : String(row.action || "Evento crítico"),
+    subtitle: String(row.performerEmail || row.performerName || "Admin não identificado"),
+    createdAt: row.createdAt || null,
+  }));
 }
 
 function mapAdminRowForUi(admin: any) {
@@ -453,6 +686,86 @@ adminGovernanceRouter.get("/diretoria/balance/requests", requireRole(["director"
     });
   } catch {
     return res.status(500).json({ error: "BALANCE_REVIEW_LIST_FAILED" });
+  }
+});
+
+adminGovernanceRouter.get("/pending-summary", async (req: any, res: any) => {
+  try {
+    const role = String(req.admin?.role || "admin");
+    const sections = [
+      await loadPendingNfseSummary(),
+      await loadPendingRepairsSummary(),
+      await loadGiftCardSuspiciousSummary(),
+    ];
+
+    if (role === "director" || role === "superadmin") {
+      sections.splice(1, 0, await loadPendingBalanceSummary());
+      sections.push(await loadSecurityAlertsSummary());
+    }
+
+    return res.json({
+      totalCount: sections.reduce((sum: number, section: any) => sum + Number(section.count || 0), 0),
+      updatedAt: new Date().toISOString(),
+      sections,
+    });
+  } catch {
+    return res.status(500).json({ error: "ADMIN_PENDING_SUMMARY_FAILED" });
+  }
+});
+
+adminGovernanceRouter.get("/status-overview", async (req: any, res: any) => {
+  try {
+    const role = String(req.admin?.role || "admin");
+    const isPrivileged = role === "director" || role === "superadmin";
+
+    const [nfsePending, repairsPending, suspiciousGiftCards, balancePending, nfseFailures, criticalAlerts] = await Promise.all([
+      loadPendingNfseSummary(4),
+      loadPendingRepairsSummary(4),
+      loadGiftCardSuspiciousSummary(4),
+      isPrivileged ? loadPendingBalanceSummary(4) : Promise.resolve(null),
+      loadRecentNfseFailures(5),
+      isPrivileged ? loadCriticalAlerts(5) : Promise.resolve([]),
+    ]);
+
+    const blingConfigured = Boolean(
+      process.env.BLING_CLIENT_ID &&
+      process.env.BLING_CLIENT_SECRET &&
+      process.env.BLING_REFRESH_TOKEN &&
+      process.env.BLING_CNPJ_PRESTADOR
+    );
+    const resendConfigured = Boolean(process.env.RESEND_API_KEY && process.env.EMAIL_FROM);
+
+    return res.json({
+      updatedAt: new Date().toISOString(),
+      services: {
+        bling: {
+          configured: blingConfigured,
+          label: blingConfigured ? "Bling configurado" : "Bling incompleto",
+          description: blingConfigured
+            ? "Credenciais e CNPJ do prestador disponíveis para o emissor."
+            : "Faltam credenciais, refresh token ou CNPJ do prestador.",
+        },
+        resend: {
+          configured: resendConfigured,
+          label: resendConfigured ? "Resend configurado" : "Resend incompleto",
+          description: resendConfigured
+            ? "Envio de e-mail habilitado para notas e avisos."
+            : "Faltam chave da Resend ou remetente padrão.",
+        },
+      },
+      queues: [
+        { key: nfsePending.key, label: nfsePending.label, count: nfsePending.count, description: nfsePending.description },
+        ...(balancePending
+          ? [{ key: balancePending.key, label: balancePending.label, count: balancePending.count, description: balancePending.description }]
+          : []),
+        { key: suspiciousGiftCards.key, label: suspiciousGiftCards.label, count: suspiciousGiftCards.count, description: suspiciousGiftCards.description },
+        { key: repairsPending.key, label: repairsPending.label, count: repairsPending.count, description: repairsPending.description },
+      ],
+      nfseFailures,
+      criticalAlerts,
+    });
+  } catch {
+    return res.status(500).json({ error: "ADMIN_STATUS_OVERVIEW_FAILED" });
   }
 });
 
