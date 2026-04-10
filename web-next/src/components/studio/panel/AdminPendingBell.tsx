@@ -2,6 +2,7 @@
 
 import { AlertCircle, ListTodo } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import {
   listAdminPendingSummary,
   type AdminPendingSummaryItem,
@@ -48,7 +49,9 @@ function navigateToTarget(
 export function AdminPendingBell({ onNavigate }: { onNavigate: (page: AdminPageKey) => void }) {
   const [open, setOpen] = useState(false);
   const [summary, setSummary] = useState<AdminPendingSummaryResponse>(fallbackSummary);
-  const containerRef = useRef<HTMLDivElement | null>(null);
+  const [popupPos, setPopupPos] = useState<{ top: number; right: number }>({ top: 0, right: 0 });
+  const btnRef = useRef<HTMLButtonElement | null>(null);
+  const popupRef = useRef<HTMLDivElement | null>(null);
 
   async function load() {
     try {
@@ -70,7 +73,8 @@ export function AdminPendingBell({ onNavigate }: { onNavigate: (page: AdminPageK
   useEffect(() => {
     if (!open) return;
     const onPointerDown = (event: MouseEvent) => {
-      if (!containerRef.current?.contains(event.target as Node)) {
+      const target = event.target as Node;
+      if (!btnRef.current?.contains(target) && !popupRef.current?.contains(target)) {
         setOpen(false);
       }
     };
@@ -85,6 +89,10 @@ export function AdminPendingBell({ onNavigate }: { onNavigate: (page: AdminPageK
 
   function handleOpenToggle() {
     const next = !open;
+    if (next && btnRef.current) {
+      const rect = btnRef.current.getBoundingClientRect();
+      setPopupPos({ top: rect.bottom + 12, right: window.innerWidth - rect.right });
+    }
     setOpen(next);
     if (next) {
       void load();
@@ -101,52 +109,21 @@ export function AdminPendingBell({ onNavigate }: { onNavigate: (page: AdminPageK
     navigateToTarget(section.targetPage, section.targetHref, onNavigate);
   }
 
-  return (
-    <div ref={containerRef} style={{ position: "relative" }}>
-      <button
-        type="button"
-        aria-label="Pendências"
-        onClick={handleOpenToggle}
-        style={{ background: "transparent", border: 0, cursor: "pointer", position: "relative", padding: 0 }}
-      >
-        <ListTodo size={16} strokeWidth={1.7} aria-hidden="true" />
-        {summary.totalCount > 0 ? (
-          <span
-            aria-hidden="true"
-            style={{
-              position: "absolute",
-              top: -5,
-              right: -6,
-              minWidth: 16,
-              height: 16,
-              borderRadius: 999,
-              background: "#111",
-              color: "#fff",
-              fontSize: 9,
-              display: "inline-flex",
-              alignItems: "center",
-              justifyContent: "center",
-              padding: "0 4px",
-            }}
-          >
-            {summary.totalCount > 9 ? "9+" : summary.totalCount}
-          </span>
-        ) : null}
-      </button>
-
-      {open ? (
+  const popup = open
+    ? createPortal(
         <div
+          ref={popupRef}
           style={{
-            position: "absolute",
-            right: 0,
-            top: "calc(100% + 12px)",
+            position: "fixed",
+            top: popupPos.top,
+            right: popupPos.right,
             width: 388,
             background: "#fff",
             border: "1px solid #e2e8f0",
             borderRadius: 16,
             boxShadow: "0 24px 80px rgba(17,17,17,0.16)",
             padding: 14,
-            zIndex: 120,
+            zIndex: 9000,
           }}
         >
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
@@ -252,8 +229,45 @@ export function AdminPendingBell({ onNavigate }: { onNavigate: (page: AdminPageK
               ))
             )}
           </div>
-        </div>
-      ) : null}
+        </div>,
+        document.body
+      )
+    : null;
+
+  return (
+    <div style={{ position: "relative" }}>
+      <button
+        ref={btnRef}
+        type="button"
+        aria-label="Pendências"
+        onClick={handleOpenToggle}
+        style={{ background: "transparent", border: 0, cursor: "pointer", position: "relative", padding: 0 }}
+      >
+        <ListTodo size={16} strokeWidth={1.7} aria-hidden="true" />
+        {summary.totalCount > 0 ? (
+          <span
+            aria-hidden="true"
+            style={{
+              position: "absolute",
+              top: -5,
+              right: -6,
+              minWidth: 16,
+              height: 16,
+              borderRadius: 999,
+              background: "#111",
+              color: "#fff",
+              fontSize: 9,
+              display: "inline-flex",
+              alignItems: "center",
+              justifyContent: "center",
+              padding: "0 4px",
+            }}
+          >
+            {summary.totalCount > 9 ? "9+" : summary.totalCount}
+          </span>
+        ) : null}
+      </button>
+      {popup}
     </div>
   );
 }
