@@ -61,9 +61,11 @@ type NfseFormularioProps = {
   pedido: PedidoPrefill | null;
   pedidoId?: string;
   substituir?: string;
+  onClose?: () => void;
+  onSuccess?: () => void;
 };
 
-export default function NfseFormulario({ pedido, pedidoId, substituir }: NfseFormularioProps) {
+export default function NfseFormulario({ pedido, pedidoId, substituir, onClose, onSuccess }: NfseFormularioProps) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
@@ -133,6 +135,11 @@ export default function NfseFormulario({ pedido, pedidoId, substituir }: NfseFor
       const data = (await response.json()) as { detalhes?: string; error?: string };
       if (!response.ok) {
         setErro(data.detalhes ?? data.error ?? "Erro ao emitir");
+        return;
+      }
+
+      if (onSuccess) {
+        onSuccess();
         return;
       }
 
@@ -328,20 +335,38 @@ export default function NfseFormulario({ pedido, pedidoId, substituir }: NfseFor
           marginTop: "8px",
         }}
       >
-        <a
-          href="/admin/nfse"
-          style={{
-            background: "transparent",
-            border: "0.5px solid #2a2a2a",
-            color: "#666",
-            padding: "8px 16px",
-            borderRadius: "6px",
-            fontSize: "12px",
-            textDecoration: "none",
-          }}
-        >
-          CANCELAR
-        </a>
+        {onClose ? (
+          <button
+            type="button"
+            onClick={onClose}
+            style={{
+              background: "transparent",
+              border: "0.5px solid #2a2a2a",
+              color: "#666",
+              padding: "8px 16px",
+              borderRadius: "6px",
+              fontSize: "12px",
+              cursor: "pointer",
+            }}
+          >
+            CANCELAR
+          </button>
+        ) : (
+          <a
+            href="/admin/nfse"
+            style={{
+              background: "transparent",
+              border: "0.5px solid #2a2a2a",
+              color: "#666",
+              padding: "8px 16px",
+              borderRadius: "6px",
+              fontSize: "12px",
+              textDecoration: "none",
+            }}
+          >
+            CANCELAR
+          </a>
+        )}
         <button
           onClick={submeter}
           disabled={loading || !pedidoId}

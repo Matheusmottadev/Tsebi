@@ -17,9 +17,10 @@ type NfseTabelaProps = {
   notas: Nfse[];
   total: number;
   searchParams: Record<string, string | undefined>;
+  onOpenDrawer?: (next: { pedidoId?: string; substituir?: string }) => void;
 };
 
-export default function NfseTabela({ notas, total, searchParams }: NfseTabelaProps) {
+export default function NfseTabela({ notas, total, searchParams, onOpenDrawer }: NfseTabelaProps) {
   const router = useRouter();
   const pathname = usePathname();
   const params = useSearchParams();
@@ -37,16 +38,6 @@ export default function NfseTabela({ notas, total, searchParams }: NfseTabelaPro
     startTransition(() => {
       router.push(query ? `${pathname}?${query}` : pathname);
     });
-  }
-
-  function buildDrawerHref(next: { pedidoId?: string; substituir?: string } = {}) {
-    const nextParams = new URLSearchParams(params.toString());
-    nextParams.set("emitir", "1");
-    if (next.pedidoId) nextParams.set("pedidoId", next.pedidoId);
-    else nextParams.delete("pedidoId");
-    if (next.substituir) nextParams.set("substituir", next.substituir);
-    else nextParams.delete("substituir");
-    return `${pathname}?${nextParams.toString()}`;
   }
 
   async function cancelarNota(id: string) {
@@ -280,8 +271,9 @@ export default function NfseTabela({ notas, total, searchParams }: NfseTabelaPro
                     ) : null}
 
                     {nota.status === "pendente" ? (
-                      <a
-                        href={buildDrawerHref({ pedidoId: nota.pedido_id })}
+                      <button
+                        type="button"
+                        onClick={() => onOpenDrawer?.({ pedidoId: nota.pedido_id })}
                         style={{
                           background: "#111111",
                           border: "1px solid #111111",
@@ -289,16 +281,17 @@ export default function NfseTabela({ notas, total, searchParams }: NfseTabelaPro
                           fontSize: "11px",
                           padding: "5px 10px",
                           borderRadius: "5px",
-                          textDecoration: "none",
+                          cursor: "pointer",
                         }}
                       >
                         Emitir nota
-                      </a>
+                      </button>
                     ) : null}
 
                     {nota.status === "cancelada" ? (
-                      <a
-                        href={buildDrawerHref({ pedidoId: nota.pedido_id, substituir: nota.id })}
+                      <button
+                        type="button"
+                        onClick={() => onOpenDrawer?.({ pedidoId: nota.pedido_id, substituir: nota.id })}
                         style={{
                           background: "#ffffff",
                           border: "1px solid #d1d5db",
@@ -306,11 +299,11 @@ export default function NfseTabela({ notas, total, searchParams }: NfseTabelaPro
                           fontSize: "11px",
                           padding: "5px 10px",
                           borderRadius: "5px",
-                          textDecoration: "none",
+                          cursor: "pointer",
                         }}
                       >
                         Substituir
-                      </a>
+                      </button>
                     ) : null}
 
                     {nota.status === "erro" ? (

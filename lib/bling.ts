@@ -169,6 +169,37 @@ async function blingFetch(path: string, options: RequestInit = {}): Promise<Resp
   return res;
 }
 
+function parseBlingApiError(data: unknown, status: number): string {
+  if (!data || typeof data !== "object") {
+    return `Erro Bling: ${status}`;
+  }
+
+  const payload = data as Record<string, unknown>;
+  const directMessage = [payload.error, payload.message, payload.description]
+    .map((value) => (typeof value === "string" ? value.trim() : ""))
+    .find(Boolean);
+
+  if (directMessage === "insufficient_scope") {
+    return "O app do Bling foi autorizado sem permissão suficiente para emitir NFS-e, ou o plano da conta não libera Nota de Serviço. Revise os escopos do aplicativo e o acesso fiscal da conta no Bling.";
+  }
+
+  if (directMessage) return directMessage;
+
+  const nestedError =
+    payload.error && typeof payload.error === "object" ? (payload.error as Record<string, unknown>) : null;
+  if (nestedError) {
+    const nestedMessage = [nestedError.message, nestedError.description, nestedError.type, nestedError.error]
+      .map((value) => (typeof value === "string" ? value.trim() : ""))
+      .find(Boolean);
+    if (nestedMessage === "insufficient_scope") {
+      return "O app do Bling foi autorizado sem permissão suficiente para emitir NFS-e, ou o plano da conta não libera Nota de Serviço. Revise os escopos do aplicativo e o acesso fiscal da conta no Bling.";
+    }
+    if (nestedMessage) return nestedMessage;
+  }
+
+  return `Erro Bling: ${status}`;
+}
+
 export async function emitirNFSeNoBling(payload: Record<string, unknown>) {
   const res = await blingFetch("/nfse", {
     method: "POST",
@@ -178,7 +209,7 @@ export async function emitirNFSeNoBling(payload: Record<string, unknown>) {
   const data = await res.json();
 
   if (!res.ok) {
-    throw new Error(data?.error?.message || `Erro Bling: ${res.status}`);
+    throw new Error(parseBlingApiError(data, res.status));
   }
 
   return data;
@@ -186,13 +217,19 @@ export async function emitirNFSeNoBling(payload: Record<string, unknown>) {
 
 export async function cancelarNFSeNoBling(blingId: string) {
   const res = await blingFetch(`/nfse/${blingId}`, { method: "DELETE" });
-  if (!res.ok) throw new Error(`Erro ao cancelar no Bling: ${res.status}`);
+  if (!res.ok) {
+    const data = await res.json().catch(() => null);
+    throw new Error(parseBlingApiError(data, res.status));
+  }
   return true;
 }
 
 export async function consultarNFSeNoBling(blingId: string) {
   const res = await blingFetch(`/nfse/${blingId}`);
-  if (!res.ok) throw new Error(`Erro ao consultar no Bling: ${res.status}`);
+  if (!res.ok) {
+    const data = await res.json().catch(() => null);
+    throw new Error(parseBlingApiError(data, res.status));
+  }
   return res.json();
 }
 

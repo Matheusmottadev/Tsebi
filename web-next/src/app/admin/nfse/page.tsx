@@ -1,11 +1,9 @@
 import { headers } from "next/headers";
-import { getOrderAdmin } from "@/services/admin";
+import { getOrderAdmin, getNfseStatsAdmin, listNfseAdmin, studioAuthMe } from "@/services/admin";
 import { requireAdminSession } from "@/lib/admin/server";
-import { getNfseStatsAdmin, listNfseAdmin, studioAuthMe } from "@/services/admin";
 import NfseAdminShell from "./_components/NfseAdminShell";
-import { NfseStats } from "./_components/NfseStats";
-import NfseTabela from "./_components/NfseTabela";
-import NfseFormulario, { type PedidoPrefill } from "./emitir/_components/NfseFormulario";
+import NfseDashboardClient from "./_components/NfseDashboardClient";
+import { type PedidoPrefill } from "./emitir/_components/NfseFormulario";
 
 type NfsePageProps = {
   searchParams: Promise<{
@@ -62,121 +60,31 @@ export default async function NfsePage({ searchParams }: NfsePageProps) {
     ? await buscarPedido(resolvedSearchParams.pedidoId, cookie)
     : null;
   const [{ notas, total }, stats] = await Promise.all([
-    listNfseAdmin({
-      status: resolvedSearchParams.status,
-      busca: resolvedSearchParams.busca,
-      pagina: Number(resolvedSearchParams.pagina ?? 1),
-      periodo: resolvedSearchParams.periodo,
-    }, { cookie, cache: "no-store" }),
+    listNfseAdmin(
+      {
+        status: resolvedSearchParams.status,
+        busca: resolvedSearchParams.busca,
+        pagina: Number(resolvedSearchParams.pagina ?? 1),
+        periodo: resolvedSearchParams.periodo,
+      },
+      { cookie, cache: "no-store" }
+    ),
     getNfseStatsAdmin({ cookie, cache: "no-store" }),
   ]);
 
   return (
     <NfseAdminShell admin={me.admin!} access={me.access ?? null}>
-    <div style={{ padding: "20px 28px", color: "#161616", background: "#ffffff", minHeight: "100%" }}>
-      <div
-        style={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "flex-start",
-          gap: "16px",
-          marginBottom: "20px",
-        }}
-      >
-        <div>
-          <h1 style={{ fontSize: "22px", fontWeight: 600, color: "#111111", margin: 0 }}>Notas Fiscais</h1>
-          <p style={{ fontSize: "11px", color: "#6b7280", margin: "4px 0 0" }}>
-            {new Date().toLocaleDateString("pt-BR", {
-              weekday: "long",
-              day: "numeric",
-              month: "long",
-              year: "numeric",
-            })}
-          </p>
-        </div>
-        <div style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
-          <a
-            href="/api/nfse/export"
-            style={{
-              background: "#ffffff",
-              border: "1px solid #d1d5db",
-              color: "#111111",
-              padding: "7px 14px",
-              borderRadius: "6px",
-              fontSize: "12px",
-              textDecoration: "none",
-            }}
-          >
-            Exportar CSV
-          </a>
-          <a
-            href="/admin/nfse?emitir=1"
-            style={{
-              background: "#111111",
-              color: "#ffffff",
-              padding: "7px 14px",
-              borderRadius: "6px",
-              fontSize: "12px",
-              fontWeight: 500,
-              textDecoration: "none",
-            }}
-          >
-            + EMITIR NOTA
-          </a>
-        </div>
+      <div style={{ padding: "20px 28px", color: "#161616", background: "#ffffff", minHeight: "100%" }}>
+        <NfseDashboardClient
+          notas={notas}
+          total={total}
+          stats={stats}
+          searchParams={resolvedSearchParams}
+          initialPedidoPrefill={pedidoPrefill}
+          initialPedidoId={shouldOpenDrawer ? resolvedSearchParams.pedidoId : undefined}
+          initialSubstituir={shouldOpenDrawer ? resolvedSearchParams.substituir : undefined}
+        />
       </div>
-
-      <NfseStats stats={stats} />
-      <NfseTabela notas={notas} total={total} searchParams={resolvedSearchParams} />
-
-      {shouldOpenDrawer ? (
-        <>
-          <div
-            style={{
-              position: "fixed",
-              top: 0,
-              left: 220,
-              right: 0,
-              bottom: 0,
-              background: "rgba(15, 15, 15, 0.38)",
-            }}
-          />
-          <div
-            style={{
-              position: "fixed",
-              top: 0,
-              right: 0,
-              bottom: 0,
-              width: "480px",
-              background: "#111",
-              borderLeft: "0.5px solid #2a2a2a",
-              padding: "28px",
-              overflowY: "auto",
-              zIndex: 2,
-              boxSizing: "border-box",
-              boxShadow: "-24px 0 60px rgba(0,0,0,0.16)",
-            }}
-          >
-            <div
-              style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "4px" }}
-            >
-              <h2 style={{ fontSize: "22px", fontWeight: 500, color: "#fff", margin: 0 }}>Emitir NFS-e</h2>
-              <a href="/admin/nfse" style={{ color: "#555", fontSize: "20px", textDecoration: "none", lineHeight: 1 }}>
-                ×
-              </a>
-            </div>
-            <p style={{ fontSize: "11px", color: "#444", marginBottom: "28px", letterSpacing: "0.5px" }}>
-              PREENCHA OS DADOS DA NOTA FISCAL
-            </p>
-            <NfseFormulario
-              pedido={pedidoPrefill}
-              pedidoId={resolvedSearchParams.pedidoId}
-              substituir={resolvedSearchParams.substituir}
-            />
-          </div>
-        </>
-      ) : null}
-    </div>
     </NfseAdminShell>
   );
 }
