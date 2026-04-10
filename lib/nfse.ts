@@ -12,12 +12,14 @@ export async function listarNfse({
   pagina = 1,
   periodo,
   includePendingOrders = true,
+  visao = "todos",
 }: {
   status?: string;
   busca?: string;
   pagina?: number;
   periodo?: string;
   includePendingOrders?: boolean;
+  visao?: "todos" | "sem_nota" | "emitidas";
 }): Promise<{ notas: Nfse[]; total: number }> {
   const limite = 20;
   const offset = (pagina - 1) * limite;
@@ -67,20 +69,29 @@ export async function listarNfse({
     );
   }
 
-  const nfseWhere = nfseConditions.length ? `WHERE ${nfseConditions.join(" AND ")}` : "";
+  const shouldShowOnlyPending = visao === "sem_nota";
+  const shouldShowOnlyIssued = visao === "emitidas";
+
+  const nfseWhere =
+    shouldShowOnlyPending
+      ? "WHERE FALSE"
+      : nfseConditions.length
+        ? `WHERE ${nfseConditions.join(" AND ")}`
+        : "";
   const pendingWhere =
-    includePendingOrders && (!status || status === "pendente" || status === "todos")
+    !shouldShowOnlyIssued && includePendingOrders && (!status || status === "pendente" || status === "todos")
       ? `WHERE ${pendingConditions.join(" AND ")}`
       : "WHERE FALSE";
 
   const combinedQuery = `
     WITH nfse_rows AS (
-      SELECT n.*
+      SELECT 'nfse'::text AS row_kind, n.*
       FROM nfse n
       ${nfseWhere}
     ),
     pending_rows AS (
       SELECT
+        'pedido_pendente'::text AS row_kind,
         o.id AS id,
         o.id AS pedido_id,
         NULL::varchar(100) AS bling_id,

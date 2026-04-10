@@ -281,6 +281,56 @@ async function processarEmissaoNfse(body: z.infer<typeof emitirNfseSchema>): Pro
   return { id: nfse.id };
 }
 
+async function reprocessarNfseComErro(nfse: Record<string, any>) {
+  const payload = nfse?.bling_payload;
+  if (!payload || typeof payload !== "object") {
+    throw new Error("Essa nota não possui payload salvo para reprocessamento.");
+  }
+
+  await atualizarNfse(nfse.id, {
+    tentativas: Number(nfse.tentativas || 0) + 1,
+    status: "processando",
+  });
+
+  const blingResult = await emitirNFSeNoBling(payload);
+  const blingData = blingResult?.data ?? {};
+
+  await atualizarNfse(nfse.id, {
+    status: "autorizada",
+    bling_id: String(blingData.id ?? ""),
+    numero: String(blingData.numero ?? ""),
+    serie: String(blingData.serie ?? ""),
+    pdf_url: String(blingData.linkPdf ?? ""),
+    xml_url: String(blingData.linkXml ?? ""),
+    link_nota: String(blingData.linkNota ?? ""),
+    erro_mensagem: null,
+  });
+
+  if (nfse.tomador_email && !nfse.email_enviado_em) {
+    const nfseAtualizada = {
+      ...nfse,
+      status: "autorizada",
+      numero: String(blingData.numero ?? ""),
+      serie: String(blingData.serie ?? ""),
+      pdf_url: String(blingData.linkPdf ?? ""),
+      xml_url: String(blingData.linkXml ?? ""),
+      link_nota: String(blingData.linkNota ?? ""),
+    };
+    try {
+      const resendId = await enviarEmailNfse(nfseAtualizada);
+      await registrarEmailLog({
+        nfse_id: nfse.id,
+        destinatario: nfse.tomador_email,
+        status: "enviado",
+        resend_id: resendId,
+      });
+      await atualizarNfse(nfse.id, { email_enviado_em: new Date().toISOString() });
+    } catch {}
+  }
+
+  return { id: String(nfse.id), status: "autorizada" as const };
+}
+
 async function authenticateRetryRequest(req: Request & any, res: Response, next: NextFunction) {
   const cronSecret = String(process.env.CRON_SECRET || "").trim();
   const authHeader = String(req.get("authorization") || "").trim();
@@ -373,6 +423,7 @@ nfseRouter.get("/", requireAdmin, async (req: Request & any, res: Response) => {
       pagina: Number(req.query?.pagina || 1),
       periodo: String(req.query?.periodo || "").trim() || undefined,
       includePendingOrders: String(req.query?.include_pending_orders || "").trim() !== "false",
+      visao: (String(req.query?.visao || "").trim() || "todos") as "todos" | "sem_nota" | "emitidas",
     });
     return res.json(notas);
   } catch (err) {
@@ -458,44 +509,7 @@ nfseRouter.get("/retry", authenticateRetryRequest, async (_req: Request & any, r
 
     for (const nfse of rows) {
       try {
-        await atualizarNfse(nfse.id, { tentativas: Number(nfse.tentativas || 0) + 1, status: "processando" });
-
-        const blingResult = await emitirNFSeNoBling(nfse.bling_payload);
-        const blingData = blingResult?.data ?? {};
-
-        await atualizarNfse(nfse.id, {
-          status: "autorizada",
-          bling_id: String(blingData.id ?? ""),
-          numero: String(blingData.numero ?? ""),
-          serie: String(blingData.serie ?? ""),
-          pdf_url: String(blingData.linkPdf ?? ""),
-          xml_url: String(blingData.linkXml ?? ""),
-          link_nota: String(blingData.linkNota ?? ""),
-          erro_mensagem: null,
-        });
-
-        if (nfse.tomador_email && !nfse.email_enviado_em) {
-          const nfseAtualizada = {
-            ...nfse,
-            status: "autorizada",
-            numero: String(blingData.numero ?? ""),
-            serie: String(blingData.serie ?? ""),
-            pdf_url: String(blingData.linkPdf ?? ""),
-            xml_url: String(blingData.linkXml ?? ""),
-            link_nota: String(blingData.linkNota ?? ""),
-          };
-          try {
-            const resendId = await enviarEmailNfse(nfseAtualizada);
-            await registrarEmailLog({
-              nfse_id: nfse.id,
-              destinatario: nfse.tomador_email,
-              status: "enviado",
-              resend_id: resendId,
-            });
-            await atualizarNfse(nfse.id, { email_enviado_em: new Date().toISOString() });
-          } catch {}
-        }
-
+        await reprocessarNfseComErro(nfse);
         resultados.push({ id: nfse.id, resultado: "sucesso" });
       } catch (err) {
         await atualizarNfse(nfse.id, { status: "erro", erro_mensagem: String(err) });
@@ -507,6 +521,23 @@ nfseRouter.get("/retry", authenticateRetryRequest, async (_req: Request & any, r
   } catch (err) {
     console.error("[GET /api/nfse/retry]", err);
     return res.status(500).json({ error: "Erro no retry" });
+  }
+});
+
+nfseRouter.post("/:id/retry", requireAdmin, requireAdminCsrfForMutations, async (req: Request & any, res: Response) => {
+  try {
+    const nfse = await buscarNfsePorId(String(req.params?.id || "").trim());
+    if (!nfse) return res.status(404).json({ error: "Nota não encontrada" });
+    if (nfse.status !== "erro" && nfse.status !== "processando") {
+      return res.status(400).json({ error: "Só é possível reprocessar notas com erro ou travadas em processamento." });
+    }
+
+    const result = await reprocessarNfseComErro(nfse);
+    return res.json({ ok: true, ...result });
+  } catch (err) {
+    const id = String(req.params?.id || "").trim();
+    await atualizarNfse(id, { status: "erro", erro_mensagem: String(err) }).catch(() => null);
+    return res.status(422).json({ error: err instanceof Error ? err.message : "Erro ao reprocessar nota" });
   }
 });
 

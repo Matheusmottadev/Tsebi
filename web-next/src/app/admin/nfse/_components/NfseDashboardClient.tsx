@@ -55,6 +55,7 @@ export default function NfseDashboardClient({
   const [pedidoPrefill, setPedidoPrefill] = useState<PedidoPrefill | null>(initialPedidoPrefill);
   const [drawerLoading, setDrawerLoading] = useState(false);
   const [drawerError, setDrawerError] = useState<string | null>(null);
+  const [bulkQueue, setBulkQueue] = useState<string[]>([]);
   const [isRefreshing, startTransition] = useTransition();
 
   async function openDrawer(next: { pedidoId?: string; substituir?: string } = {}) {
@@ -82,6 +83,26 @@ export default function NfseDashboardClient({
     }
   }
 
+  async function openBulkEmitQueue(pedidoIds: string[]) {
+    const uniqueIds = Array.from(new Set(pedidoIds.map((value) => String(value || "").trim()).filter(Boolean)));
+    if (uniqueIds.length === 0) return;
+    setBulkQueue(uniqueIds);
+    await openDrawer({ pedidoId: uniqueIds[0] });
+  }
+
+  function moveToNextQueuedOrder() {
+    setBulkQueue((current) => {
+      const [, ...rest] = current;
+      const nextPedidoId = rest[0];
+      if (nextPedidoId) {
+        void openDrawer({ pedidoId: nextPedidoId });
+      } else {
+        closeDrawer();
+      }
+      return rest;
+    });
+  }
+
   function closeDrawer() {
     setDrawerOpen(false);
     setDrawerError(null);
@@ -89,6 +110,7 @@ export default function NfseDashboardClient({
     setPedidoId(undefined);
     setSubstituir(undefined);
     setPedidoPrefill(null);
+    setBulkQueue([]);
   }
 
   return (
@@ -127,6 +149,9 @@ export default function NfseDashboardClient({
         onOpenDrawer={(next) => {
           void openDrawer(next);
         }}
+        onOpenBulkEmit={(pedidoIds) => {
+          void openBulkEmitQueue(pedidoIds);
+        }}
       />
 
       {drawerOpen ? (
@@ -144,6 +169,22 @@ export default function NfseDashboardClient({
             </div>
             <p style={{ fontSize: "11px", color: "#444", marginBottom: "28px", letterSpacing: "0.5px" }}>PREENCHA OS DADOS DA NOTA FISCAL</p>
 
+            {bulkQueue.length > 1 ? (
+              <div
+                style={{
+                  marginBottom: 16,
+                  padding: "12px 14px",
+                  borderRadius: 10,
+                  border: "1px solid #2f2f31",
+                  background: "#18181b",
+                  color: "#d4d4d8",
+                  fontSize: 12,
+                }}
+              >
+                Emitindo em fila. Depois desta nota, ainda restam {bulkQueue.length - 1} pedido(s) selecionado(s).
+              </div>
+            ) : null}
+
             {drawerLoading ? (
               <div style={{ fontSize: 13, color: "#d1d5db" }}>Carregando dados do pedido...</div>
             ) : null}
@@ -159,7 +200,11 @@ export default function NfseDashboardClient({
                 substituir={substituir}
                 onClose={closeDrawer}
                 onSuccess={() => {
-                  closeDrawer();
+                  if (bulkQueue.length > 1) {
+                    moveToNextQueuedOrder();
+                  } else {
+                    closeDrawer();
+                  }
                   startTransition(() => {
                     router.refresh();
                   });

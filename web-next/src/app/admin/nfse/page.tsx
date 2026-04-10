@@ -11,6 +11,7 @@ type NfsePageProps = {
     busca?: string;
     pagina?: string;
     periodo?: string;
+    visao?: string;
     emitir?: string;
     pedidoId?: string;
     substituir?: string;
@@ -66,6 +67,10 @@ export default async function NfsePage({ searchParams }: NfsePageProps) {
         busca: resolvedSearchParams.busca,
         pagina: Number(resolvedSearchParams.pagina ?? 1),
         periodo: resolvedSearchParams.periodo,
+        visao:
+          resolvedSearchParams.visao === "sem_nota" || resolvedSearchParams.visao === "emitidas"
+            ? resolvedSearchParams.visao
+            : "todos",
       },
       { cookie, cache: "no-store" }
     ),

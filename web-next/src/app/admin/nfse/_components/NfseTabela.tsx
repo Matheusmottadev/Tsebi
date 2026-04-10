@@ -1,7 +1,7 @@
 "use client";
 
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { useState, useTransition, type CSSProperties } from "react";
+import { useMemo, useState, useTransition, type CSSProperties } from "react";
 import { bootstrapAdminCsrfToken } from "@/services/admin";
 import type { Nfse } from "../../../../../../types/nfse";
 
@@ -18,15 +18,42 @@ type NfseTabelaProps = {
   total: number;
   searchParams: Record<string, string | undefined>;
   onOpenDrawer?: (next: { pedidoId?: string; substituir?: string }) => void;
+  onOpenBulkEmit?: (pedidoIds: string[]) => void;
 };
 
-export default function NfseTabela({ notas, total, searchParams, onOpenDrawer }: NfseTabelaProps) {
+function inferRowKind(nota: Nfse): "nfse" | "pedido_pendente" {
+  if (nota.row_kind === "nfse" || nota.row_kind === "pedido_pendente") return nota.row_kind;
+  if (nota.status === "pendente" && !nota.numero && !nota.bling_id && !nota.erro_mensagem) return "pedido_pendente";
+  return "nfse";
+}
+
+export default function NfseTabela({ notas, total, searchParams, onOpenDrawer, onOpenBulkEmit }: NfseTabelaProps) {
   const router = useRouter();
   const pathname = usePathname();
   const params = useSearchParams();
   const [, startTransition] = useTransition();
   const [erroModal, setErroModal] = useState<string | null>(null);
   const [loadingId, setLoadingId] = useState<string | null>(null);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+
+  const rows = useMemo(
+    () =>
+      notas.map((nota) => ({
+        ...nota,
+        rowKind: inferRowKind(nota),
+      })),
+    [notas]
+  );
+
+  const selectableIds = useMemo(
+    () => rows.filter((row) => row.rowKind === "pedido_pendente" || row.status === "erro").map((row) => row.id),
+    [rows]
+  );
+  const selectedRows = useMemo(() => rows.filter((row) => selectedIds.includes(row.id)), [rows, selectedIds]);
+  const selectedErrorRows = selectedRows.filter((row) => row.status === "erro");
+  const selectedPendingRows = selectedRows.filter((row) => row.rowKind === "pedido_pendente");
+  const allSelectableChecked = selectableIds.length > 0 && selectableIds.every((id) => selectedIds.includes(id));
+  const currentView = searchParams.visao ?? "todos";
 
   function atualizarFiltro(chave: string, valor: string) {
     const nextParams = new URLSearchParams(params.toString());
@@ -38,6 +65,14 @@ export default function NfseTabela({ notas, total, searchParams, onOpenDrawer }:
     startTransition(() => {
       router.push(query ? `${pathname}?${query}` : pathname);
     });
+  }
+
+  function toggleSelection(id: string) {
+    setSelectedIds((current) => (current.includes(id) ? current.filter((value) => value !== id) : [...current, id]));
+  }
+
+  function toggleSelectAll() {
+    setSelectedIds((current) => (allSelectableChecked ? current.filter((id) => !selectableIds.includes(id)) : Array.from(new Set([...current, ...selectableIds]))));
   }
 
   async function cancelarNota(id: string) {
@@ -79,6 +114,58 @@ export default function NfseTabela({ notas, total, searchParams, onOpenDrawer }:
     }
   }
 
+  async function reprocessarNota(id: string) {
+    setLoadingId(id);
+    try {
+      const csrfToken = await bootstrapAdminCsrfToken({ cache: "no-store" });
+      const response = await fetch(`/api/nfse/${id}/retry`, {
+        method: "POST",
+        headers: { "x-csrf-token": csrfToken },
+      });
+      if (!response.ok) {
+        const data = (await response.json().catch(() => null)) as { error?: string } | null;
+        setErroModal(data?.error ?? "Erro ao reprocessar nota");
+        return;
+      }
+      setSelectedIds((current) => current.filter((value) => value !== id));
+      router.refresh();
+    } finally {
+      setLoadingId(null);
+    }
+  }
+
+  async function reprocessarSelecionadas() {
+    if (selectedErrorRows.length === 0) return;
+    setLoadingId("bulk-retry");
+    try {
+      const csrfToken = await bootstrapAdminCsrfToken({ cache: "no-store" });
+      const resultados = await Promise.all(
+        selectedErrorRows.map(async (row) => {
+          const response = await fetch(`/api/nfse/${row.id}/retry`, {
+            method: "POST",
+            headers: { "x-csrf-token": csrfToken },
+          });
+          const data = (await response.json().catch(() => null)) as { error?: string } | null;
+          return { id: row.id, ok: response.ok, error: data?.error };
+        })
+      );
+
+      const falhas = resultados.filter((item) => !item.ok);
+      if (falhas.length > 0) {
+        setErroModal(
+          falhas.length === 1
+            ? falhas[0].error || "Não foi possível reprocessar a nota selecionada."
+            : `${falhas.length} notas não puderam ser reprocessadas agora.`
+        );
+      }
+
+      setSelectedIds((current) => current.filter((id) => !resultados.some((item) => item.ok && item.id === id)));
+      router.refresh();
+    } finally {
+      setLoadingId(null);
+    }
+  }
+
   const thStyle: CSSProperties = {
     fontSize: "10px",
     letterSpacing: "1.5px",
@@ -97,13 +184,14 @@ export default function NfseTabela({ notas, total, searchParams, onOpenDrawer }:
 
   return (
     <>
-      <div style={{ display: "flex", gap: "8px", marginBottom: "16px", alignItems: "center" }}>
+      <div style={{ display: "flex", gap: "8px", marginBottom: "12px", alignItems: "center", flexWrap: "wrap" }}>
         <input
           defaultValue={searchParams.busca}
           onChange={(event) => atualizarFiltro("busca", event.target.value)}
           placeholder="Buscar por nota, pedido ou cliente..."
           style={{
             flex: 1,
+            minWidth: 260,
             background: "#ffffff",
             border: "1px solid #d1d5db",
             borderRadius: "6px",
@@ -113,6 +201,43 @@ export default function NfseTabela({ notas, total, searchParams, onOpenDrawer }:
             outline: "none",
           }}
         />
+        <div
+          style={{
+            display: "inline-flex",
+            alignItems: "center",
+            gap: 6,
+            padding: 4,
+            borderRadius: 999,
+            border: "1px solid #e5e7eb",
+            background: "#ffffff",
+          }}
+        >
+          {[
+            { value: "todos", label: "Todos" },
+            { value: "sem_nota", label: "Sem nota" },
+            { value: "emitidas", label: "Emitidas" },
+          ].map((view) => {
+            const active = currentView === view.value;
+            return (
+              <button
+                key={view.value}
+                type="button"
+                onClick={() => atualizarFiltro("visao", view.value === "todos" ? "" : view.value)}
+                style={{
+                  border: active ? "1px solid #111111" : "1px solid transparent",
+                  background: active ? "#111111" : "#ffffff",
+                  color: active ? "#ffffff" : "#111111",
+                  fontSize: "11px",
+                  padding: "6px 10px",
+                  borderRadius: 999,
+                  cursor: "pointer",
+                }}
+              >
+                {view.label}
+              </button>
+            );
+          })}
+        </div>
         <select
           onChange={(event) => atualizarFiltro("status", event.target.value)}
           defaultValue={searchParams.status ?? ""}
@@ -151,9 +276,86 @@ export default function NfseTabela({ notas, total, searchParams, onOpenDrawer }:
         <span style={{ fontSize: "11px", color: "#6b7280" }}>{total} resultado(s)</span>
       </div>
 
+      {selectedIds.length > 0 ? (
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            gap: 12,
+            padding: "10px 12px",
+            marginBottom: 14,
+            border: "1px solid #e5e7eb",
+            borderRadius: 10,
+            background: "#f8fafc",
+          }}
+        >
+          <div style={{ fontSize: 12, color: "#334155" }}>
+            {selectedIds.length} selecionado(s)
+            {selectedPendingRows.length > 0 ? ` · ${selectedPendingRows.length} pronto(s) para emitir` : ""}
+            {selectedErrorRows.length > 0 ? ` · ${selectedErrorRows.length} com erro` : ""}
+          </div>
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+            {selectedErrorRows.length > 0 ? (
+              <button
+                type="button"
+                onClick={() => void reprocessarSelecionadas()}
+                disabled={loadingId === "bulk-retry"}
+                style={{
+                  background: "#ffffff",
+                  border: "1px solid #fecaca",
+                  color: "#b91c1c",
+                  fontSize: "11px",
+                  padding: "6px 10px",
+                  borderRadius: "6px",
+                  cursor: "pointer",
+                }}
+              >
+                {loadingId === "bulk-retry" ? "Reprocessando..." : "Reprocessar erros"}
+              </button>
+            ) : null}
+            {selectedPendingRows.length > 0 ? (
+              <button
+                type="button"
+                onClick={() => onOpenBulkEmit?.(selectedPendingRows.map((row) => row.pedido_id))}
+                style={{
+                  background: "#111111",
+                  border: "1px solid #111111",
+                  color: "#ffffff",
+                  fontSize: "11px",
+                  padding: "6px 10px",
+                  borderRadius: "6px",
+                  cursor: "pointer",
+                }}
+              >
+                Emitir selecionados
+              </button>
+            ) : null}
+            <button
+              type="button"
+              onClick={() => setSelectedIds([])}
+              style={{
+                background: "#ffffff",
+                border: "1px solid #d1d5db",
+                color: "#111111",
+                fontSize: "11px",
+                padding: "6px 10px",
+                borderRadius: "6px",
+                cursor: "pointer",
+              }}
+            >
+              Limpar seleção
+            </button>
+          </div>
+        </div>
+      ) : null}
+
       <table style={{ width: "100%", borderCollapse: "collapse" }}>
         <thead>
           <tr>
+            <th style={{ ...thStyle, width: 34 }}>
+              <input type="checkbox" checked={allSelectableChecked} onChange={toggleSelectAll} />
+            </th>
             {["NOTA", "PEDIDO", "CLIENTE", "VALOR", "STATUS", "EMITIDA EM", ""].map((header) => (
               <th key={header} style={thStyle}>
                 {header}
@@ -162,15 +364,21 @@ export default function NfseTabela({ notas, total, searchParams, onOpenDrawer }:
           </tr>
         </thead>
         <tbody>
-          {notas.map((nota) => {
+          {rows.map((nota) => {
             const statusStyle = STATUS_STYLE[nota.status] ?? STATUS_STYLE.pendente;
             const loading = loadingId === nota.id;
+            const selectable = nota.rowKind === "pedido_pendente" || nota.status === "erro";
 
             return (
-              <tr key={nota.id} style={{ cursor: "default" }}>
+              <tr key={nota.id} style={{ cursor: "default", background: selectedIds.includes(nota.id) ? "#f8fafc" : "#ffffff" }}>
+                <td style={tdStyle}>
+                  {selectable ? (
+                    <input type="checkbox" checked={selectedIds.includes(nota.id)} onChange={() => toggleSelection(nota.id)} />
+                  ) : null}
+                </td>
                 <td style={tdStyle}>
                   <span style={{ fontSize: "11px", color: "#374151", fontFamily: "monospace" }}>
-                    {nota.numero ? `NFS-e ${nota.numero}` : "Pendente"}
+                    {nota.rowKind === "pedido_pendente" ? "Sem nota" : nota.numero ? `NFS-e ${nota.numero}` : "Em andamento"}
                   </span>
                 </td>
                 <td style={tdStyle}>
@@ -179,14 +387,31 @@ export default function NfseTabela({ notas, total, searchParams, onOpenDrawer }:
                   </span>
                 </td>
                 <td style={tdStyle}>
-                  <span style={{ fontSize: "13px", color: "#111111", fontWeight: 500 }}>{nota.tomador_nome}</span>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                    <span style={{ fontSize: "13px", color: "#111111", fontWeight: 500 }}>{nota.tomador_nome}</span>
+                    {nota.rowKind === "pedido_pendente" ? (
+                      <span
+                        style={{
+                          display: "inline-flex",
+                          width: "fit-content",
+                          alignItems: "center",
+                          gap: 5,
+                          padding: "3px 8px",
+                          borderRadius: 999,
+                          fontSize: 10,
+                          fontWeight: 600,
+                          background: "#eff6ff",
+                          color: "#1d4ed8",
+                        }}
+                      >
+                        Pronto para emitir
+                      </span>
+                    ) : null}
+                  </div>
                 </td>
                 <td style={tdStyle}>
                   <span style={{ fontSize: "13px", color: "#111111" }}>
-                    {Number(nota.valor_servicos).toLocaleString("pt-BR", {
-                      style: "currency",
-                      currency: "BRL",
-                    })}
+                    {Number(nota.valor_servicos).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
                   </span>
                 </td>
                 <td style={tdStyle}>
@@ -270,7 +495,7 @@ export default function NfseTabela({ notas, total, searchParams, onOpenDrawer }:
                       </>
                     ) : null}
 
-                    {nota.status === "pendente" ? (
+                    {nota.rowKind === "pedido_pendente" ? (
                       <button
                         type="button"
                         onClick={() => onOpenDrawer?.({ pedidoId: nota.pedido_id })}
@@ -307,33 +532,49 @@ export default function NfseTabela({ notas, total, searchParams, onOpenDrawer }:
                     ) : null}
 
                     {nota.status === "erro" ? (
-                      <button
-                        onClick={() => setErroModal(nota.erro_mensagem ?? "Erro desconhecido")}
-                        style={{
-                          background: "#ffffff",
-                          border: "1px solid #fecaca",
-                          color: "#cc4444",
-                          fontSize: "11px",
-                          padding: "5px 10px",
-                          borderRadius: "5px",
-                          cursor: "pointer",
-                        }}
-                      >
-                        Ver erro
-                      </button>
+                      <>
+                        <button
+                          type="button"
+                          onClick={() => void reprocessarNota(nota.id)}
+                          disabled={loading}
+                          style={{
+                            background: "#111111",
+                            border: "1px solid #111111",
+                            color: "#ffffff",
+                            fontSize: "11px",
+                            padding: "5px 10px",
+                            borderRadius: "5px",
+                            cursor: "pointer",
+                          }}
+                        >
+                          {loading ? "..." : "Reprocessar"}
+                        </button>
+                        <button
+                          onClick={() => setErroModal(nota.erro_mensagem ?? "Erro desconhecido")}
+                          style={{
+                            background: "#ffffff",
+                            border: "1px solid #fecaca",
+                            color: "#cc4444",
+                            fontSize: "11px",
+                            padding: "5px 10px",
+                            borderRadius: "5px",
+                            cursor: "pointer",
+                          }}
+                        >
+                          Ver erro
+                        </button>
+                      </>
                     ) : null}
 
-                    {nota.status === "processando" ? (
-                      <span style={{ fontSize: "11px", color: "#6b7280" }}>Aguardando...</span>
-                    ) : null}
+                    {nota.status === "processando" ? <span style={{ fontSize: "11px", color: "#6b7280" }}>Aguardando...</span> : null}
                   </div>
                 </td>
               </tr>
             );
           })}
-          {notas.length === 0 ? (
+          {rows.length === 0 ? (
             <tr>
-              <td colSpan={7} style={{ padding: "28px 0", color: "#6b7280", fontSize: "13px", textAlign: "center" }}>
+              <td colSpan={8} style={{ padding: "28px 0", color: "#6b7280", fontSize: "13px", textAlign: "center" }}>
                 Nenhuma nota ou pedido pendente encontrado com os filtros atuais.
               </td>
             </tr>
@@ -360,12 +601,12 @@ export default function NfseTabela({ notas, total, searchParams, onOpenDrawer }:
               border: "1px solid #e5e7eb",
               borderRadius: "12px",
               padding: "24px",
-              maxWidth: "480px",
+              maxWidth: "560px",
               width: "100%",
               boxShadow: "0 24px 80px rgba(15,23,42,0.16)",
             }}
           >
-            <p style={{ fontSize: "14px", fontWeight: 600, color: "#111111", marginBottom: "12px" }}>Erro na emissao</p>
+            <p style={{ fontSize: "14px", fontWeight: 600, color: "#111111", marginBottom: "12px" }}>Erro na emissão</p>
             <p
               style={{
                 fontSize: "13px",
@@ -375,6 +616,7 @@ export default function NfseTabela({ notas, total, searchParams, onOpenDrawer }:
                 padding: "12px",
                 borderRadius: "8px",
                 border: "1px solid #fecaca",
+                whiteSpace: "pre-wrap",
               }}
             >
               {erroModal}

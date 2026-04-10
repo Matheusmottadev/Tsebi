@@ -2,6 +2,7 @@ export type NfseStatus = "pendente" | "processando" | "autorizada" | "cancelada"
 
 export interface Nfse {
   id: string;
+  row_kind?: "nfse" | "pedido_pendente";
   pedido_id: string;
   bling_id: string | null;
   numero: string | null;
