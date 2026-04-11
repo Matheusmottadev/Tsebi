@@ -312,7 +312,6 @@ export function ProductExperience({ product, recommendations, imageBaseUrl }: Pr
   const addItem = useCartStore((state) => state.addItem);
   const clearError = useCartStore((state) => state.clearError);
   const { sizes, colors } = useMemo(() => getProductVariantOptions(product), [product]);
-  const galleryImages = useMemo(() => buildGalleryImages(product), [product]);
   const tailoredProducts = useMemo(
     () =>
       [...recommendations]
@@ -340,6 +339,17 @@ export function ProductExperience({ product, recommendations, imageBaseUrl }: Pr
 
   const [selectedSize, setSelectedSize] = useState("");
   const [selectedColor, setSelectedColor] = useState("");
+
+  const galleryImages = useMemo(() => {
+    const trimmedColor = String(selectedColor || "").trim();
+    if (trimmedColor) {
+      const colorUrls = (product.colorImages?.[trimmedColor] ?? [])
+        .map((u) => normalizeImageValue(String(u || "").trim()))
+        .filter(Boolean);
+      if (colorUrls.length > 0) return colorUrls;
+    }
+    return buildGalleryImages(product);
+  }, [product, selectedColor]);
   const [feedback, setFeedback] = useState("");
   const [stickyToastMessage, setStickyToastMessage] = useState("");
   const [openDrawer, setOpenDrawer] = useState<DrawerKey | null>(null);
@@ -705,6 +715,12 @@ export function ProductExperience({ product, recommendations, imageBaseUrl }: Pr
     mediaState.target = 0;
     syncMediaTransform(0);
   }, [syncMediaTransform]);
+
+  // Reseta galeria ao trocar cor
+  useEffect(() => {
+    setActiveMobileImageIndex(0);
+    resetMediaMotion();
+  }, [selectedColor, resetMediaMotion]);
 
   const refreshMetrics = useCallback(() => {
     const mainElement = mainRef.current;

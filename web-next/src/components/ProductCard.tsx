@@ -26,7 +26,17 @@ export function ProductCard({ product, imageBaseUrl, priority = false }: Product
   const isSwipingRef = useRef(false);
 
   const { colors, sizes } = useMemo(() => getProductVariantOptions(product), [product]);
-  const images = useMemo(() => collectProductMedia(product).slice(0, 5), [product]);
+  const images = useMemo(() => {
+    const firstColor = colors[0];
+    if (firstColor) {
+      const colorUrls = (product.colorImages?.[firstColor] ?? [])
+        .map((u) => String(u || "").trim())
+        .filter(Boolean)
+        .slice(0, 5);
+      if (colorUrls.length > 0) return colorUrls;
+    }
+    return collectProductMedia(product).slice(0, 5);
+  }, [product, colors]);
   const quickAddEnabled = canQuickAddWithoutSelection(product);
   const quickAddVariant = useMemo(
     () => buildVariantSnapshot({ color: colors[0] || null, size: sizes[0] || null }),
