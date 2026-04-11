@@ -603,24 +603,15 @@ export function DrawerEditarProduto({
 
       const stockQty = Object.values(variantStock).reduce((sum, qty) => sum + Math.max(0, Number(qty || 0)), 0);
 
-      const resolvedPhotoUrls = photos.map((slot) => {
-        const directUrl = String(slot.url || "").trim();
-        if (directUrl && !directUrl.startsWith("blob:")) return directUrl;
-        if (slot.file) return String(slot.persistedUrl || "").trim();
-        return "";
-      });
-
-      for (let index = 0; index < photos.length; index += 1) {
-        const file = photos[index]?.file;
-        if (!file) continue;
-        const uploadedUrl = await uploadImage(identifier, index, file);
-        resolvedPhotoUrls[index] = uploadedUrl;
-      }
-
-      const galleryImages = resolvedPhotoUrls
-        .slice(1)
-        .filter((value) => Boolean(value))
-        .slice(0, 4);
+      // Deriva imageUrl e secondaryImage da primeira cor com fotos
+      const cleanColorImages = Object.fromEntries(
+        Object.entries(colorImages)
+          .map(([color, urls]) => [color, urls.filter((u) => String(u || "").trim())])
+          .filter(([, urls]) => (urls as string[]).length > 0)
+      );
+      const firstColorUrls = cleanColorImages[normalizedColors[0] ?? ""] ?? [];
+      const derivedImageUrl = String(firstColorUrls[0] || product?.image || "").trim();
+      const derivedSecondary = String(firstColorUrls[1] || "").trim();
 
       const saveResponse = await updateProductAdmin(identifier, {
         name: String(name || "").trim(),
@@ -636,9 +627,9 @@ export function DrawerEditarProduto({
         collection: String(collection || "").trim(),
         gender: String(gender || "Unissex").trim(),
         material: String(materialMain || "").trim(),
-        imageUrl: String(resolvedPhotoUrls[0] || "").trim(),
-        secondaryImage: String(resolvedPhotoUrls[1] || "").trim(),
-        galleryImages,
+        imageUrl: derivedImageUrl,
+        secondaryImage: derivedSecondary,
+        galleryImages: firstColorUrls.slice(2),
         modelInfo: String(modelInfo || "").trim(),
         fitType: String(fitType || "").trim(),
         sizeRecommendation: String(sizeRecommendation || "").trim(),
@@ -646,11 +637,7 @@ export function DrawerEditarProduto({
         materialMain: String(materialMain || "").trim(),
         cleaningRecommendation: String(cleaningRecommendation || "").trim(),
         careList: careList.map((item) => String(item || "").trim()).filter(Boolean),
-        colorImages: Object.fromEntries(
-          Object.entries(colorImages)
-            .map(([color, urls]) => [color, urls.filter((u) => String(u || "").trim())])
-            .filter(([, urls]) => (urls as string[]).length > 0)
-        ),
+        colorImages: cleanColorImages,
       });
 
       const refreshed = await getProductAdmin(identifier);
@@ -678,65 +665,6 @@ export function DrawerEditarProduto({
     >
       <div className={form.stack}>
         {error ? <p className={styles.error}>{error}</p> : null}
-
-        <section className={styles.section}>
-          <h4 className={styles.sectionTitle}>Fotos (ate 5)</h4>
-          <p className={styles.sectionHint}>A primeira imagem sera usada como foto principal</p>
-          <div className={styles.photosGrid}>
-            {photos.map((slot, index) => {
-              const preview = String(slot.url || "").trim();
-              const isDragging = draggingIndex === index;
-              return (
-                <div key={slot.id} className={styles.photoSlot}>
-                  <button
-                    type="button"
-                    className={`${styles.photoButton} ${isDragging ? styles.dragging : ""}`}
-                    onClick={() => openFilePicker(index)}
-                    draggable={true}
-                    onDragStart={() => setDraggingIndex(index)}
-                    onDragOver={(event) => event.preventDefault()}
-                    onDrop={(event) => {
-                      event.preventDefault();
-                      if (draggingIndex == null) return;
-                      reorderPhotos(draggingIndex, index);
-                      setDraggingIndex(null);
-                    }}
-                    onDragEnd={() => setDraggingIndex(null)}
-                  >
-                    {preview ? <img className={styles.photoPreview} src={preview} alt={`Imagem ${index + 1}`} /> : <Plus className={styles.plusIcon} />}
-                    <input
-                      ref={(node) => {
-                        inputRefs.current[index] = node;
-                      }}
-                      type="file"
-                      accept="image/*"
-                      style={{ display: "none" }}
-                      onChange={(event) => {
-                        const file = event.target.files?.[0] || null;
-                        if (file) setFileAt(index, file);
-                        event.currentTarget.value = "";
-                      }}
-                    />
-                    <GripVertical size={14} style={{ position: "absolute", left: 6, top: 6, color: "rgba(17,17,17,0.6)" }} />
-                    {preview ? (
-                      <button
-                        type="button"
-                        className={styles.deletePhoto}
-                        onClick={(event) => {
-                          event.stopPropagation();
-                          removePhoto(index);
-                        }}
-                      >
-                        <Trash2 size={14} />
-                      </button>
-                    ) : null}
-                  </button>
-                  {index === 0 ? <p className={styles.principalLabel}>Principal</p> : null}
-                </div>
-              );
-            })}
-          </div>
-        </section>
 
         <section className={styles.section}>
           <h4 className={styles.sectionTitle}>Informacoes basicas</h4>
