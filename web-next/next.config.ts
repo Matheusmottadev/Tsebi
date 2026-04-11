@@ -68,6 +68,18 @@ const nextConfig: NextConfig = {
         protocol: "https",
         hostname: "media.tsebi.com.br",
       },
+      {
+        protocol: "https",
+        hostname: "images.unsplash.com",
+      },
+      {
+        protocol: "https",
+        hostname: "*.r2.cloudflarestorage.com",
+      },
+      {
+        protocol: "https",
+        hostname: "pub-*.r2.dev",
+      },
     ],
   },
   async headers() {
