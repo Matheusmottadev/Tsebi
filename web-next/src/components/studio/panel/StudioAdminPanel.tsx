@@ -8,7 +8,10 @@ import {
   listAuditLogsAdmin,
   listAppointmentSlotsAdmin,
   listCouponsAdmin,
+  listDirectoriaAdmins,
+  listDirectoriaBalanceRequests,
   listGiftCardsAdmin,
+  listNfseAdmin,
   listNewsletterAdmin,
   listOrdersAdmin,
   listProductsAdmin,
@@ -250,7 +253,7 @@ type GlobalSearchResult = {
 };
 
 type GlobalSearchGroup = {
-  label: "PEDIDOS" | "PRODUTOS" | "USUÁRIOS" | "CUPONS";
+  label: string;
   items: GlobalSearchResult[];
 };
 
@@ -267,6 +270,28 @@ function matchesSearch(value: string, ...fields: unknown[]): boolean {
   if (!normalizedQuery) return false;
   const haystack = fields.map((field) => normalizeSearchValue(field)).join(" ");
   return haystack.includes(normalizedQuery);
+}
+
+function formatAdminRoleLabel(role: string): string {
+  if (role === "superadmin") return "Diretoria";
+  if (role === "director") return "Gerente";
+  return "Admin";
+}
+
+function formatNfseStatusLabel(status: string): string {
+  const normalized = String(status || "").trim().toLowerCase();
+  if (normalized === "autorizada") return "Autorizada";
+  if (normalized === "cancelada") return "Cancelada";
+  if (normalized === "erro") return "Com erro";
+  if (normalized === "processando") return "Processando";
+  return "Pendente";
+}
+
+function formatBalanceRequestStatusLabel(status: string): string {
+  const normalized = String(status || "").trim().toLowerCase();
+  if (normalized === "approved") return "Aprovada";
+  if (normalized === "rejected") return "Rejeitada";
+  return "Pendente";
 }
 
 const OPEN_ORDER_STATUSES = new Set([
@@ -317,7 +342,11 @@ export function StudioAdminPanel() {
   const [isGlobalSearchOpen, setIsGlobalSearchOpen] = useState(false);
   const [globalSearchQuery, setGlobalSearchQuery] = useState("");
   const [globalSearchTarget, setGlobalSearchTarget] = useState<GlobalSearchTarget | null>(null);
+  const [homeSearchQuery, setHomeSearchQuery] = useState("");
+  const [homeSearchLoading, setHomeSearchLoading] = useState(false);
+  const [homeRemoteSearchGroups, setHomeRemoteSearchGroups] = useState<GlobalSearchGroup[]>([]);
   const [balanceCustomerTargetId, setBalanceCustomerTargetId] = useState<string | null>(null);
+  const [diretoriaSearchTarget, setDiretoriaSearchTarget] = useState<{ kind: "admin" | "balance_request"; id: string } | null>(null);
   const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const globalSearchInputRef = useRef<HTMLInputElement | null>(null);
 
@@ -557,6 +586,174 @@ export function StudioAdminPanel() {
   const kpis = useMemo(() => buildDashboardKpis(connectedData), [connectedData]);
   const recentOrders = useMemo(() => buildRecentOrders(connectedData), [connectedData]);
   const activity = useMemo(() => buildActivityItems(connectedData), [connectedData]);
+  const canSearchPrivilegedData = adminAccess?.role === "director" || adminAccess?.role === "superadmin";
+  const homeLocalSearchGroups = useMemo<GlobalSearchGroup[]>(() => {
+    const query = String(homeSearchQuery || "").trim();
+    if (query.length < 2) return [];
+
+    const orders = connectedData.orders
+      .filter((order) =>
+        matchesSearch(
+          query,
+          order.id,
+          order.orderNumber,
+          order.userName,
+          order.userEmail,
+          order.shippingSelectedService,
+          order.shippingSelectedCarrierName,
+          order.carrier
+        )
+      )
+      .sort((a, b) => String(b.createdAt || "").localeCompare(String(a.createdAt || "")))
+      .slice(0, 4)
+      .map<GlobalSearchResult>((order) => ({
+        id: `home-order-${order.id}`,
+        title: toRecentOrderLabel(order),
+        subtitle: order.userName || order.userEmail || "Cliente",
+        meta: formatCurrency(order.amount, order.currency, 0),
+        target: { page: "pedidos", kind: "order", id: String(order.id || "") },
+      }));
+
+    const customers = connectedData.users
+      .filter((user) => matchesSearch(query, user.id, user.name, user.email, user.cpf, user.phone))
+      .sort((a, b) => String(a.name || "").localeCompare(String(b.name || "")))
+      .slice(0, 4)
+      .map<GlobalSearchResult>((user) => ({
+        id: `home-user-${user.id}`,
+        title: user.name || user.email || "Cliente",
+        subtitle: user.email || user.phone || "Cliente",
+        meta: "Cliente",
+        target: { page: "usuarios", kind: "user", id: String(user.id || "") },
+      }));
+
+    const giftCards = connectedData.giftCards
+      .filter((card) => matchesSearch(query, card.id, card.code, card.note))
+      .sort((a, b) => String(b.updatedAt || "").localeCompare(String(a.updatedAt || "")))
+      .slice(0, 4)
+      .map<GlobalSearchResult>((card) => ({
+        id: `home-gift-card-${card.id}`,
+        title: card.code || "Gift card",
+        subtitle: card.note || "Gift card",
+        meta: card.active ? "Ativo" : "Inativo",
+        target: { page: "gift_cards", kind: "gift_card", id: String(card.id || "") },
+      }));
+
+    const groups: GlobalSearchGroup[] = [];
+    if (orders.length > 0) groups.push({ label: "PEDIDOS", items: orders });
+    if (customers.length > 0) groups.push({ label: "CLIENTES", items: customers });
+    if (giftCards.length > 0) groups.push({ label: "GIFT CARDS", items: giftCards });
+    return groups;
+  }, [connectedData, homeSearchQuery]);
+
+  useEffect(() => {
+    const query = String(homeSearchQuery || "").trim();
+    if (query.length < 2) {
+      setHomeRemoteSearchGroups([]);
+      setHomeSearchLoading(false);
+      return;
+    }
+
+    setHomeRemoteSearchGroups([]);
+    let cancelled = false;
+    const timer = window.setTimeout(async () => {
+      setHomeSearchLoading(true);
+
+      const [nfseResponse, adminsResponse, balanceRequestsResponse] = await Promise.all([
+        listNfseAdmin(
+          {
+            busca: query,
+            pagina: 1,
+            include_pending_orders: false,
+            visao: "emitidas",
+          },
+          { cache: "no-store" }
+        ).catch(() => null),
+        canSearchPrivilegedData ? listDirectoriaAdmins({ cache: "no-store" }).catch(() => null) : Promise.resolve(null),
+        canSearchPrivilegedData
+          ? listDirectoriaBalanceRequests({ page: 1, limit: 100 }, { cache: "no-store" }).catch(() => null)
+          : Promise.resolve(null),
+      ]);
+
+      if (cancelled) return;
+
+      const groups: GlobalSearchGroup[] = [];
+
+      const nfseRows = Array.isArray(nfseResponse?.notas) ? nfseResponse.notas : [];
+      const nfseResults = nfseRows
+        .filter((nota) =>
+          matchesSearch(query, nota.numero, nota.pedido_id, nota.tomador_nome, nota.tomador_email, nota.status)
+        )
+        .slice(0, 4)
+        .map<GlobalSearchResult>((nota) => ({
+          id: `home-nfse-${nota.id}`,
+          title: nota.numero ? `NFS-e ${nota.numero}` : `Pedido #${String(nota.pedido_id || "").slice(0, 8)}`,
+          subtitle: nota.tomador_nome || nota.tomador_email || "Nota fiscal",
+          meta: formatNfseStatusLabel(nota.status),
+          target: {
+            page: "nfse",
+            kind: "nfse",
+            id: String(nota.id || ""),
+            query: String(nota.numero || nota.pedido_id || ""),
+          },
+        }));
+      if (nfseResults.length > 0) groups.push({ label: "NOTAS FISCAIS", items: nfseResults });
+
+      if (canSearchPrivilegedData) {
+        const adminRows = Array.isArray(adminsResponse?.rows) ? adminsResponse.rows : [];
+        const adminResults = adminRows
+          .filter((admin) => matchesSearch(query, admin.id, admin.name, admin.nickname, admin.email, admin.role))
+          .slice(0, 4)
+          .map<GlobalSearchResult>((admin) => ({
+            id: `home-admin-${admin.id}`,
+            title: admin.name || admin.email,
+            subtitle: admin.email,
+            meta: formatAdminRoleLabel(admin.role),
+            target: { page: "diretoria", kind: "admin", id: String(admin.id || "") },
+          }));
+        if (adminResults.length > 0) groups.push({ label: "ADMINS", items: adminResults });
+
+        const requestRows = Array.isArray(balanceRequestsResponse?.rows) ? balanceRequestsResponse.rows : [];
+        const requestResults = requestRows
+          .filter((request) =>
+            matchesSearch(
+              query,
+              request.id,
+              request.customerName,
+              request.customerEmail,
+              request.requesterName,
+              request.requesterEmail,
+              request.relatedOrderId,
+              request.reason,
+              request.reasonDetail,
+              request.status
+            )
+          )
+          .slice(0, 4)
+          .map<GlobalSearchResult>((request) => ({
+            id: `home-balance-request-${request.id}`,
+            title: request.customerName || request.customerEmail || `Solicitação ${request.id.slice(0, 8)}`,
+            subtitle: request.requesterName || request.requesterEmail || "Solicitação de saldo",
+            meta: formatBalanceRequestStatusLabel(request.status),
+            target: { page: "diretoria", kind: "balance_request", id: String(request.id || "") },
+          }));
+        if (requestResults.length > 0) groups.push({ label: "SOLICITAÇÕES DE SALDO", items: requestResults });
+      }
+
+      setHomeRemoteSearchGroups(groups);
+      setHomeSearchLoading(false);
+    }, 260);
+
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timer);
+    };
+  }, [canSearchPrivilegedData, homeSearchQuery]);
+
+  const homeSearchGroups = useMemo<GlobalSearchGroup[]>(
+    () => [...homeLocalSearchGroups, ...homeRemoteSearchGroups],
+    [homeLocalSearchGroups, homeRemoteSearchGroups]
+  );
+
   const globalSearchGroups = useMemo<GlobalSearchGroup[]>(() => {
     const query = String(globalSearchQuery || "").trim();
     if (query.length < 2) return [];
@@ -660,7 +857,25 @@ export function StudioAdminPanel() {
   function handleGlobalSearchSelect(target: GlobalSearchTarget) {
     setIsGlobalSearchOpen(false);
     setGlobalSearchQuery("");
-    setActivePage(target.page);
+    setHomeSearchQuery("");
+    setHomeRemoteSearchGroups([]);
+
+    if (target.kind === "nfse") {
+      const query = String(target.query || target.id || "").trim();
+      router.push(query ? `/admin/nfse?busca=${encodeURIComponent(query)}` : "/admin/nfse");
+      return;
+    }
+
+    if (target.kind === "admin" || target.kind === "balance_request") {
+      setDiretoriaSearchTarget({
+        kind: target.kind === "admin" ? "admin" : "balance_request",
+        id: target.id,
+      });
+      setActivePage("diretoria");
+      return;
+    }
+
+    setActivePage(target.page as AdminPageKey);
     setGlobalSearchTarget(target);
   }
 
@@ -677,6 +892,10 @@ export function StudioAdminPanel() {
 
   const handleGlobalSearchTargetHandled = useCallback(() => {
     setGlobalSearchTarget(null);
+  }, []);
+
+  const handleDiretoriaSearchTargetHandled = useCallback(() => {
+    setDiretoriaSearchTarget(null);
   }, []);
 
   function handleSaved(shouldReload: boolean) {
@@ -707,6 +926,11 @@ export function StudioAdminPanel() {
         activities={activity}
         loading={isLoading}
         errorMessage={errorMessage}
+        searchQuery={homeSearchQuery}
+        searchLoading={homeSearchLoading}
+        searchGroups={homeSearchGroups}
+        onSearchQueryChange={setHomeSearchQuery}
+        onSearchSelect={handleGlobalSearchSelect}
         onViewAllOrders={() => setActivePage("pedidos")}
       />
     ) : activePage === "saldo_clientes" ? (
@@ -728,6 +952,8 @@ export function StudioAdminPanel() {
             setBalanceCustomerTargetId(customerId);
             setActivePage("saldo_clientes");
           }}
+          focusTarget={diretoriaSearchTarget}
+          onFocusTargetHandled={handleDiretoriaSearchTargetHandled}
         />
       </RequireRole>
     ) : activePage === "status" ? (

@@ -42,12 +42,23 @@ export type ActivityItem = {
   important: boolean;
 };
 
-export type GlobalSearchPageKey = Extract<AdminPageKey, "pedidos" | "produtos" | "usuarios" | "cupons">;
+export type GlobalSearchPageKey =
+  | Extract<AdminPageKey, "pedidos" | "produtos" | "usuarios" | "cupons" | "gift_cards" | "diretoria">
+  | "nfse";
 
-export type GlobalSearchTargetKind = "order" | "product" | "user" | "coupon";
+export type GlobalSearchTargetKind =
+  | "order"
+  | "product"
+  | "user"
+  | "coupon"
+  | "gift_card"
+  | "admin"
+  | "balance_request"
+  | "nfse";
 
 export type GlobalSearchTarget = {
   page: GlobalSearchPageKey;
   kind: GlobalSearchTargetKind;
   id: string;
+  query?: string | null;
 };

@@ -1448,11 +1448,26 @@ export function ConnectedPage({
       };
     }
 
+    if (globalSearchTarget.kind === "gift_card") {
+      const card = giftCardsRows.find((row) => String(row.id || "") === globalSearchTarget.id);
+      if (card) {
+        setEditingGiftCard(card);
+        onGlobalSearchTargetHandled?.();
+      } else {
+        showToast("Não foi possível abrir este gift card.");
+        onGlobalSearchTargetHandled?.();
+      }
+      return () => {
+        cancelled = true;
+      };
+    }
+
     return () => {
       cancelled = true;
     };
   }, [
     couponsRows,
+    giftCardsRows,
     globalSearchTarget,
     onGlobalSearchTargetHandled,
     ordersRows,

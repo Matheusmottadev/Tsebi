@@ -262,11 +262,15 @@ export function DiretoriaPage({
   refreshKey = 0,
   onNavigatePage,
   onOpenBalanceCustomer,
+  focusTarget,
+  onFocusTargetHandled,
 }: {
   csrfToken?: string;
   refreshKey?: number;
   onNavigatePage?: (page: AdminPageKey) => void;
   onOpenBalanceCustomer?: (customerId: string) => void;
+  focusTarget?: { kind: "admin" | "balance_request"; id: string } | null;
+  onFocusTargetHandled?: () => void;
 }) {
   const [tab, setTab] = useState<"admins" | "approvals" | "audit">("admins");
   const [admins, setAdmins] = useState<AdminAccessRow[]>([]);
@@ -354,6 +358,41 @@ export function DiretoriaPage({
       loadAudit();
     }
   }, [tab, requestStatusFilter, requestDateFrom, requestDateTo, requesterFilter, auditSecurityFilter, refreshKey]);
+
+  useEffect(() => {
+    if (!focusTarget?.id) return;
+
+    if (focusTarget.kind === "admin") {
+      setTab("admins");
+      const admin = admins.find((row) => String(row.id || "") === focusTarget.id);
+      if (admin) {
+        openEditDrawer(admin);
+        onFocusTargetHandled?.();
+      }
+      return;
+    }
+
+    if (focusTarget.kind === "balance_request") {
+      setTab("approvals");
+      const request = requests.find((row) => String(row.id || "") === focusTarget.id);
+      if (request) {
+        setSelectedRequest(request);
+        setRejectReason(request.rejectionReason || "");
+        onFocusTargetHandled?.();
+      } else {
+        getDirectoriaBalanceRequest(focusTarget.id, { cache: "no-store" })
+          .then((response) => {
+            setSelectedRequest(response.request || null);
+            setRejectReason(response.request?.rejectionReason || "");
+            onFocusTargetHandled?.();
+          })
+          .catch(() => {
+            setMessage("Não foi possível abrir essa solicitação de saldo.");
+            onFocusTargetHandled?.();
+          });
+      }
+    }
+  }, [admins, focusTarget, onFocusTargetHandled, requests]);
 
   useEffect(
     () => () => {

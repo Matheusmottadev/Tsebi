@@ -66,7 +66,7 @@ export function AdminPendingBell({ onNavigate }: { onNavigate: (page: AdminPageK
     void load();
     const timer = window.setInterval(() => {
       void load();
-    }, 15_000);
+    }, 30_000);
     return () => window.clearInterval(timer);
   }, []);
 
