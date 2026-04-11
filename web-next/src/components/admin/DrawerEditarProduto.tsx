@@ -258,6 +258,8 @@ export function DrawerEditarProduto({
   const [cleaningRecommendation, setCleaningRecommendation] = useState("");
   const [careInput, setCareInput] = useState("");
   const [careList, setCareList] = useState<string[]>([]);
+  const [colorImages, setColorImages] = useState<Record<string, string[]>>({});
+  const [uploadingColor, setUploadingColor] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState("");
   const [draggingIndex, setDraggingIndex] = useState<number | null>(null);
@@ -311,6 +313,18 @@ export function DrawerEditarProduto({
       setMaterialMain(String(source.materialMain || source.material || ""));
       setCleaningRecommendation(String(source.cleaningRecommendation || ""));
       setCareList((Array.isArray(source.careList) ? source.careList : []).map((item) => String(item || "").trim()).filter(Boolean));
+
+      // Inicializa fotos por cor
+      const seededColorImages: Record<string, string[]> = {};
+      if (source.colorImages && typeof source.colorImages === "object") {
+        Object.entries(source.colorImages).forEach(([color, urls]) => {
+          if (Array.isArray(urls) && urls.length > 0) {
+            seededColorImages[String(color).trim()] = urls.map((u) => String(u || "").trim()).filter(Boolean);
+          }
+        });
+      }
+      setColorImages(seededColorImages);
+
       setColorInput("");
       setCareInput("");
       setError("");
@@ -490,6 +504,62 @@ export function DrawerEditarProduto({
     setCareList((current) => current.filter((_item, itemIndex) => itemIndex !== index));
   }
 
+  function handleColorImageChange(color: string, index: number, value: string) {
+    setColorImages((current) => {
+      const urls = [...(current[color] || [])];
+      urls[index] = value;
+      return { ...current, [color]: urls };
+    });
+  }
+
+  function handleColorImageAdd(color: string) {
+    setColorImages((current) => {
+      const urls = [...(current[color] || [])];
+      if (urls.length >= 6) return current;
+      return { ...current, [color]: [...urls, ""] };
+    });
+  }
+
+  function handleColorImageRemove(color: string, index: number) {
+    setColorImages((current) => {
+      const urls = [...(current[color] || [])].filter((_u, i) => i !== index);
+      return { ...current, [color]: urls };
+    });
+  }
+
+  async function handleColorImageUpload(color: string, file: File) {
+    if (!product) return;
+    const identifier = String(product.dbId || product.id || product.sku || "").trim();
+    if (!identifier) return;
+    setUploadingColor(color);
+    try {
+      const csrfToken = await bootstrapAdminCsrfToken();
+      const currentUrls = colorImages[color] || [];
+      const slot = currentUrls.filter(Boolean).length + 1;
+      const bytes = await file.arrayBuffer();
+      const response = await fetch(
+        `/api/admin/products/${encodeURIComponent(identifier)}/image?slot=${slot}&color=${encodeURIComponent(color)}`,
+        {
+          method: "POST",
+          body: bytes,
+          headers: { "content-type": file.type, "x-csrf-token": csrfToken },
+        }
+      );
+      if (!response.ok) throw new Error("Falha ao enviar imagem.");
+      const payload = await response.json().catch(() => ({}));
+      const uploadedUrl = String(payload?.image?.url || "").trim();
+      if (!uploadedUrl) throw new Error("URL não retornada.");
+      setColorImages((current) => ({
+        ...current,
+        [color]: [...(current[color] || []).filter(Boolean), uploadedUrl],
+      }));
+    } catch {
+      // silencioso — usuário pode tentar novamente
+    } finally {
+      setUploadingColor(null);
+    }
+  }
+
   async function uploadImage(productId: string, slotIndex: number, file: File): Promise<string> {
     const csrfToken = await bootstrapAdminCsrfToken();
     const bytes = await file.arrayBuffer();
@@ -576,6 +646,11 @@ export function DrawerEditarProduto({
         materialMain: String(materialMain || "").trim(),
         cleaningRecommendation: String(cleaningRecommendation || "").trim(),
         careList: careList.map((item) => String(item || "").trim()).filter(Boolean),
+        colorImages: Object.fromEntries(
+          Object.entries(colorImages)
+            .map(([color, urls]) => [color, urls.filter((u) => String(u || "").trim())])
+            .filter(([, urls]) => (urls as string[]).length > 0)
+        ),
       });
 
       const refreshed = await getProductAdmin(identifier);
@@ -798,6 +873,67 @@ export function DrawerEditarProduto({
             })}
           </div>
         </section>
+
+        {colors.length > 0 && (
+          <section className={styles.section}>
+            <h4 className={styles.sectionTitle}>Fotos por cor</h4>
+            <p className={styles.sectionHint}>Até 6 fotos por cor. Quando cadastradas, substituem as fotos gerais no card e na galeria do app.</p>
+            {colors.map((color) => {
+              const urls = colorImages[color] || [];
+              const isUploading = uploadingColor === color;
+              return (
+                <div key={color} className={styles.colorImageBlock}>
+                  <p className={styles.colorImageLabel}>{color}</p>
+                  {urls.map((url, index) => (
+                    <div key={index} className={styles.colorImageRow}>
+                      <input
+                        type="url"
+                        className={styles.colorImageInput}
+                        placeholder="https://..."
+                        value={url}
+                        onChange={(e) => handleColorImageChange(color, index, e.target.value)}
+                      />
+                      {url && (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={url} alt="" className={styles.colorImagePreview} />
+                      )}
+                      <button
+                        type="button"
+                        className={styles.colorImageRemove}
+                        onClick={() => handleColorImageRemove(color, index)}
+                      >
+                        <X size={12} />
+                      </button>
+                    </div>
+                  ))}
+                  <div className={styles.colorImageActions}>
+                    {urls.length < 6 && (
+                      <button type="button" className={styles.colorImageAdd} onClick={() => handleColorImageAdd(color)}>
+                        + URL
+                      </button>
+                    )}
+                    {urls.length < 6 && (
+                      <label className={styles.colorImageUpload}>
+                        {isUploading ? "Enviando..." : "↑ Upload"}
+                        <input
+                          type="file"
+                          accept="image/jpeg,image/png,image/webp"
+                          style={{ display: "none" }}
+                          disabled={isUploading}
+                          onChange={(e) => {
+                            const file = e.target.files?.[0];
+                            if (file) void handleColorImageUpload(color, file);
+                            e.target.value = "";
+                          }}
+                        />
+                      </label>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </section>
+        )}
 
         <section className={styles.section}>
           <h4 className={styles.sectionTitle}>Detalhes do produto</h4>
