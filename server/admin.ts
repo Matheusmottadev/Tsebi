@@ -326,6 +326,7 @@ const productCreateSchema = z.object({
   gender: z.string().trim().max(40).optional().default(""),
   secondaryImage: z.string().trim().max(600).optional().default(""),
   galleryImages: z.array(z.string().trim().max(600)).max(5).optional().default([]),
+  colorImages: z.record(z.string().trim(), z.array(z.string().trim().max(600)).max(10)).optional().default({}),
   modelInfo: z.string().trim().max(200).optional().default(""),
   fitType: z.string().trim().max(120).optional().default(""),
   sizeRecommendation: z.string().trim().max(240).optional().default(""),
@@ -353,6 +354,7 @@ const productPatchSchema = z.object({
   gender: z.string().trim().max(40).optional(),
   secondaryImage: z.string().trim().max(600).optional(),
   galleryImages: z.array(z.string().trim().max(600)).max(5).optional(),
+  colorImages: z.record(z.string().trim(), z.array(z.string().trim().max(600)).max(10)).optional(),
   modelInfo: z.string().trim().max(200).optional(),
   fitType: z.string().trim().max(120).optional(),
   sizeRecommendation: z.string().trim().max(240).optional(),
@@ -2456,25 +2458,42 @@ adminRouter.post(
       const before = await getProductByIdentifier(id);
       if (!before) return res.status(404).json({ error: "NOT_FOUND" });
       const slotRaw = Number(req.query.slot || 1);
-      const slot = Number.isInteger(slotRaw) && slotRaw >= 1 && slotRaw <= 5 ? slotRaw : 1;
+      const slot = Number.isInteger(slotRaw) && slotRaw >= 1 && slotRaw <= 10 ? slotRaw : 1;
+      const colorParam = String(req.query.color || "").trim();
 
       const folder = String(process.env.R2_FOLDER || "tsebi/products").trim() || "tsebi/products";
       const publicIdBase = `product_${String(before.sku || before.id || id).trim()}`;
-      const publicId = slot > 1 ? `${publicIdBase}_slot${slot}` : publicIdBase;
+      const colorSlug = colorParam ? `_${colorParam.toLowerCase().replace(/\s+/g, "-")}` : "";
+      const publicId = slot > 1 ? `${publicIdBase}${colorSlug}_slot${slot}` : `${publicIdBase}${colorSlug}`;
       const uploaded = await getR2Upload()(req.body, { folder, publicId });
       const url = String(uploaded?.secure_url || uploaded?.url || "").trim();
       if (!url) return res.status(500).json({ error: "IMAGE_UPLOAD_FAILED" });
 
-      const gallery = Array.isArray(before.galleryImages) ? [...before.galleryImages] : [];
       const imagePatch: any = {};
-      if (slot === 1) {
-        imagePatch.imageUrl = url;
+
+      if (colorParam) {
+        // Upload para cor específica → atualiza colorImages[color]
+        const existing = (before as any).colorImages || {};
+        const colorGallery: string[] = Array.isArray(existing[colorParam]) ? [...existing[colorParam]] : [];
+        const index = slot - 1;
+        while (colorGallery.length <= index) colorGallery.push("");
+        colorGallery[index] = url;
+        imagePatch.colorImages = {
+          ...existing,
+          [colorParam]: colorGallery.filter((v: string) => String(v || "").trim())
+        };
       } else {
-        const index = slot - 2;
-        while (gallery.length <= index) gallery.push("");
-        gallery[index] = url;
-        imagePatch.galleryImages = gallery.filter((value: any) => String(value || "").trim());
-        if (slot === 2) imagePatch.secondaryImage = url;
+        // Upload global (sem cor) → comportamento original
+        const gallery = Array.isArray(before.galleryImages) ? [...before.galleryImages] : [];
+        if (slot === 1) {
+          imagePatch.imageUrl = url;
+        } else {
+          const index = slot - 2;
+          while (gallery.length <= index) gallery.push("");
+          gallery[index] = url;
+          imagePatch.galleryImages = gallery.filter((value: any) => String(value || "").trim());
+          if (slot === 2) imagePatch.secondaryImage = url;
+        }
       }
 
       const updated = await updateProductByIdentifier(id, imagePatch);

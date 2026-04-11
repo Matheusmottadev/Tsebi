@@ -65,6 +65,16 @@ function seedVariantStock(product: Product): Record<string, string> {
   return seeded;
 }
 
+function seedColorImages(product: Product): Record<string, string[]> {
+  const source = product?.colorImages;
+  if (!source || typeof source !== "object") return {};
+  const seeded: Record<string, string[]> = {};
+  Object.entries(source).forEach(([color, urls]) => {
+    if (Array.isArray(urls)) seeded[color] = urls.filter(Boolean);
+  });
+  return seeded;
+}
+
 function pickErrorMessage(error: unknown): string {
   if (error instanceof HttpError) {
     if (error.status === 403) return "CSRF inválido. Recarregue a página e tente novamente.";
@@ -73,6 +83,8 @@ function pickErrorMessage(error: unknown): string {
   if (error instanceof Error) return error.message || "Falha ao salvar produto.";
   return "Falha ao salvar produto.";
 }
+
+const MAX_COLOR_IMAGES = 6;
 
 export function ProductEditorForm({ productId, product, csrfToken }: ProductEditorFormProps) {
   const router = useRouter();
@@ -84,6 +96,8 @@ export function ProductEditorForm({ productId, product, csrfToken }: ProductEdit
   const [sizesText, setSizesText] = useState(Array.isArray(product.sizes) ? product.sizes.join(", ") : "");
   const [colorsText, setColorsText] = useState(Array.isArray(product.colors) ? product.colors.join(", ") : "");
   const [variantStockInput, setVariantStockInput] = useState<Record<string, string>>(() => seedVariantStock(product));
+  const [colorImagesInput, setColorImagesInput] = useState<Record<string, string[]>>(() => seedColorImages(product));
+  const [uploadingColor, setUploadingColor] = useState<string | null>(null);
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
@@ -96,11 +110,7 @@ export function ProductEditorForm({ productId, product, csrfToken }: ProductEdit
     const pairs: Array<{ key: string; color: string; size: string }> = [];
     colors.forEach((color) => {
       sizes.forEach((size) => {
-        pairs.push({
-          key: `${color}__${size}`,
-          color,
-          size,
-        });
+        pairs.push({ key: `${color}__${size}`, color, size });
       });
     });
     return pairs;
@@ -110,8 +120,7 @@ export function ProductEditorForm({ productId, product, csrfToken }: ProductEdit
   const totalVariantStock = useMemo(() => {
     if (!hasVariantMatrix) return 0;
     return variantPairs.reduce((sum, pair) => {
-      const qty = Math.max(0, Number(variantStockInput[pair.key] || 0));
-      return sum + qty;
+      return sum + Math.max(0, Number(variantStockInput[pair.key] || 0));
     }, 0);
   }, [hasVariantMatrix, variantPairs, variantStockInput]);
 
@@ -134,7 +143,6 @@ export function ProductEditorForm({ productId, product, csrfToken }: ProductEdit
         allowedKeys.add(`${color}__${size}`);
       });
     });
-
     setVariantStockInput((current) => {
       const next: Record<string, string> = {};
       allowedKeys.forEach((key) => {
@@ -146,10 +154,66 @@ export function ProductEditorForm({ productId, product, csrfToken }: ProductEdit
 
   function handleVariantStockChange(variantKey: string, value: string) {
     const safeValue = String(value || "").replace(/[^\d]/g, "");
-    setVariantStockInput((current) => ({
-      ...current,
-      [variantKey]: safeValue,
-    }));
+    setVariantStockInput((current) => ({ ...current, [variantKey]: safeValue }));
+  }
+
+  function handleColorImageChange(color: string, index: number, value: string) {
+    setColorImagesInput((current) => {
+      const urls = [...(current[color] || [])];
+      urls[index] = value;
+      return { ...current, [color]: urls };
+    });
+  }
+
+  function handleColorImageAdd(color: string) {
+    setColorImagesInput((current) => {
+      const urls = current[color] || [];
+      if (urls.length >= MAX_COLOR_IMAGES) return current;
+      return { ...current, [color]: [...urls, ""] };
+    });
+  }
+
+  function handleColorImageRemove(color: string, index: number) {
+    setColorImagesInput((current) => {
+      const urls = [...(current[color] || [])];
+      urls.splice(index, 1);
+      return { ...current, [color]: urls };
+    });
+  }
+
+  async function handleColorImageUpload(color: string, file: File) {
+    setUploadingColor(color);
+    try {
+      const token = String(csrfToken || "").trim() || (await bootstrapAdminCsrfToken());
+      const currentUrls = colorImagesInput[color] || [];
+      const slot = currentUrls.filter(Boolean).length + 1;
+
+      const response = await fetch(
+        `/api/admin/products/${encodeURIComponent(productId)}/image?slot=${slot}&color=${encodeURIComponent(color)}`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": file.type,
+            "x-csrf-token": token,
+          },
+          body: file,
+        }
+      );
+
+      if (!response.ok) throw new Error("Falha no upload da imagem.");
+      const data = await response.json();
+      const uploadedUrl = String(data?.image?.url || "");
+      if (!uploadedUrl) throw new Error("URL não retornada pelo servidor.");
+
+      setColorImagesInput((current) => {
+        const urls = [...(current[color] || [])].filter(Boolean);
+        return { ...current, [color]: [...urls, uploadedUrl] };
+      });
+    } catch (error) {
+      alert(pickErrorMessage(error));
+    } finally {
+      setUploadingColor(null);
+    }
   }
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -170,6 +234,13 @@ export function ProductEditorForm({ productId, product, csrfToken }: ProductEdit
         });
       }
 
+      // Limpa colorImages: remove entradas vazias, mantém só cores com imagens
+      const payloadColorImages: Record<string, string[]> = {};
+      Object.entries(colorImagesInput).forEach(([color, urls]) => {
+        const clean = urls.filter((u) => String(u || "").trim());
+        if (clean.length > 0) payloadColorImages[color] = clean;
+      });
+
       await updateProductAdmin(
         productId,
         {
@@ -181,6 +252,7 @@ export function ProductEditorForm({ productId, product, csrfToken }: ProductEdit
           sizes,
           colors,
           variantStock: payloadVariantStock,
+          colorImages: payloadColorImages,
         },
         token
       );
@@ -230,7 +302,7 @@ export function ProductEditorForm({ productId, product, csrfToken }: ProductEdit
       </div>
 
       <label className={styles.field}>
-        <span>Imagem URL</span>
+        <span>Imagem principal (URL)</span>
         <input type="url" value={imageUrl} onChange={(event) => setImageUrl(event.target.value)} />
       </label>
 
@@ -282,6 +354,72 @@ export function ProductEditorForm({ productId, product, csrfToken }: ProductEdit
         </div>
       ) : (
         <p className={styles.help}>Preencha cores e tamanhos para ativar o estoque por variante.</p>
+      )}
+
+      {colors.length > 0 && (
+        <div className={styles.variantMatrix}>
+          <p className={styles.variantTitle}>Fotos por cor</p>
+          <p className={styles.help}>
+            Adicione até {MAX_COLOR_IMAGES} fotos por cor. Essas imagens serão exibidas no card e na galeria
+            correspondente a cada cor no app.
+          </p>
+          {colors.map((color) => {
+            const urls = colorImagesInput[color] || [];
+            const isUploading = uploadingColor === color;
+            return (
+              <div key={color} className={styles.colorImageBlock}>
+                <p className={styles.colorImageLabel}>{color}</p>
+
+                {urls.map((url, index) => (
+                  <div key={index} className={styles.colorImageRow}>
+                    <input
+                      type="url"
+                      className={styles.colorImageInput}
+                      placeholder="https://..."
+                      value={url}
+                      onChange={(e) => handleColorImageChange(color, index, e.target.value)}
+                    />
+                    {url && (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={url} alt="" className={styles.colorImagePreview} />
+                    )}
+                    <button
+                      type="button"
+                      className={styles.colorImageRemove}
+                      onClick={() => handleColorImageRemove(color, index)}
+                    >
+                      ✕
+                    </button>
+                  </div>
+                ))}
+
+                <div className={styles.colorImageActions}>
+                  {urls.length < MAX_COLOR_IMAGES && (
+                    <button type="button" className={styles.colorImageAdd} onClick={() => handleColorImageAdd(color)}>
+                      + URL
+                    </button>
+                  )}
+                  {urls.length < MAX_COLOR_IMAGES && (
+                    <label className={styles.colorImageUpload}>
+                      {isUploading ? "Enviando..." : "↑ Upload"}
+                      <input
+                        type="file"
+                        accept="image/jpeg,image/png,image/webp"
+                        style={{ display: "none" }}
+                        disabled={isUploading}
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (file) handleColorImageUpload(color, file);
+                          e.target.value = "";
+                        }}
+                      />
+                    </label>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
       )}
 
       <label className={styles.checkbox}>

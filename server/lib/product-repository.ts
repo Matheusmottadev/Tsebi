@@ -157,6 +157,7 @@ export type ProductWritePayload = {
   gender?: string;
   secondaryImage?: string;
   galleryImages?: string[];
+  colorImages?: Record<string, string[]>;
   modelInfo?: string;
   fitType?: string;
   sizeRecommendation?: string;
@@ -196,6 +197,7 @@ type ProductMetadata = {
   gender?: string;
   secondaryImage?: string;
   galleryImages?: string[];
+  colorImages?: Record<string, string[]>;
   modelInfo?: string;
   fitType?: string;
   sizeRecommendation?: string;
@@ -257,6 +259,8 @@ export type Product = {
   active: boolean;
   image: string;
   secondaryImage?: string;
+  galleryImages?: string[];
+  colorImages?: Record<string, string[]>;
   modelInfo?: string;
   fitType?: string;
   sizeRecommendation?: string;
@@ -264,7 +268,6 @@ export type Product = {
   materialMain?: string;
   cleaningRecommendation?: string;
   careList?: string[];
-  galleryImages?: string[];
   createdAt: string | null;
   updatedAt: string | null;
   href: string;
@@ -1010,6 +1013,19 @@ function normalizeProductMetadata(value: unknown, fallback: ProductStaticMetadat
     raw.secondaryImage || raw.secondary_image || raw.image2 || raw.hoverImage || fallback.secondaryImage || ""
   ).trim();
   const galleryImages = normalizeTextList(raw.galleryImages || raw.gallery_images || [], []);
+
+  const rawColorImages = raw.colorImages || raw.color_images;
+  const colorImages: Record<string, string[]> | undefined =
+    rawColorImages && typeof rawColorImages === "object" && !Array.isArray(rawColorImages)
+      ? Object.fromEntries(
+          Object.entries(rawColorImages as Record<string, unknown>)
+            .map(([color, urls]) => [
+              String(color).trim(),
+              normalizeTextList(Array.isArray(urls) ? urls : [], [])
+            ])
+            .filter(([color, urls]) => color && (urls as string[]).length > 0)
+        )
+      : undefined;
   const careList = normalizeTextList(raw.careList || raw.care_list || [], []);
   const modelInfo = sanitizeCatalogText(raw.modelInfo || raw.model_info || "").trim();
   const fitType = sanitizeCatalogText(raw.fitType || raw.fit_type || "").trim();
@@ -1032,6 +1048,7 @@ function normalizeProductMetadata(value: unknown, fallback: ProductStaticMetadat
     gender: gender || undefined,
     secondaryImage: secondaryImage || undefined,
     galleryImages: galleryImages.length ? galleryImages : undefined,
+    colorImages: colorImages && Object.keys(colorImages).length ? colorImages : undefined,
     modelInfo: modelInfo || undefined,
     fitType: fitType || undefined,
     sizeRecommendation: sizeRecommendation || undefined,
@@ -1285,6 +1302,7 @@ function mapProduct(row: ProductRow | null | undefined): Product {
     cleaningRecommendation: metadata.cleaningRecommendation || undefined,
     careList: Array.isArray(metadata.careList) ? metadata.careList : undefined,
     galleryImages: Array.isArray(metadata.galleryImages) ? metadata.galleryImages : undefined,
+    colorImages: metadata.colorImages && Object.keys(metadata.colorImages).length ? metadata.colorImages : undefined,
     createdAt: (row?.created_at as string | null) || null,
     updatedAt: (row?.updated_at as string | null) || null,
     href: `produto.html?id=${encodeURIComponent(sku)}`
@@ -2018,6 +2036,7 @@ function buildPersistedMetadata(sku: string, input: unknown = {}): ProductMetada
     gender: normalized.gender,
     secondaryImage: normalized.secondaryImage,
     galleryImages: normalized.galleryImages,
+    colorImages: normalized.colorImages,
     modelInfo: normalized.modelInfo,
     fitType: normalized.fitType,
     sizeRecommendation: normalized.sizeRecommendation,
@@ -2142,6 +2161,7 @@ async function updateProductByIdentifier(identifier: string, patch: ProductWrite
     gender: patch.gender ?? currentMetadataRecord.gender,
     secondaryImage: patch.secondaryImage ?? currentMetadataRecord.secondaryImage,
     galleryImages: patch.galleryImages ?? currentMetadataRecord.galleryImages,
+    colorImages: (patch as any).colorImages ?? currentMetadataRecord.colorImages,
     modelInfo: patch.modelInfo ?? currentMetadataRecord.modelInfo,
     fitType: patch.fitType ?? currentMetadataRecord.fitType,
     sizeRecommendation: patch.sizeRecommendation ?? currentMetadataRecord.sizeRecommendation,

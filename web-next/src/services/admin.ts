@@ -160,6 +160,7 @@ export interface AdminProductCreatePayload {
   gender?: string;
   secondaryImage?: string;
   galleryImages?: string[];
+  colorImages?: Record<string, string[]>;
   modelInfo?: string;
   fitType?: string;
   sizeRecommendation?: string;

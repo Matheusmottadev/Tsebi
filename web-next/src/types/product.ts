@@ -25,6 +25,7 @@ export interface ProductMetadata {
   cleaningRecommendation?: string;
   careList?: string[];
   galleryImages?: string[];
+  colorImages?: Record<string, string[]>;
   secondaryImage?: string;
 }
 
@@ -58,6 +59,7 @@ export interface Product {
   cleaningRecommendation?: string;
   careList?: string[];
   galleryImages?: string[];
+  colorImages?: Record<string, string[]>;
   createdAt: string | null;
   updatedAt: string | null;
   href: string;
