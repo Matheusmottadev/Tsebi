@@ -23,11 +23,5 @@
       "source": "/api/:path*",
       "destination": "https://tsebi-production.up.railway.app/api/:path*"
     }
-  ],
-  "crons": [
-    {
-      "path": "/api/nfse/retry",
-      "schedule": "*/5 * * * *"
-    }
   ]
 }
